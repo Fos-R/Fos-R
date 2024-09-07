@@ -15,10 +15,9 @@ struct TimedEdge<T: structs::Protocol> {
     // covariance matrix
 }
 
-struct TimedAutomaton<T: structs::Protocol> {
+pub struct TimedAutomaton<T: structs::Protocol> {
     graph: Vec<TimedNode<T>>
 }
-
 
 struct ConstraintsNode<T: structs::Protocol> {
     edges: Vec<ConstraintsEdge<T>>,
@@ -32,19 +31,33 @@ struct ConstraintsAutomaton<T: structs::Protocol> {
     graph: Vec<ConstraintsNode<T>>
 }
 
-fn create_constraints_automaton<T: structs::Protocol>(flow: structs::Flow) -> ConstraintsAutomaton<T> {
-    panic!("Not implemented");
+impl<T: structs::Protocol> ConstraintsAutomaton<T> {
+    fn new_packet_number_constraints_automaton(flow: &structs::Flow) -> ConstraintsAutomaton<T> {
+        panic!("Not implemented");
+    }
 }
 
-fn intersect_automata<T: structs::Protocol>(automaton: TimedAutomaton<T>, constraints: ConstraintsAutomaton<T>) -> TimedAutomaton<T> {
-    panic!("Not implemented");
+impl ConstraintsAutomaton<structs::TCPPacketInfo> {
+    fn new_tcp_flags_constraints_automaton(flow: &structs::Flow) -> ConstraintsAutomaton<structs::TCPPacketInfo> {
+        panic!("Not implemented");
+    }
 }
 
-fn import_timed_TCP_automaton(filename: &str) -> std::io::Result<TimedAutomaton<structs::TCPPacketInfo>> {
-    panic!("Not implemented");
+impl<T: structs::Protocol> TimedAutomaton<T> {
+
+    fn intersect_automata(&self, constraints: &ConstraintsAutomaton<T>) -> TimedAutomaton<T> {
+        panic!("Not implemented");
+    }
+
+    fn sample(&self) -> structs::PacketsIR<T> {
+        panic!("Not implemented");
+    }
+
 }
 
-fn sample<T: structs::Protocol>(automaton: TimedAutomaton<T>) -> structs::PacketsIR<T> {
-    panic!("Not implemented");
+impl TimedAutomaton<structs::TCPPacketInfo> {
+    fn import_timed_tcp_automaton(filename: &str) -> std::io::Result<Self> {
+        panic!("Not implemented");
+    }
 }
 
