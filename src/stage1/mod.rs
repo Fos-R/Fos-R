@@ -1,4 +1,4 @@
-use crate::structs;
+use crate::structs::*;
 use std::collections::HashMap;
 
 /// Number of columns in the flow description
@@ -22,7 +22,7 @@ impl BayesianNetworkNode {
 enum CellType {
     Fixed(u32),
     Free(BayesianNetworkNode),
-    ReuseVariable(usize,usize)
+    ReuseVariable(usize,usize) // values are the coordinates of the cell in the partial flows to reuse
 }
 
 struct BayesianNetwork {
@@ -60,7 +60,7 @@ impl Stage1 {
     }
 
     /// Generates flows. At least "number of flows" are generated (a difference of a few flows can be expected).
-    pub fn generate_flows(&self, number_of_flows: u32) -> Vec<structs::Flow> {
+    pub fn generate_flows(&self, number_of_flows: u32) -> Vec<Flow> {
         panic!("Not implemented");
     }
 

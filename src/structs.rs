@@ -6,13 +6,6 @@ pub struct Packet {
 }
 
 #[derive(Debug)]
-pub enum TransportProtocol {
-    TCP,
-    UDP,
-    ICMP
-}
-
-#[derive(Debug)]
 pub enum PacketDirection {
     ClientToServer,
     ServerToClient
@@ -25,7 +18,6 @@ pub enum PayloadType {
     LowEntropy,
     HighEntropy
 }
-
 
 #[derive(Debug)]
 pub struct TCPPacketInfo {
@@ -69,12 +61,18 @@ pub struct PacketsIR<T: Protocol> { // Intermediate representation (as output by
 }
 
 #[derive(Debug)]
-pub struct Flow { // Output of stage 1
+pub enum Flow {
+    TCPFlow(FlowData),
+    UDPFlow(FlowData),
+    ICMPFlow(FlowData)
+}
+
+#[derive(Debug)]
+pub struct FlowData { // Output of stage 1
     src_ip: Ipv4Addr,
     dst_ip: Ipv4Addr,
     src_port: u16,
     dst_port: u16,
-    protocol: TransportProtocol,
     ttl_client: u8,
     ttl_server: u8,
     fwd_packets_count: u32,

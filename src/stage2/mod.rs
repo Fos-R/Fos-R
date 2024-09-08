@@ -1,10 +1,10 @@
-use crate::structs;
+use crate::structs::*;
 mod automaton;
 
 pub struct Stage2 {
-    tcp_automata: Vec<automaton::TimedAutomaton<structs::TCPPacketInfo>>,
-    udp_automata: Vec<automaton::TimedAutomaton<structs::UDPPacketInfo>>,
-    icmp_automata: Vec<automaton::TimedAutomaton<structs::ICMPPacketInfo>>
+    tcp_automata: Vec<automaton::TimedAutomaton<TCPPacketInfo>>,
+    udp_automata: Vec<automaton::TimedAutomaton<UDPPacketInfo>>,
+    icmp_automata: Vec<automaton::TimedAutomaton<ICMPPacketInfo>>
 }
 
 impl Stage2 {
@@ -17,7 +17,15 @@ impl Stage2 {
         panic!("Not implemented");
     }
 
-    pub fn generate_packets_info<T: structs::Protocol>(&self, flow: &structs::Flow) -> structs::PacketsIR<T> {
+    pub fn generate_tcp_packets_info(&self, flow: &FlowData) -> PacketsIR<TCPPacketInfo> {
+        panic!("Not implemented");
+    }
+
+    pub fn generate_udp_packets_info(&self, flow: &FlowData) -> PacketsIR<UDPPacketInfo> {
+        panic!("Not implemented");
+    }
+
+    pub fn generate_icmp_packets_info(&self, flow: &FlowData) -> PacketsIR<ICMPPacketInfo> {
         panic!("Not implemented");
     }
 
