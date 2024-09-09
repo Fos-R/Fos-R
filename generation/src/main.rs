@@ -8,9 +8,9 @@ mod stage3;
 fn main() {
     // Init and import patterns and automata
     let mut s1 = stage1::Stage1::new();
-    s1.import_patterns("pattern.txt");
+    s1.import_patterns("patterns.json");
     let mut s2 = stage2::Stage2::new();
-    s2.import_automata("automata.dot");
+    s2.import_automata("automata_tcp_21.json");
     let s3 = stage3::Stage3::new();
 
     let mut packets = vec![];
