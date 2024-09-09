@@ -1,0 +1,3 @@
+git+https://github.com/FosR-project/TADAM.git
+git+https://github.com/FosR-project/FlowChronicle.git
+git+https://github.com/FosR-project/NTLFlowLyzer.git
