@@ -48,6 +48,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitfield"
+version = "0.13.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46afbd2983a5d5a7bd740ccb198caf5b82f45c40c09c0eed36052d91cb92e719"
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -143,6 +149,7 @@ name = "fosr"
 version = "0.1.0"
 dependencies = [
  "crossbeam-channel",
+ "packet_rs",
  "pcap",
  "rstat",
  "serde_json",
@@ -319,6 +326,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "packet_rs"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a68bdbfdbb292331f97d8ffa6d6876464329aee51ecc8abd61c7efcbf63bca66"
+dependencies = [
+ "bitfield",
+ "paste",
+ "pyo3_nullify",
+]
+
+[[package]]
+name = "paste"
+version = "1.0.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
+
+[[package]]
 name = "pcap"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -356,6 +380,12 @@ checksum = "5e719e8df665df0d1c8fbfd238015744736151d4445ec0836b8e628aae103b77"
 dependencies = [
  "unicode-ident",
 ]
+
+[[package]]
+name = "pyo3_nullify"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "625763a7c79883337490472d649b45a37abe0d3730ddbefb8b0e389ac4db9450"
 
 [[package]]
 name = "quote"
