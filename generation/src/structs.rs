@@ -49,10 +49,37 @@ pub struct ICMPPacketInfo {
     direction: PacketDirection
 }
 
-pub trait Protocol {}
-impl Protocol for TCPPacketInfo {}
-impl Protocol for UDPPacketInfo {}
-impl Protocol for ICMPPacketInfo {}
+pub trait Protocol {
+    fn get_direction(&self) -> PacketDirection;
+    fn get_iat(&self) -> Duration;
+}
+
+impl Protocol for TCPPacketInfo {
+    fn get_direction(&self) -> PacketDirection {
+        self.direction
+    }
+    fn get_iat(&self) -> Duration {
+        self.iat
+    }
+}
+
+impl Protocol for UDPPacketInfo {
+    fn get_direction(&self) -> PacketDirection {
+        self.direction
+    }
+    fn get_iat(&self) -> Duration {
+        self.iat
+    }
+}
+
+impl Protocol for ICMPPacketInfo {
+    fn get_direction(&self) -> PacketDirection {
+        self.direction
+    }
+    fn get_iat(&self) -> Duration {
+        self.iat
+    }
+}
 
 #[derive(Debug)]
 pub struct PacketsIR<T: Protocol> { // Intermediate representation (as output by stage 2)

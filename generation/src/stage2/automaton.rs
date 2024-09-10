@@ -3,7 +3,7 @@ use crate::structs::*;
 // Automaton are graphs. Graphs are not straightforward in Rust due to ownership, so we reference nodes by their index in the graph. Indices are never reused, leading to a small memory leak. Since we do not need to remove regularly nodes, it’s not a big deal.
 
 struct TimedNode<T: Protocol> {
-    edges: Vec<TimedEdge<T>>,
+    out_edges: Vec<TimedEdge<T>>,
 }
 
 struct TimedEdge<T: Protocol> {
@@ -20,7 +20,7 @@ pub struct TimedAutomaton<T: Protocol> {
 }
 
 struct ConstraintsNode<T: Protocol> {
-    edges: Vec<ConstraintsEdge<T>>,
+    out_edges: Vec<ConstraintsEdge<T>>,
 }
 
 struct ConstraintsEdge<T: Protocol> {

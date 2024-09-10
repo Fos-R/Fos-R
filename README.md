@@ -16,10 +16,28 @@ Extract the flows:
 
 ## Learning (TODO)
 
-FlowChronicle with netflows
+Go to the learning folder:
 
-TADAM : one automata per dest port + UDP + ICMP
+    cd learning
+
+Install dependencies:
+
+    pip install -U requirements.txt
+
+Learn patterns:
+
+    (TODO)
+
+Learn automata:
+
+    (TODO)
 
 ## Generation (TODO)
 
-    cargo run patterns.json tas
+Go to the generation folder:
+
+    cd ../generation
+
+You can start 
+
+    cargo run models/patterns.json models/tas
