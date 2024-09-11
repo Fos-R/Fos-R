@@ -13,36 +13,30 @@ def parse_TCP(input_string):
         Contains: flags, direction, payload type, iat, payload size
     """
     if "$" in input_string: return "$", [0,0]
-    regex_format2 = r'([A-Za-z]+)/([><])/([A-Za-z]+)/(-?\d+.\d+)/(\d+)'
-    match = re.match(regex_format2, input_string)
+    match = re.match(r'([A-Za-z]+)/([><])/([A-Za-z]+)/(-?\d+.\d+)/(\d+)', input_string)
     if match:
         return match.group(1) + "_" + match.group(2) + "_" + match.group(3), [int(float(match.group(4).replace(',', '.')) * 1e6), int(match.group(5))]
-    else:
-        assert False, "Parsing error on "+input_string
+    assert False, "Parsing error on "+input_string
 
 def parse_UDP(input_string):
     """
         Contains: direction, payload type, iat, payload size
     """
     if "$" in input_string: return "$", [0,0]
-    regex_format2 = r'([><])/([A-Za-z]+)/(-?\d+.\d+)/(\d+)'
-    match = re.match(regex_format2, input_string)
+    match = re.match(r'([><])/([A-Za-z]+)/(-?\d+.\d+)/(\d+)', input_string)
     if match:
         return match.group(1) + "_" + match.group(2), [int(float(match.group(3).replace(',', '.')) * 1e6), int(match.group(4))]
-    else:
-        assert False, "Parsing error on "+input_string
+    assert False, "Parsing error on "+input_string
 
 def parse_ICMP(input_string):
     """
         Contains: direction, iat
     """
     if "$" in input_string: return "$", [0]
-    regex_format2 = r'([><])/(-?\d+.\d+)'
-    match = re.match(regex_format2, input_string)
+    match = re.match(r'([><])/(-?\d+.\d+)', input_string)
     if match:
         return match.group(1), [int(float(match.group(2).replace(',', '.')) * 1e6)]
-    else:
-        assert False, "Parsing error on "+input_string
+    assert False, "Parsing error on "+input_string
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Learn timed automata from packet sequences.')
@@ -65,7 +59,7 @@ if __name__ == '__main__':
         args.output = "automata.json"
 
     try:
-        df = pd.read_csv(args.input,low_memory=False)
+        df = pd.read_csv(args.input,low_memory=False,names=["protocol","src_ip","dst_ip","dst_port","fwd_packets","bwd_packets","fwd_bytes","bwd_bytes","time_sequence"])
     except Exception as e:
         print("Input file cannot be opened:",e)
         exit()
@@ -79,10 +73,10 @@ if __name__ == '__main__':
         if len(unique) == 1:
             protocol = unique[0].upper()
             if protocol not in ["TCP","UDP","ICMP"]:
-                print("Transport protocol should be TCP, UDP or ICMP. Found:",str(protocol))
+                print("Network protocol should be TCP, UDP or ICMP. Found:",str(protocol))
                 exit()
         else:
-            print("Multiple transport protocol detected. Please manually select one with --proto")
+            print("Multiple network protocols detected. Please manually select one with --proto")
             exit()
 
     df = df[df["protocol"] == protocol]
