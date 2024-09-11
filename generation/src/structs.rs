@@ -5,13 +5,13 @@ pub struct Packet {
     // should be replaced by the Packet structure defined in the network library
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone,Copy)]
 pub enum PacketDirection {
     ClientToServer,
     ServerToClient
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone,Copy)]
 pub enum PayloadType {
     Empty,
     Print,
@@ -19,7 +19,7 @@ pub enum PayloadType {
     HighEntropy
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone,Copy)]
 pub struct TCPPacketInfo {
     payload_length: u32,
     payload_type: PayloadType,
@@ -33,7 +33,7 @@ pub struct TCPPacketInfo {
     p_flag: bool
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone,Copy)]
 pub struct UDPPacketInfo {
     payload_length: u32,
     payload_type: PayloadType,
@@ -41,7 +41,7 @@ pub struct UDPPacketInfo {
     direction: PacketDirection
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone,Copy)]
 pub struct ICMPPacketInfo {
     // we assume no payload
     // we may need to add more fields to correctly generate them
