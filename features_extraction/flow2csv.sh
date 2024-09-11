@@ -23,7 +23,8 @@ payloads=""
 tshark -r $file -T fields \
     -e ip.proto -e ip.src -e ip.dst -e ip.ttl \
     -e tcp.time_delta -e tcp.dstport -e tcp.len -e tcp.flags.str -e tcp.payload \
-    -e udp.time_delta -e udp.dstport -e udp.length -e udp.length -e udp.payload | while read l; do
+    -e udp.time_delta -e udp.dstport -e udp.length -e udp.length -e udp.payload \
+    -e icmp.type -e icmp.code -e data.len -e data | while read l; do
     array=($l)
     proto=${array[0]}
     if [ "$proto" -eq 6 ] || [ "$proto" -eq 17 ]; then
@@ -49,7 +50,7 @@ tshark -r $file -T fields \
             bwd_ttl=${array[3]}
             total_time=$((total_time+delta))
         fi
-        # output new letter (ensure it can not be empty)r
+        # output new letter (ensure it can not be empty)
         if [ "$proto" -eq 6 ]; then
             protoname="TCP"
             flags=$(echo ${array[7]} | tr -d "·") # specific to TCP
@@ -60,6 +61,11 @@ tshark -r $file -T fields \
         fi
     elif [ "$proto" -eq 1 ]; then
         protoname="ICMP"
+        type=${array[4]}
+        code=${array[5]}
+        len=${array[6]}
+        timeseq=$timeseq$type/$code/$len" "
+        payloads=$payloads"P:"${array[7]}" " # extract payload (ensure it can not be empty)
     else
         echo "Unknown protocol ("$proto"), packed dropped"
     fi
