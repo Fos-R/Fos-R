@@ -59,7 +59,7 @@ if __name__ == '__main__':
         args.output = "automata.json"
 
     try:
-        df = pd.read_csv(args.input,low_memory=False,names=["protocol","src_ip","dst_ip","dst_port","fwd_packets","bwd_packets","fwd_bytes","bwd_bytes","time_sequence"])
+        df = pd.read_csv(args.input,low_memory=False,names=["protocol","src_ip","dst_ip","dst_port","fwd_packets","bwd_packets","fwd_bytes","bwd_bytes","time_sequence","payloads"])
     except Exception as e:
         print("Input file cannot be opened:",e)
         exit()
@@ -85,6 +85,11 @@ if __name__ == '__main__':
     elif len(ignore_dst_ports) > 0:
         df = df[~df["dst_port"].isin(ignore_dst_ports)]
     df = df["time_sequence"]
+
+    len_before = len(df)
+    df = df[df.str.len() < 20000]
+    if len(df) < len_before:
+        print((len_before-len(df)),"flows have been ignored because they are too long.")
 
     if len(df) == 0:
         print("No stream satisfies these conditions")
