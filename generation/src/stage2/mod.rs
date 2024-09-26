@@ -1,5 +1,9 @@
 use crate::structs::*;
 use std::fs::File;
+use std::fs;
+use std::ffi::OsStr;
+use std::path::PathBuf;
+
 mod automaton;
 
 pub struct Stage2 {
@@ -14,7 +18,25 @@ impl Stage2 {
         Stage2 { tcp_automata: vec![], udp_automata: vec![], icmp_automata: vec![] }
     }
 
-    pub fn import_automata(&mut self, filename: &str) -> std::io::Result<()> {
+    pub fn import_automata_from_dir(&mut self, directory_name: &str) {
+        let mut nb = 0;
+        let paths = fs::read_dir(directory_name).expect("Cannot read directory");
+        for p in paths {
+            let p = p.expect("Cannot open path").path();
+            if !p.is_dir() && p.extension() == Some(OsStr::new("json")) {
+                match self.import_automata(&p) {
+                    Ok(()) => {
+                        println!("Automaton {:?} is loaded",p.file_name().unwrap());
+                        nb += 1
+                    },
+                    Err(s) => println!("Could not load automaton {:?} ({})",p.file_name().unwrap(), s),
+                }
+            }
+        }
+        println!("{} automata have been loaded",nb);
+    }
+
+    pub fn import_automata(&mut self, filename: &PathBuf) -> std::io::Result<()> {
         let f = File::open(filename)?;
         let a : automaton::JsonAutomaton = serde_json::from_reader(f)?;
         match a.protocol {
