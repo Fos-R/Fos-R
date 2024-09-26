@@ -8,9 +8,9 @@ mod stage3;
 fn main() {
     // Init and import patterns and automata
     let mut s1 = stage1::Stage1::new();
-    s1.import_patterns("patterns.json");
+    // s1.import_patterns("patterns.json");
     let mut s2 = stage2::Stage2::new();
-    s2.import_automata("automata_tcp_21.json");
+    s2.import_automata("../models/tas/chat.json").expect("Error loading the json file");
     let s3 = stage3::Stage3::new();
 
     let mut packets = vec![];

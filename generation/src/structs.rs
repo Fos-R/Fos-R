@@ -7,8 +7,8 @@ pub struct Packet {
 
 #[derive(Debug,Clone,Copy)]
 pub enum PacketDirection {
-    ClientToServer,
-    ServerToClient
+    Forward, // client to server
+    Backward, // server to client
 }
 
 #[derive(Debug,Clone,Copy)]
@@ -33,12 +33,38 @@ pub struct TCPPacketInfo {
     p_flag: bool
 }
 
+pub fn parse_tcp_symbol(symbol: String) -> TCPPacketInfo
+{ // TODO
+    TCPPacketInfo {
+        payload_length: 0,
+        payload_type: PayloadType::Empty,
+        iat: Duration::new(5, 0),
+        direction: PacketDirection::Forward,
+        s_flag: false,
+        a_flag: false,
+        f_flag: false,
+        r_flag: false,
+        u_flag: false,
+        p_flag: false
+    }
+}
+
 #[derive(Debug,Clone,Copy)]
 pub struct UDPPacketInfo {
     payload_length: u32,
     payload_type: PayloadType,
     iat: Duration,
     direction: PacketDirection
+}
+
+pub fn parse_udp_symbol(symbol: String) -> UDPPacketInfo
+{ // TODO
+    UDPPacketInfo {
+        payload_length: 0,
+        payload_type: PayloadType::Empty,
+        iat: Duration::new(5, 0),
+        direction: PacketDirection::Forward,
+    }
 }
 
 #[derive(Debug,Clone,Copy)]
@@ -48,6 +74,15 @@ pub struct ICMPPacketInfo {
     iat: Duration,
     direction: PacketDirection
 }
+
+pub fn parse_icmp_symbol(symbol: String) -> ICMPPacketInfo
+{ // TODO
+    ICMPPacketInfo {
+        iat: Duration::new(5, 0),
+        direction: PacketDirection::Forward,
+    }
+}
+
 
 pub trait Protocol {
     fn get_direction(&self) -> PacketDirection;

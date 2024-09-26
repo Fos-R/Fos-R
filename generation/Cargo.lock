@@ -152,6 +152,7 @@ dependencies = [
  "packet_rs",
  "pcap",
  "rstat",
+ "serde",
  "serde_json",
 ]
 
