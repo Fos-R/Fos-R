@@ -1,6 +1,5 @@
 use crate::structs::*;
 use serde::Deserialize;
-use std::time::Duration;
 use std::cmp::max;
 
 // Automaton are graphs. Graphs are not straightforward in Rust due to ownership, so we reference nodes by their index in the graph. Indices are never reused, leading to a small memory leak. Since we do not need to remove regularly nodes, it’s not a big deal.
@@ -14,12 +13,14 @@ struct TimedEdge<T: Protocol> {
     src_node: usize, // not sure if useful
     transition_proba: f32,
     data: T,
-    // expectation vector
-    // covariance matrix
+    mu: Vec<f32>, // TODO: find a better type
+    cov: Vec<Vec<f32>> // TODO: find a better type
 }
 
 pub struct TimedAutomaton<T: Protocol> {
-    graph: Vec<TimedNode<T>>
+    graph: Vec<TimedNode<T>>,
+    metadata: MetaData,
+    noise: Noise,
 }
 
 struct ConstraintsNode<T: Protocol> {
@@ -61,15 +62,15 @@ impl<T: Protocol> TimedAutomaton<T> {
 #[derive(Deserialize, Debug)]
 pub struct JsonAutomaton {
     edges: Vec<JsonEdge>,
-    noise: JsonNoise,
+    noise: Noise,
     initial_state: usize,
     accepting_state: usize,
     pub protocol: JsonProtocol,
-    metadata: JsonMetaData,
+    metadata: MetaData,
 }
 
 #[derive(Deserialize, Debug)]
-struct JsonNoise {
+struct Noise {
     none: f32,
     deletion: f32,
     reemission: f32,
@@ -95,7 +96,7 @@ pub enum JsonProtocol {
 }
 
 #[derive(Deserialize, Debug)]
-struct JsonMetaData {
+struct MetaData {
     select_dst_ports: Vec<u32>,
     ignore_dst_ports: Vec<u32>,
     input_file: String,
@@ -105,11 +106,17 @@ struct JsonMetaData {
 impl<T: Protocol> TimedAutomaton<T> {
     pub fn import_timed_automaton(a: JsonAutomaton, symbol_parser: impl Fn(String) -> T) -> Self {
         let mut nodes_nb = 0;
-        for e in a.edges {
-            nodes_nb = max(max(nodes_nb, e.src), e.dst);
+        let mut graph : Vec<TimedNode<T>> = vec![];
+        for _ in 0..a.edges.len()+1 { // the automaton is connexe, so there #edges+1 >= #nodes
+            graph.push(TimedNode { out_edges: vec![] });
         }
-        let t = TimedAutomaton::<T> { graph: vec![] };
-        t
+        for e in a.edges {
+            let new_edge = TimedEdge { dst_node: e.dst, src_node: e.src, transition_proba: e.p, data: symbol_parser(e.symbol), mu: e.mu, cov: e.cov };
+            graph[e.src].out_edges.push(new_edge);
+            nodes_nb = max(max(nodes_nb, e.src+1), e.dst+1);
+        }
+        graph.truncate(nodes_nb);
+        TimedAutomaton::<T> { graph: graph, metadata: a.metadata, noise: a.noise }
     }
 }
 
