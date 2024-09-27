@@ -1,6 +1,9 @@
 use crate::structs::*;
 use serde::Deserialize;
 use std::cmp::max;
+use rand::prelude::*;
+use rand::distributions::WeightedIndex;
+use rand::Rng;
 
 // Automaton are graphs. Graphs are not straightforward in Rust due to ownership, so we reference nodes by their index in the graph. Indices are never reused, leading to a small memory leak. Since we do not need to remove regularly nodes, it’s not a big deal.
 
@@ -21,6 +24,8 @@ pub struct TimedAutomaton<T: Protocol> {
     graph: Vec<TimedNode<T>>,
     metadata: MetaData,
     noise: Noise,
+    initial_state: usize,
+    accepting_state: usize
 }
 
 struct ConstraintsNode<T: Protocol> {
@@ -49,12 +54,26 @@ impl ConstraintsAutomaton<TCPPacketInfo> {
 
 impl<T: Protocol> TimedAutomaton<T> {
 
-    fn intersect_automata(&self, constraints: &ConstraintsAutomaton<T>) -> TimedAutomaton<T> {
+    pub fn intersect_automata(&self, constraints: &ConstraintsAutomaton<T>) -> TimedAutomaton<T> {
         panic!("Not implemented");
     }
 
-    fn sample(&self) -> PacketsIR<T> {
-        panic!("Not implemented");
+    pub fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Vec<T> {
+        let mut output = vec![];
+        let mut current_state = self.initial_state;
+        while current_state != self.accepting_state {
+            assert!(!self.graph[current_state].out_edges.is_empty());
+            let mut weights = vec![];
+            for e in self.graph[current_state].out_edges.iter() {
+                weights.push(e.transition_proba);
+            }
+            let dist = WeightedIndex::new(&weights).unwrap();
+            let nb = dist.sample(rng);
+            current_state = self.graph[current_state].out_edges[nb].dst_node;
+            output.push(self.graph[current_state].out_edges[nb].data);
+            dbg!(current_state);
+        }
+        output
     }
 
 }
@@ -116,7 +135,7 @@ impl<T: Protocol> TimedAutomaton<T> {
             nodes_nb = max(max(nodes_nb, e.src+1), e.dst+1);
         }
         graph.truncate(nodes_nb);
-        TimedAutomaton::<T> { graph: graph, metadata: a.metadata, noise: a.noise }
+        TimedAutomaton::<T> { graph, metadata: a.metadata, noise: a.noise, initial_state: a.initial_state, accepting_state: a.accepting_state }
     }
 }
 
