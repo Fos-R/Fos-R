@@ -1,17 +1,29 @@
 use crate::structs::*;
+use crate::tcp::*;
+use crate::udp::*;
+use crate::icmp::*;
 use serde::Deserialize;
 use std::cmp::max;
 use rand::prelude::*;
 use rand::distributions::WeightedIndex;
 use rand::Rng;
+use std::time::{Duration, Instant};
 
 // Automaton are graphs. Graphs are not straightforward in Rust due to ownership, so we reference nodes by their index in the graph. Indices are never reused, leading to a small memory leak. Since we do not need to remove regularly nodes, it’s not a big deal.
 
-struct TimedNode<T: Protocol> {
+// pub fn complete_tcp_with_values<R: Rng + ?Sized>(rng: &mut R, data: TCPPacketInfo) {
+//     panic!("Not implemented");
+// }
+
+
+
+#[derive(Debug,Clone)]
+struct TimedNode<T: EdgeType> {
     out_edges: Vec<TimedEdge<T>>,
 }
 
-struct TimedEdge<T: Protocol> {
+#[derive(Debug,Clone)]
+struct TimedEdge<T: EdgeType> {
     dst_node: usize,
     src_node: usize, // not sure if useful
     transition_proba: f32,
@@ -20,45 +32,43 @@ struct TimedEdge<T: Protocol> {
     cov: Vec<Vec<f32>> // TODO: find a better type
 }
 
-pub struct TimedAutomaton<T: Protocol> {
+#[derive(Debug,Clone)]
+pub struct TimedAutomaton<T: EdgeType> {
     graph: Vec<TimedNode<T>>,
-    metadata: MetaData,
+    metadata: AutomatonMetaData,
     noise: Noise,
     initial_state: usize,
     accepting_state: usize
 }
 
-struct ConstraintsNode<T: Protocol> {
+struct ConstraintsNode<T: EdgeType> {
     out_edges: Vec<ConstraintsEdge<T>>,
 }
 
-struct ConstraintsEdge<T: Protocol> {
+struct ConstraintsEdge<T: EdgeType> {
     data: T,
 }
 
-struct ConstraintsAutomaton<T: Protocol> {
+pub struct ConstraintsAutomaton<T: EdgeType> {
     graph: Vec<ConstraintsNode<T>>
 }
 
-impl<T: Protocol> ConstraintsAutomaton<T> {
-    fn new_packet_number_constraints_automaton(flow: &Flow) -> ConstraintsAutomaton<T> {
-        panic!("Not implemented");
-    }
+pub fn new_packet_number_constraints_automaton<T: EdgeType>(flow: &FlowData) -> ConstraintsAutomaton<T> {
+    panic!("Not implemented");
 }
 
-impl ConstraintsAutomaton<TCPPacketInfo> {
-    fn new_tcp_flags_constraints_automaton(flow: &Flow) -> ConstraintsAutomaton<TCPPacketInfo> {
-        panic!("Not implemented");
-    }
+pub fn new_tcp_flags_constraints_automaton(flow: &FlowData) -> ConstraintsAutomaton<TCPEdgeTuple> {
+    panic!("Not implemented");
 }
 
-impl<T: Protocol> TimedAutomaton<T> {
+impl<T: EdgeType> TimedAutomaton<T> {
 
     pub fn intersect_automata(&self, constraints: &ConstraintsAutomaton<T>) -> TimedAutomaton<T> {
-        panic!("Not implemented");
+        // TODO complete
+        self.clone()
     }
 
-    pub fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Vec<T> {
+    pub fn sample<R: Rng + ?Sized, U>(&self, rng: &mut R, header_creator: impl Fn(Vec<u32>, T) -> U) -> Vec<U> {
         let mut output = vec![];
         let mut current_state = self.initial_state;
         while current_state != self.accepting_state {
@@ -68,10 +78,11 @@ impl<T: Protocol> TimedAutomaton<T> {
                 weights.push(e.transition_proba);
             }
             let dist = WeightedIndex::new(&weights).unwrap();
-            let nb = dist.sample(rng);
-            current_state = self.graph[current_state].out_edges[nb].dst_node;
-            output.push(self.graph[current_state].out_edges[nb].data);
-            dbg!(current_state);
+            let e = &self.graph[current_state].out_edges[dist.sample(rng)];
+            current_state = e.dst_node;
+            let data = e.data.clone();
+            let data = header_creator(vec![], data);
+            output.push(data);
         }
         output
     }
@@ -85,10 +96,10 @@ pub struct JsonAutomaton {
     initial_state: usize,
     accepting_state: usize,
     pub protocol: JsonProtocol,
-    metadata: MetaData,
+    metadata: AutomatonMetaData,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 struct Noise {
     none: f32,
     deletion: f32,
@@ -114,15 +125,15 @@ pub enum JsonProtocol {
     ICMP
 }
 
-#[derive(Deserialize, Debug)]
-struct MetaData {
+#[derive(Deserialize, Debug, Clone)]
+struct AutomatonMetaData {
     select_dst_ports: Vec<u32>,
     ignore_dst_ports: Vec<u32>,
     input_file: String,
     creation_time: String,
 }
 
-impl<T: Protocol> TimedAutomaton<T> {
+impl<T: EdgeType> TimedAutomaton<T> {
     pub fn import_timed_automaton(a: JsonAutomaton, symbol_parser: impl Fn(String) -> T) -> Self {
         let mut nodes_nb = 0;
         let mut graph : Vec<TimedNode<T>> = vec![];
