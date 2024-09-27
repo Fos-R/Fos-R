@@ -3,19 +3,22 @@ use std::fs::File;
 use std::fs;
 use std::ffi::OsStr;
 use std::path::PathBuf;
+use rand_pcg::Pcg32;
+use rand::prelude::*;
 
 mod automaton;
 
 pub struct Stage2 {
     tcp_automata: Vec<automaton::TimedAutomaton<TCPPacketInfo>>,
     udp_automata: Vec<automaton::TimedAutomaton<UDPPacketInfo>>,
-    icmp_automata: Vec<automaton::TimedAutomaton<ICMPPacketInfo>>
+    icmp_automata: Vec<automaton::TimedAutomaton<ICMPPacketInfo>>,
+    rng: Pcg32,
 }
 
 impl Stage2 {
 
-    pub fn new() -> Self {
-        Stage2 { tcp_automata: vec![], udp_automata: vec![], icmp_automata: vec![] }
+    pub fn new(seed: u64) -> Self {
+        Stage2 { tcp_automata: vec![], udp_automata: vec![], icmp_automata: vec![], rng: Pcg32::seed_from_u64(seed) }
     }
 
     pub fn import_automata_from_dir(&mut self, directory_name: &str) {
@@ -50,15 +53,17 @@ impl Stage2 {
         Ok(())
     }
 
-    pub fn generate_tcp_packets_info(&self, flow: &FlowData) -> PacketsIR<TCPPacketInfo> {
+    pub fn generate_tcp_packets_info(&mut self, flow: FlowData) -> PacketsIR<TCPPacketInfo> {
+        // TODO: select correct TCP automata
+        let packets_info = self.tcp_automata[0].sample(&mut self.rng);
+        PacketsIR::<TCPPacketInfo> { packets_info, flow: Flow::TCPFlow(flow) }
+    }
+
+    pub fn generate_udp_packets_info(&self, flow: FlowData) -> PacketsIR<UDPPacketInfo> {
         panic!("Not implemented");
     }
 
-    pub fn generate_udp_packets_info(&self, flow: &FlowData) -> PacketsIR<UDPPacketInfo> {
-        panic!("Not implemented");
-    }
-
-    pub fn generate_icmp_packets_info(&self, flow: &FlowData) -> PacketsIR<ICMPPacketInfo> {
+    pub fn generate_icmp_packets_info(&self, flow: FlowData) -> PacketsIR<ICMPPacketInfo> {
         panic!("Not implemented");
     }
 

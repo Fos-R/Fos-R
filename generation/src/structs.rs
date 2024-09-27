@@ -84,7 +84,7 @@ pub fn parse_icmp_symbol(symbol: String) -> ICMPPacketInfo
 }
 
 
-pub trait Protocol {
+pub trait Protocol : Copy {
     fn get_direction(&self) -> PacketDirection;
     fn get_iat(&self) -> Duration;
 }
@@ -118,8 +118,8 @@ impl Protocol for ICMPPacketInfo {
 
 #[derive(Debug)]
 pub struct PacketsIR<T: Protocol> { // Intermediate representation (as output by stage 2)
-    packets_info: Vec<T>,
-    flow: Flow
+    pub packets_info: Vec<T>,
+    pub flow: Flow
 }
 
 #[derive(Debug)]
