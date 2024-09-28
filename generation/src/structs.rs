@@ -11,17 +11,23 @@ pub enum PacketDirection {
     Backward, // server to client
 }
 
+#[derive(Debug,Clone)]
+pub enum Payload {
+    Empty(),
+    Replay(Vec<u8>),
+    Random(usize)
+}
+
 #[derive(Debug,Clone,Copy)]
 pub enum PayloadType {
     Empty,
-    Print,
-    LowEntropy,
-    HighEntropy
+    Replay,
+    Random
 }
 
 pub trait Protocol {
     fn get_direction(&self) -> PacketDirection;
-    fn get_iat(&self) -> Duration;
+    fn get_ts(&self) -> Instant;
 }
 
 pub trait EdgeType : Copy {}

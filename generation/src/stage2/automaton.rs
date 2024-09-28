@@ -28,8 +28,28 @@ struct TimedEdge<T: EdgeType> {
     src_node: usize, // not sure if useful
     transition_proba: f32,
     data: T,
-    mu: Vec<f32>, // TODO: find a better type
-    cov: Vec<Vec<f32>> // TODO: find a better type
+    mu: [f32; 2],
+    cov: [[f32; 2]; 2],
+    tss: Vec<TSS>,
+}
+
+impl<T: EdgeType> TimedEdge<T> {
+    // https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Conditional_distributions
+
+    fn get_conditioned_mu(&self, size: f32) -> f32 {
+        self.mu[0] + self.cov[0][1] / self.cov[1][1] * (size - self.mu[1])
+    }
+
+    fn get_conditioned_cov(&self, size: f32) -> f32 {
+        self.cov[0][0] - self.cov[0][1] * self.cov[0][1] / self.cov[1][1]
+    }
+}
+
+#[derive(Debug,Clone)]
+struct TSS {
+    tss_nb: usize,
+    letter_nb: usize,
+    payload_size: u32,
 }
 
 #[derive(Debug,Clone)]
@@ -68,9 +88,10 @@ impl<T: EdgeType> TimedAutomaton<T> {
         self.clone()
     }
 
-    pub fn sample<R: Rng + ?Sized, U>(&self, rng: &mut R, header_creator: impl Fn(Vec<u32>, T) -> U) -> Vec<U> {
+    pub fn sample<R: Rng + ?Sized, U>(&self, rng: &mut R, initial_ts: Instant, header_creator: impl Fn(Payload, Instant, T) -> U) -> Vec<U> {
         let mut output = vec![];
         let mut current_state = self.initial_state;
+        let mut current_ts = initial_ts;
         while current_state != self.accepting_state {
             assert!(!self.graph[current_state].out_edges.is_empty());
             let mut weights = vec![];
@@ -80,8 +101,9 @@ impl<T: EdgeType> TimedAutomaton<T> {
             let dist = WeightedIndex::new(&weights).unwrap();
             let e = &self.graph[current_state].out_edges[dist.sample(rng)];
             current_state = e.dst_node;
+            current_ts += Duration::new(0,0); // TODO: tirage
             let data = e.data.clone();
-            let data = header_creator(vec![], data);
+            let data = header_creator(Payload::Empty(), current_ts, data); // TODO: tirage
             output.push(data);
         }
         output
@@ -116,6 +138,7 @@ struct JsonEdge {
     symbol: String,
     mu: Vec<f32>,
     cov: Vec<Vec<f32>>,
+    tss: Vec<Vec<u32>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -141,7 +164,8 @@ impl<T: EdgeType> TimedAutomaton<T> {
             graph.push(TimedNode { out_edges: vec![] });
         }
         for e in a.edges {
-            let new_edge = TimedEdge { dst_node: e.dst, src_node: e.src, transition_proba: e.p, data: symbol_parser(e.symbol), mu: e.mu, cov: e.cov };
+            let tss = e.tss.into_iter().map(|l| TSS { tss_nb: l[0] as usize, letter_nb:l[1] as usize, payload_size: l[2] }).collect();
+            let new_edge = TimedEdge { dst_node: e.dst, src_node: e.src, transition_proba: e.p, data: symbol_parser(e.symbol), mu: e.mu.try_into().unwrap(), cov: [[e.cov[0][0], e.cov[0][1]],[e.cov[1][0],e.cov[1][1]]], tss };
             graph[e.src].out_edges.push(new_edge);
             nodes_nb = max(max(nodes_nb, e.src+1), e.dst+1);
         }
