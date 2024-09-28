@@ -1,13 +1,12 @@
 use crate::structs::*;
 use crate::tcp::*;
-use crate::udp::*;
-use crate::icmp::*;
 use serde::Deserialize;
 use std::cmp::max;
 use rand::prelude::*;
 use rand::distributions::WeightedIndex;
 use rand::Rng;
 use std::time::{Duration, Instant};
+use rand_distr::{Normal, Distribution};
 
 // Automaton are graphs. Graphs are not straightforward in Rust due to ownership, so we reference nodes by their index in the graph. Indices are never reused, leading to a small memory leak. Since we do not need to remove regularly nodes, it’s not a big deal.
 
@@ -27,7 +26,7 @@ struct TimedEdge<T: EdgeType> {
     dst_node: usize,
     src_node: usize, // not sure if useful
     transition_proba: f32,
-    data: T,
+    data: Option<T>, // no data if transition to sink state
     mu: [f32; 2],
     cov: [[f32; 2]; 2],
     tss: Vec<TSS>,
@@ -40,7 +39,7 @@ impl<T: EdgeType> TimedEdge<T> {
         self.mu[0] + self.cov[0][1] / self.cov[1][1] * (size - self.mu[1])
     }
 
-    fn get_conditioned_cov(&self, size: f32) -> f32 {
+    fn get_conditioned_var(&self, size: f32) -> f32 {
         self.cov[0][0] - self.cov[0][1] * self.cov[0][1] / self.cov[1][1]
     }
 }
@@ -100,11 +99,22 @@ impl<T: EdgeType> TimedAutomaton<T> {
             }
             let dist = WeightedIndex::new(&weights).unwrap();
             let e = &self.graph[current_state].out_edges[dist.sample(rng)];
-            current_state = e.dst_node;
-            current_ts += Duration::new(0,0); // TODO: tirage
-            let data = e.data.clone();
-            let data = header_creator(Payload::Empty(), current_ts, data); // TODO: tirage
-            output.push(data);
+            if let Some(data) = e.data { // if $-transition, don’t create a header
+                let (payload, payload_size) = match data.get_payload_type() {
+                    PayloadType::Empty => (Payload::Empty, 0),
+                    PayloadType::Random => (Payload::Random(2), 2),
+                    PayloadType::Replay => (Payload::Replay(vec![0]), 1)
+                };
+                let mu = e.get_conditioned_mu(payload_size as f32);
+                let var = e.get_conditioned_var(payload_size as f32);
+                let normal = Normal::new(mu, var).unwrap();
+                let iat = normal.sample(rng);
+                current_state = e.dst_node;
+                current_ts += Duration::from_millis(iat as u64);
+                let data = data.clone();
+                let data = header_creator(payload, current_ts, data);
+                output.push(data);
+            }
         }
         output
     }
@@ -165,7 +175,13 @@ impl<T: EdgeType> TimedAutomaton<T> {
         }
         for e in a.edges {
             let tss = e.tss.into_iter().map(|l| TSS { tss_nb: l[0] as usize, letter_nb:l[1] as usize, payload_size: l[2] }).collect();
-            let new_edge = TimedEdge { dst_node: e.dst, src_node: e.src, transition_proba: e.p, data: symbol_parser(e.symbol), mu: e.mu.try_into().unwrap(), cov: [[e.cov[0][0], e.cov[0][1]],[e.cov[1][0],e.cov[1][1]]], tss };
+            let data =
+                if e.symbol.find("$").is_some() {
+                    None
+                } else {
+                    Some(symbol_parser(e.symbol))
+                };
+            let new_edge = TimedEdge { dst_node: e.dst, src_node: e.src, transition_proba: e.p, data, mu: e.mu.try_into().unwrap(), cov: [[e.cov[0][0], e.cov[0][1]],[e.cov[1][0],e.cov[1][1]]], tss };
             graph[e.src].out_edges.push(new_edge);
             nodes_nb = max(max(nodes_nb, e.src+1), e.dst+1);
         }
