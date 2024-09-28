@@ -20,6 +20,7 @@ for file in tcp_flows/*; do
     protoname=""
     timeseq=""
     payloads=""
+    error=0
     # order of the parameters is very important so TCP and UDP fields have the same array index. Payload can be empty so it’s at the end.
     # tshark -i - -T fields
     tshark -r $file -T fields \
@@ -27,6 +28,11 @@ for file in tcp_flows/*; do
         -e tcp.time_delta -e tcp.dstport -e tcp.len -e tcp.flags.str -e tcp.payload \
         -e udp.time_delta -e udp.dstport -e udp.length -e udp.length -e udp.payload \
         -e icmp.type -e icmp.code -e data.len -e data | { while read l; do
+        if [ "$((fwd_packets+bwd_packets))" -eq 300 ]; then
+            echo "Dropping flow: too many packets"
+            error=1
+            break
+        fi
         array=($l)
         proto=${array[0]}
         if [ "$proto" -eq 6 ] || [ "$proto" -eq 17 ]; then
@@ -74,6 +80,8 @@ for file in tcp_flows/*; do
         # id=$((id+1))
         # echo $id packets processed
     done
-    echo $protoname","$src_ip","$dst_ip","$dst_port","$fwd_packets","$bwd_packets","$fwd_bytes","$bwd_bytes","$timeseq","$payloads >> $outfile
+    if [ "$error" -eq 0 ]; then
+        echo $protoname","$src_ip","$dst_ip","$dst_port","$fwd_packets","$bwd_packets","$fwd_bytes","$bwd_bytes","$timeseq","$payloads >> $outfile
+    fi
     }
 done
