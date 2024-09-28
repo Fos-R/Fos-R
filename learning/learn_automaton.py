@@ -8,24 +8,47 @@ from Options import Options, GuardsFormat, Init, Search
 import pandas as pd
 import datetime
 
+def add_payload_type(row):
+    if row['protocol'] == "ICMP":
+        return row["time_sequence"] # no payload to analyze
+    headers = row['time_sequence'].split()
+    payloads = row["payloads"].split()
+    for i,p in enumerate(payloads):
+        p = p.split(":")[1]
+        hnibbles = [int(v,16)%4 for v in list(p)]+[int(v,16)//4 for v in list(p)]
+        if len(hnibbles)==0: # only P:, i.e., empty payload
+            headers[i]+="/Empty"
+        else:
+            random = False
+            if len(hnibbles) >= 20: # expected number of observations should be at least 5. There are 4 categories, so that’s at least 20 examples. Since each byte is split into 4 half-nibbles, it means that we need at least 5 bytes.
+                obs = [0]*4
+                for j in range(4):
+                    obs[j] += hnibbles.count(j)
+                random = (chisquare(obs).pvalue >= 0.05)
+            if random:
+                headers[i]+="/Random"
+            else:
+                headers[i]+="/Replay"
+    return " ".join(headers)
+
+
 def parse_TCP(input_string):
-    """
-        Contains: flags, direction, payload type, iat, payload size
-    """
     if "$" in input_string: return "$", [0,0]
-    match = re.match(r'([A-Za-z]+)/([><])/([A-Za-z]+)/(-?\d+.\d+)/(\d+)', input_string)
+    regex_format2 = r'([A-Za-z]+)/([><])/(-?\d+\.?\d*)/(\d+)/([A-Za-z]+)'
+    match = re.match(regex_format2, input_string)
     if match:
-        return match.group(1) + "_" + match.group(2) + "_" + match.group(3), [int(float(match.group(4).replace(',', '.')) * 1e6), int(match.group(5))]
-    assert False, "Parsing error on "+input_string
+        return match.group(1) + "_" + match.group(2) + "_" + match.group(5), [int(float(match.group(3).replace(',', '.')) * 1e3), int(match.group(4))]
+    else:
+        assert False, "Parsing error on "+input_string
 
 def parse_UDP(input_string):
     """
-        Contains: direction, payload type, iat, payload size
+        Contains: direction, iat, payload size, payload type
     """
     if "$" in input_string: return "$", [0,0]
-    match = re.match(r'([><])/([A-Za-z]+)/(-?\d+.\d+)/(\d+)', input_string)
+    match = re.match(r'([><])/(-?\d+.\d+)/(\d+)/([A-Za-z]+)', input_string)
     if match:
-        return match.group(1) + "_" + match.group(2), [int(float(match.group(3).replace(',', '.')) * 1e6), int(match.group(4))]
+        return match.group(1) + "_" + match.group(4), [int(float(match.group(2).replace(',', '.')) * 1e6), int(match.group(3))]
     assert False, "Parsing error on "+input_string
 
 def parse_ICMP(input_string):
@@ -84,6 +107,9 @@ if __name__ == '__main__':
         df = df[df["dst_port"].isin(select_dst_ports)]
     elif len(ignore_dst_ports) > 0:
         df = df[~df["dst_port"].isin(ignore_dst_ports)]
+
+    df = df.apply(add_payload_type, axis=1)
+
     df = df["time_sequence"]
 
     len_before = len(df)
@@ -108,8 +134,56 @@ if __name__ == '__main__':
 
     l = exhaustive_search(options, tss_list=df, verbose=args.verbose, noise_model=noise_model)
     # print("Automaton successfully learned")
+    tmp = []
+    for e in ta.edges:
+        if e.symbol != "$":
+            d = {}
+            if "Replay" in e.symbol:
+                tss = []
+                for ts, t in e.tss.items():
+                    tss = tss + [payloads[ts].split()[a].split(":")[1] for (a,_) in t]
+                values, counts = np.unique(tss, return_counts=True)
+                d["payloads"] = { "payloads": [str(s) for s in values] }
+                d["payloads"]["type"] = "HexCodes"
+                # if len(set(counts))==1: # all weights are equal
+                #     d["payloads"]["type"] = "HexCodes"
+                # else:
+                #     d["payloads"]["type"] = "WeightedHexCodes"
+                #     d["payloads"]["weights"] = [int(i) for i in counts]
+            elif "Random" in e.symbol:
+                lengths = []
+                for ts, t in e.tss.items():
+                    lengths = lengths + [int(len(payloads[ts].split()[a].split(":")[1])/2) for (a,_) in t]
+                    # divide by 2 because it’s hexadecimal encoding, so 2 letters -> 1 byte
+                d["payloads"] = { "type": "Lengths", "lengths": lengths }
+            else:
+                d["payloads"] = { "type": "NoPayload" }
+            # if empty: keep tss empty
+            d["p"] = e.proba
+            d["src"] = ta.states.index(e.source)
+            d["dst"] = ta.states.index(e.destination)
+            d["symbol"] = e.symbol
+            d["mu"] = e.mu.tolist()
+            d["cov"] = e.cov.tolist()
+            tmp.append(d)
 
-    d = l.ta.dict_export_ta()
+    noise = {}
+    noise["none"] = 2**(-self.cost_transition)
+    noise["deletion"] = 2**(-self.cost_deletion)
+    noise["reemission"] = 2**(-self.cost_reemission)
+    noise["transposition"] = 2**(-self.cost_transposition)
+    noise["addition"] = 2**(-self.cost_addition)
+    s = sum(noise.values())
+    for k,v in noise.items(): # normalize, just in case
+        noise[k] = v/s
+
+    d = { "edges": tmp, "noise": noise}
+    for i,n in enumerate(self.states):
+        if n.initial:
+            d["initial_state"] = i
+        if n.accepting:
+            d["accepting_state"] = i
+
     d["protocol"] = protocol
     metadata = {}
     metadata["select_dst_ports"] = args.select_dst_ports
