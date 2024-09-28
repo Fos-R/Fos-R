@@ -1,15 +1,19 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use crate::*;
 use crate::tcp::*;
 use crate::udp::*;
 use crate::icmp::*;
+use rand_pcg::Pcg32;
+use rand::prelude::*;
 
-pub struct Stage3 {} // In the future, add network/system configuration here
+pub struct Stage3 {
+    rng: Pcg32,
+} // In the future, add network/system configuration here
 
 impl Stage3 {
 
-    pub fn new() -> Self {
-        Stage3 {}
+    pub fn new(seed: u64) -> Self {
+        Stage3 { rng: Pcg32::seed_from_u64(seed) }
     }
 
     /// Generate TCP packets from an intermediate representation

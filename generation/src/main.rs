@@ -18,7 +18,7 @@ fn main() {
     let mut s2 = stage2::Stage2::new(42);
     let nb_automata = s2.import_automata_from_dir("../models/tas/");
     assert!(nb_automata > 0);
-    let s3 = stage3::Stage3::new();
+    let s3 = stage3::Stage3::new(42);
 
     let flows = vec![Flow::TCPFlow(FlowData {
     src_ip: Ipv4Addr::new(127, 0, 0, 1),
