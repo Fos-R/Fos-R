@@ -1,5 +1,8 @@
+#![allow(unused)]
+
 use std::net::Ipv4Addr;
 use std::time::{Duration, Instant};
+use std::fmt::Debug;
 
 // Stage 1 and 2 structures
 
@@ -30,15 +33,15 @@ pub struct FlowData {
 
 // Stage 2 structures
 
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug,Clone)]
 pub enum PayloadType {
     Empty,
-    Replay,
-    Random
+    Replay(Vec<Vec<u8>>),
+    Random(Vec<usize>)
 }
 
-pub trait EdgeType : Copy {
-    fn get_payload_type(&self) -> PayloadType;
+pub trait EdgeType : Debug {
+    fn get_payload_type(&self) -> &PayloadType;
 }
 
 // Stage 2 and 3 structures

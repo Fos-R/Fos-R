@@ -10,6 +10,7 @@ license = "GPL-3.0"
 
 [dependencies]
 crossbeam-channel = "0.5.13"
+hex = "0.4.3"
 packet_rs = "0.4.0"
 pcap = "2.2.0"
 rand = "0.8.5"

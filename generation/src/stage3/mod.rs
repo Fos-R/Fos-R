@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use std::time::Instant;
 use crate::*;
 use crate::tcp::*;

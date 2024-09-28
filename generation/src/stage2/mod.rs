@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use crate::structs::*;
 use crate::tcp::*;
 use crate::udp::*;

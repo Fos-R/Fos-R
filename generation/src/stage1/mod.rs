@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use crate::structs::*;
 use serde::Deserialize;
 use std::fs::File;
