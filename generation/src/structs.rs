@@ -3,6 +3,7 @@
 use std::net::Ipv4Addr;
 use std::time::{Duration, Instant};
 use std::fmt::Debug;
+use serde::Deserialize;
 
 // Stage 1 and 2 structures
 
@@ -42,6 +43,15 @@ pub enum PayloadType {
 
 pub trait EdgeType : Debug {
     fn get_payload_type(&self) -> &PayloadType;
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(tag = "type")]
+pub enum JsonPayload {
+    Lengths { lengths: Vec<usize> },
+    // WeightedHexCodes { payloads: Vec<String>, weights: Vec<u32> },
+    HexCodes { payloads: Vec<String> },
+    NoPayload
 }
 
 // Stage 2 and 3 structures

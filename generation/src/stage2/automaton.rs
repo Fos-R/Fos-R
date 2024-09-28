@@ -122,6 +122,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
                 let var = e.get_conditioned_var();
                 let normal = Normal::new(mu, var).unwrap();
                 let iat = normal.sample(rng).max(0.); // TODO: add a small random positive delay
+                                                      // TODO: faire cela biaise beaucoup vers un résultat = 0
                 current_state = e.dst_node;
                 current_ts += Duration::from_millis(iat as u64);
                 let data = header_creator(payload, current_ts, data);
@@ -153,7 +154,7 @@ struct JsonEdge {
     symbol: String,
     mu: Vec<f32>,
     cov: Vec<Vec<f32>>,
-    tss: Vec<String>,
+    payloads: JsonPayload,
 }
 
 #[derive(Deserialize, Debug)]
@@ -164,7 +165,7 @@ pub enum JsonProtocol {
 }
 
 impl<T: EdgeType> TimedAutomaton<T> {
-    pub fn import_timed_automaton(a: JsonAutomaton, symbol_parser: impl Fn(String, Vec<String>) -> T) -> Self {
+    pub fn import_timed_automaton(a: JsonAutomaton, symbol_parser: impl Fn(String, JsonPayload) -> T) -> Self {
         let mut nodes_nb = 0;
         let mut graph : Vec<TimedNode<T>> = vec![];
         for _ in 0..a.edges.len()+1 { // the automaton is connexe, so there #edges+1 >= #nodes
@@ -175,7 +176,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
                 if e.symbol.find("$").is_some() {
                     None
                 } else {
-                    Some(symbol_parser(e.symbol, e.tss))
+                    Some(symbol_parser(e.symbol, e.payloads))
                 };
             let new_edge = TimedEdge { dst_node: e.dst, src_node: e.src, transition_proba: e.p, data, mu: e.mu.try_into().unwrap(), cov: [[e.cov[0][0], e.cov[0][1]],[e.cov[1][0],e.cov[1][1]]] };
             graph[e.src].out_edges.push(new_edge);
