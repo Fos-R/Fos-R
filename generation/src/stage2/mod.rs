@@ -12,6 +12,7 @@ use rand::prelude::*;
 mod automaton;
 
 pub struct Stage2 {
+    // TODO: map port -> automata
     tcp_automata: Vec<automaton::TimedAutomaton<TCPEdgeTuple>>,
     udp_automata: Vec<automaton::TimedAutomaton<UDPEdgeTuple>>,
     icmp_automata: Vec<automaton::TimedAutomaton<ICMPEdgeTuple>>,
@@ -62,7 +63,7 @@ impl Stage2 {
         let automata = &self.tcp_automata[0];
         // let automata = automata.intersect_automata(&automaton::new_packet_number_constraints_automaton::<TCPPacketInfo>(&flow));
         // let automata = automata.intersect_automata(&automaton::new_tcp_flags_constraints_automaton(&flow));
-        let packets_info = automata.sample(&mut self.rng, create_tcp_header);
+        let packets_info = automata.sample(&mut self.rng, flow.timestamp, create_tcp_header);
         PacketsIR::<TCPPacketInfo> { packets_info, flow: Flow::TCPFlow(flow) }
     }
 
