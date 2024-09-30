@@ -94,10 +94,11 @@ impl<T: EdgeType> TimedAutomaton<T> {
         panic!("Not implemented");
     }
 
-    pub fn sample<R: Rng + ?Sized, U>(&self, rng: &mut R, initial_ts: Instant, header_creator: impl Fn(Payload, Instant, &T) -> U) -> Vec<U> {
+    pub fn sample<R: Rng + ?Sized, U>(&self, rng: &mut R, initial_ts: Instant, header_creator: impl Fn(Payload, NoiseType, Instant, &T) -> U) -> Vec<U> {
         let mut output = vec![];
         let mut current_state = self.initial_state;
         let mut current_ts = initial_ts;
+        // TODO: sample with noise
         while current_state != self.accepting_state {
             assert!(!self.graph[current_state].out_edges.is_empty());
             let mut weights = vec![];
@@ -125,7 +126,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
                                                       // TODO: faire cela biaise beaucoup vers un résultat = 0
                 current_state = e.dst_node;
                 current_ts += Duration::from_millis(iat as u64);
-                let data = header_creator(payload, current_ts, data);
+                let data = header_creator(payload, NoiseType::None, current_ts, data);
                 output.push(data);
             }
         }
@@ -164,8 +165,28 @@ pub enum JsonProtocol {
     ICMP
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(tag = "type")]
+enum JsonPayload {
+    Lengths { lengths: Vec<usize> },
+    // WeightedHexCodes { payloads: Vec<String>, weights: Vec<u32> },
+    HexCodes { payloads: Vec<String> },
+    NoPayload
+}
+
+impl JsonPayload {
+
+    fn into_payload_type(self) -> PayloadType {
+        match self {
+                            JsonPayload::Lengths { lengths: l } => PayloadType::Random(l),
+                            JsonPayload::NoPayload => PayloadType::Empty,
+                            JsonPayload::HexCodes { payloads: p } => PayloadType::Replay(p.into_iter().map(|s| hex::decode(s).expect("Payload decoding failed")).collect())
+        }
+    }
+}
+
 impl<T: EdgeType> TimedAutomaton<T> {
-    pub fn import_timed_automaton(a: JsonAutomaton, symbol_parser: impl Fn(String, JsonPayload) -> T) -> Self {
+    pub fn import_timed_automaton(a: JsonAutomaton, symbol_parser: impl Fn(String, PayloadType) -> T) -> Self {
         let mut nodes_nb = 0;
         let mut graph : Vec<TimedNode<T>> = vec![];
         for _ in 0..a.edges.len()+1 { // the automaton is connexe, so there #edges+1 >= #nodes
@@ -176,14 +197,14 @@ impl<T: EdgeType> TimedAutomaton<T> {
                 if e.symbol.find("$").is_some() {
                     None
                 } else {
-                    Some(symbol_parser(e.symbol, e.payloads))
+                    Some(symbol_parser(e.symbol, e.payloads.into_payload_type()))
                 };
             let new_edge = TimedEdge { dst_node: e.dst, src_node: e.src, transition_proba: e.p, data, mu: e.mu.try_into().unwrap(), cov: [[e.cov[0][0], e.cov[0][1]],[e.cov[1][0],e.cov[1][1]]] };
             graph[e.src].out_edges.push(new_edge);
             nodes_nb = nodes_nb.max(e.src+1).max(e.dst+1);
         }
         graph.truncate(nodes_nb);
-        dbg!(&graph);
+        // dbg!(&graph);
         TimedAutomaton::<T> { graph, metadata: a.metadata, noise: a.noise, initial_state: a.initial_state, accepting_state: a.accepting_state }
     }
 }

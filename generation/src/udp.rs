@@ -7,7 +7,8 @@ use std::time::Instant;
 pub struct UDPPacketInfo {
     pub payload: Payload,
     pub ts: Instant,
-    pub direction: PacketDirection
+    pub direction: PacketDirection,
+    pub noise: NoiseType,
 }
 
 impl Protocol for UDPPacketInfo {
@@ -16,6 +17,9 @@ impl Protocol for UDPPacketInfo {
     }
     fn get_ts(&self) -> Instant {
         self.ts
+    }
+    fn get_noise_type(&self) -> NoiseType {
+        self.noise
     }
 }
 
@@ -31,22 +35,17 @@ impl EdgeType for UDPEdgeTuple {
     }
 }
 
-pub fn parse_udp_symbol(symbol: String, tss: JsonPayload) -> UDPEdgeTuple {
+pub fn parse_udp_symbol(symbol: String, p: PayloadType) -> UDPEdgeTuple {
     let strings : Vec<&str> = symbol.split("_").collect();
     UDPEdgeTuple {  direction:
         match strings[0] {
             _ if strings[0] == ">" => PacketDirection::Forward,
             _ => PacketDirection::Backward
         },
-                    payload_type:
-                        match tss {
-                            JsonPayload::Lengths { lengths: l } => PayloadType::Random(l),
-                            JsonPayload::NoPayload => PayloadType::Empty,
-                            JsonPayload::HexCodes { payloads: p } => PayloadType::Replay(p.into_iter().map(|s| hex::decode(s).expect("Payload decoding failed")).collect())
-        },
+        payload_type: p
     }
 }
 
-pub fn create_udp_header(payload: Payload, ts: Instant, e: &UDPEdgeTuple) -> UDPPacketInfo {
-    UDPPacketInfo { payload, ts, direction: e.direction }
+pub fn create_udp_header(payload: Payload, noise: NoiseType, ts: Instant, e: &UDPEdgeTuple) -> UDPPacketInfo {
+    UDPPacketInfo { payload, noise, ts, direction: e.direction }
 }
