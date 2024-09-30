@@ -45,16 +45,16 @@ pub trait EdgeType : Debug {
     fn get_payload_type(&self) -> &PayloadType;
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(tag = "type")]
-pub enum JsonPayload {
-    Lengths { lengths: Vec<usize> },
-    // WeightedHexCodes { payloads: Vec<String>, weights: Vec<u32> },
-    HexCodes { payloads: Vec<String> },
-    NoPayload
-}
-
 // Stage 2 and 3 structures
+
+#[derive(Debug,Clone,Copy)]
+pub enum NoiseType {
+    None,
+    Deleted,
+    Reemitted,
+    Transposed,
+    Added
+}
 
 #[derive(Debug,Clone,Copy)]
 pub enum PacketDirection {
@@ -70,6 +70,7 @@ pub enum Payload {
 }
 
 pub trait Protocol {
+    fn get_noise_type(&self) -> NoiseType;
     fn get_direction(&self) -> PacketDirection;
     fn get_ts(&self) -> Instant;
 }

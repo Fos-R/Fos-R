@@ -8,7 +8,8 @@ pub struct ICMPPacketInfo {
     // we assume no payload
     // we may need to add more fields to correctly generate them
     pub ts: Instant,
-    pub direction: PacketDirection
+    pub direction: PacketDirection,
+    pub noise: NoiseType,
 }
 
 impl Protocol for ICMPPacketInfo {
@@ -17,6 +18,9 @@ impl Protocol for ICMPPacketInfo {
     }
     fn get_ts(&self) -> Instant {
         self.ts
+    }
+    fn get_noise_type(&self) -> NoiseType {
+        self.noise
     }
 }
 
@@ -31,19 +35,15 @@ impl EdgeType for ICMPEdgeTuple {
     }
 }
 
-pub fn parse_icmp_symbol(symbol: String, tss: JsonPayload) -> ICMPEdgeTuple {
-    if let JsonPayload::NoPayload = tss {
-        ICMPEdgeTuple { direction:
-            match symbol {
-                _ if symbol == ">" => PacketDirection::Forward,
-                _ => PacketDirection::Backward
-            }
+pub fn parse_icmp_symbol(symbol: String, _t: PayloadType) -> ICMPEdgeTuple {
+    ICMPEdgeTuple { direction:
+        match symbol {
+            _ if symbol == ">" => PacketDirection::Forward,
+            _ => PacketDirection::Backward
         }
-    } else {
-        panic!("ICMP packet with payload?")
     }
 }
 
-pub fn create_icmp_header(_payload: Payload, ts: Instant, e: &ICMPEdgeTuple) -> ICMPPacketInfo {
-    ICMPPacketInfo { ts, direction: e.direction }
+pub fn create_icmp_header(_payload: Payload, noise: NoiseType, ts: Instant, e: &ICMPEdgeTuple) -> ICMPPacketInfo {
+    ICMPPacketInfo { ts, direction: e.direction, noise }
 }

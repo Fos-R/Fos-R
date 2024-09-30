@@ -8,6 +8,7 @@ pub struct TCPPacketInfo {
     pub payload: Payload,
     pub ts: Instant,
     pub direction: PacketDirection,
+    pub noise: NoiseType,
     pub s_flag: bool,
     pub a_flag: bool,
     pub f_flag: bool,
@@ -22,6 +23,9 @@ impl Protocol for TCPPacketInfo {
     }
     fn get_ts(&self) -> Instant {
         self.ts
+    }
+    fn get_noise_type(&self) -> NoiseType {
+        self.noise
     }
 }
 
@@ -43,19 +47,14 @@ impl EdgeType for TCPEdgeTuple {
     }
 }
 
-pub fn parse_tcp_symbol(symbol: String, tss: JsonPayload) -> TCPEdgeTuple {
+pub fn parse_tcp_symbol(symbol: String, p: PayloadType) -> TCPEdgeTuple {
     let strings : Vec<&str> = symbol.split("_").collect();
     TCPEdgeTuple {  direction:
         match strings[1] {
             _ if strings[1] == ">" => PacketDirection::Forward,
             _ => PacketDirection::Backward
         },
-                    payload_type:
-                        match tss {
-                            JsonPayload::Lengths { lengths: l } => PayloadType::Random(l),
-                            JsonPayload::NoPayload => PayloadType::Empty,
-                            JsonPayload::HexCodes { payloads: p } => PayloadType::Replay(p.into_iter().map(|s| hex::decode(s).expect("Payload decoding failed")).collect())
-        },
+                    payload_type: p,
                     s_flag: strings[0].find('S').is_some(),
                     a_flag: strings[0].find('A').is_some(),
                     f_flag: strings[0].find('F').is_some(),
@@ -66,10 +65,11 @@ pub fn parse_tcp_symbol(symbol: String, tss: JsonPayload) -> TCPEdgeTuple {
 
 }
 
-pub fn create_tcp_header(payload: Payload, ts: Instant, e: &TCPEdgeTuple) -> TCPPacketInfo {
+pub fn create_tcp_header(payload: Payload, noise: NoiseType, ts: Instant, e: &TCPEdgeTuple) -> TCPPacketInfo {
     TCPPacketInfo {
         payload,
         ts,
+        noise,
         direction: e.direction,
         s_flag: e.s_flag,
         a_flag: e.a_flag,
