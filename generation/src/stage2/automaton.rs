@@ -7,7 +7,7 @@ use rand::prelude::*;
 use rand::distributions::WeightedIndex;
 use rand::Rng;
 use std::time::{Duration, Instant};
-use rand_distr::{Normal, Distribution};
+use rand_distr::{Normal, Poisson, Distribution};
 
 // Automaton are graphs. Graphs are not straightforward in Rust due to ownership, so we reference nodes by their index in the graph. Indices are never reused, leading to a small memory leak. Since we do not need to remove regularly nodes, it’s not a big deal.
 
@@ -21,6 +21,12 @@ struct TimedNode<T: EdgeType> {
 }
 
 #[derive(Debug,Clone)]
+enum EdgeDistribution {
+    Normal, // TODO: add cond_var to compute it only once
+    Poisson
+}
+
+#[derive(Debug,Clone)]
 struct TimedEdge<T: EdgeType> {
     dst_node: usize,
     src_node: usize, // not sure if useful
@@ -28,17 +34,23 @@ struct TimedEdge<T: EdgeType> {
     data: Option<T>, // no data if transition to sink state
     mu: [f32; 2],
     cov: [[f32; 2]; 2],
+    p: EdgeDistribution,
 }
 
-impl<T: EdgeType> TimedEdge<T> {
+impl EdgeDistribution {
     // https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Conditional_distributions
 
-    fn get_conditioned_mu(&self, size: f32) -> f32 {
-        self.mu[0] + self.cov[0][1] / self.cov[1][1] * (size - self.mu[1])
-    }
-
-    fn get_conditioned_var(&self) -> f32 {
-        self.cov[0][0] - self.cov[0][1] * self.cov[0][1] / self.cov[1][1]
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R, cond_mu: f32, cond_var: f32) -> f32 {
+        match &self {
+            EdgeDistribution::Normal => {
+                let normal = Normal::new(cond_mu, cond_var).unwrap();
+                normal.sample(rng).max(0.)
+            },
+            EdgeDistribution::Poisson => {
+                let poisson = Poisson::new((cond_mu + cond_var)/2.0).unwrap();
+                poisson.sample(rng).max(0.)
+            }
+        }
     }
 }
 
@@ -114,16 +126,18 @@ impl<T: EdgeType> TimedAutomaton<T> {
                         let size = sizes.choose(rng).unwrap().clone();
                         (Payload::Random(size), size)
                     },
+                    PayloadType::Text(tss) => { // TODO
+                        let ts = tss.choose(rng).unwrap();
+                        (Payload::Replay(ts.clone().into()), ts.len())
+                    }
                     PayloadType::Replay(tss) => {
                         let ts = tss.choose(rng).unwrap();
                         (Payload::Replay(ts.clone()), ts.len())
                     }
                 };
-                let mu = e.get_conditioned_mu(payload_size as f32);
-                let var = e.get_conditioned_var();
-                let normal = Normal::new(mu, var).unwrap();
-                let iat = normal.sample(rng).max(0.); // TODO: add a small random positive delay
-                                                      // TODO: faire cela biaise beaucoup vers un résultat = 0
+                let cond_mu = e.mu[0] + e.cov[0][1] / e.cov[1][1] * (payload_size as f32 - e.mu[1]);
+                let cond_var = e.cov[0][0] - e.cov[0][1] * e.cov[0][1] / e.cov[1][1];
+                let iat = e.p.sample(rng, cond_mu, cond_var);
                 current_state = e.dst_node;
                 current_ts += Duration::from_millis(iat as u64);
                 let data = header_creator(payload, NoiseType::None, current_ts, data);
@@ -169,8 +183,8 @@ pub enum JsonProtocol {
 #[serde(tag = "type")]
 enum JsonPayload {
     Lengths { lengths: Vec<usize> },
-    // WeightedHexCodes { payloads: Vec<String>, weights: Vec<u32> },
-    HexCodes { payloads: Vec<String> },
+    HexCodes { content: Vec<String> },
+    Text { content: Vec<String> },
     NoPayload
 }
 
@@ -180,7 +194,8 @@ impl JsonPayload {
         match self {
                             JsonPayload::Lengths { lengths: l } => PayloadType::Random(l),
                             JsonPayload::NoPayload => PayloadType::Empty,
-                            JsonPayload::HexCodes { payloads: p } => PayloadType::Replay(p.into_iter().map(|s| hex::decode(s).expect("Payload decoding failed")).collect())
+                            JsonPayload::HexCodes { content: p } => PayloadType::Replay(p.into_iter().map(|s| hex::decode(s).expect("Payload decoding failed")).collect()),
+                            JsonPayload::Text { content: p } => PayloadType::Text(p),
         }
     }
 }
@@ -199,7 +214,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
                 } else {
                     Some(symbol_parser(e.symbol, e.payloads.into_payload_type()))
                 };
-            let new_edge = TimedEdge { dst_node: e.dst, src_node: e.src, transition_proba: e.p, data, mu: e.mu.try_into().unwrap(), cov: [[e.cov[0][0], e.cov[0][1]],[e.cov[1][0],e.cov[1][1]]] };
+            let new_edge = TimedEdge { dst_node: e.dst, src_node: e.src, transition_proba: e.p, data, p: EdgeDistribution::Normal, mu: e.mu.try_into().unwrap(), cov: [[e.cov[0][0], e.cov[0][1]],[e.cov[1][0],e.cov[1][1]]] };
             graph[e.src].out_edges.push(new_edge);
             nodes_nb = nodes_nb.max(e.src+1).max(e.dst+1);
         }
