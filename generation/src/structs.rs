@@ -37,6 +37,7 @@ pub struct FlowData {
 #[derive(Debug,Clone)]
 pub enum PayloadType {
     Empty,
+    Text(Vec<String>),
     Replay(Vec<Vec<u8>>),
     Random(Vec<usize>)
 }
