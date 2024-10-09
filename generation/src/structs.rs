@@ -57,7 +57,7 @@ pub enum NoiseType {
     Added
 }
 
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug,Clone,Copy,PartialEq,Eq)]
 pub enum PacketDirection {
     Forward, // client to server
     Backward, // server to client
@@ -68,6 +68,17 @@ pub enum Payload {
     Empty,
     Replay(Vec<u8>),
     Random(usize)
+}
+
+impl Payload {
+    pub fn get_payload_size(&self) -> usize {
+        match &self {
+            Payload::Empty => 0,
+            Payload::Replay(l) => l.len(),
+            Payload::Random(len) => *len,
+        }
+    }
+
 }
 
 pub trait Protocol {
