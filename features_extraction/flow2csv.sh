@@ -3,14 +3,16 @@
 
 # mkdir -p tcp_flows
 
-# PcapSplitter -f $1 -o tcp_flows -m connection -i tcp # split the streams (TCP only)
+# PcapSplitter -f $1 -o tcp_flows -m connection -i "(tcp || udp || icmp)" # split the streams (TCP only)
 
-if [ "$OUTPUT_FILE" = "" ]; then outfile="output.csv"; else outfile=$OUTPUT_FILE; fi
-id=0
-echo protocol,src_ip,dst_ip,dst_port,fwd_packets,bwd_packets,fwd_bytes,bwd_bytes,time_sequence,payloads > $outfile
-for file in tcp_flows/*; do
+if [ "$1" = "" ]; then echo "Usage: $0 pcap-folder [output_file]"; exit; fi
+outfile=$2
+if [ "$outfile" = "" ]; then outfile="output.csv"; fi
+
+echo timestamp,protocol,src_ip,dst_ip,dst_port,fwd_packets,bwd_packets,fwd_bytes,bwd_bytes,time_sequence,payloads > $outfile
+for file in $1/*; do
     echo "Process file $file"
-    # TODO: add flow timestamp
+    timestamp=""
     src_ip=""
     fwd_packets=0
     bwd_packets=0
@@ -24,44 +26,48 @@ for file in tcp_flows/*; do
     # order of the parameters is very important so TCP and UDP fields have the same array index. Payload can be empty so it’s at the end.
     # tshark -i - -T fields
     tshark -r $file -T fields \
+        -e frame.time_epoch
         -e ip.proto -e ip.src -e ip.dst -e ip.ttl \
         -e tcp.time_delta -e tcp.dstport -e tcp.len -e tcp.flags.str -e tcp.payload \
         -e udp.time_delta -e udp.dstport -e udp.length -e udp.length -e udp.payload \
         -e icmp.type -e icmp.code -e data.len -e data | { while read l; do
-        if [ "$((fwd_packets+bwd_packets))" -eq 300 ]; then
+        if [ "$((fwd_packets+bwd_packets))" -eq 250 ]; then
             echo "Dropping flow: too many packets"
             error=1
             break
         fi
         array=($l)
-        proto=${array[0]}
+        proto=${array[1]}
+        if [ "$timestamp" = "" ]; then
+            timestamp=${array[0]}
+        fi
         if [ "$proto" -eq 6 ] || [ "$proto" -eq 17 ]; then
-            delta=$(echo "${array[4]}*1000000 / 1" | bc) # extract the time delta (unit: microsecond)
-            ip=${array[1]} # extract the source IP (for direction identification)
-            len=${array[6]} # extract the paquet length
-            payloads=$payloads"P:"${array[8]}" " # extract payload (ensure it can not be empty)
+            delta=$(echo "${array[5]}*1000000 / 1" | bc) # extract the time delta (unit: microsecond)
+            ip=${array[2]} # extract the source IP (for direction identification)
+            len=${array[7]} # extract the paquet length
+            payloads=$payloads"P:"${array[9]}" " # extract payload (ensure it can not be empty)
             if [ "$src_ip" = "" ]; then
                 src_ip=$ip # extract only once destination IP and ports
-                dst_ip=${array[2]}
-                dst_port=${array[5]}
+                dst_ip=${array[3]}
+                dst_port=${array[6]}
             fi # memorize first IP source
             # maybe use the file name to get the source IP?
             if [ "$src_ip" = "$ip" ]; then # infer direction
                 dir=">"
                 fwd_packets=$((fwd_packets+1))
                 fwd_bytes=$((fwd_bytes+len))
-                fwd_ttl=${array[3]}
+                fwd_ttl=${array[4]}
             else
                 dir="<"
                 bwd_packets=$((bwd_packets+1))
                 bwd_bytes=$((bwd_bytes+len))
-                bwd_ttl=${array[3]}
+                bwd_ttl=${array[4]}
                 total_time=$((total_time+delta))
             fi
             # output new letter (ensure it can not be empty)
             if [ "$proto" -eq 6 ]; then
                 protoname="TCP"
-                flags=$(echo ${array[7]} | tr -d "·") # specific to TCP
+                flags=$(echo ${array[8]} | tr -d "·") # specific to TCP
                 timeseq=$timeseq$flags/$dir/$delta/$len" "
             elif [ "$proto" -eq 17 ]; then
                 protoname="UDP"
@@ -69,19 +75,17 @@ for file in tcp_flows/*; do
             fi
         elif [ "$proto" -eq 1 ]; then
             protoname="ICMP"
-            type=${array[4]}
-            code=${array[5]}
-            len=${array[6]}
+            type=${array[5]}
+            code=${array[6]}
+            len=${array[7]}
             timeseq=$timeseq$type/$code/$len" "
-            payloads=$payloads"P:"${array[7]}" " # extract payload (ensure it can not be empty)
+            payloads=$payloads"P:"${array[8]}" " # extract payload (ensure it can not be empty)
         else
             echo "Unknown protocol ("$proto"), packed dropped"
         fi
-        # id=$((id+1))
-        # echo $id packets processed
     done
     if [ "$error" -eq 0 ]; then
-        echo $protoname","$src_ip","$dst_ip","$dst_port","$fwd_packets","$bwd_packets","$fwd_bytes","$bwd_bytes","$timeseq","$payloads >> $outfile
+        echo $timestamp,$protoname","$src_ip","$dst_ip","$dst_port","$fwd_packets","$bwd_packets","$fwd_bytes","$bwd_bytes","$timeseq","$payloads >> $outfile
     fi
     }
 done
