@@ -10,6 +10,8 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use rand_pcg::Pcg32;
 use rand::prelude::*;
+use std::net::Ipv4Addr;
+use std::time::{Duration, Instant};
 
 mod automaton;
 
@@ -67,6 +69,29 @@ impl Stage2 {
         // let automata = automata.intersect_automata(&automaton::new_tcp_flags_constraints_automaton(&flow));
         let packets_info = automata.sample(&mut self.rng, flow.timestamp, create_tcp_header);
         PacketsIR::<TCPPacketInfo> { packets_info, flow: Flow::TCPFlow(flow) }
+    }
+
+    pub fn generate_tcp_packets_info_no_flow(&mut self, ts: Instant) -> PacketsIR<TCPPacketInfo> {
+        let automata = &self.tcp_automata[0];
+        let packets_info = automata.sample(&mut self.rng, ts, create_tcp_header);
+        // Reconstruct flow from sample
+        let flow = Flow::TCPFlow(FlowData {
+            src_ip: Ipv4Addr::new(192, 168, 1, 8),
+            dst_ip: Ipv4Addr::new(192, 168, 1, 14),
+            src_port: 34200,
+            dst_port: 8080,
+            recorded_ttl_client: 23,
+            recorded_ttl_server: 68,
+            initial_ttl_client: 255,
+            initial_ttl_server: 255,
+            fwd_packets_count: packets_info.iter().filter(|p| p.direction == PacketDirection::Forward).count() as u32,
+            bwd_packets_count: packets_info.iter().filter(|p| p.direction == PacketDirection::Backward).count() as u32,
+            fwd_total_payload_length: packets_info.iter().filter(|p| p.direction == PacketDirection::Forward).map(|p| p.payload.get_payload_size()).sum::<usize>() as u32,
+            bwd_total_payload_length: packets_info.iter().filter(|p| p.direction == PacketDirection::Backward).map(|p| p.payload.get_payload_size()).sum::<usize>() as u32,
+            timestamp: ts,
+            total_duration: packets_info.last().unwrap().ts.duration_since(ts)
+            } );
+        PacketsIR::<TCPPacketInfo> { packets_info, flow }
     }
 
     pub fn generate_udp_packets_info(&self, flow: FlowData) -> PacketsIR<UDPPacketInfo> {
