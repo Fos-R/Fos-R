@@ -26,7 +26,7 @@ for file in $1/*; do
     # order of the parameters is very important so TCP and UDP fields have the same array index. Payload can be empty so it’s at the end.
     # tshark -i - -T fields
     tshark -r $file -T fields \
-        -e frame.time_epoch
+        -e frame.time_epoch \
         -e ip.proto -e ip.src -e ip.dst -e ip.ttl \
         -e tcp.time_delta -e tcp.dstport -e tcp.len -e tcp.flags.str -e tcp.payload \
         -e udp.time_delta -e udp.dstport -e udp.length -e udp.length -e udp.payload \
