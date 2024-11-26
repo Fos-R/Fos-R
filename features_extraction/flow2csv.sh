@@ -1,18 +1,15 @@
 #!/usr/bin/bash
 # bash is necessary to take advantages of arrays
 
-# mkdir -p tcp_flows
-
-# PcapSplitter -f $1 -o tcp_flows -m connection -i "(tcp || udp || icmp)" # split the streams (TCP only)
-
 if [ "$1" = "" ]; then echo "Usage: $0 pcap-folder [output_file]"; exit; fi
 outfile=$2
 if [ "$outfile" = "" ]; then outfile="output.csv"; fi
 
-echo timestamp,protocol,src_ip,dst_ip,dst_port,fwd_packets,bwd_packets,fwd_bytes,bwd_bytes,time_sequence,payloads > $outfile
+echo timestamp,duration,protocol,src_ip,dst_ip,dst_port,fwd_packets,bwd_packets,fwd_bytes,bwd_bytes,time_sequence,payloads > $outfile
 for file in $1/*; do
-    echo "Process file $file"
+    # echo "Extract features from $file"
     timestamp=""
+    last_time=""
     src_ip=""
     fwd_packets=0
     bwd_packets=0
@@ -32,7 +29,7 @@ for file in $1/*; do
         -e udp.time_delta -e udp.dstport -e udp.length -e udp.length -e udp.payload \
         -e icmp.type -e icmp.code -e data.len -e data | { while read l; do
         if [ "$((fwd_packets+bwd_packets))" -eq 250 ]; then
-            echo "Dropping flow: too many packets"
+            echo "Dropping flow: too many packets! ($file)"
             error=1
             break
         fi
@@ -41,6 +38,7 @@ for file in $1/*; do
         if [ "$timestamp" = "" ]; then
             timestamp=${array[0]}
         fi
+        last_time=${array[0]}
         if [ "$proto" -eq 6 ] || [ "$proto" -eq 17 ]; then
             delta=$(echo "${array[5]}*1000000 / 1" | bc) # extract the time delta (unit: microsecond)
             ip=${array[2]} # extract the source IP (for direction identification)
@@ -84,8 +82,11 @@ for file in $1/*; do
             echo "Unknown protocol ("$proto"), packed dropped"
         fi
     done
+    # trim
+    timeseq=$(echo $timeseq | xargs)
+    payloads=$(echo $payloads | xargs)
     if [ "$error" -eq 0 ]; then
-        echo $timestamp,$protoname","$src_ip","$dst_ip","$dst_port","$fwd_packets","$bwd_packets","$fwd_bytes","$bwd_bytes","$timeseq","$payloads >> $outfile
+        echo $timestamp,$(echo "$last_time-$timestamp" | bc),$protoname","$src_ip","$dst_ip","$dst_port","$fwd_packets","$bwd_packets","$fwd_bytes","$bwd_bytes","$timeseq","$payloads >> $outfile
     fi
     }
 done
