@@ -145,11 +145,6 @@ if __name__ == '__main__':
                 values, counts = np.unique(tss, return_counts=True)
                 d["payloads"] = { "payloads": [str(s) for s in values] }
                 d["payloads"]["type"] = "HexCodes"
-                # if len(set(counts))==1: # all weights are equal
-                #     d["payloads"]["type"] = "HexCodes"
-                # else:
-                #     d["payloads"]["type"] = "WeightedHexCodes"
-                #     d["payloads"]["weights"] = [int(i) for i in counts]
             elif "Random" in e.symbol:
                 lengths = []
                 for ts, t in e.tss.items():
