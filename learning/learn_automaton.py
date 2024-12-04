@@ -2,11 +2,13 @@ import os
 import argparse
 import re
 import json
-from TADAM.TADAM import exhaustive_search, opportunistic_search
-from TADAM.MDL import NoiseModel
-from Options import Options, GuardsFormat, Init, Search
+from tadam.tadam import exhaustive_search, opportunistic_search
+from tadam.mdl import NoiseModel
+from tadam.options import Options, GuardsFormat, Init, Search
 import pandas as pd
 import datetime
+from scipy.stats import chisquare
+import numpy as np
 
 def add_payload_type(row):
     if row['protocol'] == "ICMP":
@@ -82,13 +84,27 @@ if __name__ == '__main__':
         args.output = "automata.json"
 
     try:
-        df = pd.read_csv(args.input,low_memory=False,names=["protocol","src_ip","dst_ip","dst_port","fwd_packets","bwd_packets","fwd_bytes","bwd_bytes","time_sequence","payloads"])
+        df = pd.read_csv(args.input,low_memory=False)
+        # df = pd.read_csv(args.input,low_memory=False,names=["protocol","src_ip","dst_ip","dst_port","fwd_packets","bwd_packets","fwd_bytes","bwd_bytes","time_sequence","payloads"])
     except Exception as e:
         print("Input file cannot be opened:",e)
         exit()
-
     if len(df) == 0:
         print("Input file is empty")
+        exit()
+
+    if len(select_dst_ports) > 0:
+        df = df[df["dst_port"].isin(select_dst_ports)]
+    elif len(ignore_dst_ports) > 0:
+        df = df[~df["dst_port"].isin(ignore_dst_ports)]
+
+    if len(df) == 0:
+        if len(select_dst_ports) > 0:
+            print("No stream satisfies these conditions (selected ports: "+str(select_dst_ports)+")")
+        elif len(ignore_dst_ports) > 0:
+            print("No stream satisfies these conditions (ignored ports: "+str(ignore_dst_ports)+")")
+        else:
+            print("ASSERTION ERROR")
         exit()
 
     if protocol is None:
@@ -101,25 +117,17 @@ if __name__ == '__main__':
         else:
             print("Multiple network protocols detected. Please manually select one with --proto")
             exit()
+    else:
+        df = df[df["protocol"] == protocol]
 
-    df = df[df["protocol"] == protocol]
-    if len(select_dst_ports) > 0:
-        df = df[df["dst_port"].isin(select_dst_ports)]
-    elif len(ignore_dst_ports) > 0:
-        df = df[~df["dst_port"].isin(ignore_dst_ports)]
-
-    df = df.apply(add_payload_type, axis=1)
-
-    df = df["time_sequence"]
+    df["time_sequence"] = df.apply(add_payload_type, axis=1)
 
     len_before = len(df)
-    df = df[df.str.len() < 20000]
+    df = df[df["time_sequence"].str.len() < 20000]
     if len(df) < len_before:
         print((len_before-len(df)),"flows have been ignored because they are too long.")
 
-    if len(df) == 0:
-        print("No stream satisfies these conditions")
-        exit()
+    df = df.reset_index(drop=True)
 
     print("Learning from",len(df),"examples")
 
@@ -132,7 +140,8 @@ if __name__ == '__main__':
                     search = Search.EXHAUSTIVE,
                     init = Init.STATE_SYMBOL)
 
-    l = exhaustive_search(options, tss_list=df, verbose=args.verbose, noise_model=noise_model)
+    l = exhaustive_search(options, tss_list=df["time_sequence"], verbose=args.verbose, noise_model=noise_model)
+    ta = l.ta
     # print("Automaton successfully learned")
     tmp = []
     for e in ta.edges:
@@ -141,14 +150,14 @@ if __name__ == '__main__':
             if "Replay" in e.symbol:
                 tss = []
                 for ts, t in e.tss.items():
-                    tss = tss + [payloads[ts].split()[a].split(":")[1] for (a,_) in t]
+                    tss = tss + [df["payloads"][ts].split()[a].split(":")[1] for (a,_) in t]
                 values, counts = np.unique(tss, return_counts=True)
                 d["payloads"] = { "payloads": [str(s) for s in values] }
                 d["payloads"]["type"] = "HexCodes"
             elif "Random" in e.symbol:
                 lengths = []
                 for ts, t in e.tss.items():
-                    lengths = lengths + [int(len(payloads[ts].split()[a].split(":")[1])/2) for (a,_) in t]
+                    lengths = lengths + [int(len(df["payloads"][ts].split()[a].split(":")[1])/2) for (a,_) in t]
                     # divide by 2 because it’s hexadecimal encoding, so 2 letters -> 1 byte
                 d["payloads"] = { "type": "Lengths", "lengths": lengths }
             else:
@@ -163,17 +172,17 @@ if __name__ == '__main__':
             tmp.append(d)
 
     noise = {}
-    noise["none"] = 2**(-self.cost_transition)
-    noise["deletion"] = 2**(-self.cost_deletion)
-    noise["reemission"] = 2**(-self.cost_reemission)
-    noise["transposition"] = 2**(-self.cost_transposition)
-    noise["addition"] = 2**(-self.cost_addition)
+    noise["none"] = 2**(-ta.cost_transition)
+    noise["deletion"] = 2**(-ta.cost_deletion)
+    noise["reemission"] = 2**(-ta.cost_reemission)
+    noise["transposition"] = 2**(-ta.cost_transposition)
+    noise["addition"] = 2**(-ta.cost_addition)
     s = sum(noise.values())
     for k,v in noise.items(): # normalize, just in case
         noise[k] = v/s
 
     d = { "edges": tmp, "noise": noise}
-    for i,n in enumerate(self.states):
+    for i,n in enumerate(ta.states):
         if n.initial:
             d["initial_state"] = i
         if n.accepting:
@@ -189,14 +198,14 @@ if __name__ == '__main__':
     try:
         out_file = open(args.output, "w")
         json.dump(d, out_file, indent=4)
-        print("JSON file successfully created")
+        print("JSON file successfully created:",args.output)
     except Exception as e:
         print("Error during json save:",e)
 
     if args.output_dot:
         try:
             l.ta.export_ta(args.output_dot, guard_as_distrib=True)
-            print("Dot file successfully created")
+            print("Dot file successfully created:",arg.output_dot)
         except Exception as e:
             print("Error during dot save:",e)
 

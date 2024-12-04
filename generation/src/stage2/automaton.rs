@@ -80,31 +80,7 @@ struct Noise {
     addition: f32,
 }
 
-struct ConstraintsNode<T: EdgeType> {
-    out_edges: Vec<ConstraintsEdge<T>>,
-}
-
-struct ConstraintsEdge<T: EdgeType> {
-    data: T,
-}
-
-pub struct ConstraintsAutomaton<T: EdgeType> {
-    graph: Vec<ConstraintsNode<T>>
-}
-
-pub fn new_packet_number_constraints_automaton<T: EdgeType>(flow: &FlowData) -> ConstraintsAutomaton<T> {
-    panic!("Not implemented");
-}
-
-pub fn new_tcp_flags_constraints_automaton(flow: &FlowData) -> ConstraintsAutomaton<TCPEdgeTuple> {
-    panic!("Not implemented");
-}
-
 impl<T: EdgeType> TimedAutomaton<T> {
-
-    pub fn intersect_automata(&self, constraints: &ConstraintsAutomaton<T>) -> TimedAutomaton<T> {
-        panic!("Not implemented");
-    }
 
     pub fn sample<R: Rng + ?Sized, U>(&self, rng: &mut R, initial_ts: Instant, header_creator: impl Fn(Payload, NoiseType, Instant, &T) -> U) -> Vec<U> {
         let mut output = vec![];
