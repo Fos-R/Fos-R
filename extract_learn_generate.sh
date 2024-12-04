@@ -44,9 +44,10 @@ if [ "$learn" -eq 1 ]; then
     # python3 ./flowchronicle_learn.py --input ../data/$name.csv --output ../models/"$name"_patterns.json
     output_dir="../models/tas/"
     output_dot_dir="../models/tas/"
-    declare -A dst_ports=(["21"]="ftp", ["443"]="https") # TODO: complete
+    declare -A dst_ports=(["21"]="ftp" ["443"]="https") # TODO: complete
+    # declare -A dst_ports=(["21"]="ftp") # TODO: complete
     for i in "${!dst_ports[@]}"; do
-        python3 ./learn_automaton.py --select_dst_port $i --input ../data/$name.csv --output $output_dir${dst_ports[$i]}.json --output_dot $output_dot_dir${dst_ports[$i]}.dot
+        python3 ./learn_automaton.py --select_dst_port $i --input ../data/$name.csv --output $output_dir${dst_ports[$i]}.json --output_dot $output_dot_dir${dst_ports[$i]}.dot --automaton_name ${dst_ports[$i]}
     done
     cd ..
 fi

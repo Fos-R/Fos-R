@@ -63,14 +63,15 @@ impl Stage2 {
     }
 
     pub fn generate_tcp_packets_info(&mut self, flow: FlowData) -> PacketsIR<TCPPacketInfo> {
-        // TODO: select correct TCP automata depending on the port
-        let automata = &self.tcp_automata[0];
+        let automata = self.tcp_automata.iter().find(|a| a.is_compatible_with(flow.dst_port)).unwrap();
         let packets_info = automata.sample(&mut self.rng, flow.timestamp, create_tcp_header);
         PacketsIR::<TCPPacketInfo> { packets_info, flow: Flow::TCPFlow(flow) }
     }
 
-    pub fn generate_tcp_packets_info_no_flow(&mut self, ts: Instant) -> PacketsIR<TCPPacketInfo> {
-        let automata = &self.tcp_automata[0];
+    pub fn generate_tcp_packets_info_no_flow(&mut self, port: u16, ts: Instant) -> PacketsIR<TCPPacketInfo> {
+        let automata = self.tcp_automata.iter().find(|a| a.is_compatible_with(port)).unwrap();
+        println!("Sampling with automaton: {}", automata.get_name());
+        // let automata = &self.tcp_automata[0];
         let packets_info = automata.sample(&mut self.rng, ts, create_tcp_header);
         // Reconstruct flow from sample
         let flow = Flow::TCPFlow(FlowData {

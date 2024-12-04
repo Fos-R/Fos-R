@@ -43,7 +43,7 @@ impl EdgeDistribution {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R, cond_mu: f32, cond_var: f32) -> f32 {
         match &self {
             EdgeDistribution::Normal => {
-                let normal = Normal::new(cond_mu, cond_var).unwrap();
+                let normal = Normal::new(cond_mu, cond_var.sqrt()).unwrap();
                 normal.sample(rng).max(0.)
             },
             EdgeDistribution::Poisson => {
@@ -65,10 +65,11 @@ pub struct TimedAutomaton<T: EdgeType> {
 
 #[derive(Deserialize, Debug, Clone)]
 struct AutomatonMetaData {
-    select_dst_ports: Vec<u32>,
-    ignore_dst_ports: Vec<u32>,
+    select_dst_ports: Vec<u16>,
+    ignore_dst_ports: Vec<u16>,
     input_file: String,
     creation_time: String,
+    automaton_name: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -82,17 +83,28 @@ struct Noise {
 
 impl<T: EdgeType> TimedAutomaton<T> {
 
+    pub fn is_compatible_with(&self, port: u16) -> bool {
+        self.metadata.select_dst_ports.contains(&port)
+    }
+
+    pub fn get_name(&self) -> &str {
+        &self.metadata.automaton_name
+    }
+
     pub fn sample<R: Rng + ?Sized, U>(&self, rng: &mut R, initial_ts: Instant, header_creator: impl Fn(Payload, NoiseType, Instant, &T) -> U) -> Vec<U> {
         let mut output = vec![];
         let mut current_state = self.initial_state;
         let mut current_ts = initial_ts;
         // TODO: sample with noise
-        while current_state != self.accepting_state {
+        let mut iter = 0;
+        while current_state != self.accepting_state && iter < 100 {
+            iter += 1;
             assert!(!self.graph[current_state].out_edges.is_empty());
             let mut weights = vec![];
             for e in self.graph[current_state].out_edges.iter() {
                 weights.push(e.transition_proba);
             }
+            // println!("{:?} {:?}",weights, self.graph[current_state].out_edges);
             let dist = WeightedIndex::new(&weights).unwrap();
             let e = &self.graph[current_state].out_edges[dist.sample(rng)];
             if let Some(data) = &e.data { // if $-transition, don’t create a header
@@ -115,7 +127,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
                 let cond_var = e.cov[0][0] - e.cov[0][1] * e.cov[0][1] / e.cov[1][1];
                 let iat = e.p.sample(rng, cond_mu, cond_var);
                 current_state = e.dst_node;
-                current_ts += Duration::from_millis(iat as u64);
+                current_ts += Duration::from_micros(iat as u64);
                 let data = header_creator(payload, NoiseType::None, current_ts, data);
                 output.push(data);
             }
