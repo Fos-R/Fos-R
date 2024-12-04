@@ -21,7 +21,6 @@ for file in $1/*; do
     payloads=""
     error=0
     # order of the parameters is very important so TCP and UDP fields have the same array index. Payload can be empty so it’s at the end.
-    # tshark -i - -T fields
     tshark -r $file -T fields \
         -e frame.time_epoch \
         -e ip.proto -e ip.src -e ip.dst -e ip.ttl \
@@ -90,3 +89,6 @@ for file in $1/*; do
     fi
     }
 done
+
+echo "Most common ports:"
+cat $outfile| tail -n +2 | cut -f6 -d, | sort | uniq -cd | awk -v limit=$thr '$1 > limit{print $2}'

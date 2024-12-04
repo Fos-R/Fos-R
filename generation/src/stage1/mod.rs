@@ -9,14 +9,25 @@ use rand::prelude::*;
 /// A node of the Bayesian network
 #[derive(Deserialize, Debug, Clone)]
 struct BayesianNetworkNode {
-    parents: Vec<usize>, // where to collect the data
+    feature_number: usize,
+    partial_flow_number: usize,
+    parents: Vec<usize>, // indices in the Bayesian network’s nodes
     cpt: Vec<CptLine>
 }
 
 #[derive(Deserialize, Debug, Clone)]
-struct CptLine {
-    value: f32,
-    probas: Vec<(i32,f32)>,
+#[serde(tag = "type")]
+enum CptLine {
+    Discrete {  weights: Vec<f32>,
+                values: Vec<u32>,
+                parents_values: Vec<u32> }, // value of the parents, as ordered in the "parents" field of BayesianNetworkNode
+    Interval {  weights: Vec<f32>,
+                values: Vec<(u32,u32)>,
+                parents_values: Vec<u32> },
+    Normal {
+                mean: f32,
+                variance: f32,
+                parents_values: Vec<u32> },
 }
 
 impl BayesianNetworkNode {
@@ -24,15 +35,15 @@ impl BayesianNetworkNode {
     fn sample(&self, vector: &mut Vec<i32>) {
         panic!("Not implemented");
     }
-
 }
 
 /// The possible values of the cells inside a pattern
 #[derive(Deserialize, Debug, Clone)]
+#[serde(tag = "type")]
 enum CellType {
-    Fixed(u32),
-    Free(BayesianNetworkNode),
-    ReuseVariable(usize,usize) // values are the coordinates of the cell in the partial flows to reuse
+    Fixed { value: u32 },
+    Free,
+    ReuseVariable { col: usize, row: usize } // values are the coordinates of the cell in the partial flows to reuse
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -51,7 +62,6 @@ impl BayesianNetwork {
 /// Each pattern has partial flows and a Bayesian network that describes the distribution of "free" cells
 #[derive(Deserialize, Debug, Clone)]
 struct Pattern {
-    weight: f32,
     start_ts_distrib: f32,
     partial_flows: Vec<Vec<CellType>>,
     bayesian_network: BayesianNetwork
@@ -59,27 +69,29 @@ struct Pattern {
 
 #[derive(Deserialize, Debug, Clone)]
 struct PatternSet {
+    weights: Vec<u32>,
     patterns: Vec<Pattern>,
-    // metadata: PatternMetaData,
+    default_pattern: BayesianNetwork,
+    metadata: PatternMetaData,
 }
 
-// #[derive(Deserialize, Debug, Clone)]
-// struct PatternMetaData {
-//     input_file: String,
-//     creation_time: String,
-// }
+#[derive(Deserialize, Debug, Clone)]
+struct PatternMetaData {
+    input_file: String,
+    creation_time: String,
+}
 
 
 /// Stage 1: generates flow descriptions
 pub struct Stage1 {
-    set: PatternSet,
+    set: Option<PatternSet>,
     rng: Pcg32,
 }
 
 impl Stage1 {
 
     pub fn new(seed: u64) -> Self {
-        Stage1 { set: PatternSet { patterns: vec![] }, rng: Pcg32::seed_from_u64(seed) }
+        Stage1 { set: None, rng: Pcg32::seed_from_u64(seed) }
     }
 
     /// Import patterns from a file
@@ -87,7 +99,7 @@ impl Stage1 {
         let f = File::open(filename)?;
         let mut set : PatternSet = serde_json::from_reader(f)?;
         println!("Patterns {:?} are loaded",filename);
-        self.set.patterns.append(&mut set.patterns);
+        self.set = Some(set);
         Ok(())
     }
 
