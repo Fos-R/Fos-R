@@ -85,7 +85,7 @@ for file in $1/*; do
     timeseq=$(echo $timeseq | xargs)
     payloads=$(echo $payloads | xargs)
     if [ "$error" -eq 0 ]; then
-        echo $timestamp,$(echo "$last_time-$timestamp" | bc),$protoname","$src_ip","$dst_ip","$dst_port","$fwd_packets","$bwd_packets","$fwd_bytes","$bwd_bytes","$timeseq","$payloads >> $outfile
+        echo $timestamp,$(echo "($last_time-$timestamp)*1000000 / 1" | bc),$protoname","$src_ip","$dst_ip","$dst_port","$fwd_packets","$bwd_packets","$fwd_bytes","$bwd_bytes","$timeseq","$payloads >> $outfile
     fi
     }
 done
