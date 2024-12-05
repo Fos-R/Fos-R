@@ -1,12 +1,12 @@
 #![allow(unused)]
 
 use crate::structs::*;
-use std::time::Instant;
+use std::time::Duration;
 
 #[derive(Debug,Clone)]
 pub struct TCPPacketInfo {
     pub payload: Payload,
-    pub ts: Instant,
+    pub ts: Duration,
     pub direction: PacketDirection,
     pub noise: NoiseType,
     pub s_flag: bool,
@@ -21,7 +21,7 @@ impl Protocol for TCPPacketInfo {
     fn get_direction(&self) -> PacketDirection {
         self.direction
     }
-    fn get_ts(&self) -> Instant {
+    fn get_ts(&self) -> Duration {
         self.ts
     }
     fn get_noise_type(&self) -> NoiseType {
@@ -65,7 +65,7 @@ pub fn parse_tcp_symbol(symbol: String, p: PayloadType) -> TCPEdgeTuple {
 
 }
 
-pub fn create_tcp_header(payload: Payload, noise: NoiseType, ts: Instant, e: &TCPEdgeTuple) -> TCPPacketInfo {
+pub fn create_tcp_header(payload: Payload, noise: NoiseType, ts: Duration, e: &TCPEdgeTuple) -> TCPPacketInfo {
     TCPPacketInfo {
         payload,
         ts,

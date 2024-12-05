@@ -8,7 +8,7 @@ mod stage1;
 mod stage2;
 mod stage3;
 
-use std::time::{Duration, Instant};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 fn main() {
     // Init and import patterns and automata
@@ -20,7 +20,7 @@ fn main() {
     let s3 = stage3::Stage3::new(42);
 
     let mut packets = vec![];
-    let mut ts = Instant::now();
+    let mut ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     for _ in 0..10 {
         let headers = s2.generate_tcp_packets_info_no_flow(21, ts);
         packets.append(&mut s3.generate_tcp_packets(&headers));

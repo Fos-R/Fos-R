@@ -1,13 +1,13 @@
 #![allow(unused)]
 
 use crate::structs::*;
-use std::time::Instant;
+use std::time::Duration;
 
 #[derive(Debug,Clone)]
 pub struct ICMPPacketInfo {
     // we assume no payload
     // we may need to add more fields to correctly generate them
-    pub ts: Instant,
+    pub ts: Duration,
     pub direction: PacketDirection,
     pub noise: NoiseType,
 }
@@ -16,7 +16,7 @@ impl Protocol for ICMPPacketInfo {
     fn get_direction(&self) -> PacketDirection {
         self.direction
     }
-    fn get_ts(&self) -> Instant {
+    fn get_ts(&self) -> Duration {
         self.ts
     }
     fn get_noise_type(&self) -> NoiseType {
@@ -44,6 +44,6 @@ pub fn parse_icmp_symbol(symbol: String, _t: PayloadType) -> ICMPEdgeTuple {
     }
 }
 
-pub fn create_icmp_header(_payload: Payload, noise: NoiseType, ts: Instant, e: &ICMPEdgeTuple) -> ICMPPacketInfo {
+pub fn create_icmp_header(_payload: Payload, noise: NoiseType, ts: Duration, e: &ICMPEdgeTuple) -> ICMPPacketInfo {
     ICMPPacketInfo { ts, direction: e.direction, noise }
 }

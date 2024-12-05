@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use std::net::Ipv4Addr;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use std::fmt::Debug;
 use serde::Deserialize;
 
@@ -28,7 +28,7 @@ pub struct FlowData {
     pub bwd_packets_count: u32,
     pub fwd_total_payload_length: u32,
     pub bwd_total_payload_length: u32,
-    pub timestamp: Instant,
+    pub timestamp: Duration,
     pub total_duration: Duration
 }
 
@@ -84,7 +84,7 @@ impl Payload {
 pub trait Protocol {
     fn get_noise_type(&self) -> NoiseType;
     fn get_direction(&self) -> PacketDirection;
-    fn get_ts(&self) -> Instant;
+    fn get_ts(&self) -> Duration;
 }
 
 #[derive(Debug)]
