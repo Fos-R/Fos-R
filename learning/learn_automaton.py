@@ -168,36 +168,35 @@ if __name__ == '__main__':
 
     tmp = []
     for e in ta.edges:
-        if e.symbol != "$":
-            d = {}
-            if "Replay" in e.symbol:
-                tss = []
-                for ts, t in e.tss.items():
-                    tss = tss + [payloads[ts].split()[a].split(":")[1] for (a,_) in t]
-                d["payloads"] = { "content": [str(s) for s in tss] }
-                d["payloads"]["type"] = "HexCodes"
-            elif "Text" in e.symbol:
-                tss = []
-                for ts, t in e.tss.items():
-                    tss = tss + [payloads[ts].split()[a].split(":")[1] for (a,_) in t]
-                d["payloads"] = { "content": [bytes.fromhex(s).decode('utf-8') for s in tss] }
-                d["payloads"]["type"] = "Text"
-            elif "Random" in e.symbol:
-                lengths = []
-                for ts, t in e.tss.items():
-                    lengths = lengths + [int(len(payloads[ts].split()[a].split(":")[1])/2) for (a,_) in t]
-                    # divide by 2 because it’s hexadecimal encoding, so 2 letters -> 1 byte
-                d["payloads"] = { "type": "Lengths", "lengths": lengths }
-            else:
-                d["payloads"] = { "type": "NoPayload" }
-            # if empty: keep tss empty
-            d["p"] = e.proba
-            d["src"] = ta.states.index(e.source)
-            d["dst"] = ta.states.index(e.destination)
-            d["symbol"] = e.symbol
-            d["mu"] = e.mu.tolist()
-            d["cov"] = e.cov.tolist()
-            tmp.append(d)
+        d = {}
+        if "Replay" in e.symbol:
+            tss = []
+            for ts, t in e.tss.items():
+                tss = tss + [payloads[ts].split()[a].split(":")[1] for (a,_) in t]
+            d["payloads"] = { "content": [str(s) for s in tss] }
+            d["payloads"]["type"] = "HexCodes"
+        elif "Text" in e.symbol:
+            tss = []
+            for ts, t in e.tss.items():
+                tss = tss + [payloads[ts].split()[a].split(":")[1] for (a,_) in t]
+            d["payloads"] = { "content": [bytes.fromhex(s).decode('utf-8') for s in tss] }
+            d["payloads"]["type"] = "Text"
+        elif "Random" in e.symbol:
+            lengths = []
+            for ts, t in e.tss.items():
+                lengths = lengths + [int(len(payloads[ts].split()[a].split(":")[1])/2) for (a,_) in t]
+                # divide by 2 because it’s hexadecimal encoding, so 2 letters -> 1 byte
+            d["payloads"] = { "type": "Lengths", "lengths": lengths }
+        else:
+            d["payloads"] = { "type": "NoPayload" }
+        # if empty: keep tss empty
+        d["p"] = e.proba
+        d["src"] = ta.states.index(e.source)
+        d["dst"] = ta.states.index(e.destination)
+        d["symbol"] = e.symbol
+        d["mu"] = e.mu.tolist()
+        d["cov"] = e.cov.tolist()
+        tmp.append(d)
 
     noise = {}
     noise["none"] = 2**(-ta.cost_transition)

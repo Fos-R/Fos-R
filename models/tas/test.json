@@ -1,0 +1,423 @@
+{
+    "edges": [
+        {
+            "payloads": {
+                "type": "NoPayload"
+            },
+            "p": 1.0,
+            "src": 0,
+            "dst": 1,
+            "symbol": "S_>_Empty",
+            "mu": [
+                0.0,
+                0.0
+            ],
+            "cov": [
+                [
+                    1e-06,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1e-06
+                ]
+            ]
+        },
+        {
+            "payloads": {
+                "type": "NoPayload"
+            },
+            "p": 1.0,
+            "src": 1,
+            "dst": 2,
+            "symbol": "AS_<_Empty",
+            "mu": [
+                126000.0,
+                0.0
+            ],
+            "cov": [
+                [
+                    1e-06,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1e-06
+                ]
+            ]
+        },
+        {
+            "payloads": {
+                "type": "NoPayload"
+            },
+            "p": 0.21428571428571427,
+            "src": 2,
+            "dst": 3,
+            "symbol": "A_>_Empty",
+            "mu": [
+                61333.333333333336,
+                0.0
+            ],
+            "cov": [
+                [
+                    1064333333.3333343,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1e-06
+                ]
+            ]
+        },
+        {
+            "payloads": {
+                "content": [
+                    "220 (vsFTPd 3.0.3)\r\n"
+                ],
+                "type": "Text"
+            },
+            "p": 0.3333333333333333,
+            "src": 3,
+            "dst": 2,
+            "symbol": "AP_<_Text:220",
+            "mu": [
+                2246000.0,
+                20.0
+            ],
+            "cov": [
+                [
+                    1e-06,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1e-06
+                ]
+            ]
+        },
+        {
+            "payloads": {
+                "content": [
+                    "USER iscxtap\r\n"
+                ],
+                "type": "Text"
+            },
+            "p": 0.3333333333333333,
+            "src": 3,
+            "dst": 4,
+            "symbol": "AP_>_Text:USER",
+            "mu": [
+                94000.0,
+                14.0
+            ],
+            "cov": [
+                [
+                    1e-06,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1e-06
+                ]
+            ]
+        },
+        {
+            "payloads": {
+                "type": "NoPayload"
+            },
+            "p": 1.0,
+            "src": 4,
+            "dst": 2,
+            "symbol": "A_<_Empty",
+            "mu": [
+                11697000.0,
+                0.0
+            ],
+            "cov": [
+                [
+                    540474088666666.6,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1e-06
+                ]
+            ]
+        },
+        {
+            "payloads": {
+                "type": "Lengths",
+                "lengths": [
+                    34,
+                    23,
+                    31,
+                    24,
+                    22,
+                    14
+                ]
+            },
+            "p": 0.42857142857142855,
+            "src": 2,
+            "dst": 2,
+            "symbol": "AP_<_Random",
+            "mu": [
+                13691500.0,
+                24.666666666666668
+            ],
+            "cov": [
+                [
+                    771037188300000.0,
+                    -24950200.0
+                ],
+                [
+                    -24950200.0,
+                    50.26666766666667
+                ]
+            ]
+        },
+        {
+            "payloads": {
+                "content": [
+                    "PASS 1234\r\n"
+                ],
+                "type": "Text"
+            },
+            "p": 0.07142857142857142,
+            "src": 2,
+            "dst": 4,
+            "symbol": "AP_>_Text:PASS",
+            "mu": [
+                46000.0,
+                11.0
+            ],
+            "cov": [
+                [
+                    1e-06,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1e-06
+                ]
+            ]
+        },
+        {
+            "payloads": {
+                "content": [
+                    "TYPE I\r\n"
+                ],
+                "type": "Text"
+            },
+            "p": 0.07142857142857142,
+            "src": 2,
+            "dst": 4,
+            "symbol": "AP_>_Text:TYPE",
+            "mu": [
+                175000.0,
+                8.0
+            ],
+            "cov": [
+                [
+                    1e-06,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1e-06
+                ]
+            ]
+        },
+        {
+            "payloads": {
+                "content": [
+                    "PASV\r\n"
+                ],
+                "type": "Text"
+            },
+            "p": 0.07142857142857142,
+            "src": 2,
+            "dst": 5,
+            "symbol": "AP_>_Text:PASV",
+            "mu": [
+                11000.0,
+                6.0
+            ],
+            "cov": [
+                [
+                    1e-06,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1e-06
+                ]
+            ]
+        },
+        {
+            "payloads": {
+                "content": [
+                    "227 Entering Passive Mode (192,168,10,50,93,6).\r\n"
+                ],
+                "type": "Text"
+            },
+            "p": 1.0,
+            "src": 5,
+            "dst": 6,
+            "symbol": "AP_<_Text:227",
+            "mu": [
+                144000.0,
+                49.0
+            ],
+            "cov": [
+                [
+                    1e-06,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1e-06
+                ]
+            ]
+        },
+        {
+            "payloads": {
+                "content": [
+                    "STOR 0391cff6bb54498ba7dd2fb2e90f53c5.txt\r\n"
+                ],
+                "type": "Text"
+            },
+            "p": 1.0,
+            "src": 6,
+            "dst": 2,
+            "symbol": "AP_>_Text:STOR",
+            "mu": [
+                486000.0,
+                43.0
+            ],
+            "cov": [
+                [
+                    1e-06,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1e-06
+                ]
+            ]
+        },
+        {
+            "payloads": {
+                "content": [
+                    "QUIT\r\n"
+                ],
+                "type": "Text"
+            },
+            "p": 0.3333333333333333,
+            "src": 3,
+            "dst": 2,
+            "symbol": "AP_>_Text:QUIT",
+            "mu": [
+                113000.0,
+                6.0
+            ],
+            "cov": [
+                [
+                    1e-06,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1e-06
+                ]
+            ]
+        },
+        {
+            "payloads": {
+                "type": "NoPayload"
+            },
+            "p": 0.07142857142857142,
+            "src": 2,
+            "dst": 7,
+            "symbol": "AF_<_Empty",
+            "mu": [
+                50000.0,
+                0.0
+            ],
+            "cov": [
+                [
+                    1e-06,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1e-06
+                ]
+            ]
+        },
+        {
+            "payloads": {
+                "type": "NoPayload"
+            },
+            "p": 1.0,
+            "src": 7,
+            "dst": 4,
+            "symbol": "AF_>_Empty",
+            "mu": [
+                74000.0,
+                0.0
+            ],
+            "cov": [
+                [
+                    1e-06,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1e-06
+                ]
+            ]
+        },
+        {
+            "payloads": {
+                "type": "NoPayload"
+            },
+            "p": 0.07142857142857142,
+            "src": 2,
+            "dst": 8,
+            "symbol": "$",
+            "mu": [
+                0.0,
+                0.0
+            ],
+            "cov": [
+                [
+                    1e-06,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1e-06
+                ]
+            ]
+        }
+    ],
+    "noise": {
+        "none": 0.8709677419354839,
+        "deletion": 0.03225806451612904,
+        "reemission": 0.03225806451612904,
+        "transposition": 0.03225806451612904,
+        "addition": 0.03225806451612904
+    },
+    "initial_state": 0,
+    "accepting_state": 8,
+    "protocol": "TCP",
+    "metadata": {
+        "select_dst_ports": [
+            21
+        ],
+        "input_file": "mini.csv",
+        "ignore_dst_ports": [],
+        "creation_time": "2024-12-05 14:31:21.520104",
+        "automaton_name": "ftp"
+    }
+}
