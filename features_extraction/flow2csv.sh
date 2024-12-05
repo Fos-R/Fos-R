@@ -91,4 +91,6 @@ for file in $1/*; do
 done
 
 echo "Most common ports:"
+len=$(cat $outfile | wc -l)
+thr=$((len/1000))
 cat $outfile| tail -n +2 | cut -f6 -d, | sort | uniq -cd | awk -v limit=$thr '$1 > limit{print $2}'

@@ -150,7 +150,7 @@ if __name__ == '__main__':
 
     df = df.reset_index(drop=True)
 
-    print("Learning from",len(df),"examples")
+    # print("Learning from",len(df),"examples")
 
     noise_model = NoiseModel(deletion_possible=False)
     parsers = { "TCP": parse_TCP, "UDP": parse_UDP, "ICMP": parse_ICMP }
