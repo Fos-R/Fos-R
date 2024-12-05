@@ -6,7 +6,7 @@ use serde::Deserialize;
 use rand::prelude::*;
 use rand::distributions::WeightedIndex;
 use rand::Rng;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use rand_distr::{Normal, Poisson, Distribution};
 
 // Automaton are graphs. Graphs are not straightforward in Rust due to ownership, so we reference nodes by their index in the graph. Indices are never reused, leading to a small memory leak. Since we do not need to remove regularly nodes, it’s not a big deal.
@@ -91,7 +91,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
         &self.metadata.automaton_name
     }
 
-    pub fn sample<R: Rng + ?Sized, U>(&self, rng: &mut R, initial_ts: Instant, header_creator: impl Fn(Payload, NoiseType, Instant, &T) -> U) -> Vec<U> {
+    pub fn sample<R: Rng + ?Sized, U>(&self, rng: &mut R, initial_ts: Duration, header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U) -> Vec<U> {
         let mut output = vec![];
         let mut current_state = self.initial_state;
         let mut current_ts = initial_ts;

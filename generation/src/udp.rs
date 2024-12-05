@@ -1,12 +1,12 @@
 #![allow(unused)]
 
 use crate::structs::*;
-use std::time::Instant;
+use std::time::Duration;
 
 #[derive(Debug,Clone)]
 pub struct UDPPacketInfo {
     pub payload: Payload,
-    pub ts: Instant,
+    pub ts: Duration,
     pub direction: PacketDirection,
     pub noise: NoiseType,
 }
@@ -15,7 +15,7 @@ impl Protocol for UDPPacketInfo {
     fn get_direction(&self) -> PacketDirection {
         self.direction
     }
-    fn get_ts(&self) -> Instant {
+    fn get_ts(&self) -> Duration {
         self.ts
     }
     fn get_noise_type(&self) -> NoiseType {
@@ -46,6 +46,6 @@ pub fn parse_udp_symbol(symbol: String, p: PayloadType) -> UDPEdgeTuple {
     }
 }
 
-pub fn create_udp_header(payload: Payload, noise: NoiseType, ts: Instant, e: &UDPEdgeTuple) -> UDPPacketInfo {
+pub fn create_udp_header(payload: Payload, noise: NoiseType, ts: Duration, e: &UDPEdgeTuple) -> UDPPacketInfo {
     UDPPacketInfo { payload, noise, ts, direction: e.direction }
 }

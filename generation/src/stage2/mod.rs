@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use rand_pcg::Pcg32;
 use rand::prelude::*;
 use std::net::Ipv4Addr;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 mod automaton;
 
@@ -68,7 +68,7 @@ impl Stage2 {
         PacketsIR::<TCPPacketInfo> { packets_info, flow: Flow::TCPFlow(flow) }
     }
 
-    pub fn generate_tcp_packets_info_no_flow(&mut self, port: u16, ts: Instant) -> PacketsIR<TCPPacketInfo> {
+    pub fn generate_tcp_packets_info_no_flow(&mut self, port: u16, ts: Duration) -> PacketsIR<TCPPacketInfo> {
         let automata = self.tcp_automata.iter().find(|a| a.is_compatible_with(port)).unwrap();
         println!("Sampling with automaton: {}", automata.get_name());
         // let automata = &self.tcp_automata[0];
@@ -88,7 +88,7 @@ impl Stage2 {
             fwd_total_payload_length: packets_info.iter().filter(|p| p.direction == PacketDirection::Forward).map(|p| p.payload.get_payload_size()).sum::<usize>() as u32,
             bwd_total_payload_length: packets_info.iter().filter(|p| p.direction == PacketDirection::Backward).map(|p| p.payload.get_payload_size()).sum::<usize>() as u32,
             timestamp: ts,
-            total_duration: packets_info.last().unwrap().ts.duration_since(ts)
+            total_duration: packets_info.last().unwrap().ts - ts
             } );
         PacketsIR::<TCPPacketInfo> { packets_info, flow }
     }
