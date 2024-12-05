@@ -96,9 +96,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
         let mut current_state = self.initial_state;
         let mut current_ts = initial_ts;
         // TODO: sample with noise
-        let mut iter = 0;
-        while current_state != self.accepting_state && iter < 100 {
-            iter += 1;
+        while current_state != self.accepting_state {
             assert!(!self.graph[current_state].out_edges.is_empty());
             let mut weights = vec![];
             for e in self.graph[current_state].out_edges.iter() {
@@ -126,11 +124,11 @@ impl<T: EdgeType> TimedAutomaton<T> {
                 let cond_mu = e.mu[0] + e.cov[0][1] / e.cov[1][1] * (payload_size as f32 - e.mu[1]);
                 let cond_var = e.cov[0][0] - e.cov[0][1] * e.cov[0][1] / e.cov[1][1];
                 let iat = e.p.sample(rng, cond_mu, cond_var);
-                current_state = e.dst_node;
                 current_ts += Duration::from_micros(iat as u64);
                 let data = header_creator(payload, NoiseType::None, current_ts, data);
                 output.push(data);
             }
+            current_state = e.dst_node;
         }
         output
     }
@@ -192,12 +190,12 @@ impl<T: EdgeType> TimedAutomaton<T> {
     pub fn import_timed_automaton(a: JsonAutomaton, symbol_parser: impl Fn(String, PayloadType) -> T) -> Self {
         let mut nodes_nb = 0;
         let mut graph : Vec<TimedNode<T>> = vec![];
-        for _ in 0..a.edges.len()+1 { // the automaton is connexe, so there #edges+1 >= #nodes
+        for _ in 0..a.edges.len()+1 { // the automaton is connected, so #edges+1 >= #nodes
             graph.push(TimedNode { out_edges: vec![] });
         }
         for e in a.edges {
             let data =
-                if e.symbol.find("$").is_some() {
+                if e.symbol.eq("$") {
                     None
                 } else {
                     Some(symbol_parser(e.symbol, e.payloads.into_payload_type()))
