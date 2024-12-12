@@ -1,17 +1,17 @@
 #![allow(unused)]
 
-use crate::*;
+use crate::icmp::*;
 use crate::tcp::*;
 use crate::udp::*;
-use crate::icmp::*;
-use std::collections::LinkedList;
-use rand_pcg::Pcg32;
-use rand::prelude::*;
+use crate::*;
 use pcap::{Capture, Packet, PacketHeader};
 use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
 use pnet_packet::ip::IpNextHeaderProtocols;
 use pnet_packet::ipv4::{self, Ipv4Flags, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
+use rand::prelude::*;
+use rand_pcg::Pcg32;
+use std::collections::LinkedList;
 
 pub struct Stage3 {
     rng: Pcg32,
@@ -19,8 +19,8 @@ pub struct Stage3 {
 
 struct TcpPacketData {
     base_time: SystemTime,
-    forward: u32, // foward SEQ and backward ACK
-    backward: u32, // forward ACK and backward SEQ
+    forward: u32,    // foward SEQ and backward ACK
+    backward: u32,   // forward ACK and backward SEQ
     cwnd: usize,     // Congestion window size
     rwnd: usize,     // Receiver window size
     ssthresh: usize, // Slow start threshold
@@ -42,7 +42,6 @@ impl TcpPacketData {
 }
 
 impl Stage3 {
-
     fn setup_ethernet_frame(&self, packet: &mut [u8]) -> Option<()> {
         let mut eth_packet = MutableEthernetPacket::new(packet)?;
         eth_packet.set_ethertype(EtherTypes::Ipv4);
@@ -50,7 +49,12 @@ impl Stage3 {
         Some(())
     }
 
-    fn setup_ip_packet(&self, packet: &mut [u8], flow: FlowData, packet_info: &TCPPacketInfo) -> Option<()> {
+    fn setup_ip_packet(
+        &self,
+        packet: &mut [u8],
+        flow: FlowData,
+        packet_info: &TCPPacketInfo,
+    ) -> Option<()> {
         let len = packet.len();
         let mut ipv4_packet = MutableIpv4Packet::new(packet)?;
 
@@ -83,7 +87,13 @@ impl Stage3 {
         Some(())
     }
 
-    fn setup_tcp_packet(&mut self, packet: &mut [u8], flow: FlowData, packet_info: &TCPPacketInfo, tcp_data: &mut TcpPacketData) -> Option<()> {
+    fn setup_tcp_packet(
+        &mut self,
+        packet: &mut [u8],
+        flow: FlowData,
+        packet_info: &TCPPacketInfo,
+        tcp_data: &mut TcpPacketData,
+    ) -> Option<()> {
         let mut tcp_packet = MutableTcpPacket::new(packet)?;
 
         match packet_info.get_direction() {
@@ -178,10 +188,12 @@ impl Stage3 {
         ));
 
         Some(())
-    }   
+    }
 
     pub fn new(seed: u64) -> Self {
-        Stage3 { rng: Pcg32::seed_from_u64(seed) }
+        Stage3 {
+            rng: Pcg32::seed_from_u64(seed),
+        }
     }
 
     /// Generate TCP packets from an intermediate representation
@@ -194,7 +206,7 @@ impl Stage3 {
             Flow::ICMPFlow(f) => f,
         };
         let mut tcp_data = TcpPacketData::new();
-        let packets: LinkedList<Vec<[u8]>> = LinkedList::new();
+        let packets: Vec<Vec<u8>> = Vec::new();
 
         for packet_info in &input.packets_info {
             let packet_size = MutableEthernetPacket::minimum_packet_size()
@@ -207,7 +219,7 @@ impl Stage3 {
             self.setup_ethernet_frame(&mut packet[..])?;
             self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info)?;
             self.setup_tcp_packet(&mut packet[tcp_start..], flow, packet_info, &mut tcp_data)?;
-        }   
+        }
 
         Some(packets)
     }
@@ -221,5 +233,4 @@ impl Stage3 {
     pub fn generate_icmp_packets(&self, input: &PacketsIR<ICMPPacketInfo>) -> Vec<Packet> {
         panic!("Not implemented");
     }
-
 }
