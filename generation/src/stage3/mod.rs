@@ -4,6 +4,8 @@ use crate::icmp::*;
 use crate::tcp::*;
 use crate::udp::*;
 use crate::*;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use libc;
 use pcap::{Capture, Packet, PacketHeader};
 use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
 use pnet_packet::ip::IpNextHeaderProtocols;
@@ -11,7 +13,6 @@ use pnet_packet::ipv4::{self, Ipv4Flags, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
 use rand::prelude::*;
 use rand_pcg::Pcg32;
-use std::collections::LinkedList;
 
 pub struct Stage3 {
     rng: Pcg32,
@@ -190,6 +191,27 @@ impl Stage3 {
         Some(())
     }
 
+    fn get_pcap_header(&self, packet_size: usize, ts: Instant, base_time: SystemTime) -> PacketHeader {
+        PacketHeader {
+            ts: self.instant_to_timeval(ts, base_time),
+            caplen: packet_size as u32,
+            len: packet_size as u32,
+        }
+    }
+
+    fn instant_to_timeval(&self, instant: Instant, base_time: SystemTime) -> libc::timeval {
+        let duration_since_epoch = base_time
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards");
+        let elapsed = instant.elapsed();
+        let total_duration = duration_since_epoch + elapsed;
+
+        libc::timeval {
+            tv_sec: total_duration.as_secs() as _,
+            tv_usec: total_duration.subsec_micros() as _,
+        }
+    }
+
     pub fn new(seed: u64) -> Self {
         Stage3 {
             rng: Pcg32::seed_from_u64(seed),
@@ -206,7 +228,8 @@ impl Stage3 {
             Flow::ICMPFlow(f) => f,
         };
         let mut tcp_data = TcpPacketData::new();
-        let packets: Vec<Vec<u8>> = Vec::new();
+        let packets: Vec<Packet> = Vec::new();
+        let base_time = SystemTime::now();
 
         for packet_info in &input.packets_info {
             let packet_size = MutableEthernetPacket::minimum_packet_size()
@@ -219,6 +242,11 @@ impl Stage3 {
             self.setup_ethernet_frame(&mut packet[..])?;
             self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info)?;
             self.setup_tcp_packet(&mut packet[tcp_start..], flow, packet_info, &mut tcp_data)?;
+
+            packets.push(Packet{
+                header: &self.get_pcap_header(packet_size, packet_info.get_ts(), base_time), 
+                data: &packet,
+            });
         }
 
         Some(packets)
