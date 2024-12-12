@@ -47,7 +47,7 @@ fn main() {
     let mut packets = vec![];
     for _ in 0..args.nb_flows { // Generate 10 flows
         let headers = s2.generate_tcp_packets_info_no_flow(21, ts);
-        packets.append(&mut s3.generate_tcp_packets(&headers));
+        packets.append(&mut s3.generate_tcp_packets(&headers).unwrap());
         ts += Duration::from_millis(1000);
     }
     // export packets to pcap file

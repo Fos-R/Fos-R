@@ -51,7 +51,7 @@ impl Stage3 {
     fn setup_ip_packet(
         &self,
         packet: &mut [u8],
-        flow: FlowData,
+        flow: &FlowData,
         packet_info: &TCPPacketInfo,
     ) -> Option<()> {
         let len = packet.len();
@@ -89,7 +89,7 @@ impl Stage3 {
     fn setup_tcp_packet(
         &mut self,
         packet: &mut [u8],
-        flow: FlowData,
+        flow: &FlowData,
         packet_info: &TCPPacketInfo,
         tcp_data: &mut TcpPacketData,
     ) -> Option<()> {
@@ -214,7 +214,7 @@ impl Stage3 {
     pub fn generate_tcp_packets(&self, input: &PacketsIR<TCPPacketInfo>) -> Option<Vec<Packet>> {
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let tcp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
-        let flow = match input.flow {
+        let flow = match &input.flow {
             Flow::TCPFlow(f) => f,
             Flow::UDPFlow(f) => f,
             Flow::ICMPFlow(f) => f,
