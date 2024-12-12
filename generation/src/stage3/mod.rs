@@ -19,7 +19,6 @@ pub struct Stage3 {
 } // In the future, add network/system configuration here
 
 struct TcpPacketData {
-    base_time: SystemTime,
     forward: u32,    // foward SEQ and backward ACK
     backward: u32,   // forward ACK and backward SEQ
     cwnd: usize,     // Congestion window size
@@ -31,7 +30,6 @@ struct TcpPacketData {
 impl TcpPacketData {
     fn new() -> Self {
         TcpPacketData {
-            base_time: SystemTime::now(),
             forward: random::<u32>(),
             backward: random::<u32>(),
             cwnd: 65535,     // Initial congestion window size (in bytes)
@@ -191,24 +189,18 @@ impl Stage3 {
         Some(())
     }
 
-    fn get_pcap_header(&self, packet_size: usize, ts: Instant, base_time: SystemTime) -> PacketHeader {
+    fn get_pcap_header(&self, packet_size: usize, ts: Duration) -> PacketHeader {
         PacketHeader {
-            ts: self.instant_to_timeval(ts, base_time),
+            ts: self.instant_to_timeval(ts),
             caplen: packet_size as u32,
             len: packet_size as u32,
         }
     }
 
-    fn instant_to_timeval(&self, instant: Instant, base_time: SystemTime) -> libc::timeval {
-        let duration_since_epoch = base_time
-            .duration_since(UNIX_EPOCH)
-            .expect("Time went backwards");
-        let elapsed = instant.elapsed();
-        let total_duration = duration_since_epoch + elapsed;
-
+    fn instant_to_timeval(&self, duration: Duration) -> libc::timeval {
         libc::timeval {
-            tv_sec: total_duration.as_secs() as _,
-            tv_usec: total_duration.subsec_micros() as _,
+            tv_sec: duration.as_secs() as _,
+            tv_usec: duration.subsec_micros() as _,
         }
     }
 
@@ -229,7 +221,6 @@ impl Stage3 {
         };
         let mut tcp_data = TcpPacketData::new();
         let packets: Vec<Packet> = Vec::new();
-        let base_time = SystemTime::now();
 
         for packet_info in &input.packets_info {
             let packet_size = MutableEthernetPacket::minimum_packet_size()
@@ -244,7 +235,7 @@ impl Stage3 {
             self.setup_tcp_packet(&mut packet[tcp_start..], flow, packet_info, &mut tcp_data)?;
 
             packets.push(Packet{
-                header: &self.get_pcap_header(packet_size, packet_info.get_ts(), base_time), 
+                header: &self.get_pcap_header(packet_size, packet_info.get_ts()), 
                 data: &packet,
             });
         }
