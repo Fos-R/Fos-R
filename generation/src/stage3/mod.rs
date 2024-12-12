@@ -4,6 +4,7 @@ use crate::*;
 use crate::tcp::*;
 use crate::udp::*;
 use crate::icmp::*;
+use std::collections::LinkedList;
 use rand_pcg::Pcg32;
 use rand::prelude::*;
 use pcap::{Capture, Packet, PacketHeader};
@@ -82,7 +83,7 @@ impl Stage3 {
         Some(())
     }
 
-    fn setup_tcp_packet(&mut self, packet: &mut [u8], flow: FlowData, packet_info: &TCPPacketInfo, flow_packet: &mut TcpPacketData) -> Option<()> {
+    fn setup_tcp_packet(&mut self, packet: &mut [u8], flow: FlowData, packet_info: &TCPPacketInfo, tcp_data: &mut TcpPacketData) -> Option<()> {
         let mut tcp_packet = MutableTcpPacket::new(packet)?;
 
         match packet_info.get_direction() {
@@ -92,13 +93,13 @@ impl Stage3 {
                 tcp_packet.set_destination(flow.dst_port);
 
                 // Set sequence and acknowledgement numbers
-                tcp_packet.set_sequence(flow_packet.forward);
+                tcp_packet.set_sequence(tcp_data.forward);
                 if packet_info.a_flag {
-                    tcp_packet.set_acknowledgement(flow_packet.backward);
+                    tcp_packet.set_acknowledgement(tcp_data.backward);
                 }
 
                 // Increment forward ACK and backward SEQ
-                flow_packet.forward += packet_info.payload.get_payload_size() as u32;
+                tcp_data.forward += packet_info.payload.get_payload_size() as u32;
             }
             PacketDirection::Backward => {
                 // Set the source and destination ports
@@ -106,12 +107,12 @@ impl Stage3 {
                 tcp_packet.set_destination(flow.src_port);
 
                 // Set sequence and acknowledgement numbers
-                tcp_packet.set_sequence(flow_packet.backward);
+                tcp_packet.set_sequence(tcp_data.backward);
                 if packet_info.a_flag {
-                    tcp_packet.set_acknowledgement(flow_packet.forward);
+                    tcp_packet.set_acknowledgement(tcp_data.forward);
                 }
 
-                flow_packet.backward += packet_info.payload.get_payload_size() as u32;
+                tcp_data.backward += packet_info.payload.get_payload_size() as u32;
             }
         }
 
@@ -140,19 +141,19 @@ impl Stage3 {
         let mut cwr_flag = false;
         if rand::random::<f32>() < 0.05 {
             // 5% chance of congestion
-            flow_packet.ssthresh = flow_packet.cwnd / 2; // Halve the threshold
-            flow_packet.cwnd = flow_packet.ssthresh; // Enter congestion avoidance
+            tcp_data.ssthresh = tcp_data.cwnd / 2; // Halve the threshold
+            tcp_data.cwnd = tcp_data.ssthresh; // Enter congestion avoidance
             cwr_flag = true; // Indicate CWR flag should be set
-        } else if flow_packet.cwnd < flow_packet.ssthresh {
+        } else if tcp_data.cwnd < tcp_data.ssthresh {
             // Slow start: Exponential increase
-            flow_packet.cwnd += flow_packet.mss;
+            tcp_data.cwnd += tcp_data.mss;
         } else {
             // Congestion avoidance: Linear increase
-            flow_packet.cwnd += (flow_packet.mss * flow_packet.mss) / flow_packet.cwnd;
+            tcp_data.cwnd += (tcp_data.mss * tcp_data.mss) / tcp_data.cwnd;
         }
 
         // Set the window size
-        let effective_window = flow_packet.cwnd.min(flow_packet.rwnd) as u16;
+        let effective_window = tcp_data.cwnd.min(tcp_data.rwnd) as u16;
         tcp_packet.set_window(effective_window); // TODO: Compute the correct window size
 
         // Set the CWR flag if congestion occurred
@@ -177,16 +178,38 @@ impl Stage3 {
         ));
 
         Some(())
-    }
-
+    }   
 
     pub fn new(seed: u64) -> Self {
         Stage3 { rng: Pcg32::seed_from_u64(seed) }
     }
 
     /// Generate TCP packets from an intermediate representation
-    pub fn generate_tcp_packets(&self, input: &PacketsIR<TCPPacketInfo>) -> Vec<Packet> {
-        panic!("Not implemented");
+    pub fn generate_tcp_packets(&self, input: &PacketsIR<TCPPacketInfo>) -> Option<Vec<Packet>> {
+        let ip_start = MutableEthernetPacket::minimum_packet_size();
+        let tcp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
+        let flow = match input.flow {
+            Flow::TCPFlow(f) => f,
+            Flow::UDPFlow(f) => f,
+            Flow::ICMPFlow(f) => f,
+        };
+        let mut tcp_data = TcpPacketData::new();
+        let packets: LinkedList<Vec<[u8]>> = LinkedList::new();
+
+        for packet_info in &input.packets_info {
+            let packet_size = MutableEthernetPacket::minimum_packet_size()
+                + MutableIpv4Packet::minimum_packet_size()
+                + MutableTcpPacket::minimum_packet_size()
+                + packet_info.payload.get_payload_size() as usize;
+
+            let mut packet = vec![0u8; packet_size];
+
+            self.setup_ethernet_frame(&mut packet[..])?;
+            self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info)?;
+            self.setup_tcp_packet(&mut packet[tcp_start..], flow, packet_info, &mut tcp_data)?;
+        }   
+
+        Some(packets)
     }
 
     /// Generate UDP packets from an intermediate representation
