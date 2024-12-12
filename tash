@@ -1,0 +1,31 @@
+[1mdiff --git a/generation/src/main.rs b/generation/src/main.rs[m
+[1mindex 1270e61..7568591 100644[m
+[1m--- a/generation/src/main.rs[m
+[1m+++ b/generation/src/main.rs[m
+[36m@@ -1,4 +1,4 @@[m
+[31m-mod structs;[m
+[32m+[m[32m        mod structs;[m
+ use structs::*;[m
+ mod tcp;[m
+ mod udp;[m
+[1mdiff --git a/generation/src/stage3/mod.rs b/generation/src/stage3/mod.rs[m
+[1mindex 13e40da..4996655 100644[m
+[1m--- a/generation/src/stage3/mod.rs[m
+[1m+++ b/generation/src/stage3/mod.rs[m
+[36m@@ -9,6 +9,16 @@[m [muse rand::prelude::*;[m
+ [m
+ pub struct Stage3 {[m
+     rng: Pcg32,[m
+[32m+[m
+[32m+[m[32m    flow: FlowData,[m
+[32m+[m[32m    base_time: SystemTime,[m
+[32m+[m[32m    forward: u32, // foward SEQ and backward ACK[m
+[32m+[m[32m    backward: u32, // forward ACK and backward SEQ[m
+[32m+[m
+[32m+[m[32m    cwnd: usize,     // Congestion window size[m
+[32m+[m[32m    rwnd: usize,     // Receiver window size[m
+[32m+[m[32m    ssthresh: usize, // Slow start threshold[m
+[32m+[m[32m    mss: usize,      // Maximum Segment Size[m
+ } // In the future, add network/system configuration here[m
+ [m
+ impl Stage3 {[m
