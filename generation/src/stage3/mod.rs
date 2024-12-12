@@ -16,6 +16,30 @@ pub struct Stage3 {
     rng: Pcg32,
 } // In the future, add network/system configuration here
 
+struct TcpPacketData {
+    base_time: SystemTime,
+    forward: u32, // foward SEQ and backward ACK
+    backward: u32, // forward ACK and backward SEQ
+    cwnd: usize,     // Congestion window size
+    rwnd: usize,     // Receiver window size
+    ssthresh: usize, // Slow start threshold
+    mss: usize,      // Maximum Segment Size
+}
+
+impl TcpPacketData {
+    fn new() -> Self {
+        TcpPacketData {
+            base_time: SystemTime::now(),
+            forward: random::<u32>(),
+            backward: random::<u32>(),
+            cwnd: 65535,     // Initial congestion window size (in bytes)
+            rwnd: 65535,     // Receiver's advertised window size
+            ssthresh: 65535, // Slow start threshold
+            mss: 1460,       // Typical MSS
+        }
+    }
+}
+
 impl Stage3 {
 
     fn setup_ethernet_frame(&self, packet: &mut [u8]) -> Option<()> {
@@ -58,7 +82,7 @@ impl Stage3 {
         Some(())
     }
 
-    fn setup_tcp_packet(&mut self, packet: &mut [u8], flow: FlowData, packet_info: &TCPPacketInfo, forward: u32, backward: u32) -> Option<()> {
+    fn setup_tcp_packet(&mut self, packet: &mut [u8], flow: FlowData, packet_info: &TCPPacketInfo, flow_packet: &mut TcpPacketData) -> Option<()> {
         let mut tcp_packet = MutableTcpPacket::new(packet)?;
 
         match packet_info.get_direction() {
@@ -68,13 +92,13 @@ impl Stage3 {
                 tcp_packet.set_destination(flow.dst_port);
 
                 // Set sequence and acknowledgement numbers
-                tcp_packet.set_sequence(forward);
+                tcp_packet.set_sequence(flow_packet.forward);
                 if packet_info.a_flag {
-                    tcp_packet.set_acknowledgement(backward);
+                    tcp_packet.set_acknowledgement(flow_packet.backward);
                 }
 
                 // Increment forward ACK and backward SEQ
-                forward += packet_info.payload.get_payload_size() as u32;
+                flow_packet.forward += packet_info.payload.get_payload_size() as u32;
             }
             PacketDirection::Backward => {
                 // Set the source and destination ports
@@ -82,12 +106,12 @@ impl Stage3 {
                 tcp_packet.set_destination(flow.src_port);
 
                 // Set sequence and acknowledgement numbers
-                tcp_packet.set_sequence(backward);
+                tcp_packet.set_sequence(flow_packet.backward);
                 if packet_info.a_flag {
-                    tcp_packet.set_acknowledgement(forward);
+                    tcp_packet.set_acknowledgement(flow_packet.forward);
                 }
 
-                backward += packet_info.payload.get_payload_size() as u32;
+                flow_packet.backward += packet_info.payload.get_payload_size() as u32;
             }
         }
 
@@ -116,19 +140,19 @@ impl Stage3 {
         let mut cwr_flag = false;
         if rand::random::<f32>() < 0.05 {
             // 5% chance of congestion
-            self.ssthresh = self.cwnd / 2; // Halve the threshold
-            self.cwnd = self.ssthresh; // Enter congestion avoidance
+            flow_packet.ssthresh = flow_packet.cwnd / 2; // Halve the threshold
+            flow_packet.cwnd = flow_packet.ssthresh; // Enter congestion avoidance
             cwr_flag = true; // Indicate CWR flag should be set
-        } else if self.cwnd < self.ssthresh {
+        } else if flow_packet.cwnd < flow_packet.ssthresh {
             // Slow start: Exponential increase
-            self.cwnd += self.mss;
+            flow_packet.cwnd += flow_packet.mss;
         } else {
             // Congestion avoidance: Linear increase
-            self.cwnd += (mss * mss) / self.cwnd;
+            flow_packet.cwnd += (flow_packet.mss * flow_packet.mss) / flow_packet.cwnd;
         }
 
         // Set the window size
-        let effective_window = cwnd.min(self.rwnd) as u16;
+        let effective_window = flow_packet.cwnd.min(flow_packet.rwnd) as u16;
         tcp_packet.set_window(effective_window); // TODO: Compute the correct window size
 
         // Set the CWR flag if congestion occurred
