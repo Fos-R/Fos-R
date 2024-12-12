@@ -220,7 +220,7 @@ impl Stage3 {
             Flow::ICMPFlow(f) => f,
         };
         let mut tcp_data = TcpPacketData::new();
-        let packets: Vec<Packet> = Vec::new();
+        let mut packets: Vec<Packet> = Vec::new();
 
         for packet_info in &input.packets_info {
             let packet_size = MutableEthernetPacket::minimum_packet_size()
