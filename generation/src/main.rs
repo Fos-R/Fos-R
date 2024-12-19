@@ -7,6 +7,7 @@ mod udp;
 mod stage1;
 mod stage2;
 mod stage3;
+mod stage4;
 
 use clap::Parser;
 use std::path::Path;
@@ -62,5 +63,5 @@ fn main() {
         ts += Duration::from_millis(1000);
     }
     // export packets to pcap file
-    println!("TODO: export packets to {:?}", args.outfile);
+   stage4::write_pcap("output.pcap", packets).unwrap();
 }
