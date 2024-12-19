@@ -3,7 +3,7 @@
 use crate::structs::*;
 use std::time::Duration;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct UDPPacketInfo {
     pub payload: Payload,
     pub ts: Duration,
@@ -23,10 +23,10 @@ impl Protocol for UDPPacketInfo {
     }
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct UDPEdgeTuple {
     pub payload_type: PayloadType,
-    pub direction: PacketDirection
+    pub direction: PacketDirection,
 }
 
 impl EdgeType for UDPEdgeTuple {
@@ -36,16 +36,26 @@ impl EdgeType for UDPEdgeTuple {
 }
 
 pub fn parse_udp_symbol(symbol: String, p: PayloadType) -> UDPEdgeTuple {
-    let strings : Vec<&str> = symbol.split("_").collect();
-    UDPEdgeTuple {  direction:
-        match strings[0] {
+    let strings: Vec<&str> = symbol.split("_").collect();
+    UDPEdgeTuple {
+        direction: match strings[0] {
             _ if strings[0] == ">" => PacketDirection::Forward,
-            _ => PacketDirection::Backward
+            _ => PacketDirection::Backward,
         },
-        payload_type: p
+        payload_type: p,
     }
 }
 
-pub fn create_udp_header(payload: Payload, noise: NoiseType, ts: Duration, e: &UDPEdgeTuple) -> UDPPacketInfo {
-    UDPPacketInfo { payload, noise, ts, direction: e.direction }
+pub fn create_udp_header(
+    payload: Payload,
+    noise: NoiseType,
+    ts: Duration,
+    e: &UDPEdgeTuple,
+) -> UDPPacketInfo {
+    UDPPacketInfo {
+        payload,
+        noise,
+        ts,
+        direction: e.direction,
+    }
 }

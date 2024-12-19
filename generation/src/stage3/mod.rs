@@ -4,7 +4,6 @@ use crate::icmp::*;
 use crate::tcp::*;
 use crate::udp::*;
 use crate::*;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use libc;
 use pcap::{Capture, Packet, PacketHeader};
 use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
@@ -13,6 +12,7 @@ use pnet_packet::ipv4::{self, Ipv4Flags, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
 use rand::prelude::*;
 use rand_pcg::Pcg32;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 pub struct Stage3 {
     rng: Pcg32,
@@ -92,23 +92,24 @@ impl Stage3 {
         flow: &FlowData,
         packet_info: &TCPPacketInfo,
         tcp_data: TcpPacketData, // Change to take ownership of tcp_data
-    ) -> Option<TcpPacketData> { // Return TcpPacketData and an empty tuple
+    ) -> Option<TcpPacketData> {
+        // Return TcpPacketData and an empty tuple
         let mut tcp_packet = MutableTcpPacket::new(packet)?;
-    
+
         let mut new_tcp_data = tcp_data; // Create a new instance of TcpPacketData
-    
+
         match packet_info.get_direction() {
             PacketDirection::Forward => {
                 // Set the source and destination ports
                 tcp_packet.set_source(flow.src_port);
                 tcp_packet.set_destination(flow.dst_port);
-    
+
                 // Set sequence and acknowledgement numbers
                 tcp_packet.set_sequence(new_tcp_data.forward);
                 if packet_info.a_flag {
                     tcp_packet.set_acknowledgement(new_tcp_data.backward);
                 }
-    
+
                 // Increment forward ACK and backward SEQ
                 new_tcp_data.forward += packet_info.payload.get_payload_size() as u32;
             }
@@ -116,17 +117,17 @@ impl Stage3 {
                 // Set the source and destination ports
                 tcp_packet.set_source(flow.dst_port);
                 tcp_packet.set_destination(flow.src_port);
-    
+
                 // Set sequence and acknowledgement numbers
                 tcp_packet.set_sequence(new_tcp_data.backward);
                 if packet_info.a_flag {
                     tcp_packet.set_acknowledgement(new_tcp_data.forward);
                 }
-    
+
                 new_tcp_data.backward += packet_info.payload.get_payload_size() as u32;
             }
         }
-    
+
         // Set the payload
         match packet_info.payload {
             Payload::Empty => (),
@@ -137,7 +138,7 @@ impl Stage3 {
             }
             Payload::Replay(_) => (),
         }
-    
+
         // Set the s | a | f | r | u | p flags
         tcp_packet.set_flags(
             (packet_info.s_flag as u8 * TcpFlags::SYN as u8)
@@ -147,7 +148,7 @@ impl Stage3 {
                 | (packet_info.u_flag as u8 * TcpFlags::URG as u8)
                 | (packet_info.p_flag as u8 * TcpFlags::PSH as u8),
         );
-    
+
         // Simulate the congestion window
         let mut cwr_flag = false;
         if rand::random::<f32>() < 0.05 {
@@ -162,19 +163,19 @@ impl Stage3 {
             // Congestion avoidance: Linear increase
             new_tcp_data.cwnd += (new_tcp_data.mss * new_tcp_data.mss) / new_tcp_data.cwnd;
         }
-    
+
         // Set the window size
         let effective_window = new_tcp_data.cwnd.min(new_tcp_data.rwnd) as u16;
         tcp_packet.set_window(effective_window); // TODO: Compute the correct window size
-    
+
         // Set the CWR flag if congestion occurred
         if cwr_flag {
             tcp_packet.set_flags(tcp_packet.get_flags() | TcpFlags::CWR as u8);
         }
-    
+
         // Set the data offset
         tcp_packet.set_data_offset(5); // TODO: Are there any options?
-    
+
         // Compute the checksum
         tcp_packet.set_checksum(tcp::ipv4_checksum(
             &tcp_packet.to_immutable(),
@@ -187,10 +188,9 @@ impl Stage3 {
                 PacketDirection::Backward => &flow.src_ip,
             },
         ));
-    
+
         Some(new_tcp_data) // Return the new tcp_data and an empty tuple
     }
-    
 
     fn get_pcap_header(&self, packet_size: usize, ts: Duration) -> PacketHeader {
         PacketHeader {
@@ -235,15 +235,16 @@ impl Stage3 {
 
             self.setup_ethernet_frame(&mut packet[..])?;
             self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info)?;
-            tcp_data = self.setup_tcp_packet(&mut packet[tcp_start..], flow, packet_info, tcp_data)?;
+            tcp_data =
+                self.setup_tcp_packet(&mut packet[tcp_start..], flow, packet_info, tcp_data)?;
 
             let header = self.get_pcap_header(packet_size, packet_info.get_ts());
             let data = packet;
-    
+
             packets.push(Packet {
                 header: &header,
                 data: &data,
-            }); 
+            });
         }
 
         Some(packets)

@@ -2,12 +2,12 @@
 
 use crate::structs::*;
 use crate::tcp::*;
-use serde::Deserialize;
-use rand::prelude::*;
 use rand::distributions::WeightedIndex;
+use rand::prelude::*;
 use rand::Rng;
+use rand_distr::{Distribution, Normal, Poisson};
+use serde::Deserialize;
 use std::time::Duration;
-use rand_distr::{Normal, Poisson, Distribution};
 
 // Automaton are graphs. Graphs are not straightforward in Rust due to ownership, so we reference nodes by their index in the graph. Indices are never reused, leading to a small memory leak. Since we do not need to remove regularly nodes, it’s not a big deal.
 
@@ -15,18 +15,18 @@ use rand_distr::{Normal, Poisson, Distribution};
 //     panic!("Not implemented");
 // }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 struct TimedNode<T: EdgeType> {
     out_edges: Vec<TimedEdge<T>>,
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 enum EdgeDistribution {
     Normal, // TODO: add cond_var to compute it only once
-    Poisson
+    Poisson,
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 struct TimedEdge<T: EdgeType> {
     dst_node: usize,
     src_node: usize, // not sure if useful
@@ -45,22 +45,22 @@ impl EdgeDistribution {
             EdgeDistribution::Normal => {
                 let normal = Normal::new(cond_mu, cond_var.sqrt()).unwrap();
                 normal.sample(rng).max(0.)
-            },
+            }
             EdgeDistribution::Poisson => {
-                let poisson = Poisson::new((cond_mu + cond_var)/2.0).unwrap();
+                let poisson = Poisson::new((cond_mu + cond_var) / 2.0).unwrap();
                 poisson.sample(rng).max(0.)
             }
         }
     }
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct TimedAutomaton<T: EdgeType> {
     graph: Vec<TimedNode<T>>,
     metadata: AutomatonMetaData,
     noise: Noise,
     initial_state: usize,
-    accepting_state: usize
+    accepting_state: usize,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -82,7 +82,6 @@ struct Noise {
 }
 
 impl<T: EdgeType> TimedAutomaton<T> {
-
     pub fn is_compatible_with(&self, port: u16) -> bool {
         self.metadata.select_dst_ports.contains(&port)
     }
@@ -91,7 +90,12 @@ impl<T: EdgeType> TimedAutomaton<T> {
         &self.metadata.automaton_name
     }
 
-    pub fn sample<R: Rng + ?Sized, U>(&self, rng: &mut R, initial_ts: Duration, header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U) -> Vec<U> {
+    pub fn sample<R: Rng + ?Sized, U>(
+        &self,
+        rng: &mut R,
+        initial_ts: Duration,
+        header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
+    ) -> Vec<U> {
         let mut output = vec![];
         let mut current_state = self.initial_state;
         let mut current_ts = initial_ts;
@@ -105,14 +109,16 @@ impl<T: EdgeType> TimedAutomaton<T> {
             // println!("{:?} {:?}",weights, self.graph[current_state].out_edges);
             let dist = WeightedIndex::new(&weights).unwrap();
             let e = &self.graph[current_state].out_edges[dist.sample(rng)];
-            if let Some(data) = &e.data { // if $-transition, don’t create a header
+            if let Some(data) = &e.data {
+                // if $-transition, don’t create a header
                 let (payload, payload_size) = match data.get_payload_type() {
                     PayloadType::Empty => (Payload::Empty, 0),
                     PayloadType::Random(sizes) => {
                         let size = sizes.choose(rng).unwrap().clone();
                         (Payload::Random(size), size)
-                    },
-                    PayloadType::Text(tss) => { // TODO
+                    }
+                    PayloadType::Text(tss) => {
+                        // TODO
                         let ts = tss.choose(rng).unwrap();
                         (Payload::Replay(ts.clone().into()), ts.len())
                     }
@@ -132,7 +138,6 @@ impl<T: EdgeType> TimedAutomaton<T> {
         }
         output
     }
-
 }
 
 // IMPORT FROM JSON
@@ -162,7 +167,7 @@ struct JsonEdge {
 pub enum JsonProtocol {
     TCP,
     UDP,
-    ICMP
+    ICMP,
 }
 
 #[derive(Deserialize, Debug)]
@@ -171,42 +176,61 @@ enum JsonPayload {
     Lengths { lengths: Vec<usize> },
     HexCodes { content: Vec<String> },
     Text { content: Vec<String> },
-    NoPayload
+    NoPayload,
 }
 
 impl JsonPayload {
-
     fn into_payload_type(self) -> PayloadType {
         match self {
-                            JsonPayload::Lengths { lengths: l } => PayloadType::Random(l),
-                            JsonPayload::NoPayload => PayloadType::Empty,
-                            JsonPayload::HexCodes { content: p } => PayloadType::Replay(p.into_iter().map(|s| hex::decode(s).expect("Payload decoding failed")).collect()),
-                            JsonPayload::Text { content: p } => PayloadType::Text(p),
+            JsonPayload::Lengths { lengths: l } => PayloadType::Random(l),
+            JsonPayload::NoPayload => PayloadType::Empty,
+            JsonPayload::HexCodes { content: p } => PayloadType::Replay(
+                p.into_iter()
+                    .map(|s| hex::decode(s).expect("Payload decoding failed"))
+                    .collect(),
+            ),
+            JsonPayload::Text { content: p } => PayloadType::Text(p),
         }
     }
 }
 
 impl<T: EdgeType> TimedAutomaton<T> {
-    pub fn import_timed_automaton(a: JsonAutomaton, symbol_parser: impl Fn(String, PayloadType) -> T) -> Self {
+    pub fn import_timed_automaton(
+        a: JsonAutomaton,
+        symbol_parser: impl Fn(String, PayloadType) -> T,
+    ) -> Self {
         let mut nodes_nb = 0;
-        let mut graph : Vec<TimedNode<T>> = vec![];
-        for _ in 0..a.edges.len()+1 { // the automaton is connected, so #edges+1 >= #nodes
+        let mut graph: Vec<TimedNode<T>> = vec![];
+        for _ in 0..a.edges.len() + 1 {
+            // the automaton is connected, so #edges+1 >= #nodes
             graph.push(TimedNode { out_edges: vec![] });
         }
         for e in a.edges {
-            let data =
-                if e.symbol.eq("$") {
-                    None
-                } else {
-                    Some(symbol_parser(e.symbol, e.payloads.into_payload_type()))
-                };
-            let new_edge = TimedEdge { dst_node: e.dst, src_node: e.src, transition_proba: e.p, data, p: EdgeDistribution::Normal, mu: e.mu.try_into().unwrap(), cov: [[e.cov[0][0], e.cov[0][1]],[e.cov[1][0],e.cov[1][1]]] };
+            let data = if e.symbol.eq("$") {
+                None
+            } else {
+                Some(symbol_parser(e.symbol, e.payloads.into_payload_type()))
+            };
+            let new_edge = TimedEdge {
+                dst_node: e.dst,
+                src_node: e.src,
+                transition_proba: e.p,
+                data,
+                p: EdgeDistribution::Normal,
+                mu: e.mu.try_into().unwrap(),
+                cov: [[e.cov[0][0], e.cov[0][1]], [e.cov[1][0], e.cov[1][1]]],
+            };
             graph[e.src].out_edges.push(new_edge);
-            nodes_nb = nodes_nb.max(e.src+1).max(e.dst+1);
+            nodes_nb = nodes_nb.max(e.src + 1).max(e.dst + 1);
         }
         graph.truncate(nodes_nb);
         // dbg!(&graph);
-        TimedAutomaton::<T> { graph, metadata: a.metadata, noise: a.noise, initial_state: a.initial_state, accepting_state: a.accepting_state }
+        TimedAutomaton::<T> {
+            graph,
+            metadata: a.metadata,
+            noise: a.noise,
+            initial_state: a.initial_state,
+            accepting_state: a.accepting_state,
+        }
     }
 }
-

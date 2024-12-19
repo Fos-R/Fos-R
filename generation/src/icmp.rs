@@ -3,7 +3,7 @@
 use crate::structs::*;
 use std::time::Duration;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct ICMPPacketInfo {
     // we assume no payload
     // we may need to add more fields to correctly generate them
@@ -24,9 +24,9 @@ impl Protocol for ICMPPacketInfo {
     }
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct ICMPEdgeTuple {
-    pub direction: PacketDirection
+    pub direction: PacketDirection,
 }
 
 impl EdgeType for ICMPEdgeTuple {
@@ -36,14 +36,23 @@ impl EdgeType for ICMPEdgeTuple {
 }
 
 pub fn parse_icmp_symbol(symbol: String, _t: PayloadType) -> ICMPEdgeTuple {
-    ICMPEdgeTuple { direction:
-        match symbol {
+    ICMPEdgeTuple {
+        direction: match symbol {
             _ if symbol == ">" => PacketDirection::Forward,
-            _ => PacketDirection::Backward
-        }
+            _ => PacketDirection::Backward,
+        },
     }
 }
 
-pub fn create_icmp_header(_payload: Payload, noise: NoiseType, ts: Duration, e: &ICMPEdgeTuple) -> ICMPPacketInfo {
-    ICMPPacketInfo { ts, direction: e.direction, noise }
+pub fn create_icmp_header(
+    _payload: Payload,
+    noise: NoiseType,
+    ts: Duration,
+    e: &ICMPEdgeTuple,
+) -> ICMPPacketInfo {
+    ICMPPacketInfo {
+        ts,
+        direction: e.direction,
+        noise,
+    }
 }

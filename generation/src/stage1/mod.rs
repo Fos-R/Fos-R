@@ -1,10 +1,10 @@
 #![allow(unused)]
 
 use crate::structs::*;
+use rand::prelude::*;
+use rand_pcg::Pcg32;
 use serde::Deserialize;
 use std::fs::File;
-use rand_pcg::Pcg32;
-use rand::prelude::*;
 
 /// A node of the Bayesian network
 #[derive(Deserialize, Debug, Clone)]
@@ -12,22 +12,27 @@ struct BayesianNetworkNode {
     feature_number: usize,
     partial_flow_number: usize,
     parents: Vec<usize>, // indices in the Bayesian network’s nodes
-    cpt: Vec<CptLine>
+    cpt: Vec<CptLine>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
 enum CptLine {
-    Discrete {  weights: Vec<f32>,
-                values: Vec<u32>,
-                parents_values: Vec<u32> }, // value of the parents, as ordered in the "parents" field of BayesianNetworkNode
-    Interval {  weights: Vec<f32>,
-                values: Vec<(u32,u32)>,
-                parents_values: Vec<u32> },
+    Discrete {
+        weights: Vec<f32>,
+        values: Vec<u32>,
+        parents_values: Vec<u32>,
+    }, // value of the parents, as ordered in the "parents" field of BayesianNetworkNode
+    Interval {
+        weights: Vec<f32>,
+        values: Vec<(u32, u32)>,
+        parents_values: Vec<u32>,
+    },
     Normal {
-                mean: f32,
-                variance: f32,
-                parents_values: Vec<u32> },
+        mean: f32,
+        variance: f32,
+        parents_values: Vec<u32>,
+    },
 }
 
 impl BayesianNetworkNode {
@@ -43,12 +48,12 @@ impl BayesianNetworkNode {
 enum CellType {
     Fixed { value: u32 },
     Free,
-    ReuseVariable { col: usize, row: usize } // values are the coordinates of the cell in the partial flows to reuse
+    ReuseVariable { col: usize, row: usize }, // values are the coordinates of the cell in the partial flows to reuse
 }
 
 #[derive(Deserialize, Debug, Clone)]
 struct BayesianNetwork {
-    graph: Vec<BayesianNetworkNode> // order is assumed to be topological
+    graph: Vec<BayesianNetworkNode>, // order is assumed to be topological
 }
 
 impl BayesianNetwork {
@@ -56,7 +61,6 @@ impl BayesianNetwork {
     fn sample(&self) -> Vec<i32> {
         panic!("Not implemented");
     }
-
 }
 
 /// Each pattern has partial flows and a Bayesian network that describes the distribution of "free" cells
@@ -64,7 +68,7 @@ impl BayesianNetwork {
 struct Pattern {
     start_ts_distrib: f32,
     partial_flows: Vec<Vec<CellType>>,
-    bayesian_network: BayesianNetwork
+    bayesian_network: BayesianNetwork,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -81,7 +85,6 @@ struct PatternMetaData {
     creation_time: String,
 }
 
-
 /// Stage 1: generates flow descriptions
 pub struct Stage1 {
     set: Option<PatternSet>,
@@ -89,16 +92,18 @@ pub struct Stage1 {
 }
 
 impl Stage1 {
-
     pub fn new(seed: u64) -> Self {
-        Stage1 { set: None, rng: Pcg32::seed_from_u64(seed) }
+        Stage1 {
+            set: None,
+            rng: Pcg32::seed_from_u64(seed),
+        }
     }
 
     /// Import patterns from a file
     pub fn import_patterns(&mut self, filename: &str) -> std::io::Result<()> {
         let f = File::open(filename)?;
-        let mut set : PatternSet = serde_json::from_reader(f)?;
-        println!("Patterns {:?} are loaded",filename);
+        let mut set: PatternSet = serde_json::from_reader(f)?;
+        println!("Patterns {:?} are loaded", filename);
         self.set = Some(set);
         Ok(())
     }
@@ -107,5 +112,4 @@ impl Stage1 {
     pub fn generate_flows(&self, number_of_flows: u32) -> Vec<Flow> {
         panic!("Not implemented");
     }
-
 }
