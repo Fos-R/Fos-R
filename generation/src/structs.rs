@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+use pcap::PacketHeader;
 use serde::Deserialize;
 use std::fmt::Debug;
 use std::net::Ipv4Addr;
@@ -96,5 +97,6 @@ pub struct PacketsIR<T: Protocol> {
 // Stage 3 structures
 
 pub struct Packet {
-    // should be replaced by the Packet structure defined in the network library
+    pub header: PacketHeader,
+    pub data: Vec<u8>,
 }

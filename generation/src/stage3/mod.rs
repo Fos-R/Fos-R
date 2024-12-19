@@ -5,7 +5,7 @@ use crate::tcp::*;
 use crate::udp::*;
 use crate::*;
 use libc;
-use pcap::{Capture, Packet, PacketHeader};
+use pcap::{Capture, PacketHeader};
 use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
 use pnet_packet::ip::IpNextHeaderProtocols;
 use pnet_packet::ipv4::{self, Ipv4Flags, MutableIpv4Packet};
@@ -238,12 +238,11 @@ impl Stage3 {
             tcp_data =
                 self.setup_tcp_packet(&mut packet[tcp_start..], flow, packet_info, tcp_data)?;
 
-            let header = self.get_pcap_header(packet_size, packet_info.get_ts());
-            let data = packet;
-
             packets.push(Packet {
-                header: &header,
-                data: &data,
+                header: self
+                    .get_pcap_header(packet_size, packet_info.get_ts())
+                    .clone(),
+                data: packet.clone(),
             });
         }
 
