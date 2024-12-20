@@ -9,12 +9,13 @@ use rand::prelude::*;
 
 pub struct Stage3 {
     rng: Pcg32,
+    taint: bool,
 } // In the future, add network/system configuration here
 
 impl Stage3 {
 
-    pub fn new(seed: u64) -> Self {
-        Stage3 { rng: Pcg32::seed_from_u64(seed) }
+    pub fn new(seed: u64, taint: bool) -> Self {
+        Stage3 { rng: Pcg32::seed_from_u64(seed), taint }
     }
 
     /// Generate TCP packets from an intermediate representation
