@@ -32,4 +32,8 @@ impl Stage3 {
         panic!("Not implemented");
     }
 
+    pub fn pcap_export(&self, outfile: &String) {
+        panic!("Not implemented");
+    }
+
 }
