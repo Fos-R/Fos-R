@@ -5,6 +5,7 @@ use serde::Deserialize;
 use std::fs::File;
 use rand_pcg::Pcg32;
 use rand::prelude::*;
+use std::time::Duration;
 
 /// A node of the Bayesian network
 #[derive(Deserialize, Debug, Clone)]
@@ -103,9 +104,9 @@ impl Stage1 {
         Ok(())
     }
 
-    /// Generates flows. At least "number of flows" are generated (a difference of a few flows can be expected).
-    pub fn generate_flows(&self, number_of_flows: u32) -> Vec<Flow> {
-        panic!("Not implemented");
+    /// Generates flows
+    pub fn generate_flows(&self, ts: Duration) -> Vec<SeededData<Flow>> {
+        vec![] // TODO
     }
 
 }

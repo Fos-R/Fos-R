@@ -20,13 +20,12 @@ pub struct Stage2 {
     tcp_automata: Vec<automaton::TimedAutomaton<TCPEdgeTuple>>,
     udp_automata: Vec<automaton::TimedAutomaton<UDPEdgeTuple>>,
     icmp_automata: Vec<automaton::TimedAutomaton<ICMPEdgeTuple>>,
-    rng: Pcg32,
 }
 
 impl Stage2 {
 
-    pub fn new(seed: u64) -> Self {
-        Stage2 { tcp_automata: vec![], udp_automata: vec![], icmp_automata: vec![], rng: Pcg32::seed_from_u64(seed) }
+    pub fn new() -> Self {
+        Stage2 { tcp_automata: vec![], udp_automata: vec![], icmp_automata: vec![] }
     }
 
     pub fn import_automata_from_dir(&mut self, directory_name: &str) -> u32 {
@@ -62,17 +61,19 @@ impl Stage2 {
         Ok(())
     }
 
-    pub fn generate_tcp_packets_info(&mut self, flow: FlowData) -> PacketsIR<TCPPacketInfo> {
-        let automata = self.tcp_automata.iter().find(|a| a.is_compatible_with(flow.dst_port)).unwrap();
-        let packets_info = automata.sample(&mut self.rng, flow.timestamp, create_tcp_header);
-        PacketsIR::<TCPPacketInfo> { packets_info, flow: Flow::TCPFlow(flow) }
+    pub fn generate_tcp_packets_info(&mut self, flow: SeededData<FlowData>) -> SeededData<PacketsIR<TCPPacketInfo>> {
+        let mut rng = Pcg32::seed_from_u64(flow.seed);
+        let automata = self.tcp_automata.iter().find(|a| a.is_compatible_with(flow.data.dst_port)).unwrap();
+        let packets_info = automata.sample(&mut rng, flow.data.timestamp, create_tcp_header);
+        SeededData { seed: rng.next_u64(), data: PacketsIR::<TCPPacketInfo> { packets_info, flow: Flow::TCPFlow(flow.data) } }
     }
 
-    pub fn generate_tcp_packets_info_no_flow(&mut self, port: u16, ts: Duration) -> PacketsIR<TCPPacketInfo> {
+    pub fn generate_tcp_packets_info_no_flow(&mut self, seed: u64, port: u16, ts: Duration) -> SeededData<PacketsIR<TCPPacketInfo>> {
+        let mut rng = Pcg32::seed_from_u64(seed);
         let automata = self.tcp_automata.iter().find(|a| a.is_compatible_with(port)).unwrap();
         println!("Sampling with automaton: {}", automata.get_name());
         // let automata = &self.tcp_automata[0];
-        let packets_info = automata.sample(&mut self.rng, ts, create_tcp_header);
+        let packets_info = automata.sample(&mut rng, ts, create_tcp_header);
         // Reconstruct flow from sample
         let flow = Flow::TCPFlow(FlowData {
             src_ip: Ipv4Addr::new(192, 168, 1, 8),
@@ -90,14 +91,14 @@ impl Stage2 {
             timestamp: ts,
             total_duration: packets_info.last().unwrap().ts - ts
             } );
-        PacketsIR::<TCPPacketInfo> { packets_info, flow }
+        SeededData { seed: rng.next_u64(), data: PacketsIR::<TCPPacketInfo> { packets_info, flow } }
     }
 
-    pub fn generate_udp_packets_info(&self, flow: FlowData) -> PacketsIR<UDPPacketInfo> {
+    pub fn generate_udp_packets_info(&self, flow: SeededData<FlowData>) -> SeededData<PacketsIR<UDPPacketInfo>> {
         panic!("Not implemented");
     }
 
-    pub fn generate_icmp_packets_info(&self, flow: FlowData) -> PacketsIR<ICMPPacketInfo> {
+    pub fn generate_icmp_packets_info(&self, flow: SeededData<FlowData>) -> SeededData<PacketsIR<ICMPPacketInfo>> {
         panic!("Not implemented");
     }
 
