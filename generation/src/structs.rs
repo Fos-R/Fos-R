@@ -5,16 +5,22 @@ use std::time::Duration;
 use std::fmt::Debug;
 use serde::Deserialize;
 
+// A general wrapper to pass a seed along with actual data
+pub struct SeededData<T> {
+    pub seed: u64,
+    pub data: T,
+}
+
 // Stage 1 and 2 structures
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Flow {
     TCPFlow(FlowData),
     UDPFlow(FlowData),
     ICMPFlow(FlowData)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FlowData {
     pub src_ip: Ipv4Addr,
     pub dst_ip: Ipv4Addr,
@@ -90,11 +96,13 @@ pub trait Protocol {
 #[derive(Debug)]
 pub struct PacketsIR<T: Protocol> { // Intermediate representation (as output by stage 2)
     pub packets_info: Vec<T>,
-    pub flow: Flow
+    pub flow: Flow,
 }
 
 // Stage 3 structures
 
-pub struct Packet {
-    // should be replaced by the Packet structure defined in the network library
+#[derive(Debug,Clone)]
+pub struct Packets {
+    pub packets: Vec<Vec<u8>>,
+    pub flow: Flow,
 }
