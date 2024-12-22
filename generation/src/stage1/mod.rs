@@ -6,6 +6,7 @@ use std::fs::File;
 use rand_pcg::Pcg32;
 use rand::prelude::*;
 use std::time::Duration;
+use std::sync::Arc;
 
 /// A node of the Bayesian network
 #[derive(Deserialize, Debug, Clone)]
@@ -69,7 +70,7 @@ struct Pattern {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-struct PatternSet {
+pub struct PatternSet {
     weights: Vec<u32>,
     patterns: Vec<Pattern>,
     default_pattern: BayesianNetwork,
@@ -85,23 +86,14 @@ struct PatternMetaData {
 
 /// Stage 1: generates flow descriptions
 pub struct Stage1 {
-    set: Option<PatternSet>,
+    set: Arc<PatternSet>,
     rng: Pcg32,
 }
 
 impl Stage1 {
 
-    pub fn new(seed: u64) -> Self {
-        Stage1 { set: None, rng: Pcg32::seed_from_u64(seed) }
-    }
-
-    /// Import patterns from a file
-    pub fn import_patterns(&mut self, filename: &str) -> std::io::Result<()> {
-        let f = File::open(filename)?;
-        let mut set : PatternSet = serde_json::from_reader(f)?;
-        println!("Patterns {:?} are loaded",filename);
-        self.set = Some(set);
-        Ok(())
+    pub fn new(seed: u64, patterns: Arc<PatternSet>) -> Self {
+        Stage1 { set: patterns, rng: Pcg32::seed_from_u64(seed) }
     }
 
     /// Generates flows
@@ -110,3 +102,12 @@ impl Stage1 {
     }
 
 }
+
+/// Import patterns from a file
+pub fn import_patterns(filename: &str) -> std::io::Result<PatternSet> {
+    let f = File::open(filename)?;
+    let set : PatternSet = serde_json::from_reader(f)?;
+    println!("Patterns {:?} are loaded",filename);
+    Ok(set)
+}
+
