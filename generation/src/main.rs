@@ -79,13 +79,13 @@ fn main() {
 
     // STAGE 1
 
+    let patterns = Arc::new(stage1::import_patterns("../models/mini_patterns.json").expect("Cannot load patterns"));
     {
         let nb_flows = Arc::clone(&nb_flows);
         threads.push(thread::spawn(move || {
             // Prepage stage 1 by loading the patterns
-            let s1 = stage1::Stage1::new(seed);
+            let s1 = stage1::Stage1::new(seed, patterns.clone());
             // This part does not work for the moment so it’s commented
-            // s1.import_patterns("../models/patterns.json").expect("Cannot load patterns");
 
             loop {
                 let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
@@ -103,34 +103,35 @@ fn main() {
 
     // STAGE 2
 
-    threads.push(thread::spawn(move || {
-        // Prepare stage 2 by loading the automata
-        let mut s2 = stage2::Stage2::new();
-        let nb_automata = s2.import_automata_from_dir(Path::new(&args.models).join("tas").to_str().unwrap()); // TODO: don’t copy the automata for all stage2’s instances
-        assert!(nb_automata > 0);
+    let automata_library = Arc::new(stage2::import_automata_from_dir(Path::new(&args.models).join("tas").to_str().unwrap()));
+    {
+        threads.push(thread::spawn(move || {
+            // Prepare stage 2 by loading the automata
+            let mut s2 = stage2::Stage2::new(automata_library.clone());
 
-        loop {
-            match rx_s2.recv().unwrap() {
-                Some(flow) => {
-                    match flow.data {
-                        Flow::TCPFlow(data) => {
-                            tx_s2_tcp.send(Some(s2.generate_tcp_packets_info(SeededData { seed : flow.seed, data }))).unwrap();
+            loop {
+                match rx_s2.recv().unwrap() {
+                    Some(flow) => {
+                        match flow.data {
+                            Flow::TCPFlow(data) => {
+                                tx_s2_tcp.send(Some(s2.generate_tcp_packets_info(SeededData { seed : flow.seed, data }))).unwrap();
+                            }
+                            Flow::UDPFlow(data) => {
+                                tx_s2_udp.send(Some(s2.generate_udp_packets_info(SeededData { seed : flow.seed, data }))).unwrap();
+                            },
+                            Flow::ICMPFlow(data) => {
+                                tx_s2_icmp.send(Some(s2.generate_icmp_packets_info(SeededData { seed : flow.seed, data }))).unwrap();
+                            },
                         }
-                        Flow::UDPFlow(data) => {
-                            tx_s2_udp.send(Some(s2.generate_udp_packets_info(SeededData { seed : flow.seed, data }))).unwrap();
-                        },
-                        Flow::ICMPFlow(data) => {
-                            tx_s2_icmp.send(Some(s2.generate_icmp_packets_info(SeededData { seed : flow.seed, data }))).unwrap();
-                        },
-                    }
-                },
-                None => break
+                    },
+                    None => break
+                }
             }
-        }
-        tx_s2_tcp.send(None).unwrap();
-        tx_s2_udp.send(None).unwrap();
-        tx_s2_icmp.send(None).unwrap();
-    }));
+            tx_s2_tcp.send(None).unwrap();
+            tx_s2_udp.send(None).unwrap();
+            tx_s2_icmp.send(None).unwrap();
+        }));
+    }
 
     // STAGE 3
 
