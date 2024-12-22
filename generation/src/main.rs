@@ -16,33 +16,51 @@ mod stage4;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::sync::mpsc::channel;
 use std::thread;
-use clap::{Parser};
+use clap::{Parser, Subcommand};
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 
-#[derive(Parser)]
+#[derive(Debug, Parser, Clone)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(short, long, default_value=Some("output.pcap"), help="Output file for synthetic network packets")] // TODO: remove default for release
-    outfile: Option<String>,
-    #[arg(short, long, default_value_t=false, help="Add noise in the output file", requires="outfile")]
-    noise: bool,
-    #[arg(short, long, default_value_t=false, help="Taint the packets to easily identify them")]
+    #[clap(subcommand)]
+    command: Command,
+
+    #[arg(short, long, global=true, default_value_t=false, help="Taint the packets to easily identify them")]
     taint: bool,
-    #[arg(short, long, default_value_t=false, help="Send packets through the network interfaces")]
-    send: bool,
-    #[arg(short='S', long, default_value=None, help="Seed for random number generation")] // TODO: remove default value for release
+    #[arg(short, long, global=true, help="Seed for random number generation")]
     seed: Option<u64>,
-    #[arg(short='f', long, default_value_t=10, help="Minimum number of flows to generate. -1 for no limit.")] // TODO: use default value "1" for release
-    nb_flows: isize,
-    #[arg(short, long, default_value="../models/test", help="Path to models directory")] // TODO: make required and remove default for release
-    models_path: String,
+    #[arg(short, long, global=true, default_value="../models/test", help="Path to models directory")] // TODO: make required and remove default for release
+    models: String,
+
+}
+
+#[derive(Debug, Subcommand, Clone)]
+enum Command {
+    /// Online mode: send packets through the network interfaces
+    Online {
+    },
+    /// Offline mode: generate a pcap file
+    Offline {
+        #[arg(short, long, default_value="output.pcap", help="Output pcap file for synthetic network packets")] // TODO: remove default for release
+        outfile: String,
+        #[arg(short, long, default_value_t=false, help="Add noise in the output file")]
+        noise: bool,
+        #[arg(short='f', long, default_value_t=10, help="Minimum number of flows to generate.")] // TODO: use default value "1" for release
+        nb_flows: isize,
+    }
 }
 
 fn main() {
     let args = Args::parse();
+    dbg!(&args);
+    let (nb_flows, online, noise) =
+        match args.command {
+            Command::Offline { nb_flows, noise, .. } => (nb_flows, false, noise),
+            Command::Online { } => (-1, true, false),
+        };
+    let nb_flows = Arc::new(Mutex::new(nb_flows));
 
-    let pcap_export = args.outfile.is_some();
-    let mut nb_flows = args.nb_flows;
     let seed = match args.seed {
         Some(s) => s,
         None => 42, //rand::random(), TODO: change for release
@@ -54,35 +72,41 @@ fn main() {
     // All the channels
     let (tx_s1, rx_s2) = channel::<Option<SeededData<Flow>>>();
     let (tx_s2_tcp, rx_s3_tcp) = channel::<Option<SeededData<PacketsIR<TCPPacketInfo>>>>();
-    let (tx_s2_udp, rx_s3_udp) = channel::<Option<SeededData<PacketsIR<UDPPacketInfo>>>>();
-    let (tx_s2_icmp, rx_s3_icmp) = channel::<Option<SeededData<PacketsIR<ICMPPacketInfo>>>>();
+    let (tx_s2_udp, _rx_s3_udp) = channel::<Option<SeededData<PacketsIR<UDPPacketInfo>>>>();
+    let (tx_s2_icmp, _rx_s3_icmp) = channel::<Option<SeededData<PacketsIR<ICMPPacketInfo>>>>();
     let (tx_s3, rx_s4) = channel::<Option<SeededData<Packets>>>();
     let (tx_pcap, rx_pcap) = channel::<Option<Vec<Vec<u8>>>>();
 
     // STAGE 1
 
-    threads.push(thread::spawn(move || {
-        // Prepage stage 1 by loading the patterns
-        let s1 = stage1::Stage1::new(seed);
-        // This part does not work for the moment so it’s commented
-        // s1.import_patterns("../models/patterns.json").expect("Cannot load patterns");
+    {
+        let nb_flows = Arc::clone(&nb_flows);
+        threads.push(thread::spawn(move || {
+            // Prepage stage 1 by loading the patterns
+            let s1 = stage1::Stage1::new(seed);
+            // This part does not work for the moment so it’s commented
+            // s1.import_patterns("../models/patterns.json").expect("Cannot load patterns");
 
-        // Stage 1: only one instance
-        while nb_flows > 0 {
-            let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-            let flows = s1.generate_flows(ts);
-            nb_flows -= flows.len() as isize;
-            flows.into_iter().for_each(|f| tx_s1.send(Some(f)).unwrap());
-        }
-        tx_s1.send(None).unwrap();
-    }));
+            loop {
+                let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+                let flows = s1.generate_flows(ts);
+                if !online { // when online, just continue as much as needed
+                    let mut counter = nb_flows.lock().unwrap();
+                    if *counter < 0 { break; }
+                    *counter -= flows.len() as isize;
+                }
+                flows.into_iter().for_each(|f| tx_s1.send(Some(f)).unwrap());
+            }
+            tx_s1.send(None).unwrap();
+        }));
+    }
 
     // STAGE 2
 
     threads.push(thread::spawn(move || {
         // Prepare stage 2 by loading the automata
         let mut s2 = stage2::Stage2::new();
-        let nb_automata = s2.import_automata_from_dir(Path::new(&args.models_path).join("tas").to_str().unwrap()); // TODO: don’t copy the automata for all stage2’s instances
+        let nb_automata = s2.import_automata_from_dir(Path::new(&args.models).join("tas").to_str().unwrap()); // TODO: don’t copy the automata for all stage2’s instances
         assert!(nb_automata > 0);
 
         loop {
@@ -110,34 +134,36 @@ fn main() {
 
     // STAGE 3
 
-    threads.push(thread::spawn(move || {
-        // Prepare stage 3 for TCP
-        let s3 = stage3::Stage3::new(args.taint);
-        loop {
-            match rx_s3_tcp.recv().unwrap() {
-                Some(headers) => {
-                    let flow_packets = s3.generate_tcp_packets(headers);
-                    if pcap_export {
-                        let mut noisy_flow = SeededData { seed: flow_packets.seed, data: flow_packets.data.clone() };
-                        if args.noise { // insert noise
-                            stage3::insert_noise(&mut noisy_flow);
+    {
+        threads.push(thread::spawn(move || {
+            // Prepare stage 3 for TCP
+            let s3 = stage3::Stage3::new(args.taint);
+            loop {
+                match rx_s3_tcp.recv().unwrap() {
+                    Some(headers) => {
+                        let flow_packets = s3.generate_tcp_packets(headers);
+                        if online {
+                            tx_s3.send(Some(flow_packets)).unwrap();
+                        } else {
+                            let mut noisy_flow = SeededData { seed: flow_packets.seed, data: flow_packets.data.clone() };
+                            if noise { // insert noise
+                                stage3::insert_noise(&mut noisy_flow);
+                            }
+                            tx_pcap.send(Some(noisy_flow.data.packets)).unwrap();
                         }
-                        tx_pcap.send(Some(noisy_flow.data.packets)).unwrap();
-                    }
-                    if args.send {
-                        tx_s3.send(Some(flow_packets)).unwrap();
-                    }
-                },
-                None => break
+                    },
+                    None => break
+                }
+                tx_s3.send(None).unwrap();
+                tx_pcap.send(None).unwrap();
             }
-            tx_s3.send(None).unwrap();
-            tx_pcap.send(None).unwrap();
-        }
-    }));
+        }));
+    }
 
     // PCAP EXPORT
 
-    if let Some(outfile) = args.outfile {
+    if let Command::Offline { outfile, .. } = &args.command {
+        let outfile = outfile.clone();
         threads.push(thread::spawn(move || {
             let mut packets_record = vec![];
             loop {
@@ -150,9 +176,9 @@ fn main() {
         }));
     }
 
-    // STAGE 4
+    // STAGE 4 (online-mode only)
 
-    else if args.send {
+    if let Command::Online { .. } = args.command {
         threads.push(thread::spawn(move || {
             let s4 = stage4::Stage4::new();
             loop {
