@@ -42,6 +42,7 @@ pub fn insert_noise(data: &mut SeededData<Packets>) {
 }
 
 pub fn pcap_export(data: &Vec<Vec<u8>>, outfile: &String) {
+    // TODO: sort the data by timestamp
     panic!("Not implemented");
 }
 
