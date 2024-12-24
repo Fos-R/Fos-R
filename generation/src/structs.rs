@@ -20,6 +20,16 @@ pub enum Flow {
     ICMPFlow(FlowData)
 }
 
+impl Flow {
+    pub fn get_data(&self) -> &FlowData {
+        match &self {
+            Flow::TCPFlow(data) => data,
+            Flow::UDPFlow(data) => data,
+            Flow::ICMPFlow(data) => data,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct FlowData {
     pub src_ip: Ipv4Addr,

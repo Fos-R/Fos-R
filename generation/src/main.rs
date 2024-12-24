@@ -14,6 +14,7 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use std::thread;
 use std::path::Path;
 use std::sync::Arc;
+use std::net::Ipv4Addr;
 
 use clap::{Parser, Subcommand};
 use crossbeam_channel::bounded;
@@ -54,12 +55,13 @@ enum Command {
         noise: bool,
         #[arg(short='f', long, default_value_t=10, help="Minimum number of flows to generate.")] // TODO: use default value "1" for release
         nb_flows: i32,
-        #[arg(short, long, default_value=None, help="Unix time for the beginning of the pcap. By default, use current time.")]
+        #[arg(short='d', long, default_value=None, help="Unix time for the beginning of the pcap. By default, use current time.")]
         start_unix_time: Option<u64>
     }
 }
 
 fn main() {
+    let local_interfaces: Vec<Ipv4Addr> = vec![]; // TODO
     let args = Args::parse();
     dbg!(&args);
     let (start_unix_time, nb_flows, online, noise) =
@@ -78,7 +80,7 @@ fn main() {
     let mut threads = vec![];
 
     // All the channels
-    let (tx_s0, rx_s1) = bounded::<Duration>(CHANNEL_SIZE);
+    let (tx_s0, rx_s1) = bounded::<SeededData<Duration>>(CHANNEL_SIZE);
     let (tx_s1, rx_s2) = bounded::<SeededData<Flow>>(CHANNEL_SIZE);
     let (tx_s2_tcp, rx_s3_tcp) = bounded::<SeededData<PacketsIR<tcp::TCPPacketInfo>>>(CHANNEL_SIZE);
     let (tx_s2_udp, _rx_s3_udp) = bounded::<SeededData<PacketsIR<udp::UDPPacketInfo>>>(CHANNEL_SIZE);
@@ -93,7 +95,6 @@ fn main() {
         let patterns = Arc::clone(&patterns);
         threads.push(thread::spawn(move || {
             let mut s0 = stage1::Stage0::new(seed, patterns, start_unix_time, nb_flows);
-            // This part does not work for the moment so it’s commented
             loop {
                 match s0.next() {
                     Some(ts) => { tx_s0.send(ts).unwrap(); },
@@ -104,24 +105,33 @@ fn main() {
     }
 
     // STAGE 1
-
     for _ in 0..NB_STAGE1 {
         let rx_s1 = rx_s1.clone();
         let tx_s1 = tx_s1.clone();
         let patterns = Arc::clone(&patterns);
-        threads.push(thread::spawn(move || {
+        let local_interfaces = local_interfaces.clone();
+        let builder = thread::Builder::new()
+            .name("Stage1".into());
+        threads.push(builder.spawn(move || {
             // Prepage stage 1 by loading the patterns
-            let s1 = stage1::Stage1::new(seed, patterns);
+            let s1 = stage1::Stage1::new(patterns);
             loop {
                 match rx_s1.recv() {
                     Ok(ts) => {
-                        let flows = s1.generate_flows(ts);
-                        flows.into_iter().for_each(|f| tx_s1.send(f).unwrap());
+                        let flows = s1.generate_flows(ts).into_iter();
+                        if online { // only keep relevant flows
+                            flows.filter(|f| {
+                                let data = f.data.get_data();
+                                local_interfaces.contains(&data.src_ip) || local_interfaces.contains(&data.dst_ip)
+                            }).for_each(|f| tx_s1.send(f).unwrap());
+                        } else {
+                            flows.for_each(|f| tx_s1.send(f).unwrap());
+                        }
                     },
                     Err(_) => { break; }
                 }
             }
-        }));
+        }).unwrap());
     }
 
     // STAGE 2
@@ -133,7 +143,9 @@ fn main() {
         let tx_s2_udp = tx_s2_udp.clone();
         let tx_s2_icmp = tx_s2_icmp.clone();
         let automata_library = Arc::clone(&automata_library);
-        threads.push(thread::spawn(move || {
+        let builder = thread::Builder::new()
+            .name("Stage2".into());
+        threads.push(builder.spawn(move || {
             // Prepare stage 2 by loading the automata
             let mut s2 = stage2::Stage2::new(automata_library);
 
@@ -155,7 +167,7 @@ fn main() {
                     Err(_) => break
                 }
             }
-        }));
+        }).unwrap());
     }
 
     // STAGE 3
@@ -164,7 +176,9 @@ fn main() {
         let rx_s3_tcp = rx_s3_tcp.clone();
         let tx_s3 = tx_s3.clone();
         let tx_pcap = tx_pcap.clone();
-        threads.push(thread::spawn(move || {
+        let builder = thread::Builder::new()
+            .name("Stage3".into());
+        threads.push(builder.spawn(move || {
             // Prepare stage 3 for TCP
             let s3 = stage3::Stage3::new(args.taint);
             loop {
@@ -184,14 +198,16 @@ fn main() {
                     Err(_) => break
                 }   
             }
-        }));
+        }).unwrap());
     }
 
     // PCAP EXPORT
 
     if let Command::Offline { outfile, .. } = &args.command {
         let outfile = outfile.clone();
-        threads.push(thread::spawn(move || {
+        let builder = thread::Builder::new()
+            .name("Pcap-export".into());
+        threads.push(builder.spawn(move || {
             let mut packets_record = vec![];
             loop {
                 match rx_pcap.recv() {
@@ -200,7 +216,7 @@ fn main() {
                 }
             }
             stage3::pcap_export(&packets_record, &outfile);
-        }));
+        }).unwrap());
     }
 
     // STAGE 4 (online-mode only)
@@ -208,7 +224,9 @@ fn main() {
     if let Command::Online { .. } = args.command {
         for _ in 0..NB_STAGE4 {
             let rx_s4 = rx_s4.clone();
-            threads.push(thread::spawn(move || {
+            let builder = thread::Builder::new()
+                .name("Stage4".into());
+            threads.push(builder.spawn(move || {
                 let s4 = stage4::Stage4::new();
                 loop {
                     match rx_s4.recv() {
@@ -216,7 +234,7 @@ fn main() {
                         Err(_) => break,
                     }
                 }
-            }));
+            }).unwrap());
         }
     }
 

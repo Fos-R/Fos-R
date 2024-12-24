@@ -89,14 +89,15 @@ pub struct Stage0 {
     window_count: u32,
     remaining: i32,
     set: Arc<PatternSet>,
+    rng: Pcg32,
 }
 
 impl Iterator for Stage0 {
-    type Item = Duration;
+    type Item = SeededData<Duration>; // TODO
     fn next(&mut self) -> Option<Self::Item> {
         if self.remaining > 0 {
             self.remaining -= 1;
-            Some(self.current_ts)
+            Some(SeededData { seed: self.rng.next_u64(), data: self.current_ts })
         } else {
             None
         }
@@ -106,7 +107,7 @@ impl Iterator for Stage0 {
 impl Stage0 {
 
     pub fn new(seed: u64, patterns: Arc<PatternSet>, initial_ts: Duration, nb_flows: i32) -> Self {
-        Stage0 { current_ts: initial_ts, window_count: 0, remaining: nb_flows, set: patterns }
+        Stage0 { current_ts: initial_ts, window_count: 0, remaining: nb_flows, set: patterns, rng: Pcg32::seed_from_u64(seed) }
     }
 
 }
@@ -114,17 +115,16 @@ impl Stage0 {
 /// Stage 1: generates flow descriptions
 pub struct Stage1 {
     set: Arc<PatternSet>,
-    rng: Pcg32,
 }
 
 impl Stage1 {
 
-    pub fn new(seed: u64, patterns: Arc<PatternSet>) -> Self {
-        Stage1 { set: patterns, rng: Pcg32::seed_from_u64(seed) }
+    pub fn new(patterns: Arc<PatternSet>) -> Self {
+        Stage1 { set: patterns }
     }
 
     /// Generates flows
-    pub fn generate_flows(&self, ts: Duration) -> Vec<SeededData<Flow>> {
+    pub fn generate_flows(&self, ts: SeededData<Duration>) -> Vec<SeededData<Flow>> {
         vec![] // TODO
     }
 
