@@ -5,6 +5,7 @@ mod tcp;
 mod udp;
 mod icmp;
 
+mod stage0;
 mod stage1;
 mod stage2;
 mod stage3;
@@ -88,23 +89,23 @@ fn main() {
     let (tx_s3, rx_s4) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
     let (tx_pcap, rx_pcap) = bounded::<Vec<Vec<u8>>>(CHANNEL_SIZE);
 
-    let patterns = Arc::new(stage1::import_patterns("../models/mini_patterns.json").expect("Cannot load patterns"));
 
     // STAGE 0
-    {
-        let patterns = Arc::clone(&patterns);
-        threads.push(thread::spawn(move || {
-            let mut s0 = stage1::Stage0::new(seed, patterns, start_unix_time, nb_flows);
-            loop {
-                match s0.next() {
-                    Some(ts) => { tx_s0.send(ts).unwrap(); },
-                    None => { break; }
-                };
-            }
-        }));
-    }
+    let builder = thread::Builder::new()
+        .name("Stage0".into());
+    threads.push(builder.spawn(move || {
+        let time_distrib = stage0::import_time_distribution("");
+        let mut s0 = stage0::Stage0::new(seed, time_distrib, start_unix_time, nb_flows);
+        loop {
+            match s0.next() {
+                Some(ts) => { tx_s0.send(ts).unwrap(); },
+                None => { break; }
+            };
+        }
+    }).unwrap());
 
     // STAGE 1
+    let patterns = Arc::new(stage1::import_patterns("../models/mini_patterns.json").expect("Cannot load patterns"));
     for _ in 0..NB_STAGE1 {
         let rx_s1 = rx_s1.clone();
         let tx_s1 = tx_s1.clone();
