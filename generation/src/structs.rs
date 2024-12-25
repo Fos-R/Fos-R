@@ -6,6 +6,7 @@ use std::fmt::Debug;
 use serde::Deserialize;
 
 // A general wrapper to pass a seed along with actual data
+#[derive(Debug)]
 pub struct SeededData<T> {
     pub seed: u64,
     pub data: T,

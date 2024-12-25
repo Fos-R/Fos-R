@@ -21,18 +21,21 @@ impl Stage3 {
     pub fn generate_tcp_packets(&self, input: SeededData<PacketsIR<TCPPacketInfo>>) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         panic!("Not implemented");
+        SeededData { seed: rng.next_u64(), data: Packets { flow: input.data.flow, packets: vec![] } }
     }
 
     /// Generate UDP packets from an intermediate representation
     pub fn generate_udp_packets(&self, input: SeededData<PacketsIR<UDPPacketInfo>>) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         panic!("Not implemented");
+        SeededData { seed: rng.next_u64(), data: Packets { flow: input.data.flow, packets: vec![] } }
     }
 
     /// Generate ICMP packets from an intermediate representation
     pub fn generate_icmp_packets(&self, input: SeededData<PacketsIR<ICMPPacketInfo>>) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         panic!("Not implemented");
+        SeededData { seed: rng.next_u64(), data: Packets { flow: input.data.flow, packets: vec![] } }
     }
 
 }
