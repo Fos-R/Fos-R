@@ -1,3 +1,6 @@
+#![allow(dead_code)] // TODO
+#![allow(unused_variables)]
+
 use crate::structs::*;
 use std::time::Duration;
 use rand_pcg::Pcg32;

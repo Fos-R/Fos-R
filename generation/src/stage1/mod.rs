@@ -7,6 +7,7 @@ use rand_pcg::Pcg32;
 use rand::prelude::*;
 use std::time::Duration;
 use std::sync::Arc;
+use std::net::Ipv4Addr;
 
 /// A node of the Bayesian network
 #[derive(Deserialize, Debug, Clone)]
@@ -71,10 +72,10 @@ struct Pattern {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct PatternSet {
-    weights: Vec<u32>,
-    patterns: Vec<Pattern>,
-    default_pattern: BayesianNetwork,
-    metadata: PatternMetaData,
+    // weights: Vec<u32>,
+    // patterns: Vec<Pattern>,
+    // default_pattern: BayesianNetwork,
+    // metadata: PatternMetaData,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -96,15 +97,34 @@ impl Stage1 {
 
     /// Generates flows
     pub fn generate_flows(&self, ts: SeededData<Duration>) -> Vec<SeededData<Flow>> {
-        vec![] // TODO
+        let mut rng = Pcg32::seed_from_u64(ts.seed);
+        // TODO
+        let flow = Flow::TCPFlow(FlowData {
+            src_ip: Ipv4Addr::new(192, 168, 1, 8),
+            dst_ip: Ipv4Addr::new(192, 168, 1, 14),
+            src_port: 34200,
+            dst_port: 21,
+            recorded_ttl_client: 23,
+            recorded_ttl_server: 68,
+            initial_ttl_client: 255,
+            initial_ttl_server: 255,
+            fwd_packets_count: 3,
+            bwd_packets_count: 2,
+            fwd_total_payload_length: 122,
+            bwd_total_payload_length: 88,
+            timestamp: ts.data,
+            total_duration: Duration::from_millis(2300),
+            } );
+        vec![SeededData { seed: rng.next_u64(), data: flow }] // TODO
     }
 
 }
 
 /// Import patterns from a file
 pub fn import_patterns(filename: &str) -> std::io::Result<PatternSet> {
-    let f = File::open(filename)?;
-    let set : PatternSet = serde_json::from_reader(f)?;
-    println!("Patterns {:?} are loaded",filename);
-    Ok(set)
+    Ok(PatternSet {}) // TODO
+    // let f = File::open(filename)?;
+    // let set : PatternSet = serde_json::from_reader(f)?;
+    // log::info!("Patterns {:?} are loaded",filename);
+    // Ok(set)
 }

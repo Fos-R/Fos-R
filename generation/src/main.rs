@@ -20,7 +20,7 @@ use std::net::Ipv4Addr;
 use clap::{Parser, Subcommand};
 use crossbeam_channel::bounded;
 
-const CHANNEL_SIZE: usize = 100;
+const CHANNEL_SIZE: usize = 5;
 const NB_STAGE1: usize = 1;
 const NB_STAGE2: usize = 1;
 const NB_STAGE3: usize = 1;
@@ -54,7 +54,7 @@ enum Command {
         outfile: String,
         #[arg(short, long, default_value_t=false, help="Add noise in the output file")]
         noise: bool,
-        #[arg(short='f', long, default_value_t=10, help="Minimum number of flows to generate.")] // TODO: use default value "1" for release
+        #[arg(short='f', long, default_value_t=1, help="Minimum number of flows to generate.")] // TODO: use default value "1" for release
         nb_flows: i32,
         #[arg(short='d', long, default_value=None, help="Unix time for the beginning of the pcap. By default, use current time.")]
         start_unix_time: Option<u64>
@@ -62,9 +62,10 @@ enum Command {
 }
 
 fn main() {
+    env_logger::init();
     let local_interfaces: Vec<Ipv4Addr> = vec![]; // TODO
     let args = Args::parse();
-    dbg!(&args);
+    log::trace!("{:?}", &args);
     let (start_unix_time, nb_flows, online, noise) =
         match args.command {
             Command::Offline { start_unix_time, nb_flows, noise, .. } => (start_unix_time.map(|ts| Duration::from_secs(ts)), nb_flows, false, noise),
@@ -76,7 +77,7 @@ fn main() {
         Some(s) => s,
         None => 42, //rand::random(), TODO: change for release
     };
-    println!("Generating with seed {}",seed);
+    log::trace!("Generating with seed {}",seed);
 
     let mut threads = vec![];
 
@@ -89,19 +90,20 @@ fn main() {
     let (tx_s3, rx_s4) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
     let (tx_pcap, rx_pcap) = bounded::<Vec<Vec<u8>>>(CHANNEL_SIZE);
 
-
     // STAGE 0
     let builder = thread::Builder::new()
         .name("Stage0".into());
     threads.push(builder.spawn(move || {
+        log::trace!("Start S0");
         let time_distrib = stage0::import_time_distribution("");
         let mut s0 = stage0::Stage0::new(seed, time_distrib, start_unix_time, nb_flows);
         loop {
             match s0.next() {
-                Some(ts) => { tx_s0.send(ts).unwrap(); },
-                None => { break; }
+                Some(ts) => { log::trace!("S0 generates"); tx_s0.send(ts).unwrap(); },
+                None => break,
             };
         }
+        log::trace!("S0 stops");
     }).unwrap());
 
     // STAGE 1
@@ -114,12 +116,14 @@ fn main() {
         let builder = thread::Builder::new()
             .name("Stage1".into());
         threads.push(builder.spawn(move || {
-            // Prepage stage 1 by loading the patterns
+            log::trace!("Start S1");
             let s1 = stage1::Stage1::new(patterns);
             loop {
                 match rx_s1.recv() {
                     Ok(ts) => {
+                        log::trace!("S1 generates");
                         let flows = s1.generate_flows(ts).into_iter();
+                        dbg!(&flows);
                         if online { // only keep relevant flows
                             flows.filter(|f| {
                                 let data = f.data.get_data();
@@ -129,11 +133,14 @@ fn main() {
                             flows.for_each(|f| tx_s1.send(f).unwrap());
                         }
                     },
-                    Err(_) => { break; }
+                    Err(_) => break,
                 }
             }
+            log::trace!("S1 stops");
         }).unwrap());
     }
+    drop(rx_s1);
+    drop(tx_s1);
 
     // STAGE 2
 
@@ -147,12 +154,14 @@ fn main() {
         let builder = thread::Builder::new()
             .name("Stage2".into());
         threads.push(builder.spawn(move || {
+            log::trace!("Start S2");
             // Prepare stage 2 by loading the automata
             let mut s2 = stage2::Stage2::new(automata_library);
-
             loop {
+                log::trace!("S2 waits");
                 match rx_s2.recv() {
                     Ok(flow) => {
+                        log::trace!("S2 generates");
                         match flow.data {
                             Flow::TCPFlow(data) => {
                                 tx_s2_tcp.send(s2.generate_tcp_packets_info(SeededData { seed : flow.seed, data })).unwrap();
@@ -165,11 +174,16 @@ fn main() {
                             },
                         }
                     },
-                    Err(_) => break
+                    Err(_) => break,
                 }
             }
+            log::trace!("S2 stops");
         }).unwrap());
     }
+    drop(rx_s2);
+    drop(tx_s2_tcp);
+    drop(tx_s2_udp);
+    drop(tx_s2_icmp);
 
     // STAGE 3
 
@@ -181,10 +195,12 @@ fn main() {
             .name("Stage3".into());
         threads.push(builder.spawn(move || {
             // Prepare stage 3 for TCP
+            log::trace!("Start S3");
             let s3 = stage3::Stage3::new(args.taint);
             loop {
                 match rx_s3_tcp.recv() {
                     Ok(headers) => {
+                        log::trace!("S3 generates");
                         let flow_packets = s3.generate_tcp_packets(headers);
                         if online {
                             tx_s3.send(flow_packets).unwrap();
@@ -196,11 +212,17 @@ fn main() {
                             tx_pcap.send(noisy_flow.data.packets).unwrap();
                         }
                     },
-                    Err(_) => break
+                    Err(_) => break,
                 }   
             }
+            log::trace!("S3 stops");
         }).unwrap());
     }
+    drop(rx_s3_tcp);
+    drop(_rx_s3_udp);
+    drop(_rx_s3_icmp);
+    drop(tx_s3);
+    drop(tx_pcap);
 
     // PCAP EXPORT
 
@@ -209,6 +231,7 @@ fn main() {
         let builder = thread::Builder::new()
             .name("Pcap-export".into());
         threads.push(builder.spawn(move || {
+            log::trace!("Start pcap export thread");
             let mut packets_record = vec![];
             loop {
                 match rx_pcap.recv() {
@@ -228,6 +251,7 @@ fn main() {
             let builder = thread::Builder::new()
                 .name("Stage4".into());
             threads.push(builder.spawn(move || {
+                log::trace!("Start S4");
                 let s4 = stage4::Stage4::new();
                 loop {
                     match rx_s4.recv() {
@@ -235,11 +259,15 @@ fn main() {
                         Err(_) => break,
                     }
                 }
+                log::trace!("S4 stops");
             }).unwrap());
         }
     }
+    drop(rx_s4);
 
     for thread in threads.into_iter() {
+        log::trace!("Waiting for thread {}", thread.thread().name().unwrap());
         thread.join().unwrap();
+        log::trace!("Thread ended");
     }
 }
