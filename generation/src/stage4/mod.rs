@@ -8,7 +8,7 @@ pub struct Stage4 {
 
 impl Stage4 {
 
-    pub fn new() -> Self {
+    pub fn new(proto: u8) -> Self {
         // TODO: probe the available interfaces
         Stage4 { interfaces: vec![] }
     }
