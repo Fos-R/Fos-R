@@ -46,7 +46,7 @@ impl Stage2 {
         flow.data.bwd_total_payload_length = packets_info.iter().filter(|p| p.direction == PacketDirection::Backward).map(|p| p.payload.get_payload_size()).sum::<usize>() as u32;
         flow.data.total_duration = packets_info.last().unwrap().ts - flow.data.timestamp;
 
-        SeededData { seed: rng.next_u64(), data: PacketsIR::<TCPPacketInfo> { packets_info, flow: Flow::TCPFlow(flow.data) } }
+        SeededData { seed: rng.next_u64(), data: PacketsIR::<TCPPacketInfo> { packets_info, flow: Flow::TCP(flow.data) } }
     }
 
     pub fn generate_udp_packets_info(&self, flow: SeededData<FlowData>) -> SeededData<PacketsIR<UDPPacketInfo>> {

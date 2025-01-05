@@ -78,7 +78,12 @@ impl Stage3 {
         }
 
         // Set the flags
-        ipv4_packet.set_flags(Ipv4Flags::DontFragment); // TODO: Set fragmentation based on the window size ??
+        let ip_flags = if self.taint {
+            0b100 + Ipv4Flags::DontFragment
+        } else {
+            Ipv4Flags::DontFragment
+        };
+        ipv4_packet.set_flags(ip_flags); // TODO: Set fragmentation based on the window size ??
 
         // Compute the checksum
         ipv4_packet.set_checksum(ipv4::checksum(&ipv4_packet.to_immutable()));
@@ -141,12 +146,12 @@ impl Stage3 {
 
         // Set the s | a | f | r | u | p flags
         tcp_packet.set_flags(
-            (packet_info.s_flag as u8 * TcpFlags::SYN as u8)
-                | (packet_info.a_flag as u8 * TcpFlags::ACK as u8)
-                | (packet_info.f_flag as u8 * TcpFlags::FIN as u8)
-                | (packet_info.r_flag as u8 * TcpFlags::RST as u8)
-                | (packet_info.u_flag as u8 * TcpFlags::URG as u8)
-                | (packet_info.p_flag as u8 * TcpFlags::PSH as u8),
+            (packet_info.s_flag as u8 * TcpFlags::SYN)
+                | (packet_info.a_flag as u8 * TcpFlags::ACK)
+                | (packet_info.f_flag as u8 * TcpFlags::FIN)
+                | (packet_info.r_flag as u8 * TcpFlags::RST)
+                | (packet_info.u_flag as u8 * TcpFlags::URG)
+                | (packet_info.p_flag as u8 * TcpFlags::PSH),
         );
 
         // Simulate the congestion window
@@ -170,7 +175,7 @@ impl Stage3 {
 
         // Set the CWR flag if congestion occurred
         if cwr_flag {
-            tcp_packet.set_flags(tcp_packet.get_flags() | TcpFlags::CWR as u8);
+            tcp_packet.set_flags(tcp_packet.get_flags() | TcpFlags::CWR);
         }
 
         // Set the data offset
@@ -217,9 +222,9 @@ impl Stage3 {
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let tcp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
         let flow = match &input.data.flow {
-            Flow::TCPFlow(f) => f,
-            Flow::UDPFlow(f) => f,
-            Flow::ICMPFlow(f) => f,
+            Flow::TCP(f) => f,
+            Flow::UDP(f) => f,
+            Flow::ICMP(f) => f,
         };
         let mut tcp_data = TcpPacketData::new();
         let mut packets: Vec<Packet> = Vec::new();
@@ -267,7 +272,7 @@ pub fn insert_noise(data: &mut SeededData<Vec<Packet>>) {
     panic!("Not implemented");
 }
 
-pub fn pcap_export(data: &Vec<Packet>, outfile: &String) {
+pub fn pcap_export(data: &Vec<Packet>, outfile: &str) {
     // TODO: sort the data by timestamp
     panic!("Not implemented");
 }

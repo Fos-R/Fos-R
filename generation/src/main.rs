@@ -71,15 +71,12 @@ fn main() {
     log::trace!("{:?}", &args);
     let (start_unix_time, flows_count, online, noise) =
         match args.command {
-            Command::Offline { start_unix_time, flows_count, noise, .. } => (start_unix_time.map(|ts| Duration::from_secs(ts)), flows_count, false, noise),
+            Command::Offline { start_unix_time, flows_count, noise, .. } => (start_unix_time.map(Duration::from_secs), flows_count, false, noise),
             Command::Online { } => (None, -1, true, false),
         };
     let start_unix_time = start_unix_time.unwrap_or(SystemTime::now().duration_since(UNIX_EPOCH).unwrap());
 
-    let seed = match args.seed {
-        Some(s) => s,
-        None => 42, //rand::random(), TODO: change for release
-    };
+    let seed = args.seed.unwrap_or(42); //rand::random() TODO: change for release
     log::trace!("Generating with seed {}",seed);
 
     let mut threads = vec![];
@@ -101,12 +98,10 @@ fn main() {
     threads.push(builder.spawn(move || {
         log::trace!("Start S0");
         let time_distrib = stage0::import_time_distribution("");
-        let mut s0 = stage0::Stage0::new(seed, time_distrib, start_unix_time, flows_count);
-        loop {
-            match s0.next() {
-                Some(ts) => { log::trace!("S0 generates"); tx_s0.send(ts).unwrap(); },
-                None => break,
-            };
+        let s0 = stage0::Stage0::new(seed, time_distrib, start_unix_time, flows_count);
+        for ts in s0 {
+            log::trace!("S0 generates");
+            tx_s0.send(ts).unwrap();
         }
         log::trace!("S0 stops");
     }).unwrap());
@@ -123,21 +118,16 @@ fn main() {
         threads.push(builder.spawn(move || {
             log::trace!("Start S1");
             let s1 = stage1::Stage1::new(patterns);
-            loop {
-                match rx_s1.recv() {
-                    Ok(ts) => {
-                        log::trace!("S1 generates");
-                        let flows = s1.generate_flows(ts).into_iter();
-                        if online { // only keep relevant flows
-                            flows.filter(|f| {
-                                let data = f.data.get_data();
-                                local_interfaces.contains(&data.src_ip) || local_interfaces.contains(&data.dst_ip)
-                            }).for_each(|f| tx_s1.send(f).unwrap());
-                        } else {
-                            flows.for_each(|f| tx_s1.send(f).unwrap());
-                        }
-                    },
-                    Err(_) => break,
+            while let Ok(ts) = rx_s1.recv() {
+                log::trace!("S1 generates");
+                let flows = s1.generate_flows(ts).into_iter();
+                if online { // only keep relevant flows
+                    flows.filter(|f| {
+                        let data = f.data.get_data();
+                        local_interfaces.contains(&data.src_ip) || local_interfaces.contains(&data.dst_ip)
+                    }).for_each(|f| tx_s1.send(f).unwrap());
+                } else {
+                    flows.for_each(|f| tx_s1.send(f).unwrap());
                 }
             }
             log::trace!("S1 stops");
@@ -161,24 +151,19 @@ fn main() {
             log::trace!("Start S2");
             // Prepare stage 2 by loading the automata
             let mut s2 = stage2::Stage2::new(automata_library);
-            loop {
+            while let Ok(flow) = rx_s2.recv() {
                 log::trace!("S2 waits");
-                match rx_s2.recv() {
-                    Ok(flow) => {
-                        log::trace!("S2 generates");
-                        match flow.data {
-                            Flow::TCPFlow(data) => {
-                                tx_s2_tcp.send(s2.generate_tcp_packets_info(SeededData { seed : flow.seed, data })).unwrap();
-                            }
-                            Flow::UDPFlow(data) => {
-                                tx_s2_udp.send(s2.generate_udp_packets_info(SeededData { seed : flow.seed, data })).unwrap();
-                            },
-                            Flow::ICMPFlow(data) => {
-                                tx_s2_icmp.send(s2.generate_icmp_packets_info(SeededData { seed : flow.seed, data })).unwrap();
-                            },
-                        }
+                log::trace!("S2 generates");
+                match flow.data {
+                    Flow::TCP(data) => {
+                        tx_s2_tcp.send(s2.generate_tcp_packets_info(SeededData { seed : flow.seed, data })).unwrap();
+                    }
+                    Flow::UDP(data) => {
+                        tx_s2_udp.send(s2.generate_udp_packets_info(SeededData { seed : flow.seed, data })).unwrap();
                     },
-                    Err(_) => break,
+                    Flow::ICMP(data) => {
+                        tx_s2_icmp.send(s2.generate_icmp_packets_info(SeededData { seed : flow.seed, data })).unwrap();
+                    },
                 }
             }
             log::trace!("S2 stops");
@@ -201,23 +186,18 @@ fn main() {
             // Prepare stage 3 for TCP
             log::trace!("Start S3");
             let s3 = stage3::Stage3::new(args.taint);
-            loop {
-                match rx_s3_tcp.recv() {
-                    Ok(headers) => {
-                        log::trace!("S3 generates");
-                        let flow_packets = s3.generate_tcp_packets(headers);
-                        if online {
-                            tx_s3_tcp.send(flow_packets).unwrap();
-                        } else {
-                            let mut noisy_flow = SeededData { seed: flow_packets.seed, data: flow_packets.data };
-                            if noise { // insert noise
-                                stage3::insert_noise(&mut noisy_flow);
-                            }
-                            tx_pcap.send(noisy_flow.data).unwrap();
-                        }
-                    },
-                    Err(_) => break,
-                }   
+            while let Ok(headers) = rx_s3_tcp.recv() {
+                log::trace!("S3 generates");
+                let flow_packets = s3.generate_tcp_packets(headers);
+                if online {
+                    tx_s3_tcp.send(flow_packets).unwrap();
+                } else {
+                    let mut noisy_flow = SeededData { seed: flow_packets.seed, data: flow_packets.data };
+                    if noise { // insert noise
+                        stage3::insert_noise(&mut noisy_flow);
+                    }
+                    tx_pcap.send(noisy_flow.data).unwrap();
+                }
             }
             log::trace!("S3 stops");
         }).unwrap());
@@ -239,11 +219,8 @@ fn main() {
         threads.push(builder.spawn(move || {
             log::trace!("Start pcap export thread");
             let mut packets_record = vec![];
-            loop {
-                match rx_pcap.recv() {
-                    Ok(mut packets) => packets_record.append(&mut packets),
-                    Err(_) => break,
-                }
+            while let Ok(mut packets) = rx_pcap.recv() {
+                packets_record.append(&mut packets)
             }
             stage3::pcap_export(&packets_record, &outfile);
         }).unwrap());
@@ -257,11 +234,8 @@ fn main() {
         threads.push(builder.spawn(move || {
             log::trace!("Start S4");
             let s4 = stage4::Stage4::new(TCP_PROTO);
-            loop {
-                match rx_s4_tcp.recv() {
-                    Ok(packets) => s4.send(packets),
-                    Err(_) => break,
-                }
+            while let Ok(packets) = rx_s4_tcp.recv() {
+                s4.send(packets)
             }
             log::trace!("S4 stops");
         }).unwrap());

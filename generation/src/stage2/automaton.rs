@@ -114,7 +114,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
                 let (payload, payload_size) = match data.get_payload_type() {
                     PayloadType::Empty => (Payload::Empty, 0),
                     PayloadType::Random(sizes) => {
-                        let size = sizes.choose(rng).unwrap().clone();
+                        let size = *sizes.choose(rng).unwrap();
                         (Payload::Random(size), size)
                     }
                     PayloadType::Text(tss) => {
