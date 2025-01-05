@@ -1,9 +1,10 @@
 #![allow(unused)]
 
+use pcap::PacketHeader;
+use serde::Deserialize;
+use std::fmt::Debug;
 use std::net::Ipv4Addr;
 use std::time::Duration;
-use std::fmt::Debug;
-use serde::Deserialize;
 
 // A general wrapper to pass a seed along with actual data
 #[derive(Debug)]
@@ -18,7 +19,7 @@ pub struct SeededData<T> {
 pub enum Flow {
     TCPFlow(FlowData),
     UDPFlow(FlowData),
-    ICMPFlow(FlowData)
+    ICMPFlow(FlowData),
 }
 
 impl Flow {
@@ -46,45 +47,45 @@ pub struct FlowData {
     pub fwd_total_payload_length: u32,
     pub bwd_total_payload_length: u32,
     pub timestamp: Duration,
-    pub total_duration: Duration
+    pub total_duration: Duration,
 }
 
 // Stage 2 structures
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub enum PayloadType {
     Empty,
     Text(Vec<String>),
     Replay(Vec<Vec<u8>>),
-    Random(Vec<usize>)
+    Random(Vec<usize>),
 }
 
-pub trait EdgeType : Debug {
+pub trait EdgeType: Debug {
     fn get_payload_type(&self) -> &PayloadType;
 }
 
 // Stage 2 and 3 structures
 
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum NoiseType {
     None,
     Deleted,
     Reemitted,
     Transposed,
-    Added
+    Added,
 }
 
-#[derive(Debug,Clone,Copy,PartialEq,Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PacketDirection {
-    Forward, // client to server
+    Forward,  // client to server
     Backward, // server to client
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub enum Payload {
     Empty,
     Replay(Vec<u8>),
-    Random(usize)
+    Random(usize),
 }
 
 impl Payload {
@@ -95,7 +96,6 @@ impl Payload {
             Payload::Random(len) => *len,
         }
     }
-
 }
 
 pub trait Protocol {
@@ -105,15 +105,15 @@ pub trait Protocol {
 }
 
 #[derive(Debug)]
-pub struct PacketsIR<T: Protocol> { // Intermediate representation (as output by stage 2)
+pub struct PacketsIR<T: Protocol> {
+    // Intermediate representation (as output by stage 2)
     pub packets_info: Vec<T>,
     pub flow: Flow,
 }
 
 // Stage 3 structures
 
-#[derive(Debug,Clone)]
-pub struct Packets {
-    pub packets: Vec<Vec<u8>>,
-    pub flow: Flow,
+pub struct Packet {
+    pub header: PacketHeader,
+    pub data: Vec<u8>,
 }

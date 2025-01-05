@@ -3,7 +3,7 @@
 use crate::structs::*;
 use std::time::Duration;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct TCPPacketInfo {
     pub payload: Payload,
     pub ts: Duration,
@@ -14,7 +14,7 @@ pub struct TCPPacketInfo {
     pub f_flag: bool,
     pub r_flag: bool,
     pub u_flag: bool,
-    pub p_flag: bool
+    pub p_flag: bool,
 }
 
 impl Protocol for TCPPacketInfo {
@@ -29,7 +29,7 @@ impl Protocol for TCPPacketInfo {
     }
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct TCPEdgeTuple {
     pub payload_type: PayloadType,
     pub direction: PacketDirection,
@@ -38,7 +38,7 @@ pub struct TCPEdgeTuple {
     pub f_flag: bool,
     pub r_flag: bool,
     pub u_flag: bool,
-    pub p_flag: bool
+    pub p_flag: bool,
 }
 
 impl EdgeType for TCPEdgeTuple {
@@ -48,24 +48,28 @@ impl EdgeType for TCPEdgeTuple {
 }
 
 pub fn parse_tcp_symbol(symbol: String, p: PayloadType) -> TCPEdgeTuple {
-    let strings : Vec<&str> = symbol.split("_").collect();
-    TCPEdgeTuple {  direction:
-        match strings[1] {
+    let strings: Vec<&str> = symbol.split("_").collect();
+    TCPEdgeTuple {
+        direction: match strings[1] {
             _ if strings[1] == ">" => PacketDirection::Forward,
-            _ => PacketDirection::Backward
+            _ => PacketDirection::Backward,
         },
-                    payload_type: p,
-                    s_flag: strings[0].find('S').is_some(),
-                    a_flag: strings[0].find('A').is_some(),
-                    f_flag: strings[0].find('F').is_some(),
-                    r_flag: strings[0].find('R').is_some(),
-                    u_flag: strings[0].find('U').is_some(),
-                    p_flag: strings[0].find('P').is_some(),
+        payload_type: p,
+        s_flag: strings[0].find('S').is_some(),
+        a_flag: strings[0].find('A').is_some(),
+        f_flag: strings[0].find('F').is_some(),
+        r_flag: strings[0].find('R').is_some(),
+        u_flag: strings[0].find('U').is_some(),
+        p_flag: strings[0].find('P').is_some(),
     }
-
 }
 
-pub fn create_tcp_header(payload: Payload, noise: NoiseType, ts: Duration, e: &TCPEdgeTuple) -> TCPPacketInfo {
+pub fn create_tcp_header(
+    payload: Payload,
+    noise: NoiseType,
+    ts: Duration,
+    e: &TCPEdgeTuple,
+) -> TCPPacketInfo {
     TCPPacketInfo {
         payload,
         ts,
@@ -76,6 +80,6 @@ pub fn create_tcp_header(payload: Payload, noise: NoiseType, ts: Duration, e: &T
         f_flag: e.f_flag,
         r_flag: e.r_flag,
         u_flag: e.u_flag,
-        p_flag: e.p_flag
+        p_flag: e.p_flag,
     }
 }
