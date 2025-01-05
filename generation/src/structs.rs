@@ -17,17 +17,17 @@ pub struct SeededData<T> {
 
 #[derive(Debug, Clone)]
 pub enum Flow {
-    TCPFlow(FlowData),
-    UDPFlow(FlowData),
-    ICMPFlow(FlowData),
+    TCP(FlowData),
+    UDP(FlowData),
+    ICMP(FlowData),
 }
 
 impl Flow {
     pub fn get_data(&self) -> &FlowData {
         match &self {
-            Flow::TCPFlow(data) => data,
-            Flow::UDPFlow(data) => data,
-            Flow::ICMPFlow(data) => data,
+            Flow::TCP(data) => data,
+            Flow::UDP(data) => data,
+            Flow::ICMP(data) => data,
         }
     }
 }

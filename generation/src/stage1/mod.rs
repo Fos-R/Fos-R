@@ -99,7 +99,7 @@ impl Stage1 {
     pub fn generate_flows(&self, ts: SeededData<Duration>) -> Vec<SeededData<Flow>> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
         // TODO
-        let flow = Flow::TCPFlow(FlowData {
+        let flow = Flow::TCP(FlowData {
             src_ip: Ipv4Addr::new(192, 168, 1, 8),
             dst_ip: Ipv4Addr::new(192, 168, 1, 14),
             src_port: 34200,
