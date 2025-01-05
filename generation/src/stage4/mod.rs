@@ -13,7 +13,7 @@ impl Stage4 {
         Stage4 { interfaces: vec![] }
     }
 
-    pub fn send(&self, packets: SeededData<Packets>) {
+    pub fn send(&self, packets: SeededData<Vec<Packet>>) {
         // send packets related to one flow
         // flow contains the metadata to configure the socket
         // before sending the next packet, we need to wait for the answer
