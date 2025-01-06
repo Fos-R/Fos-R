@@ -28,7 +28,7 @@ const TCP_PROTO: u8 = 6;
 const UDP_PROTO: u8 = 17;
 const ICMP_PROTO: u8 = 1;
 
-// Stage 0 and pcap export have only one thread
+// Stage 0 and pcap export have only one thread and stage 4 has 3 threads, one per transport protocol
 
 #[derive(Debug, Parser, Clone)]
 #[command(author, version, about, long_about = None)]

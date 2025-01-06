@@ -113,6 +113,7 @@ pub struct PacketsIR<T: Protocol> {
 
 // Stage 3 structures
 
+#[derive(Debug, Clone)]
 pub struct Packet {
     pub header: PacketHeader,
     pub data: Vec<u8>,

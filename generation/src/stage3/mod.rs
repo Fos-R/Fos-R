@@ -93,6 +93,7 @@ impl Stage3 {
 
     fn setup_tcp_packet(
         &self,
+        rng: &mut Pcg32,
         packet: &mut [u8],
         flow: &FlowData,
         packet_info: &TCPPacketInfo,
@@ -134,14 +135,16 @@ impl Stage3 {
         }
 
         // Set the payload
-        match packet_info.payload {
+        match &packet_info.payload {
             Payload::Empty => (),
             Payload::Random(size) => {
-                let mut rng = rand::thread_rng();
-                let payload: Vec<u8> = (0..size).map(|_| rng.gen()).collect();
+                let mut payload = vec![0 as u8;*size];
+                rng.fill_bytes(&mut payload);
                 tcp_packet.set_payload(payload.as_slice());
             }
-            Payload::Replay(_) => (),
+            Payload::Replay(payload) => {
+                tcp_packet.set_payload(&payload);
+            },
         }
 
         // Set the s | a | f | r | u | p flags
@@ -240,7 +243,7 @@ impl Stage3 {
             self.setup_ethernet_frame(&mut packet[..]).expect("Incorrect Ethernet frame");
             self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info).expect("Incorrect IP packet");
             tcp_data =
-                self.setup_tcp_packet(&mut packet[tcp_start..], flow, packet_info, tcp_data).expect("Incorrect TCP packet");
+                self.setup_tcp_packet(&mut rng, &mut packet[tcp_start..], flow, packet_info, tcp_data).expect("Incorrect TCP packet");
 
             packets.push(Packet {
                 header: self
