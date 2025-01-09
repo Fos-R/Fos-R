@@ -275,9 +275,18 @@ pub fn insert_noise(data: &mut SeededData<Vec<Packet>>) {
     panic!("Not implemented");
 }
 
-pub fn pcap_export(data: &Vec<Packet>, outfile: &str) {
+pub fn pcap_export(data: &Vec<Packet>, outfile: &str)  -> Result<(), pcap::Error> {
     // TODO: sort the data by timestamp
-    panic!("Not implemented");
+    let mut savefile = Capture::dead(pcap::Linktype(1))?.savefile(outfile)?;
+
+    for packet in data {
+        savefile.write(&pcap::Packet {
+            header: &packet.header,
+            data: &packet.data,
+        });
+    }
+
+    Ok(())
 }
 
 
