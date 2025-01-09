@@ -290,3 +290,17 @@ pub fn pcap_export(data: &Vec<Packet>, outfile: &str)  -> Result<(), pcap::Error
 }
 
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ethernet(){
+        let stage3 = Stage3::new(false);
+        let mut packet = [0u8; 200];
+        let result = stage3.setup_ethernet_frame(&mut packet);
+        assert_eq!(result, Some(()));
+        let ethertype = ((packet[12] as u16) << 8) | (packet[13] as u16);
+        assert_eq!(ethertype, 0x0800);
+    }
+}
