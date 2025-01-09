@@ -357,6 +357,7 @@ pub fn run_export(rx_pcap: Receiver<Vec<Packet>>, outfile: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pnet_packet::Packet;
 
     #[test]
     fn test_ethernet(){
@@ -472,4 +473,68 @@ mod tests {
         assert_eq!(ipv4_packet.get_flags(), Ipv4Flags::DontFragment);
     }
 
+    
+    #[test]
+    fn test_setup_tcp_packet() {
+        let stage = Stage3::new(false);
+
+        // Prepare the random number generator
+        let mut rng = Pcg32::seed_from_u64(42);
+
+        let flow = FlowData {
+            src_ip: "192.168.1.1".parse().unwrap(),
+            dst_ip: "192.168.1.2".parse().unwrap(),
+            src_port: 12345,
+            dst_port: 80,
+            recorded_ttl_client: 64,
+            recorded_ttl_server: 64,
+            initial_ttl_client: 64,
+            initial_ttl_server: 64,
+            fwd_packets_count: 0,
+            bwd_packets_count: 0,
+            fwd_total_payload_length: 0,
+            bwd_total_payload_length: 0,
+            timestamp: Duration::new(0, 0),
+            total_duration: Duration::new(0, 0),
+        };
+
+        let payload_size = 100;
+        let packet_info = TCPPacketInfo {
+            payload: Payload::Random(payload_size),
+            ts: Duration::new(0, 0),
+            direction: PacketDirection::Forward,
+            noise: NoiseType::None, 
+            s_flag: true,
+            a_flag: true,
+            f_flag: false,
+            r_flag: false,
+            u_flag: false,
+            p_flag: false,
+        };
+
+        let tcp_data = TcpPacketData::new();
+
+        // Prepare a mutable packet buffer
+        let mut packet = vec![0u8; MutableEthernetPacket::minimum_packet_size() +
+            MutableIpv4Packet::minimum_packet_size() +
+            MutableTcpPacket::minimum_packet_size() + payload_size]; 
+
+        // Call the setup_tcp_packet method
+        let new_tcp_data = stage.setup_tcp_packet(&mut rng, &mut packet[MutableEthernetPacket::minimum_packet_size() +
+            MutableIpv4Packet::minimum_packet_size()..], &flow, &packet_info, tcp_data).expect("Failed to setup TCP packet");
+
+        // Validate the TCP packet
+        let tcp_packet = MutableTcpPacket::new(&mut packet[MutableEthernetPacket::minimum_packet_size() +
+            MutableIpv4Packet::minimum_packet_size()..]).unwrap();
+
+        // Check fields
+        assert_eq!(tcp_packet.get_source(), flow.src_port);
+        assert_eq!(tcp_packet.get_destination(), flow.dst_port);
+        assert_eq!(tcp_packet.get_sequence() + payload_size as u32, new_tcp_data.forward);
+        assert_eq!(tcp_packet.get_acknowledgement(), new_tcp_data.backward);
+        assert!(tcp_packet.get_flags() & TcpFlags::SYN != 0);
+        assert!(tcp_packet.get_flags() & TcpFlags::ACK != 0);
+        assert_eq!(tcp_packet.payload().len(), payload_size);
+        assert!(new_tcp_data.forward > 0); 
+    }
 }
