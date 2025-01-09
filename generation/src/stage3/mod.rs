@@ -367,4 +367,109 @@ mod tests {
         let ethertype = ((packet[12] as u16) << 8) | (packet[13] as u16);
         assert_eq!(ethertype, 0x0800);
     }
+
+    #[test]
+    fn test_setup_ip_packet_forward() {
+        let stage = Stage3::new(false);
+        let mut packet = vec![0u8; MutableIpv4Packet::minimum_packet_size()];
+
+        let flow_data = FlowData {
+            src_ip: Ipv4Addr::new(192, 168, 1, 1),
+            dst_ip: Ipv4Addr::new(192, 168, 1, 2),
+            src_port: 12345,
+            dst_port: 80,
+            recorded_ttl_client: 64,
+            recorded_ttl_server: 64,
+            initial_ttl_client: 64,
+            initial_ttl_server: 64,
+            fwd_packets_count: 0,
+            bwd_packets_count: 0,
+            fwd_total_payload_length: 0,
+            bwd_total_payload_length: 0,
+            timestamp: Duration::new(0, 0),
+            total_duration: Duration::new(0, 0),
+        };
+
+        let packet_info = TCPPacketInfo {
+            payload: Payload::Empty,
+            ts: Duration::new(0, 0),
+            direction: PacketDirection::Forward,
+            noise: NoiseType::None,
+            s_flag: false,
+            a_flag: false,
+            f_flag: false,
+            r_flag: false,
+            u_flag: false,
+            p_flag: false,
+        };
+
+        // Call the method under test
+        stage.setup_ip_packet(&mut packet, &flow_data, &packet_info).expect("Failed to setup IP packet");
+
+        // Create a mutable IP packet from the packet buffer
+        let ipv4_packet = MutableIpv4Packet::new(&mut packet).expect("Failed to create IP packet");
+
+        // Assert the fields are set correctly
+        assert_eq!(ipv4_packet.get_version(), 4);
+        assert_eq!(ipv4_packet.get_header_length(), 5);
+        //assert_eq!(ipv4_packet.get_total_length(), packet.len() as u16);
+        assert_eq!(ipv4_packet.get_next_level_protocol(), IpNextHeaderProtocols::Tcp);
+        assert_eq!(ipv4_packet.get_ttl(), flow_data.recorded_ttl_client);
+        assert_eq!(ipv4_packet.get_source(), flow_data.src_ip);
+        assert_eq!(ipv4_packet.get_destination(), flow_data.dst_ip);
+        assert_eq!(ipv4_packet.get_flags(), Ipv4Flags::DontFragment);
+    }
+
+        #[test]
+    fn test_setup_ip_packet_backward() {
+        let stage = Stage3::new(false);
+        let mut packet = vec![0u8; MutableIpv4Packet::minimum_packet_size()];
+
+        let flow_data = FlowData {
+            src_ip: Ipv4Addr::new(192, 168, 1, 1),
+            dst_ip: Ipv4Addr::new(192, 168, 1, 2),
+            src_port: 12345,
+            dst_port: 80,
+            recorded_ttl_client: 64,
+            recorded_ttl_server: 64,
+            initial_ttl_client: 64,
+            initial_ttl_server: 64,
+            fwd_packets_count: 0,
+            bwd_packets_count: 0,
+            fwd_total_payload_length: 0,
+            bwd_total_payload_length: 0,
+            timestamp: Duration::new(0, 0),
+            total_duration: Duration::new(0, 0),
+        };
+
+        let packet_info = TCPPacketInfo {
+            payload: Payload::Empty,
+            ts: Duration::new(0, 0),
+            direction: PacketDirection::Backward,
+            noise: NoiseType::None,
+            s_flag: false,
+            a_flag: false,
+            f_flag: false,
+            r_flag: false,
+            u_flag: false,
+            p_flag: false,
+        };
+
+        // Call the method under test
+        stage.setup_ip_packet(&mut packet, &flow_data, &packet_info).expect("Failed to setup IP packet");
+
+        // Create a mutable IP packet from the packet buffer
+        let ipv4_packet = MutableIpv4Packet::new(&mut packet).expect("Failed to create IP packet");
+
+        // Assert the fields are set correctly
+        assert_eq!(ipv4_packet.get_version(), 4);
+        assert_eq!(ipv4_packet.get_header_length(), 5);
+        //assert_eq!(ipv4_packet.get_total_length(), packet.len() as u16);
+        assert_eq!(ipv4_packet.get_next_level_protocol(), IpNextHeaderProtocols::Tcp);
+        assert_eq!(ipv4_packet.get_ttl(), flow_data.recorded_ttl_server);
+        assert_eq!(ipv4_packet.get_source(), flow_data.dst_ip);
+        assert_eq!(ipv4_packet.get_destination(), flow_data.src_ip);
+        assert_eq!(ipv4_packet.get_flags(), Ipv4Flags::DontFragment);
+    }
+
 }
