@@ -9,11 +9,7 @@ use rand_distr::{Distribution, Normal, Poisson};
 use serde::Deserialize;
 use std::time::Duration;
 
-// Automaton are graphs. Graphs are not straightforward in Rust due to ownership, so we reference nodes by their index in the graph. Indices are never reused, leading to a small memory leak. Since we do not need to remove regularly nodes, it’s not a big deal.
-
-// pub fn complete_tcp_with_values<R: Rng + ?Sized>(rng: &mut R, data: TCPPacketInfo) {
-//     panic!("Not implemented");
-// }
+// Automaton are graphs. Graphs are not straightforward in Rust due to ownership, so we reference nodes by their index in the graph.
 
 #[derive(Debug, Clone)]
 struct TimedNode<T: EdgeType> {
