@@ -58,7 +58,7 @@ enum Command {
         #[arg(short, long, default_value_t=false, help="Add noise in the output file")]
         noise: bool,
         #[arg(short, long, default_value_t=1, help="Minimum number of flows to generate.")] // TODO: use default value "1" for release
-        flows_count: i32,
+        flow_count: i32,
         #[arg(short='d', long, default_value=None, help="Unix time for the beginning of the pcap. By default, use current time.")]
         start_unix_time: Option<u64>
     }
@@ -66,18 +66,29 @@ enum Command {
 
 fn main() {
     env_logger::init();
-    let local_interfaces: Vec<Ipv4Addr> = vec![]; // TODO
+
     let args = Args::parse();
     log::trace!("{:?}", &args);
-    let (start_unix_time, flows_count, online, noise) =
+    let (start_unix_time, flow_count, online, noise) =
         match args.command {
-            Command::Offline { start_unix_time, flows_count, noise, .. } => (start_unix_time.map(Duration::from_secs), flows_count, false, noise),
+            Command::Offline { start_unix_time, flow_count, noise, .. } => (start_unix_time.map(Duration::from_secs), flow_count, false, noise),
             Command::Online { } => (None, -1, true, false),
         };
     let start_unix_time = start_unix_time.unwrap_or(SystemTime::now().duration_since(UNIX_EPOCH).unwrap());
 
     let seed = args.seed.unwrap_or(42); //rand::random() TODO: change for release
     log::trace!("Generating with seed {}",seed);
+
+    let local_interfaces: Vec<Ipv4Addr> = 
+        if online {
+            // Extract all IPv4 local interfaces (except loopback)
+            let extract_addr = |iface: pnet::datalink::NetworkInterface| iface.ips.into_iter().filter(pnet::ipnetwork::IpNetwork::is_ipv4).map(|i| match i { pnet::ipnetwork::IpNetwork::V4(data) => data.ip(), _ => panic!("Impossible") });
+            let ifaces = pnet::datalink::interfaces().into_iter().flat_map(extract_addr).filter(|i| !i.is_loopback()).collect();
+            log::trace!("IPv4 interfaces: {:?}", &ifaces);
+            ifaces
+        } else {
+            vec![]
+        };
 
     let mut threads = vec![];
 
@@ -98,9 +109,9 @@ fn main() {
     threads.push(builder.spawn(move || {
         log::trace!("Start S0");
         let time_distrib = stage0::import_time_distribution("");
-        let s0 = stage0::Stage0::new(seed, time_distrib, start_unix_time, flows_count);
+        let s0 = stage0::Stage0::new(seed, time_distrib, start_unix_time, flow_count);
         for ts in s0 {
-            log::trace!("S0 generates");
+            log::trace!("S0 generates {:?}",ts);
             tx_s0.send(ts).unwrap();
         }
         log::trace!("S0 stops");
@@ -119,8 +130,8 @@ fn main() {
             log::trace!("Start S1");
             let s1 = stage1::Stage1::new(patterns);
             while let Ok(ts) = rx_s1.recv() {
-                log::trace!("S1 generates");
                 let flows = s1.generate_flows(ts).into_iter();
+                log::trace!("S1 generates {:?}", flows);
                 if online { // only keep relevant flows
                     flows.filter(|f| {
                         let data = f.data.get_data();
@@ -222,7 +233,7 @@ fn main() {
             while let Ok(mut packets) = rx_pcap.recv() {
                 packets_record.append(&mut packets)
             }
-            stage3::pcap_export(&packets_record, &outfile);
+            stage3::pcap_export(&packets_record, &outfile).expect("Error during pcap export!");
         }).unwrap());
     }
 

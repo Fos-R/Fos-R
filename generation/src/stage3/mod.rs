@@ -66,12 +66,12 @@ impl Stage3 {
         // Fields that depend on the direction
         match packet_info.get_direction() {
             PacketDirection::Forward => {
-                ipv4_packet.set_ttl(flow.recorded_ttl_client);
+                ipv4_packet.set_ttl(flow.ttl_client);
                 ipv4_packet.set_source(flow.src_ip);
                 ipv4_packet.set_destination(flow.dst_ip);
             }
             PacketDirection::Backward => {
-                ipv4_packet.set_ttl(flow.recorded_ttl_server);
+                ipv4_packet.set_ttl(flow.ttl_server);
                 ipv4_packet.set_source(flow.dst_ip);
                 ipv4_packet.set_destination(flow.src_ip);
             }
@@ -138,7 +138,7 @@ impl Stage3 {
         match &packet_info.payload {
             Payload::Empty => (),
             Payload::Random(size) => {
-                let mut payload = vec![0 as u8;*size];
+                let mut payload = vec![0_u8;*size];
                 rng.fill_bytes(&mut payload);
                 tcp_packet.set_payload(payload.as_slice());
             }
