@@ -143,7 +143,7 @@ impl Stage3 {
                 tcp_packet.set_payload(payload.as_slice());
             }
             Payload::Replay(payload) => {
-                tcp_packet.set_payload(&payload);
+                tcp_packet.set_payload(payload);
             },
         }
 
@@ -236,7 +236,7 @@ impl Stage3 {
             let packet_size = MutableEthernetPacket::minimum_packet_size()
                 + MutableIpv4Packet::minimum_packet_size()
                 + MutableTcpPacket::minimum_packet_size()
-                + packet_info.payload.get_payload_size() as usize;
+                + packet_info.payload.get_payload_size();
 
             let mut packet = vec![0u8; packet_size];
 
@@ -247,8 +247,7 @@ impl Stage3 {
 
             packets.push(Packet {
                 header: self
-                    .get_pcap_header(packet_size, packet_info.get_ts())
-                    .clone(),
+                    .get_pcap_header(packet_size, packet_info.get_ts()),
                 data: packet.clone(),
             });
         }
@@ -275,10 +274,11 @@ pub fn insert_noise(data: &mut SeededData<Vec<Packet>>) {
     panic!("Not implemented");
 }
 
-pub fn pcap_export(data: &Vec<Packet>, outfile: &str)  -> Result<(), pcap::Error> {
+pub fn pcap_export(mut data: Vec<Packet>, outfile: &str)  -> Result<(), pcap::Error> {
     // TODO: sort the data by timestamp
     let mut savefile = Capture::dead(pcap::Linktype(1))?.savefile(outfile)?;
-
+    log::info!("Saving into {}", outfile);
+    data.sort();
     for packet in data {
         savefile.write(&pcap::Packet {
             header: &packet.header,

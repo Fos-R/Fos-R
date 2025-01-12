@@ -8,34 +8,128 @@ use rand::prelude::*;
 use std::time::Duration;
 use std::sync::Arc;
 use std::net::Ipv4Addr;
+use std::collections::HashMap;
+
+#[derive(Debug, Clone)]
+struct PartiallyDefinedFlowData {
+    src_ip: Option<Ipv4Addr>,
+    dst_ip: Option<Ipv4Addr>,
+    src_port: Option<u16>,
+    dst_port: Option<u16>,
+    ttl_client: Option<u8>,
+    ttl_server: Option<u8>,
+    fwd_packets_count: Option<u32>,
+    bwd_packets_count: Option<u32>,
+    fwd_total_payload_length: Option<u32>,
+    bwd_total_payload_length: Option<u32>,
+    timestamp: Option<Duration>,
+    total_duration: Option<Duration>,
+    proto: Option<Protocol>,
+}
+
+impl PartiallyDefinedFlowData {
+
+    fn into_flow(self) -> Flow {
+        let d = FlowData {
+            src_ip: self.src_ip.unwrap(),
+            dst_ip: self.dst_ip.unwrap(),
+            src_port: self.src_port.unwrap(),
+            dst_port: self.dst_port.unwrap(),
+            ttl_client: self.ttl_client.unwrap(),
+            ttl_server: self.ttl_server.unwrap(),
+            fwd_packets_count: self.fwd_packets_count.unwrap(),
+            bwd_packets_count: self.bwd_packets_count.unwrap(),
+            fwd_total_payload_length: self.fwd_total_payload_length.unwrap(),
+            bwd_total_payload_length: self.bwd_total_payload_length.unwrap(),
+            timestamp: self.timestamp.unwrap(),
+            total_duration: self.total_duration.unwrap(),
+        };
+        match self.proto.unwrap() {
+            Protocol::TCP => Flow::TCP(d),
+            Protocol::UDP => Flow::UDP(d),
+            Protocol::ICMP => Flow::ICMP(d),
+        }
+    }
+
+    fn set_value(&mut self, f: &Feature, index: usize) {
+        match f {
+            // TODO: tirage des valeurs en cas d’intervalles
+            Feature::SrcIP(ref v) => self.src_ip = Some(*v.0.get(index).unwrap()),
+            Feature::DstIP(ref v) => self.dst_ip = Some(*v.0.get(index).unwrap()),
+            Feature::FwdPkt(ref v) => self.fwd_packets_count = Some(v.get(index).unwrap().0),
+            Feature::BwdPkt(ref v) => self.bwd_packets_count = Some(v.get(index).unwrap().0),
+            Feature::FwdByt(ref v) => self.fwd_total_payload_length = Some(v.get(index).unwrap().0),
+            Feature::BwdByt(ref v) => self.bwd_total_payload_length = Some(v.get(index).unwrap().0),
+            Feature::Proto(ref v) => self.proto = Some(v.clone()),
+        }
+    }
+}
+
+
+#[derive(Deserialize, Debug, Clone)]
+enum Protocol {
+    TCP,
+    UDP,
+    ICMP,
+}
 
 /// A node of the Bayesian network
 #[derive(Deserialize, Debug, Clone)]
 struct BayesianNetworkNode {
-    feature_number: usize,
+    feature: Feature,
     partial_flow_number: usize,
     parents: Vec<usize>, // indices in the Bayesian network’s nodes
     cpt: Vec<CptLine>
 }
 
 #[derive(Deserialize, Debug, Clone)]
-#[serde(tag = "type")]
-enum CptLine {
-    Discrete {  weights: Vec<f32>,
-                values: Vec<u32>,
-                parents_values: Vec<u32> }, // value of the parents, as ordered in the "parents" field of BayesianNetworkNode
-    Interval {  weights: Vec<f32>,
-                values: Vec<(u32,u32)>,
-                parents_values: Vec<u32> },
-    Normal {
-                mean: f32,
-                variance: f32,
-                parents_values: Vec<u32> },
+#[serde(from = "Vec<String>")]
+struct Ipv4Vector(Vec<Ipv4Addr>);
+
+impl From<Vec<String>> for Ipv4Vector {
+    fn from(v: Vec<String>) -> Ipv4Vector {
+        // TODO: et les IP publiques anonymisées ?
+        Ipv4Vector(v.into_iter().map(|s| s.parse().unwrap()).collect())
+    }
 }
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(tag = "type", content = "domain")]
+enum Feature {
+    SrcIP(Ipv4Vector),
+    DstIP(Ipv4Vector),
+    FwdPkt(Vec<(u32,u32)>),
+    BwdPkt(Vec<(u32,u32)>),
+    FwdByt(Vec<(u32,u32)>),
+    BwdByt(Vec<(u32,u32)>),
+    Proto(Protocol)
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct CptLineJSON {
+    probas: Vec<Vec<f32>>,
+    parents_values: Vec<Vec<u32>>
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(from = "CptLineJSON")]
+struct CptLine(HashMap<Vec<u32>,Vec<f32>>);
+
+impl From<CptLineJSON> for CptLine {
+    fn from(line: CptLineJSON) -> CptLine {
+        let mut cptline = HashMap::new();
+        let mut iter_probas = line.probas.into_iter();
+        for v in line.parents_values.into_iter() {
+            cptline.insert(v, iter_probas.next().unwrap());
+        }
+        CptLine(cptline)
+    }
+}
+
 
 impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
-    fn sample(&self, vector: &mut Vec<i32>) {
+    fn sample_index(&self, rng: &mut Pcg32) -> usize {
         panic!("Not implemented");
     }
 }
@@ -44,38 +138,84 @@ impl BayesianNetworkNode {
 #[derive(Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
 enum CellType {
-    Fixed { value: u32 },
-    Free,
-    ReuseVariable { col: usize, row: usize } // values are the coordinates of the cell in the partial flows to reuse
+    Fixed { feature: Feature }, // only one value in the Feature domain
+    ReuseSrcAsSrc { row: usize }, // reuse the IP from that row
+    ReuseSrcAsDst { row: usize },
+    ReuseDrcAsSrc { row: usize },
+    ReuseDrcAsDst { row: usize },
 }
 
 #[derive(Deserialize, Debug, Clone)]
 struct BayesianNetwork {
-    graph: Vec<BayesianNetworkNode> // order is assumed to be topological
+    graph: Vec<BayesianNetworkNode>, // order is assumed to be topological
 }
 
 impl BayesianNetwork {
     /// Sample a vector from the Bayesian network
-    fn sample(&self) -> Vec<i32> {
+    fn sample_free_cells(&self, rng: &mut Pcg32, flow_count: usize) -> Vec<PartiallyDefinedFlowData> {
+        let mut p = PartiallyDefinedFlowData { src_ip: None, dst_ip: None, src_port: None, dst_port: None,
+            ttl_client: None, ttl_server: None,
+            fwd_packets_count: None,
+            bwd_packets_count: None,
+            fwd_total_payload_length: None,
+            bwd_total_payload_length: None,
+            timestamp: None, total_duration: None,
+            proto: None, };
+
+        for v in self.graph.iter() {
+            
+            p.set_value(&v.feature, v.sample_index(rng));
+        }
         panic!("Not implemented");
     }
 
 }
 
+#[derive(Deserialize, Debug, Clone)]
+struct PartialFlowRow {
+    time_distrib: f32, // either the starting timestamp distribution or the IAT distribution
+    row: Vec<CellType>
+}
+
 /// Each pattern has partial flows and a Bayesian network that describes the distribution of "free" cells
 #[derive(Deserialize, Debug, Clone)]
 struct Pattern {
-    start_ts_distrib: f32,
-    partial_flows: Vec<Vec<CellType>>,
-    bayesian_network: BayesianNetwork
+    weight: u32,
+    partial_flows: Vec<PartialFlowRow>,
+    bayesian_network: BayesianNetwork,
+}
+
+impl Pattern {
+    /// Sample flows
+    fn sample(&self, rng: &mut Pcg32, ts: Duration) -> Vec<Flow> {
+        let mut partially_defined_flows = self.bayesian_network.sample_free_cells(rng, self.partial_flows.len());
+        for (r_index,p) in self.partial_flows.iter().enumerate() {
+            partially_defined_flows.get_mut(r_index).unwrap().timestamp = Some(ts); // TODO tirage
+            for (c_index,c) in p.row.iter().enumerate() {
+                match c {
+                    CellType::ReuseSrcAsSrc{ row } => { partially_defined_flows.get_mut(r_index).unwrap().src_ip = partially_defined_flows.get(*row).unwrap().src_ip },
+                    CellType::ReuseSrcAsDst{ row } => { partially_defined_flows.get_mut(r_index).unwrap().dst_ip = partially_defined_flows.get(*row).unwrap().src_ip },
+                    CellType::ReuseDrcAsSrc{ row } => { partially_defined_flows.get_mut(r_index).unwrap().src_ip = partially_defined_flows.get(*row).unwrap().dst_ip },
+                    CellType::ReuseDrcAsDst{ row } => { partially_defined_flows.get_mut(r_index).unwrap().dst_ip = partially_defined_flows.get(*row).unwrap().dst_ip },
+                    CellType::Fixed{ feature } => partially_defined_flows.get_mut(r_index).unwrap().set_value(feature, 0),
+                };
+            }
+        }
+        partially_defined_flows.into_iter().map(PartiallyDefinedFlowData::into_flow).collect()
+    }
+
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct PatternSet {
-    // weights: Vec<u32>,
-    // patterns: Vec<Pattern>,
-    // default_pattern: BayesianNetwork,
-    // metadata: PatternMetaData,
+    patterns: Vec<Pattern>, // the empty pattern is considered to be a pattern like the others
+    metadata: PatternMetaData,
+}
+
+impl PatternSet {
+    pub fn merge(&mut self, other: PatternSet, weight: Option<f64>) {
+        panic!("Not implemented")
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -87,18 +227,27 @@ struct PatternMetaData {
 /// Stage 1: generates flow descriptions
 pub struct Stage1 {
     set: Arc<PatternSet>,
+    online: bool, // used to generate the TTL, either initial or at the capture point
 }
 
 impl Stage1 {
 
-    pub fn new(patterns: Arc<PatternSet>) -> Self {
-        Stage1 { set: patterns }
+    pub fn new(patterns: Arc<PatternSet>, online: bool) -> Self {
+        Stage1 { set: patterns, online }
     }
 
     /// Generates flows
+    pub fn generate_flows2(&self, ts: SeededData<Duration>) -> Vec<SeededData<Flow>> {
+        let mut rng = Pcg32::seed_from_u64(ts.seed);
+        // select pattern TODO
+        let pattern = self.set.patterns.get(0).unwrap();
+        // TODO
+        pattern.sample(&mut rng, ts.data).into_iter().map(|f| SeededData { seed: rng.next_u64(), data: f }).collect()
+    }
+
+    /// Placeholder
     pub fn generate_flows(&self, ts: SeededData<Duration>) -> Vec<SeededData<Flow>> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
-        // TODO
         let flow = Flow::TCP(FlowData {
             src_ip: Ipv4Addr::new(192, 168, 1, 8),
             dst_ip: Ipv4Addr::new(192, 168, 1, 14),
@@ -120,7 +269,8 @@ impl Stage1 {
 
 /// Import patterns from a file
 pub fn import_patterns(filename: &str) -> std::io::Result<PatternSet> {
-    Ok(PatternSet {}) // TODO
+    Ok(PatternSet { patterns: vec![], metadata: PatternMetaData { input_file: "".to_string(), creation_time: "".to_string() } }) // TODO
+
     // let f = File::open(filename)?;
     // let set : PatternSet = serde_json::from_reader(f)?;
     // log::info!("Patterns {:?} are loaded",filename);
