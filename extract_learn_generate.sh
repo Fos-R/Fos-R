@@ -80,7 +80,7 @@ if [ ! -f data/$name/synthetic.pcap ] || [ "$generate" -eq 1 ]; then
     echo "Generation"
     start=$(date +%s)
     cd generation
-    cargo run -r -- -o ../data/$name/synthetic.pcap -m ../data/$name
+    cargo run -r -- offline -o ../data/$name/synthetic.pcap -m ../data/$name
     end=$(date +%s)
     echo "Generation time: $(($end-$start)) seconds"
 fi

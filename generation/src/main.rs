@@ -16,9 +16,11 @@ use std::thread;
 use std::path::Path;
 use std::sync::Arc;
 use std::net::Ipv4Addr;
+use std::env;
 
 use clap::{Parser, Subcommand};
 use crossbeam_channel::bounded;
+use pnet::{ipnetwork::IpNetwork, datalink};
 
 const CHANNEL_SIZE: usize = 5; // TODO: increase
 const STAGE1_COUNT: usize = 1; // TODO: mettre en variable. Mode online _ou_ mode "économe", un seul thread. Sinon, un nombre qui dépend des cœurs disponibles.
@@ -65,6 +67,9 @@ enum Command {
 }
 
 fn main() {
+    if env::var("RUST_LOG").is_err() {
+        env::set_var("RUST_LOG", "info") // default log level: info
+    }
     env_logger::init();
 
     let args = Args::parse();
@@ -82,8 +87,8 @@ fn main() {
     let local_interfaces: Vec<Ipv4Addr> = 
         if online {
             // Extract all IPv4 local interfaces (except loopback)
-            let extract_addr = |iface: pnet::datalink::NetworkInterface| iface.ips.into_iter().filter(pnet::ipnetwork::IpNetwork::is_ipv4).map(|i| match i { pnet::ipnetwork::IpNetwork::V4(data) => data.ip(), _ => panic!("Impossible") });
-            let ifaces = pnet::datalink::interfaces().into_iter().flat_map(extract_addr).filter(|i| !i.is_loopback()).collect();
+            let extract_addr = |iface: datalink::NetworkInterface| iface.ips.into_iter().filter(IpNetwork::is_ipv4).map(|i| match i { IpNetwork::V4(data) => data.ip(), _ => panic!("Impossible") });
+            let ifaces = datalink::interfaces().into_iter().flat_map(extract_addr).filter(|i| !i.is_loopback()).collect();
             log::trace!("IPv4 interfaces: {:?}", &ifaces);
             ifaces
         } else {
@@ -118,7 +123,7 @@ fn main() {
     }).unwrap());
 
     // STAGE 1
-    let patterns = Arc::new(stage1::import_patterns("../models/mini_patterns.json").expect("Cannot load patterns"));
+    let patterns = Arc::new(stage1::import_patterns(Path::new(&args.models).join("patterns.json").to_str().unwrap()).expect("Cannot load patterns"));
     for _ in 0..STAGE1_COUNT {
         let rx_s1 = rx_s1.clone();
         let tx_s1 = tx_s1.clone();
@@ -128,7 +133,7 @@ fn main() {
             .name("Stage1".into());
         threads.push(builder.spawn(move || {
             log::trace!("Start S1");
-            let s1 = stage1::Stage1::new(patterns);
+            let s1 = stage1::Stage1::new(patterns, online);
             while let Ok(ts) = rx_s1.recv() {
                 let flows = s1.generate_flows(ts).into_iter();
                 log::trace!("S1 generates {:?}", flows);
@@ -200,6 +205,7 @@ fn main() {
             while let Ok(headers) = rx_s3_tcp.recv() {
                 log::trace!("S3 generates");
                 let flow_packets = s3.generate_tcp_packets(headers);
+                // dbg!(&flow_packets);
                 if online {
                     tx_s3_tcp.send(flow_packets).unwrap();
                 } else {
@@ -233,7 +239,7 @@ fn main() {
             while let Ok(mut packets) = rx_pcap.recv() {
                 packets_record.append(&mut packets)
             }
-            stage3::pcap_export(&packets_record, &outfile).expect("Error during pcap export!");
+            stage3::pcap_export(packets_record, &outfile).expect("Error during pcap export!");
         }).unwrap());
     }
 

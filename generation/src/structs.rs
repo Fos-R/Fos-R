@@ -5,6 +5,7 @@ use serde::Deserialize;
 use std::fmt::Debug;
 use std::net::Ipv4Addr;
 use std::time::Duration;
+use std::cmp::Ordering;
 
 // A general wrapper to pass a seed along with actual data
 #[derive(Debug)]
@@ -116,3 +117,24 @@ pub struct Packet {
     pub header: PacketHeader,
     pub data: Vec<u8>,
 }
+
+impl Ord for Packet {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.header.ts.tv_sec.cmp(&other.header.ts.tv_sec).then(self.header.ts.tv_usec.cmp(&other.header.ts.tv_usec))
+    }
+
+}
+
+impl PartialOrd for Packet {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Packet {
+    fn eq(&self, other: &Self) -> bool {
+        self.header.ts.tv_usec == other.header.ts.tv_usec && self.header.ts.tv_sec == other.header.ts.tv_sec
+    }
+}
+
+impl Eq for Packet {}
