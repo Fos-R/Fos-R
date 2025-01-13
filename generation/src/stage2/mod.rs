@@ -50,11 +50,11 @@ impl Stage2 {
     }
 
     pub fn generate_udp_packets_info(&self, flow: SeededData<FlowData>) -> SeededData<PacketsIR<UDPPacketInfo>> {
-        panic!("Not implemented");
+        todo!()
     }
 
     pub fn generate_icmp_packets_info(&self, flow: SeededData<FlowData>) -> SeededData<PacketsIR<ICMPPacketInfo>> {
-        panic!("Not implemented");
+        todo!()
     }
 
 }

@@ -258,20 +258,20 @@ impl Stage3 {
     /// Generate UDP packets from an intermediate representation
     pub fn generate_udp_packets(&self, input: SeededData<PacketsIR<UDPPacketInfo>>) -> SeededData<Vec<Packet>> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
-        panic!("Not implemented");
+        todo!();
         SeededData { seed: rng.next_u64(), data: vec![] }
     }
 
     /// Generate ICMP packets from an intermediate representation
     pub fn generate_icmp_packets(&self, input: SeededData<PacketsIR<ICMPPacketInfo>>) -> SeededData<Vec<Packet>> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
-        panic!("Not implemented");
+        todo!();
         SeededData { seed: rng.next_u64(), data: vec![] }
     }
 }
 
 pub fn insert_noise(data: &mut SeededData<Vec<Packet>>) {
-    panic!("Not implemented");
+    todo!()
 }
 
 pub fn pcap_export(mut data: Vec<Packet>, outfile: &str)  -> Result<(), pcap::Error> {
