@@ -9,6 +9,8 @@ use std::time::Duration;
 use std::sync::Arc;
 use std::net::Ipv4Addr;
 use std::collections::HashMap;
+use rand::distributions::WeightedIndex;
+use rand::distributions::Uniform;
 
 #[derive(Debug, Clone)]
 struct PartiallyDefinedFlowData {
@@ -51,15 +53,15 @@ impl PartiallyDefinedFlowData {
         }
     }
 
-    fn set_value(&mut self, f: &Feature, index: usize) {
+    fn set_value(&mut self, rng: &mut Pcg32, f: &Feature, index: usize) {
         match f {
             // TODO: tirage des valeurs en cas d’intervalles
             Feature::SrcIP(ref v) => self.src_ip = Some(*v.0.get(index).unwrap()),
             Feature::DstIP(ref v) => self.dst_ip = Some(*v.0.get(index).unwrap()),
-            Feature::FwdPkt(ref v) => self.fwd_packets_count = Some(v.get(index).unwrap().0),
-            Feature::BwdPkt(ref v) => self.bwd_packets_count = Some(v.get(index).unwrap().0),
-            Feature::FwdByt(ref v) => self.fwd_total_payload_length = Some(v.get(index).unwrap().0),
-            Feature::BwdByt(ref v) => self.bwd_total_payload_length = Some(v.get(index).unwrap().0),
+            Feature::FwdPkt(ref v) => self.fwd_packets_count = Some(v.0.get(index).unwrap().sample(rng)),
+            Feature::BwdPkt(ref v) => self.bwd_packets_count = Some(v.0.get(index).unwrap().sample(rng)),
+            Feature::FwdByt(ref v) => self.fwd_total_payload_length = Some(v.0.get(index).unwrap().sample(rng)),
+            Feature::BwdByt(ref v) => self.bwd_total_payload_length = Some(v.0.get(index).unwrap().sample(rng)),
             Feature::Proto(ref v) => self.proto = Some(v.clone()),
         }
     }
@@ -94,14 +96,24 @@ impl From<Vec<String>> for Ipv4Vector {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(from = "Vec<(u32,u32)>")]
+struct Intervals(Vec<Uniform<u32>>);
+
+impl From<Vec<(u32,u32)>> for Intervals {
+    fn from(v: Vec<(u32,u32)>) -> Intervals {
+        Intervals(v.into_iter().map(|(low,high)| Uniform::new(low, high)).collect())
+    }
+}
+
+#[derive(Deserialize, Debug, Clone)]
 #[serde(tag = "type", content = "domain")]
 enum Feature {
     SrcIP(Ipv4Vector),
     DstIP(Ipv4Vector),
-    FwdPkt(Vec<(u32,u32)>),
-    BwdPkt(Vec<(u32,u32)>),
-    FwdByt(Vec<(u32,u32)>),
-    BwdByt(Vec<(u32,u32)>),
+    FwdPkt(Intervals),
+    BwdPkt(Intervals),
+    FwdByt(Intervals),
+    BwdByt(Intervals),
     Proto(Protocol)
 }
 
@@ -113,19 +125,24 @@ struct CptLineJSON {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(from = "CptLineJSON")]
-struct CptLine(HashMap<Vec<u32>,Vec<f32>>);
+struct CptLine(HashMap<Vec<u32>,WeightedIndex<f32>>);
+
+impl CptLine {
+    fn sample(&self, rng: &mut Pcg32, parents_values: &Vec<u32>) -> usize {
+        self.0.get(parents_values).unwrap().sample(rng)
+    }
+}
 
 impl From<CptLineJSON> for CptLine {
     fn from(line: CptLineJSON) -> CptLine {
         let mut cptline = HashMap::new();
         let mut iter_probas = line.probas.into_iter();
         for v in line.parents_values.into_iter() {
-            cptline.insert(v, iter_probas.next().unwrap());
+            cptline.insert(v, WeightedIndex::new(iter_probas.next().unwrap()).unwrap());
         }
         CptLine(cptline)
     }
 }
-
 
 impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
@@ -163,8 +180,8 @@ impl BayesianNetwork {
             proto: None, };
 
         for v in self.graph.iter() {
-            
-            p.set_value(&v.feature, v.sample_index(rng));
+            let i = v.sample_index(rng);
+            p.set_value(rng, &v.feature, i);
         }
         todo!()
     }
@@ -197,7 +214,7 @@ impl Pattern {
                     CellType::ReuseSrcAsDst{ row } => { partially_defined_flows.get_mut(r_index).unwrap().dst_ip = partially_defined_flows.get(*row).unwrap().src_ip },
                     CellType::ReuseDrcAsSrc{ row } => { partially_defined_flows.get_mut(r_index).unwrap().src_ip = partially_defined_flows.get(*row).unwrap().dst_ip },
                     CellType::ReuseDrcAsDst{ row } => { partially_defined_flows.get_mut(r_index).unwrap().dst_ip = partially_defined_flows.get(*row).unwrap().dst_ip },
-                    CellType::Fixed{ feature } => partially_defined_flows.get_mut(r_index).unwrap().set_value(feature, 0),
+                    CellType::Fixed{ feature } => partially_defined_flows.get_mut(r_index).unwrap().set_value(rng, feature, 0),
                 };
             }
         }
