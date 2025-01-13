@@ -14,7 +14,7 @@ use std::time::Duration;
 #[derive(Debug, Clone)]
 struct TimedNode<T: EdgeType> {
     out_edges: Vec<TimedEdge<T>>,
-    // TODO: créer directement le WeightedIndex
+    dist: Option<WeightedIndex<f32>>,
 }
 
 #[derive(Debug, Clone)]
@@ -25,13 +25,15 @@ enum EdgeDistribution {
 }
 
 #[derive(Debug, Clone)]
-struct TimedEdge<T: EdgeType> {
+struct TimedEdge<T: EdgeType> { // TODO: plutôt que "Option<T>" pour data, utiliser un enum
+                                // "EpsilonEdge"/"NonEpsilonEdge" pour tout ce qui étiquette une
+                                // transition (symbole et valeur)
     dst_node: usize,
     src_node: usize, // not sure if useful
-    transition_proba: f32,
     data: Option<T>, // no data if transition to sink state
+    transition_proba: f32, // not used
     mu: [f32; 2],
-    cov: [[f32; 2]; 2],
+    cov: [[f32; 2]; 2], // TODO: créer directement loi normale / poisson 
     p: EdgeDistribution,
 }
 
@@ -101,13 +103,11 @@ impl<T: EdgeType> TimedAutomaton<T> {
         // TODO: sample with noise
         while current_state != self.accepting_state {
             assert!(!self.graph[current_state].out_edges.is_empty());
-            let mut weights = vec![];
-            for e in self.graph[current_state].out_edges.iter() {
-                weights.push(e.transition_proba);
-            }
-            // println!("{:?} {:?}",weights, self.graph[current_state].out_edges);
-            let dist = WeightedIndex::new(&weights).unwrap();
-            let e = &self.graph[current_state].out_edges[dist.sample(rng)];
+            let index = match &self.graph[current_state].dist {
+                None => 0, // only one outgoing edge
+                Some(d) => d.sample(rng)
+            };
+            let e = &self.graph[current_state].out_edges[index];
             if let Some(data) = &e.data {
                 // if $-transition, don’t create a header
                 let (payload, payload_size) = match data.get_payload_type() {
@@ -171,6 +171,7 @@ pub enum JsonProtocol {
 
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
+#[serde(into = "PayloadType")]
 enum JsonPayload {
     Lengths { lengths: Vec<usize> },
     HexCodes { content: Vec<String> },
@@ -178,8 +179,8 @@ enum JsonPayload {
     NoPayload,
 }
 
-impl JsonPayload {
-    fn into_payload_type(self) -> PayloadType {
+impl Into<PayloadType> for JsonPayload {
+    fn into(self) -> PayloadType {
         match self {
             JsonPayload::Lengths { lengths: l } => PayloadType::Random(l),
             JsonPayload::NoPayload => PayloadType::Empty,
@@ -202,13 +203,13 @@ impl<T: EdgeType> TimedAutomaton<T> {
         let mut graph: Vec<TimedNode<T>> = vec![];
         for _ in 0..a.edges.len() + 1 {
             // the automaton is connected, so #edges+1 >= #nodes
-            graph.push(TimedNode { out_edges: vec![] });
+            graph.push(TimedNode { out_edges: vec![], dist: None });
         }
         for e in a.edges {
             let data = if e.symbol.eq("$") {
                 None
             } else {
-                Some(symbol_parser(e.symbol, e.payloads.into_payload_type()))
+                Some(symbol_parser(e.symbol, e.payloads.into()))
             };
             let new_edge = TimedEdge {
                 dst_node: e.dst,
@@ -222,6 +223,16 @@ impl<T: EdgeType> TimedAutomaton<T> {
             graph[e.src].out_edges.push(new_edge);
             nodes_nb = nodes_nb.max(e.src + 1).max(e.dst + 1);
         }
+        for s in graph.iter_mut() {
+            if s.out_edges.len() > 1 {
+                let mut weights = vec![];
+                for e in s.out_edges.iter() {
+                    weights.push(e.transition_proba);
+                }
+                s.dist = Some(WeightedIndex::new(&weights).unwrap());
+            }
+        }
+        // println!("{:?} {:?}",weights, self.graph[current_state].out_edges);
         graph.truncate(nodes_nb);
         // dbg!(&graph);
         TimedAutomaton::<T> {
