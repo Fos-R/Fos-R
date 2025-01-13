@@ -130,7 +130,7 @@ impl From<CptLineJSON> for CptLine {
 impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
     fn sample_index(&self, rng: &mut Pcg32) -> usize {
-        panic!("Not implemented");
+        todo!()
     }
 }
 
@@ -166,7 +166,7 @@ impl BayesianNetwork {
             
             p.set_value(&v.feature, v.sample_index(rng));
         }
-        panic!("Not implemented");
+        todo!()
     }
 
 }
@@ -214,7 +214,7 @@ pub struct PatternSet {
 
 impl PatternSet {
     pub fn merge(&mut self, other: PatternSet, weight: Option<f64>) {
-        panic!("Not implemented")
+        todo!()
     }
 }
 

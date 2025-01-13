@@ -14,12 +14,14 @@ use std::time::Duration;
 #[derive(Debug, Clone)]
 struct TimedNode<T: EdgeType> {
     out_edges: Vec<TimedEdge<T>>,
+    // TODO: créer directement le WeightedIndex
 }
 
 #[derive(Debug, Clone)]
 enum EdgeDistribution {
     Normal, // TODO: add cond_var to compute it only once
     Poisson,
+    Gamma, // TODO
 }
 
 #[derive(Debug, Clone)]
@@ -46,6 +48,7 @@ impl EdgeDistribution {
                 let poisson = Poisson::new((cond_mu + cond_var) / 2.0).unwrap();
                 poisson.sample(rng).max(0.)
             }
+            EdgeDistribution::Gamma => todo!()
         }
     }
 }
