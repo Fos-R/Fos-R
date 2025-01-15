@@ -16,10 +16,10 @@ use stage2::tadam;
 mod stage3;
 mod stage4;
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use std::thread;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Mutex, Arc};
 use std::net::Ipv4Addr;
 use std::env;
 
@@ -31,6 +31,7 @@ const CHANNEL_SIZE: usize = 5; // TODO: increase
 const STAGE1_COUNT: usize = 1; // TODO: mettre en variable. Mode online _ou_ mode "économe", un seul thread. Sinon, un nombre qui dépend des cœurs disponibles.
 const STAGE2_COUNT: usize = 1;
 const STAGE3_COUNT: usize = 1;
+// monitor threads with "top -H -p $(pgrep fosr)"
 const TCP_PROTO: u8 = 6;
 #[allow(dead_code)]
 const UDP_PROTO: u8 = 17;
@@ -45,6 +46,9 @@ fn main() {
         env::set_var("RUST_LOG", "info") // default log level: info
     }
     env_logger::init();
+    let start_time = Instant::now();
+    let packets_counter = Arc::new(Mutex::new(0));
+    let bytes_counter = Arc::new(Mutex::new(0));
 
     let args = cmd::Args::parse();
     log::trace!("{:?}", &args);
@@ -167,6 +171,8 @@ fn main() {
     // STAGE 3
 
     for _ in 0..STAGE3_COUNT {
+        let packets_counter = Arc::clone(&packets_counter);
+        let bytes_counter = Arc::clone(&bytes_counter);
         let rx_s3_tcp = rx_s3_tcp.clone();
         let tx_s3_tcp = tx_s3_tcp.clone();
         let tx_pcap = tx_pcap.clone();
@@ -179,6 +185,12 @@ fn main() {
             while let Ok(headers) = rx_s3_tcp.recv() {
                 log::trace!("S3 generates");
                 let flow_packets = s3.generate_tcp_packets(headers);
+                {
+                    let mut pc = packets_counter.lock().unwrap();
+                    *pc += flow_packets.data.packets.len();
+                    let mut bc = bytes_counter.lock().unwrap();
+                    *bc += flow_packets.data.flow.get_data().fwd_total_payload_length + flow_packets.data.flow.get_data().bwd_total_payload_length;
+                }
                 // dbg!(&flow_packets);
                 if online {
                     tx_s3_tcp.send(flow_packets).unwrap();
@@ -208,12 +220,22 @@ fn main() {
         let builder = thread::Builder::new()
             .name("Pcap-export".into());
         threads.push(builder.spawn(move || {
+            let mut first = true;
             log::trace!("Start pcap export thread");
-            let mut packets_record = vec![];
-            while let Ok(mut packets) = rx_pcap.recv() {
-                packets_record.append(&mut packets.packets)
+            let mut again = true;
+            while again {
+                let mut packets_record = vec![];
+                while packets_record.len() < 10_000_000 {
+                    if let Ok(mut packets) = rx_pcap.recv() {
+                        packets_record.append(&mut packets.packets);
+                    } else {
+                        again = false;
+                        break;
+                    }
+                }
+                stage3::pcap_export(packets_record, &outfile, !first).expect("Error during pcap export!");
+                first = false;
             }
-            stage3::pcap_export(packets_record, &outfile).expect("Error during pcap export!");
         }).unwrap());
     }
 
@@ -229,6 +251,24 @@ fn main() {
                 s4.send(packets)
             }
             log::trace!("S4 stops");
+        }).unwrap());
+    }
+
+    {
+        let packets_counter = Arc::clone(&packets_counter);
+        let bytes_counter = Arc::clone(&bytes_counter);
+        let builder = thread::Builder::new()
+            .name("Monitoring".into());
+        threads.push(builder.spawn(move || {
+            loop {
+                thread::sleep(Duration::new(2,0));
+                {
+                    let pc = packets_counter.lock().unwrap();
+                    let bc = bytes_counter.lock().unwrap();
+                    let throughput = 8. * (*bc as f64) / (Instant::now().duration_since(start_time).as_secs() as f64) / 1_000_000.;
+                    log::info!("{pc} created packets ({throughput} Mbps)");
+                }
+            }
         }).unwrap());
     }
 
