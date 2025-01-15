@@ -15,24 +15,27 @@ const WINDOW_WIDTH_IN_SECS: u64 = 5;
 /// Stage 0: generate timestamps. Must implement an Iterator with Item = SeededData<Duration>.
 /// Generate a uniform throughput and never stops. It always prepares the next windows (i.e., not
 /// the one being sent)
-pub struct OnlineUniformGenerator {
+pub struct UniformGenerator {
     next_ts: Duration, // the start of the S0 generation window = the end of the sending window
     flows_per_window: u64,
     remaining: u64,
     time_distrib: Uniform<u64>,
     rng: Pcg32,
+    online: bool,
 }
 
-impl Iterator for OnlineUniformGenerator {
+impl Iterator for UniformGenerator {
     type Item = SeededData<Duration>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.remaining == 0 {
-            // wait until the end of the current window
-            if SystemTime::now().duration_since(UNIX_EPOCH).unwrap() > self.next_ts {
-                log::warn!("Generation is too slow");
-            } else {
-                thread::sleep(self.next_ts.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap()));
+            if self.online {
+                // wait until the end of the current window
+                if SystemTime::now().duration_since(UNIX_EPOCH).unwrap() > self.next_ts {
+                    log::warn!("Generation is too slow");
+                } else {
+                    thread::sleep(self.next_ts.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap()));
+                }
             }
             self.remaining = self.flows_per_window;
             self.next_ts += Duration::new(WINDOW_WIDTH_IN_SECS, 0);
@@ -43,12 +46,12 @@ impl Iterator for OnlineUniformGenerator {
     }
 }
 
-impl OnlineUniformGenerator {
+impl UniformGenerator {
 
-    pub fn new(seed: u64, flows_per_window: u64) -> Self {
+    pub fn new(seed: u64, online: bool, flows_per_window: u64) -> Self {
         let next_ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap() + Duration::new(WINDOW_WIDTH_IN_SECS, 0);
         let time_distrib = Uniform::new(next_ts.as_millis() as u64, next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS);
-        OnlineUniformGenerator { next_ts, remaining: flows_per_window, flows_per_window, rng: Pcg32::seed_from_u64(seed), time_distrib }
+        UniformGenerator { online, next_ts, remaining: flows_per_window, flows_per_window, rng: Pcg32::seed_from_u64(seed), time_distrib }
     }
 }
 

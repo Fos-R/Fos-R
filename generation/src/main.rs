@@ -87,7 +87,7 @@ fn main() {
         .name("Stage0".into());
     threads.push(builder.spawn(move || {
         log::trace!("Start S0");
-        let s0 = stage0::OnlineUniformGenerator::new(seed, 2);
+        let s0 = stage0::UniformGenerator::new(seed, online, 2);
         for ts in s0 {
             log::trace!("S0 generates {:?}",ts);
             tx_s0.send(ts).unwrap();
