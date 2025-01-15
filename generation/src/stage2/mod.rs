@@ -59,40 +59,47 @@ impl Stage2 {
 
 }
 
-pub fn import_automata_from_dir(directory_name: &str) -> AutomataLibrary {
-    let mut nb = 0;
-    let mut lib = AutomataLibrary { tcp_automata: vec![], udp_automata: vec![], icmp_automata: vec![] };
+impl AutomataLibrary {
 
-    let paths = fs::read_dir(directory_name).expect("Cannot read directory");
-    for p in paths {
-        let p = p.expect("Cannot open path").path();
-        if !p.is_dir() && p.extension() == Some(OsStr::new("json")) {
-            match import_automata(&mut lib, &p) {
-                Ok(()) => {
-                    log::info!("Automaton {:?} is loaded",p.file_name().unwrap());
-                    nb += 1
-                },
-                Err(s) => log::error!("Could not load automaton {:?} ({})",p.file_name().unwrap(), s),
+    pub fn default_library() -> Self {
+        // TODO: utiliser include_str pour mettre les automates par défaut
+        AutomataLibrary { tcp_automata: vec![], udp_automata: vec![], icmp_automata: vec![] }
+    }
+
+    pub fn from_dir(directory_name: &str) -> Self {
+        let mut nb = 0;
+        let mut lib = AutomataLibrary { tcp_automata: vec![], udp_automata: vec![], icmp_automata: vec![] };
+
+        let paths = fs::read_dir(directory_name).expect("Cannot read directory");
+        for p in paths {
+            let p = p.expect("Cannot open path").path();
+            if !p.is_dir() && p.extension() == Some(OsStr::new("json")) {
+                match lib.from_file(&p) {
+                    Ok(()) => {
+                        log::info!("Automaton {:?} is loaded",p.file_name().unwrap());
+                        nb += 1
+                    },
+                    Err(s) => log::error!("Could not load automaton {:?} ({})",p.file_name().unwrap(), s),
+                }
             }
         }
+        log::info!("{} automata have been loaded",nb);
+        lib
     }
-    log::info!("{} automata have been loaded",nb);
-    lib
-}
 
 
-pub fn import_automata(lib: &mut AutomataLibrary, filename: &PathBuf) -> std::io::Result<()> {
-    let f = File::open(filename)?;
-    let a : automaton::JsonAutomaton = serde_json::from_reader(f)?;
-    match a.protocol {
-        automaton::JsonProtocol::TCP => {
-            lib.tcp_automata.push(automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(a,parse_tcp_symbol)); },
-        automaton::JsonProtocol::UDP => {
-            lib.udp_automata.push(automaton::TimedAutomaton::<UDPEdgeTuple>::import_timed_automaton(a,parse_udp_symbol)); },
-        automaton::JsonProtocol::ICMP => {
-            lib.icmp_automata.push(automaton::TimedAutomaton::<ICMPEdgeTuple>::import_timed_automaton(a,parse_icmp_symbol)); },
+    pub fn from_file(&mut self, filename: &PathBuf) -> std::io::Result<()> {
+        let f = File::open(filename)?;
+        let a : automaton::JsonAutomaton = serde_json::from_reader(f)?;
+        match a.protocol {
+            automaton::JsonProtocol::TCP => {
+                self.tcp_automata.push(automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(a,parse_tcp_symbol)); },
+            automaton::JsonProtocol::UDP => {
+                self.udp_automata.push(automaton::TimedAutomaton::<UDPEdgeTuple>::import_timed_automaton(a,parse_udp_symbol)); },
+            automaton::JsonProtocol::ICMP => {
+                self.icmp_automata.push(automaton::TimedAutomaton::<ICMPEdgeTuple>::import_timed_automaton(a,parse_icmp_symbol)); },
+        }
+        Ok(())
     }
-    Ok(())
+
 }
-
-

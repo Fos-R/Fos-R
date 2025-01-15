@@ -91,7 +91,7 @@ fn main() {
     }).unwrap());
 
     // STAGE 1
-    let patterns = Arc::new(stage1::import_patterns(Path::new(&args.models).join("patterns.json").to_str().unwrap()).expect("Cannot load patterns"));
+    let patterns = Arc::new(stage1::PatternSet::from_file(Path::new(&args.models).join("patterns.json").to_str().unwrap()).expect("Cannot load patterns"));
     for _ in 0..STAGE1_COUNT {
         let rx_s1 = rx_s1.clone();
         let tx_s1 = tx_s1.clone();
@@ -122,7 +122,7 @@ fn main() {
 
     // STAGE 2
 
-    let automata_library = Arc::new(stage2::import_automata_from_dir(Path::new(&args.models).join("tas").to_str().unwrap()));
+    let automata_library = Arc::new(stage2::AutomataLibrary::from_dir(Path::new(&args.models).join("tas").to_str().unwrap()));
     for _ in 0..STAGE2_COUNT {
         let rx_s2 = rx_s2.clone();
         let tx_s2_tcp = tx_s2_tcp.clone();
