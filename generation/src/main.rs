@@ -1,5 +1,6 @@
 mod structs;
 use crate::structs::*;
+mod cmd;
 
 mod tcp;
 mod udp;
@@ -18,7 +19,7 @@ use std::sync::Arc;
 use std::net::Ipv4Addr;
 use std::env;
 
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use crossbeam_channel::bounded;
 use pnet::{ipnetwork::IpNetwork, datalink};
 
@@ -30,41 +31,8 @@ const TCP_PROTO: u8 = 6;
 const UDP_PROTO: u8 = 17;
 const ICMP_PROTO: u8 = 1;
 
+
 // Stage 0 and pcap export have only one thread and stage 4 has 3 threads, one per transport protocol
-
-#[derive(Debug, Parser, Clone)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    #[clap(subcommand)]
-    command: Command,
-
-    #[arg(short, long, global=true, default_value_t=false, help="Taint the packets to easily identify them")]
-    taint: bool,
-    #[arg(short, long, global=true, help="Seed for random number generation")]
-    seed: Option<u64>,
-    #[arg(short, long, global=true, default_value="../models/test", help="Path to models directory")] // TODO: make required and remove default for release
-    models: String,
-
-}
-
-#[derive(Debug, Subcommand, Clone)]
-enum Command {
-    /// Online mode: send packets through the network interfaces
-    Online {
-        // TODO: API pour synchroniser les agents online
-    },
-    /// Offline mode: generate a pcap file
-    Offline {
-        #[arg(short, long, default_value="output.pcap", help="Output pcap file for synthetic network packets")] // TODO: remove default for release
-        outfile: String,
-        #[arg(short, long, default_value_t=false, help="Add noise in the output file")]
-        noise: bool,
-        #[arg(short, long, default_value_t=1, help="Minimum number of flows to generate.")] // TODO: use default value "1" for release
-        flow_count: i32,
-        #[arg(short='d', long, default_value=None, help="Unix time for the beginning of the pcap. By default, use current time.")]
-        start_unix_time: Option<u64>
-    }
-}
 
 fn main() {
     if env::var("RUST_LOG").is_err() {
@@ -72,12 +40,12 @@ fn main() {
     }
     env_logger::init();
 
-    let args = Args::parse();
+    let args = cmd::Args::parse();
     log::trace!("{:?}", &args);
     let (start_unix_time, flow_count, online, noise) =
         match args.command {
-            Command::Offline { start_unix_time, flow_count, noise, .. } => (start_unix_time.map(Duration::from_secs), flow_count, false, noise),
-            Command::Online { } => (None, -1, true, false),
+            cmd::Command::Offline { start_unix_time, flow_count, noise, .. } => (start_unix_time.map(Duration::from_secs), flow_count, false, noise),
+            cmd::Command::Online { } => (None, -1, true, false),
         };
     let start_unix_time = start_unix_time.unwrap_or(SystemTime::now().duration_since(UNIX_EPOCH).unwrap());
 
@@ -229,7 +197,7 @@ fn main() {
 
     // PCAP EXPORT
 
-    if let Command::Offline { outfile, .. } = &args.command {
+    if let cmd::Command::Offline { outfile, .. } = &args.command {
         let outfile = outfile.clone();
         let builder = thread::Builder::new()
             .name("Pcap-export".into());
@@ -245,7 +213,7 @@ fn main() {
 
     // STAGE 4 (online-mode only)
 
-    if let Command::Online { .. } = args.command {
+    if online {
         let builder = thread::Builder::new()
             .name("Stage4-TCP".into());
         threads.push(builder.spawn(move || {
