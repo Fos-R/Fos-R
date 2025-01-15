@@ -4,7 +4,6 @@ use crate::icmp::*;
 use crate::tcp::*;
 use crate::udp::*;
 use crate::*;
-use libc;
 use pcap::{Capture, PacketHeader};
 use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
 use pnet_packet::ip::IpNextHeaderProtocols;
@@ -12,7 +11,6 @@ use pnet_packet::ipv4::{self, Ipv4Flags, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
 use rand::prelude::*;
 use rand_pcg::Pcg32;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 pub struct Stage3 {
     taint: bool,
@@ -258,15 +256,13 @@ impl Stage3 {
     /// Generate UDP packets from an intermediate representation
     pub fn generate_udp_packets(&self, input: SeededData<PacketsIR<UDPPacketInfo>>) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
-        todo!();
-        SeededData { seed: rng.next_u64(), data: Packets { flow: input.data.flow, packets: vec![] } }
+        todo!()
     }
 
     /// Generate ICMP packets from an intermediate representation
     pub fn generate_icmp_packets(&self, input: SeededData<PacketsIR<ICMPPacketInfo>>) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
-        todo!();
-        SeededData { seed: rng.next_u64(), data: Packets { flow: input.data.flow, packets: vec![] } }
+        todo!()
     }
 }
 

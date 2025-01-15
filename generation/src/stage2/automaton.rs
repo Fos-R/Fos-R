@@ -140,6 +140,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
 }
 
 // IMPORT FROM JSON
+// TODO: rendre ça plus propre avec des "From/Into"
 
 #[derive(Deserialize, Debug)]
 pub struct JsonAutomaton {
