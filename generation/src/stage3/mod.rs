@@ -270,9 +270,9 @@ pub fn insert_noise(data: &mut SeededData<Packets>) {
     todo!()
 }
 
-pub fn pcap_export(mut data: Vec<Packet>, outfile: &str)  -> Result<(), pcap::Error> {
-    // TODO: sort the data by timestamp
-    let mut savefile = Capture::dead(pcap::Linktype(1))?.savefile(outfile)?;
+pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool)  -> Result<(), pcap::Error> {
+    let mut capture = Capture::dead(pcap::Linktype(1))?;
+    let mut savefile = if append { capture.savefile_append(outfile)? } else { capture.savefile(outfile)? };
     log::info!("Saving into {}", outfile);
     data.sort();
     for packet in data {
