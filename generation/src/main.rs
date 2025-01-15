@@ -71,10 +71,10 @@ fn main() {
     let (tx_s2_tcp, rx_s3_tcp) = bounded::<SeededData<PacketsIR<tcp::TCPPacketInfo>>>(CHANNEL_SIZE);
     let (tx_s2_udp, _rx_s3_udp) = bounded::<SeededData<PacketsIR<udp::UDPPacketInfo>>>(CHANNEL_SIZE);
     let (tx_s2_icmp, _rx_s3_icmp) = bounded::<SeededData<PacketsIR<icmp::ICMPPacketInfo>>>(CHANNEL_SIZE);
-    let (tx_s3_tcp, rx_s4_tcp) = bounded::<SeededData<Vec<Packet>>>(CHANNEL_SIZE);
-    let (_tx_s3_udp, _rx_s4_udp) = bounded::<SeededData<Vec<Packet>>>(CHANNEL_SIZE);
-    let (_tx_s3_icmp, _rx_s4_icmp) = bounded::<SeededData<Vec<Packet>>>(CHANNEL_SIZE);
-    let (tx_pcap, rx_pcap) = bounded::<Vec<Packet>>(CHANNEL_SIZE);
+    let (tx_s3_tcp, rx_s4_tcp) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
+    let (_tx_s3_udp, _rx_s4_udp) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
+    let (_tx_s3_icmp, _rx_s4_icmp) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
+    let (tx_pcap, rx_pcap) = bounded::<Packets>(CHANNEL_SIZE);
 
     // STAGE 0
     let builder = thread::Builder::new()
@@ -205,7 +205,7 @@ fn main() {
             log::trace!("Start pcap export thread");
             let mut packets_record = vec![];
             while let Ok(mut packets) = rx_pcap.recv() {
-                packets_record.append(&mut packets)
+                packets_record.append(&mut packets.packets)
             }
             stage3::pcap_export(packets_record, &outfile).expect("Error during pcap export!");
         }).unwrap());
