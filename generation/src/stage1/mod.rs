@@ -55,13 +55,12 @@ impl PartiallyDefinedFlowData {
 
     fn set_value(&mut self, rng: &mut Pcg32, f: &Feature, index: usize) {
         match f {
-            // TODO: tirage des valeurs en cas d’intervalles
-            Feature::SrcIP(ref v) => self.src_ip = Some(*v.0.get(index).unwrap()),
-            Feature::DstIP(ref v) => self.dst_ip = Some(*v.0.get(index).unwrap()),
-            Feature::FwdPkt(ref v) => self.fwd_packets_count = Some(v.0.get(index).unwrap().sample(rng)),
-            Feature::BwdPkt(ref v) => self.bwd_packets_count = Some(v.0.get(index).unwrap().sample(rng)),
-            Feature::FwdByt(ref v) => self.fwd_total_payload_length = Some(v.0.get(index).unwrap().sample(rng)),
-            Feature::BwdByt(ref v) => self.bwd_total_payload_length = Some(v.0.get(index).unwrap().sample(rng)),
+            Feature::SrcIP(ref v) => self.src_ip = Some(v.0[index]),
+            Feature::DstIP(ref v) => self.dst_ip = Some(v.0[index]),
+            Feature::FwdPkt(ref v) => self.fwd_packets_count = Some(v.0[index].sample(rng)),
+            Feature::BwdPkt(ref v) => self.bwd_packets_count = Some(v.0[index].sample(rng)),
+            Feature::FwdByt(ref v) => self.fwd_total_payload_length = Some(v.0[index].sample(rng)),
+            Feature::BwdByt(ref v) => self.bwd_total_payload_length = Some(v.0[index].sample(rng)),
             Feature::Proto(ref v) => self.proto = Some(v.clone()),
         }
     }
@@ -129,7 +128,7 @@ struct CptLine(HashMap<Vec<u32>,WeightedIndex<f32>>);
 
 impl CptLine {
     fn sample(&self, rng: &mut Pcg32, parents_values: &Vec<u32>) -> usize {
-        self.0.get(parents_values).unwrap().sample(rng)
+        self.0[parents_values].sample(rng)
     }
 }
 
@@ -210,10 +209,10 @@ impl Pattern {
             partially_defined_flows.get_mut(r_index).unwrap().timestamp = Some(ts); // TODO tirage
             for (c_index,c) in p.row.iter().enumerate() {
                 match c {
-                    CellType::ReuseSrcAsSrc{ row } => { partially_defined_flows.get_mut(r_index).unwrap().src_ip = partially_defined_flows.get(*row).unwrap().src_ip },
-                    CellType::ReuseSrcAsDst{ row } => { partially_defined_flows.get_mut(r_index).unwrap().dst_ip = partially_defined_flows.get(*row).unwrap().src_ip },
-                    CellType::ReuseDrcAsSrc{ row } => { partially_defined_flows.get_mut(r_index).unwrap().src_ip = partially_defined_flows.get(*row).unwrap().dst_ip },
-                    CellType::ReuseDrcAsDst{ row } => { partially_defined_flows.get_mut(r_index).unwrap().dst_ip = partially_defined_flows.get(*row).unwrap().dst_ip },
+                    CellType::ReuseSrcAsSrc{ row } => { partially_defined_flows.get_mut(r_index).unwrap().src_ip = partially_defined_flows[*row].src_ip },
+                    CellType::ReuseSrcAsDst{ row } => { partially_defined_flows.get_mut(r_index).unwrap().dst_ip = partially_defined_flows[*row].src_ip },
+                    CellType::ReuseDrcAsSrc{ row } => { partially_defined_flows.get_mut(r_index).unwrap().src_ip = partially_defined_flows[*row].dst_ip },
+                    CellType::ReuseDrcAsDst{ row } => { partially_defined_flows.get_mut(r_index).unwrap().dst_ip = partially_defined_flows[*row].dst_ip },
                     CellType::Fixed{ feature } => partially_defined_flows.get_mut(r_index).unwrap().set_value(rng, feature, 0),
                 };
             }
@@ -232,6 +231,23 @@ pub struct PatternSet {
 impl PatternSet {
     pub fn merge(&mut self, other: PatternSet, weight: Option<f64>) {
         todo!()
+    }
+
+    /// Import patterns from a file
+    pub fn from_file(filename: &str) -> std::io::Result<Self> {
+        Ok(PatternSet { patterns: vec![], metadata: PatternMetaData { input_file: "".to_string(), creation_time: "".to_string() } }) // TODO
+
+        // let f = File::open(filename)?;
+        // let set : PatternSet = serde_json::from_reader(f)?;
+        // log::info!("Patterns loaded from {:?}",filename);
+        // Ok(set)
+    }
+
+    /// Import patterns from a file
+    pub fn from_str(data: &str) -> std::io::Result<Self> {
+        let set : PatternSet = serde_json::from_str(data)?;
+        log::info!("Default patterns loaded");
+        Ok(set)
     }
 }
 
@@ -257,7 +273,7 @@ impl Stage1 {
     pub fn generate_flows2(&self, ts: SeededData<Duration>) -> Vec<SeededData<Flow>> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
         // select pattern TODO
-        let pattern = self.set.patterns.get(0).unwrap();
+        let pattern = &self.set.patterns[0];
         // TODO
         pattern.sample(&mut rng, ts.data).into_iter().map(|f| SeededData { seed: rng.next_u64(), data: f }).collect()
     }
@@ -284,12 +300,3 @@ impl Stage1 {
 
 }
 
-/// Import patterns from a file
-pub fn import_patterns(filename: &str) -> std::io::Result<PatternSet> {
-    Ok(PatternSet { patterns: vec![], metadata: PatternMetaData { input_file: "".to_string(), creation_time: "".to_string() } }) // TODO
-
-    // let f = File::open(filename)?;
-    // let set : PatternSet = serde_json::from_reader(f)?;
-    // log::info!("Patterns {:?} are loaded",filename);
-    // Ok(set)
-}
