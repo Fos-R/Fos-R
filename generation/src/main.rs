@@ -38,9 +38,6 @@ const UDP_PROTO: u8 = 17;
 #[allow(dead_code)]
 const ICMP_PROTO: u8 = 1;
 
-
-// Stage 0 and pcap export have only one thread and stage 4 has 3 threads, one per transport protocol
-
 fn main() {
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info") // default log level: info
@@ -49,6 +46,7 @@ fn main() {
     let start_time = Instant::now();
     let packets_counter = Arc::new(Mutex::new(0));
     let bytes_counter = Arc::new(Mutex::new(0));
+    let running = Arc::new(Mutex::new(true)); // TODO: use std::sync::atomic instead
 
     let args = cmd::Args::parse();
     log::trace!("{:?}", &args);
@@ -73,6 +71,7 @@ fn main() {
         };
 
     let mut threads = vec![];
+    let mut gen_threads = vec![];
 
     // All the channels
     let (tx_s0, rx_s1) = bounded::<SeededData<Duration>>(CHANNEL_SIZE);
@@ -89,9 +88,9 @@ fn main() {
 
     let builder = thread::Builder::new()
         .name("Stage0".into());
-    threads.push(builder.spawn(move || {
+    gen_threads.push(builder.spawn(move || {
         log::trace!("Start S0");
-        let s0 = stage0::UniformGenerator::new(seed, online, 2);
+        let s0 = stage0::UniformGenerator::new(seed, online, 2, 100);
         for ts in s0 {
             log::trace!("S0 generates {:?}",ts);
             tx_s0.send(ts).unwrap();
@@ -109,7 +108,7 @@ fn main() {
         let local_interfaces = local_interfaces.clone();
         let builder = thread::Builder::new()
             .name("Stage1".into());
-        threads.push(builder.spawn(move || {
+        gen_threads.push(builder.spawn(move || {
             log::trace!("Start S1");
             let s1 = flowchronicle::FCGenerator::new(patterns, online);
             while let Ok(ts) = rx_s1.recv() {
@@ -141,7 +140,7 @@ fn main() {
         let automata_library = Arc::clone(&automata_library);
         let builder = thread::Builder::new()
             .name("Stage2".into());
-        threads.push(builder.spawn(move || {
+        gen_threads.push(builder.spawn(move || {
             log::trace!("Start S2");
             // Prepare stage 2 by loading the automata
             let s2 = tadam::TadamGenerator::new(automata_library);
@@ -178,7 +177,7 @@ fn main() {
         let tx_pcap = tx_pcap.clone();
         let builder = thread::Builder::new()
             .name("Stage3-TCP".into());
-        threads.push(builder.spawn(move || {
+        gen_threads.push(builder.spawn(move || {
             // Prepare stage 3 for TCP
             log::trace!("Start S3");
             let s3 = stage3::Stage3::new(args.taint);
@@ -219,7 +218,7 @@ fn main() {
         let outfile = outfile.clone();
         let builder = thread::Builder::new()
             .name("Pcap-export".into());
-        threads.push(builder.spawn(move || {
+        gen_threads.push(builder.spawn(move || {
             let mut first = true;
             log::trace!("Start pcap export thread");
             let mut again = true;
@@ -233,6 +232,7 @@ fn main() {
                         break;
                     }
                 }
+                // TODO: export in another thread because it can clog the generation
                 stage3::pcap_export(packets_record, &outfile, !first).expect("Error during pcap export!");
                 first = false;
             }
@@ -244,7 +244,7 @@ fn main() {
     if online {
         let builder = thread::Builder::new()
             .name("Stage4-TCP".into());
-        threads.push(builder.spawn(move || {
+        gen_threads.push(builder.spawn(move || {
             log::trace!("Start S4");
             let s4 = stage4::Stage4::new(TCP_PROTO);
             while let Ok(packets) = rx_s4_tcp.recv() {
@@ -257,24 +257,42 @@ fn main() {
     {
         let packets_counter = Arc::clone(&packets_counter);
         let bytes_counter = Arc::clone(&bytes_counter);
+        let running = Arc::clone(&running);
         let builder = thread::Builder::new()
             .name("Monitoring".into());
         threads.push(builder.spawn(move || {
             loop {
-                thread::sleep(Duration::new(2,0));
+                thread::sleep(Duration::new(1,0));
                 {
                     let pc = packets_counter.lock().unwrap();
                     let bc = bytes_counter.lock().unwrap();
                     let throughput = 8. * (*bc as f64) / (Instant::now().duration_since(start_time).as_secs() as f64) / 1_000_000.;
                     log::info!("{pc} created packets ({throughput} Mbps)");
+                    let running = running.lock().unwrap();
+                    if !*running {
+                        break;
+                    }
                 }
             }
         }).unwrap());
     }
 
+    // Wait for the generation threads to end
+    for thread in gen_threads.into_iter() {
+        log::trace!("Waiting for thread {}", thread.thread().name().unwrap());
+        thread.join().unwrap();
+        log::trace!("Thread ended");
+    }
+    {
+        // Tell the other threads to stop
+        let mut running = running.lock().unwrap();
+        *running = false;
+    }
+    // Wait for the other threads to stop
     for thread in threads.into_iter() {
         log::trace!("Waiting for thread {}", thread.thread().name().unwrap());
         thread.join().unwrap();
         log::trace!("Thread ended");
     }
+
 }
