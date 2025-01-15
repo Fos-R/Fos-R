@@ -1,7 +1,4 @@
-#![allow(unused)]
-
 use pcap::PacketHeader;
-use serde::Deserialize;
 use std::fmt::Debug;
 use std::net::Ipv4Addr;
 use std::time::Duration;
@@ -66,6 +63,7 @@ pub trait EdgeType: Debug {
 // Stage 2 and 3 structures
 
 #[derive(Debug, Clone, Copy)]
+#[allow(unused)]
 pub enum NoiseType {
     None,
     Deleted,
@@ -98,6 +96,7 @@ impl Payload {
 }
 
 pub trait Protocol {
+    #[allow(unused)]
     fn get_noise_type(&self) -> NoiseType;
     fn get_direction(&self) -> PacketDirection;
     fn get_ts(&self) -> Duration;

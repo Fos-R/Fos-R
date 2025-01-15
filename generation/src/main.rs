@@ -8,7 +8,11 @@ mod icmp;
 
 mod stage0;
 mod stage1;
+use stage1::Stage1;
+use stage1::flowchronicle;
 mod stage2;
+use stage2::Stage2;
+use stage2::tadam;
 mod stage3;
 mod stage4;
 
@@ -77,12 +81,12 @@ fn main() {
     let (tx_pcap, rx_pcap) = bounded::<Packets>(CHANNEL_SIZE);
 
     // STAGE 0
+
     let builder = thread::Builder::new()
         .name("Stage0".into());
     threads.push(builder.spawn(move || {
         log::trace!("Start S0");
-        let time_distrib = stage0::import_time_distribution("");
-        let s0 = stage0::Stage0::new(seed, time_distrib, start_unix_time, flow_count);
+        let s0 = stage0::UniformGenerator::new(seed, start_unix_time, flow_count);
         for ts in s0 {
             log::trace!("S0 generates {:?}",ts);
             tx_s0.send(ts).unwrap();
@@ -91,7 +95,8 @@ fn main() {
     }).unwrap());
 
     // STAGE 1
-    let patterns = Arc::new(stage1::PatternSet::from_file(Path::new(&args.models).join("patterns.json").to_str().unwrap()).expect("Cannot load patterns"));
+    //
+    let patterns = Arc::new(flowchronicle::PatternSet::from_file(Path::new(&args.models).join("patterns.json").to_str().unwrap()).expect("Cannot load patterns"));
     for _ in 0..STAGE1_COUNT {
         let rx_s1 = rx_s1.clone();
         let tx_s1 = tx_s1.clone();
@@ -101,7 +106,7 @@ fn main() {
             .name("Stage1".into());
         threads.push(builder.spawn(move || {
             log::trace!("Start S1");
-            let s1 = stage1::Stage1::new(patterns, online);
+            let s1 = flowchronicle::FCGenerator::new(patterns, online);
             while let Ok(ts) = rx_s1.recv() {
                 let flows = s1.generate_flows(ts).into_iter();
                 log::trace!("S1 generates {:?}", flows);
@@ -122,7 +127,7 @@ fn main() {
 
     // STAGE 2
 
-    let automata_library = Arc::new(stage2::AutomataLibrary::from_dir(Path::new(&args.models).join("tas").to_str().unwrap()));
+    let automata_library = Arc::new(tadam::AutomataLibrary::from_dir(Path::new(&args.models).join("tas").to_str().unwrap()));
     for _ in 0..STAGE2_COUNT {
         let rx_s2 = rx_s2.clone();
         let tx_s2_tcp = tx_s2_tcp.clone();
@@ -134,7 +139,7 @@ fn main() {
         threads.push(builder.spawn(move || {
             log::trace!("Start S2");
             // Prepare stage 2 by loading the automata
-            let mut s2 = stage2::Stage2::new(automata_library);
+            let s2 = tadam::TadamGenerator::new(automata_library);
             while let Ok(flow) = rx_s2.recv() {
                 log::trace!("S2 waits");
                 log::trace!("S2 generates");
