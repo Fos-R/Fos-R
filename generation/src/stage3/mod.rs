@@ -220,7 +220,7 @@ impl Stage3 {
     }
 
     /// Generate TCP packets from an intermediate representation
-    pub fn generate_tcp_packets(&self, input: SeededData<PacketsIR<TCPPacketInfo>>) -> SeededData<Vec<Packet>> {
+    pub fn generate_tcp_packets(&self, input: SeededData<PacketsIR<TCPPacketInfo>>) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let tcp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
@@ -252,25 +252,25 @@ impl Stage3 {
             });
         }
 
-        SeededData { seed: rng.next_u64(), data: packets }
+        SeededData { seed: rng.next_u64(), data: Packets { packets, flow: input.data.flow } }
     }
 
     /// Generate UDP packets from an intermediate representation
-    pub fn generate_udp_packets(&self, input: SeededData<PacketsIR<UDPPacketInfo>>) -> SeededData<Vec<Packet>> {
+    pub fn generate_udp_packets(&self, input: SeededData<PacketsIR<UDPPacketInfo>>) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         todo!();
-        SeededData { seed: rng.next_u64(), data: vec![] }
+        SeededData { seed: rng.next_u64(), data: Packets { flow: input.data.flow, packets: vec![] } }
     }
 
     /// Generate ICMP packets from an intermediate representation
-    pub fn generate_icmp_packets(&self, input: SeededData<PacketsIR<ICMPPacketInfo>>) -> SeededData<Vec<Packet>> {
+    pub fn generate_icmp_packets(&self, input: SeededData<PacketsIR<ICMPPacketInfo>>) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         todo!();
-        SeededData { seed: rng.next_u64(), data: vec![] }
+        SeededData { seed: rng.next_u64(), data: Packets { flow: input.data.flow, packets: vec![] } }
     }
 }
 
-pub fn insert_noise(data: &mut SeededData<Vec<Packet>>) {
+pub fn insert_noise(data: &mut SeededData<Packets>) {
     todo!()
 }
 

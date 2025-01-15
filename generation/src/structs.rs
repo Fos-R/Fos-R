@@ -138,3 +138,8 @@ impl PartialEq for Packet {
 }
 
 impl Eq for Packet {}
+
+pub struct Packets {
+    pub packets: Vec<Packet>,
+    pub flow: Flow,
+}
