@@ -16,7 +16,7 @@ use stage2::tadam;
 mod stage3;
 mod stage4;
 
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time::Duration;
 use std::thread;
 use std::path::Path;
 use std::sync::Arc;
@@ -32,7 +32,9 @@ const STAGE1_COUNT: usize = 1; // TODO: mettre en variable. Mode online _ou_ mod
 const STAGE2_COUNT: usize = 1;
 const STAGE3_COUNT: usize = 1;
 const TCP_PROTO: u8 = 6;
+#[allow(dead_code)]
 const UDP_PROTO: u8 = 17;
+#[allow(dead_code)]
 const ICMP_PROTO: u8 = 1;
 
 
@@ -46,12 +48,11 @@ fn main() {
 
     let args = cmd::Args::parse();
     log::trace!("{:?}", &args);
-    let (start_unix_time, flow_count, online, noise) =
+    let (online, noise) =
         match args.command {
-            cmd::Command::Offline { start_unix_time, flow_count, noise, .. } => (start_unix_time.map(Duration::from_secs), flow_count, false, noise),
-            cmd::Command::Online { } => (None, -1, true, false),
+            cmd::Command::Offline { noise, .. } => (false, noise),
+            cmd::Command::Online { } => (true, false),
         };
-    let start_unix_time = start_unix_time.unwrap_or(SystemTime::now().duration_since(UNIX_EPOCH).unwrap());
 
     let seed = args.seed.unwrap_or(42); //rand::random() TODO: change for release
     log::trace!("Generating with seed {}",seed);
@@ -86,7 +87,7 @@ fn main() {
         .name("Stage0".into());
     threads.push(builder.spawn(move || {
         log::trace!("Start S0");
-        let s0 = stage0::UniformGenerator::new(seed, start_unix_time, flow_count);
+        let s0 = stage0::OnlineUniformGenerator::new(seed, 2);
         for ts in s0 {
             log::trace!("S0 generates {:?}",ts);
             tx_s0.send(ts).unwrap();

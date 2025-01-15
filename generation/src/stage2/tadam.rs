@@ -33,7 +33,7 @@ impl AutomataLibrary {
         for p in paths {
             let p = p.expect("Cannot open path").path();
             if !p.is_dir() && p.extension() == Some(OsStr::new("json")) {
-                match lib.from_file(&p) {
+                match lib.import_from_file(&p) {
                     Ok(()) => {
                         log::info!("Automaton {:?} is loaded",p.file_name().unwrap());
                         nb += 1
@@ -47,7 +47,7 @@ impl AutomataLibrary {
     }
 
 
-    pub fn from_file(&mut self, filename: &PathBuf) -> std::io::Result<()> {
+    pub fn import_from_file(&mut self, filename: &PathBuf) -> std::io::Result<()> {
         let f = File::open(filename)?;
         let a : automaton::JsonAutomaton = serde_json::from_reader(f)?;
         match a.protocol {
