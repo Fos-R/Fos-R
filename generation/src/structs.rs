@@ -5,8 +5,8 @@ use std::time::Duration;
 use std::cmp::Ordering;
 
 // A general wrapper to pass a seed along with actual data
-#[derive(Debug)]
-pub struct SeededData<T> {
+#[derive(Debug, Clone)]
+pub struct SeededData<T: Clone> {
     pub seed: u64,
     pub data: T,
 }
@@ -102,7 +102,7 @@ pub trait Protocol {
     fn get_ts(&self) -> Duration;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PacketsIR<T: Protocol> {
     // Intermediate representation (as output by stage 2)
     pub packets_info: Vec<T>,
@@ -138,7 +138,9 @@ impl PartialEq for Packet {
 
 impl Eq for Packet {}
 
+#[derive(Debug, Clone)]
 pub struct Packets {
     pub packets: Vec<Packet>,
+    // TODO: + packets_info
     pub flow: Flow,
 }
