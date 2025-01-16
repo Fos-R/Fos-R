@@ -82,7 +82,8 @@ fn main() {
     let (tx_s3_tcp, rx_s4_tcp) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
     let (_tx_s3_udp, _rx_s4_udp) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
     let (_tx_s3_icmp, _rx_s4_icmp) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
-    let (tx_pcap, rx_pcap) = bounded::<Packets>(CHANNEL_SIZE);
+    let (tx_s3, rx_collector) = bounded::<Packets>(CHANNEL_SIZE);
+    let (tx_collector, rx_pcap) = bounded::<Vec<Packet>>(CHANNEL_SIZE);
 
     // STAGE 0
 
@@ -99,7 +100,7 @@ fn main() {
     }).unwrap());
 
     // STAGE 1
-    //
+
     let patterns = Arc::new(flowchronicle::PatternSet::from_file(Path::new(&args.models).join("patterns.json").to_str().unwrap()).expect("Cannot load patterns"));
     for _ in 0..STAGE1_COUNT {
         let rx_s1 = rx_s1.clone();
@@ -174,7 +175,7 @@ fn main() {
         let bytes_counter = Arc::clone(&bytes_counter);
         let rx_s3_tcp = rx_s3_tcp.clone();
         let tx_s3_tcp = tx_s3_tcp.clone();
-        let tx_pcap = tx_pcap.clone();
+        let tx_s3 = tx_s3.clone();
         let builder = thread::Builder::new()
             .name("Stage3-TCP".into());
         gen_threads.push(builder.spawn(move || {
@@ -198,7 +199,7 @@ fn main() {
                     if noise { // insert noise
                         stage3::insert_noise(&mut noisy_flow);
                     }
-                    tx_pcap.send(noisy_flow.data).unwrap();
+                    tx_s3.send(noisy_flow.data).unwrap();
                 }
             }
             log::trace!("S3 stops");
@@ -210,36 +211,44 @@ fn main() {
     drop(tx_s3_tcp);
     drop(_tx_s3_udp);
     drop(_tx_s3_icmp);
-    drop(tx_pcap);
+    drop(tx_s3);
 
     // PCAP EXPORT
 
     if let cmd::Command::Offline { outfile, .. } = &args.command {
-        let outfile = outfile.clone();
         let builder = thread::Builder::new()
-            .name("Pcap-export".into());
+            .name("Pcap-collector".into());
         gen_threads.push(builder.spawn(move || {
-            let mut first = true;
-            log::trace!("Start pcap export thread");
+            log::trace!("Start pcap collector thread");
             let mut again = true;
             while again {
                 let mut packets_record = vec![];
                 while packets_record.len() < 10_000_000 {
-                    if let Ok(mut packets) = rx_pcap.recv() {
+                    if let Ok(mut packets) = rx_collector.recv() {
                         packets_record.append(&mut packets.packets);
                     } else {
                         again = false;
                         break;
                     }
                 }
-                // TODO: export in another thread because it can clog the generation
+                tx_collector.send(packets_record).unwrap();
+            }
+        }).unwrap());
+
+        let outfile = outfile.clone();
+        let builder = thread::Builder::new()
+            .name("Pcap-export".into());
+        gen_threads.push(builder.spawn(move || {
+            log::trace!("Start pcap export thread");
+            let mut first = true;
+            while let Ok(packets_record) = rx_pcap.recv() {
                 stage3::pcap_export(packets_record, &outfile, !first).expect("Error during pcap export!");
                 first = false;
             }
         }).unwrap());
     }
 
-    // STAGE 4 (online-mode only)
+    // STAGE 4 (online mode only)
 
     if online {
         let builder = thread::Builder::new()
