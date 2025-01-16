@@ -78,6 +78,15 @@ pub enum PacketDirection {
     Backward, // server to client
 }
 
+impl PacketDirection {
+    pub fn into_reverse(self) -> PacketDirection {
+        match self {
+            PacketDirection::Forward => PacketDirection::Backward,
+            PacketDirection::Backward => PacketDirection::Forward,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Payload {
     Empty,
