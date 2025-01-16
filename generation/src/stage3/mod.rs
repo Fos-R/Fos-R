@@ -306,7 +306,65 @@ impl Stage3 {
     /// Generate UDP packets from an intermediate representation
     pub fn generate_udp_packets(&self, input: SeededData<PacketsIR<UDPPacketInfo>>) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
-        todo!()
+        let ip_start = MutableEthernetPacket::minimum_packet_size();
+        let udp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
+        let flow = match &input.data.flow {
+            Flow::TCP(f) => f,
+            Flow::UDP(f) => f,
+            Flow::ICMP(f) => f,
+        };
+        let mut packets: Vec<Packet> = Vec::new();
+
+        for packet_info in &input.data.packets_info {
+            let packet_size = MutableEthernetPacket::minimum_packet_size()
+                + MutableIpv4Packet::minimum_packet_size()
+                + MutableUdpPacket::minimum_packet_size()
+                + packet_info.payload.get_payload_size();
+
+            let mut packet = vec![0u8; packet_size];
+
+            self.setup_ethernet_frame(&mut packet[..]).expect("Incorrect Ethernet frame");
+            self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info).expect("Incorrect IP packet");
+            self.setup_udp_packet(&mut rng, &mut packet[        let mut rng = Pcg32::seed_from_u64(input.seed);
+                let ip_start = MutableEthernetPacket::minimum_packet_size();
+                let udp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
+                let flow = match &input.data.flow {
+                    Flow::TCP(f) => f,
+                    Flow::UDP(f) => f,
+                    Flow::ICMP(f) => f,
+                };
+
+                let mut packets: Vec<Packet> = Vec::new();
+        
+                for packet_info in &input.data.packets_info {
+                    let packet_size = MutableEthernetPacket::minimum_packet_size()
+                        + MutableIpv4Packet::minimum_packet_size()
+                        + MutableUdpPacket::minimum_packet_size()
+                        + packet_info.payload.get_payload_size();
+        
+                    let mut packet = vec![0u8; packet_size];
+        
+                    self.setup_ethernet_frame(&mut packet[..]).expect("Incorrect Ethernet frame");
+                    self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info).expect("Incorrect IP packet");
+                    self.setup_udp_packet(&mut rng, &mut packet[udp_start..], flow, packet_info).expect("Incorrect UDP packet");
+        
+                    packets.push(Packet {
+                        header: self
+                            .get_pcap_header(packet_size, packet_info.get_ts()),
+                        data: packet.clone(),
+                    });
+                }
+        
+                SeededData { seed: rng.next_u64(), data: Packets { packets, flow: input.data.flow } }..], flow, packet_info).expect("Incorrect UDP packet");
+
+            packets.push(Packet {
+                header: self
+                    .get_pcap_header(packet_size, packet_info.get_ts()),
+                data: packet.clone(),
+            });
+        }
+
+        SeededData { seed: rng.next_u64(), data: Packets { packets, flow: input.data.flow } }
     }
 
     /// Generate ICMP packets from an intermediate representation
