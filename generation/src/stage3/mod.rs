@@ -222,14 +222,11 @@ impl Stage3 {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let tcp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
-        let flow = match &input.data.flow {
-            Flow::TCP(f) => f,
-            Flow::UDP(f) => f,
-            Flow::ICMP(f) => f,
-        };
+        let flow = &input.data.flow.get_data();
         let mut tcp_data = TcpPacketData::new();
         let mut packets: Vec<Packet> = Vec::new();
 
+        // TODO: plutôt générer un iterator en consommant input.data.packets_info
         for packet_info in &input.data.packets_info {
             let packet_size = MutableEthernetPacket::minimum_packet_size()
                 + MutableIpv4Packet::minimum_packet_size()
@@ -273,8 +270,7 @@ pub fn insert_noise(data: &mut SeededData<Packets>) {
 pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool)  -> Result<(), pcap::Error> {
     let mut capture = Capture::dead(pcap::Linktype(1))?;
     let mut savefile = if append { capture.savefile_append(outfile)? } else { capture.savefile(outfile)? };
-    log::info!("Saving into {}", outfile);
-    data.sort();
+    // data.sort();
     for packet in data {
         savefile.write(&pcap::Packet {
             header: &packet.header,

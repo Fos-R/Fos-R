@@ -22,21 +22,25 @@ use std::path::Path;
 use std::sync::{Mutex, Arc};
 use std::net::Ipv4Addr;
 use std::env;
+use std::collections::HashMap;
 
 use clap::Parser;
 use crossbeam_channel::bounded;
 use pnet::{ipnetwork::IpNetwork, datalink};
 
-const CHANNEL_SIZE: usize = 5; // TODO: increase
+const CHANNEL_SIZE: usize = 50; // TODO: increase
 const STAGE1_COUNT: usize = 1; // TODO: mettre en variable. Mode online _ou_ mode "économe", un seul thread. Sinon, un nombre qui dépend des cœurs disponibles.
 const STAGE2_COUNT: usize = 1;
-const STAGE3_COUNT: usize = 1;
+const STAGE3_COUNT: usize = 1; // per protocol
+const STAGE4_COUNT: usize = 1; // per protocol
 // monitor threads with "top -H -p $(pgrep fosr)"
 const TCP_PROTO: u8 = 6;
 #[allow(dead_code)]
 const UDP_PROTO: u8 = 17;
 #[allow(dead_code)]
 const ICMP_PROTO: u8 = 1;
+
+const PROTOCOLS: [u8;3] = [TCP_PROTO, UDP_PROTO, ICMP_PROTO];
 
 fn main() {
     if env::var("RUST_LOG").is_err() {
@@ -77,12 +81,20 @@ fn main() {
     let (tx_s0, rx_s1) = bounded::<SeededData<Duration>>(CHANNEL_SIZE);
     let (tx_s1, rx_s2) = bounded::<SeededData<Flow>>(CHANNEL_SIZE);
     let (tx_s2_tcp, rx_s3_tcp) = bounded::<SeededData<PacketsIR<tcp::TCPPacketInfo>>>(CHANNEL_SIZE);
-    let (tx_s2_udp, _rx_s3_udp) = bounded::<SeededData<PacketsIR<udp::UDPPacketInfo>>>(CHANNEL_SIZE);
-    let (tx_s2_icmp, _rx_s3_icmp) = bounded::<SeededData<PacketsIR<icmp::ICMPPacketInfo>>>(CHANNEL_SIZE);
-    let (tx_s3_tcp, rx_s4_tcp) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
-    let (_tx_s3_udp, _rx_s4_udp) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
-    let (_tx_s3_icmp, _rx_s4_icmp) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
-    let (tx_s3, rx_collector) = bounded::<Packets>(CHANNEL_SIZE);
+    let (tx_s2_udp, rx_s3_udp) = bounded::<SeededData<PacketsIR<udp::UDPPacketInfo>>>(CHANNEL_SIZE);
+    let (tx_s2_icmp, rx_s3_icmp) = bounded::<SeededData<PacketsIR<icmp::ICMPPacketInfo>>>(CHANNEL_SIZE);
+    let mut tx_s3 = HashMap::new();
+    let mut rx_s4 = HashMap::new();
+    for proto in PROTOCOLS {
+        let mut tx_s3_hm = HashMap::new();
+        for iface in local_interfaces.iter() {
+            let (tx, rx) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
+            tx_s3_hm.insert(iface.clone(), tx);
+            rx_s4.insert((iface.clone(), proto), rx);
+        }
+        tx_s3.insert(proto, tx_s3_hm);
+    }
+    let (tx_s3_to_collector, rx_collector) = bounded::<Packets>(CHANNEL_SIZE);
     let (tx_collector, rx_pcap) = bounded::<Vec<Packet>>(CHANNEL_SIZE);
 
     // STAGE 0
@@ -170,48 +182,62 @@ fn main() {
 
     // STAGE 3
 
-    for _ in 0..STAGE3_COUNT {
-        let packets_counter = Arc::clone(&packets_counter);
-        let bytes_counter = Arc::clone(&bytes_counter);
-        let rx_s3_tcp = rx_s3_tcp.clone();
-        let tx_s3_tcp = tx_s3_tcp.clone();
-        let tx_s3 = tx_s3.clone();
-        let builder = thread::Builder::new()
-            .name("Stage3-TCP".into());
-        gen_threads.push(builder.spawn(move || {
-            // Prepare stage 3 for TCP
-            log::trace!("Start S3");
-            let s3 = stage3::Stage3::new(args.taint);
-            while let Ok(headers) = rx_s3_tcp.recv() {
-                log::trace!("S3 generates");
-                let flow_packets = s3.generate_tcp_packets(headers);
-                {
-                    let mut pc = packets_counter.lock().unwrap();
-                    *pc += flow_packets.data.packets.len();
-                    let mut bc = bytes_counter.lock().unwrap();
-                    *bc += flow_packets.data.flow.get_data().fwd_total_payload_length + flow_packets.data.flow.get_data().bwd_total_payload_length;
-                }
-                // dbg!(&flow_packets);
-                if online {
-                    tx_s3_tcp.send(flow_packets).unwrap();
-                } else {
-                    let mut noisy_flow = SeededData { seed: flow_packets.seed, data: flow_packets.data };
-                    if noise { // insert noise
-                        stage3::insert_noise(&mut noisy_flow);
+    for (proto, tx_s3_hm) in tx_s3.into_iter() {
+        if proto == TCP_PROTO {
+            for _ in 0..STAGE3_COUNT {
+                let tx_s3_hm = tx_s3_hm.clone();
+                let rx_s3_tcp = rx_s3_tcp.clone();
+                let tx_s3_to_collector = tx_s3_to_collector.clone();
+                let packets_counter = Arc::clone(&packets_counter);
+                let bytes_counter = Arc::clone(&bytes_counter);
+
+                let builder = thread::Builder::new()
+                    .name("Stage3-TCP".into());
+                gen_threads.push(builder.spawn(move || {
+                    // Prepare stage 3 for TCP
+                    log::trace!("Start S3");
+                    let s3 = stage3::Stage3::new(args.taint);
+                    while let Ok(headers) = rx_s3_tcp.recv() {
+                        log::trace!("S3 generates");
+                        let flow_packets = s3.generate_tcp_packets(headers);
+                        {
+                            let mut pc = packets_counter.lock().unwrap();
+                            *pc += flow_packets.data.packets.len();
+                            let mut bc = bytes_counter.lock().unwrap();
+                            *bc += flow_packets.data.flow.get_data().fwd_total_payload_length + flow_packets.data.flow.get_data().bwd_total_payload_length;
+                        }
+                        // dbg!(&flow_packets);
+                        if online {
+
+                            let f = flow_packets.data.flow.get_data();
+                            let src_s4 = tx_s3_hm.get(&f.src_ip).clone();
+                            let dst_s4 = tx_s3_hm.get(&f.dst_ip).clone();
+                            if let (Some(tx1), Some(tx2)) = (src_s4, dst_s4) {
+                                // only copy if we have to
+                                tx1.send(flow_packets.clone()).unwrap();
+                                tx2.send(flow_packets).unwrap();
+                            } else if let Some(tx1) = src_s4 {
+                                tx1.send(flow_packets).unwrap();
+                            } else if let Some(tx2) = dst_s4 {
+                                tx2.send(flow_packets).unwrap();
+                            }
+                        } else {
+                            let mut noisy_flow = SeededData { seed: flow_packets.seed, data: flow_packets.data };
+                            if noise { // insert noise
+                                stage3::insert_noise(&mut noisy_flow);
+                            }
+                            tx_s3_to_collector.send(noisy_flow.data).unwrap();
+                        }
                     }
-                    tx_s3.send(noisy_flow.data).unwrap();
-                }
+                    log::trace!("S3 stops");
+                }).unwrap());
             }
-            log::trace!("S3 stops");
-        }).unwrap());
+        }
     }
     drop(rx_s3_tcp);
-    drop(_rx_s3_udp);
-    drop(_rx_s3_icmp);
-    drop(tx_s3_tcp);
-    drop(_tx_s3_udp);
-    drop(_tx_s3_icmp);
-    drop(tx_s3);
+    drop(rx_s3_udp);
+    drop(rx_s3_icmp);
+    drop(tx_s3_to_collector);
 
     // PCAP EXPORT
 
@@ -222,9 +248,10 @@ fn main() {
             log::trace!("Start pcap collector thread");
             let mut again = true;
             while again {
-                let mut packets_record = vec![];
+                let mut packets_record = Vec::with_capacity(10_010_000);
                 while packets_record.len() < 10_000_000 {
                     if let Ok(mut packets) = rx_collector.recv() {
+                        // TODO: utiliser extend avec l’itérator
                         packets_record.append(&mut packets.packets);
                     } else {
                         again = false;
@@ -240,10 +267,13 @@ fn main() {
             .name("Pcap-export".into());
         gen_threads.push(builder.spawn(move || {
             log::trace!("Start pcap export thread");
-            let mut first = true;
-            while let Ok(packets_record) = rx_pcap.recv() {
-                stage3::pcap_export(packets_record, &outfile, !first).expect("Error during pcap export!");
-                first = false;
+            if let Ok(packets_record) = rx_pcap.recv() {
+                log::trace!("Saving into {}", outfile);
+                stage3::pcap_export(packets_record, &outfile, false).expect("Error during pcap export!");
+                while let Ok(packets_record) = rx_pcap.recv() {
+                    log::trace!("Saving into {}", outfile);
+                    stage3::pcap_export(packets_record, &outfile, true).expect("Error during pcap export!");
+                }
             }
         }).unwrap());
     }
@@ -251,16 +281,21 @@ fn main() {
     // STAGE 4 (online mode only)
 
     if online {
-        let builder = thread::Builder::new()
-            .name("Stage4-TCP".into());
-        gen_threads.push(builder.spawn(move || {
-            log::trace!("Start S4");
-            let s4 = stage4::Stage4::new(TCP_PROTO);
-            while let Ok(packets) = rx_s4_tcp.recv() {
-                s4.send(packets)
+        for ((iface, proto), rx) in rx_s4.into_iter() {
+            for _ in 0..STAGE4_COUNT {
+                let rx = rx.clone();
+                let builder = thread::Builder::new()
+                    .name(format!("Stage4-TCP-{}",iface).into());
+                gen_threads.push(builder.spawn(move || {
+                    log::trace!("Start S4");
+                    let s4 = stage4::Stage4::new(iface.clone(), proto);
+                    while let Ok(packets) = rx.recv() {
+                        s4.send(packets)
+                    }
+                    log::trace!("S4 stops");
+                }).unwrap());
             }
-            log::trace!("S4 stops");
-        }).unwrap());
+        }
     }
 
     {
@@ -276,7 +311,11 @@ fn main() {
                     let pc = packets_counter.lock().unwrap();
                     let bc = bytes_counter.lock().unwrap();
                     let throughput = 8. * (*bc as f64) / (Instant::now().duration_since(start_time).as_secs() as f64) / 1_000_000.;
-                    log::info!("{pc} created packets ({throughput} Mbps)");
+                    if throughput < 1000. {
+                        log::info!("{pc} created packets ({} Mbps)", throughput);
+                    } else {
+                        log::info!("{pc} created packets ({} Gbps)", throughput/1000.);
+                    }
                     let running = running.lock().unwrap();
                     if !*running {
                         break;

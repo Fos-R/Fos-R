@@ -3,14 +3,15 @@
 use crate::*;
 
 pub struct Stage4 {
-    interfaces: Vec<String>,
+    interface: Ipv4Addr,
+    proto: u8,
+    // TODO: add raw socket
 }
 
 impl Stage4 {
 
-    pub fn new(proto: u8) -> Self {
-        // TODO: probe the available interfaces
-        Stage4 { interfaces: vec![] }
+    pub fn new(interface: Ipv4Addr, proto: u8) -> Self {
+        Stage4 { interface, proto }
     }
 
     pub fn send(&self, packets: SeededData<Packets>) {
