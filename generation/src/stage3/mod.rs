@@ -9,6 +9,7 @@ use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
 use pnet_packet::ip::IpNextHeaderProtocols;
 use pnet_packet::ipv4::{self, Ipv4Flags, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
+use pnet_packet::udp::{MutableUdpPacket, ipv4_checksum};
 use rand::prelude::*;
 use rand_pcg::Pcg32;
 use crossbeam_channel::{Sender, Receiver};
@@ -198,6 +199,55 @@ impl Stage3 {
 
         Some(new_tcp_data) // Return the new tcp_data and an empty tuple
     }
+
+    fn setup_udp_packet(
+        &self,
+        rng: &mut Pcg32,
+        packet: &mut [u8],
+        flow: &FlowData,
+        packet_info: &UDPPacketInfo,
+    ) -> Option<()> {
+        let mut udp_packet = MutableUdpPacket::new(packet)?;
+
+        // Set the source and destination ports
+        match packet_info.get_direction() {
+            PacketDirection::Forward => {
+                udp_packet.set_source(flow.src_port);
+                udp_packet.set_destination(flow.dst_port);
+            }
+            PacketDirection::Backward => {
+                udp_packet.set_source(flow.dst_port);
+                udp_packet.set_destination(flow.src_port);
+            }
+        }
+        // Set the payload
+        match &packet_info.payload {
+            Payload::Empty => (),
+            Payload::Random(size) => {
+                let mut payload = vec![0_u8;*size];
+                rng.fill_bytes(&mut payload);
+                udp_packet.set_payload(payload.as_slice());
+            }
+            Payload::Replay(payload) => {
+                udp_packet.set_payload(payload);
+            },
+        }
+
+        // Compute the checksum
+        udp_packet.set_checksum(pnet_packet::udp::ipv4_checksum(
+            &udp_packet.to_immutable(),
+            match packet_info.get_direction() {
+                PacketDirection::Forward => &flow.src_ip,
+                PacketDirection::Backward => &flow.dst_ip,
+            },
+            match packet_info.get_direction() {
+                PacketDirection::Forward => &flow.dst_ip,
+                PacketDirection::Backward => &flow.src_ip,
+            },
+        ));
+        Some(())
+    }
+
 
     fn get_pcap_header(&self, packet_size: usize, ts: Duration) -> PacketHeader {
         PacketHeader {
