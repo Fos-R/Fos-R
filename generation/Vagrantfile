@@ -6,6 +6,8 @@ Vagrant.configure("2") do |config|
       vm.vm.synced_folder ".", "/vagrant", disabled: true
       vm.vm.synced_folder ".", "/home/vagrant/fosr"
 
+      vm.vm.synced_folder "/nix/store", "/nix/store"
+
       vm.vm.provision "shell", privileged:false, inline: <<-SHELL
         sudo apt update
         sudo apt install -y libpcap-dev tcpdump
