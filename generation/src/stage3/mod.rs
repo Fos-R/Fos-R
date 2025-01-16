@@ -224,7 +224,8 @@ impl Stage3 {
         let tcp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
         let flow = &input.data.flow.get_data();
         let mut tcp_data = TcpPacketData::new();
-        let mut packets: Vec<Packet> = Vec::new();
+        let mut packets = Vec::new();
+        let mut directions = Vec::new();
 
         // TODO: plutôt générer un iterator en consommant input.data.packets_info
         for packet_info in &input.data.packets_info {
@@ -245,9 +246,10 @@ impl Stage3 {
                     .get_pcap_header(packet_size, packet_info.get_ts()),
                 data: packet.clone(),
             });
+            directions.push(packet_info.get_direction());
         }
 
-        SeededData { seed: rng.next_u64(), data: Packets { packets, flow: input.data.flow } }
+        SeededData { seed: rng.next_u64(), data: Packets { packets, directions, flow: input.data.flow } }
     }
 
     /// Generate UDP packets from an intermediate representation

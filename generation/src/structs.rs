@@ -141,6 +141,6 @@ impl Eq for Packet {}
 #[derive(Debug, Clone)]
 pub struct Packets {
     pub packets: Vec<Packet>,
-    // TODO: + packets_info
+    pub directions: Vec<PacketDirection>,
     pub flow: Flow,
 }
