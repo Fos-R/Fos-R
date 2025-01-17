@@ -12,7 +12,7 @@ pub struct ICMPPacketInfo {
     pub noise: NoiseType,
 }
 
-impl Protocol for ICMPPacketInfo {
+impl PacketInfo for ICMPPacketInfo {
     fn get_direction(&self) -> PacketDirection {
         self.direction
     }
@@ -37,8 +37,8 @@ impl EdgeType for ICMPEdgeTuple {
 
 pub fn parse_icmp_symbol(symbol: String, _t: PayloadType) -> ICMPEdgeTuple {
     ICMPEdgeTuple {
-        direction: match symbol {
-            _ if symbol == ">" => PacketDirection::Forward,
+        direction: match symbol.as_str() {
+            ">" => PacketDirection::Forward,
             _ => PacketDirection::Backward,
         },
     }

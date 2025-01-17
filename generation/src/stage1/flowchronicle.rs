@@ -30,30 +30,29 @@ struct PartiallyDefinedFlowData {
     proto: Option<Protocol>,
 }
 
-impl Into<Flow> for PartiallyDefinedFlowData {
+impl From<PartiallyDefinedFlowData> for Flow {
 
-    fn into(self) -> Flow {
+    fn from(p: PartiallyDefinedFlowData) -> Self {
         let d = FlowData {
-            src_ip: self.src_ip.unwrap(),
-            dst_ip: self.dst_ip.unwrap(),
-            src_port: self.src_port.unwrap(),
-            dst_port: self.dst_port.unwrap(),
-            ttl_client: self.ttl_client.unwrap(),
-            ttl_server: self.ttl_server.unwrap(),
-            fwd_packets_count: self.fwd_packets_count.unwrap(),
-            bwd_packets_count: self.bwd_packets_count.unwrap(),
-            fwd_total_payload_length: self.fwd_total_payload_length.unwrap(),
-            bwd_total_payload_length: self.bwd_total_payload_length.unwrap(),
-            timestamp: self.timestamp.unwrap(),
-            total_duration: self.total_duration.unwrap(),
+            src_ip: p.src_ip.unwrap(),
+            dst_ip: p.dst_ip.unwrap(),
+            src_port: p.src_port.unwrap(),
+            dst_port: p.dst_port.unwrap(),
+            ttl_client: p.ttl_client.unwrap(),
+            ttl_server: p.ttl_server.unwrap(),
+            fwd_packets_count: p.fwd_packets_count.unwrap(),
+            bwd_packets_count: p.bwd_packets_count.unwrap(),
+            fwd_total_payload_length: p.fwd_total_payload_length.unwrap(),
+            bwd_total_payload_length: p.bwd_total_payload_length.unwrap(),
+            timestamp: p.timestamp.unwrap(),
+            total_duration: p.total_duration.unwrap(),
         };
-        match self.proto.unwrap() {
+        match p.proto.unwrap() {
             Protocol::TCP => Flow::TCP(d),
             Protocol::UDP => Flow::UDP(d),
             Protocol::ICMP => Flow::ICMP(d),
         }
     }
-
 
 }
 
