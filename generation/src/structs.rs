@@ -104,7 +104,7 @@ impl Payload {
     }
 }
 
-pub trait Protocol {
+pub trait Protocol { // TODO: renommer
     #[allow(unused)]
     fn get_noise_type(&self) -> NoiseType;
     fn get_direction(&self) -> PacketDirection;

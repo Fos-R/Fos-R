@@ -8,6 +8,7 @@ use rand_distr::Distribution;
 use std::time::UNIX_EPOCH;
 use std::time::SystemTime;
 use std::thread;
+use crossbeam_channel::Sender;
 
 
 const WINDOW_WIDTH_IN_SECS: u64 = 5;
@@ -62,4 +63,11 @@ impl UniformGenerator {
     }
 }
 
-
+pub fn run(generator: impl Iterator<Item=SeededData<Duration>>, tx_s0: Sender<SeededData<Duration>>) {
+    log::trace!("Start S0");
+    for ts in generator {
+        log::trace!("S0 generates {:?}",ts);
+        tx_s0.send(ts).unwrap();
+    }
+    log::trace!("S0 stops");
+}

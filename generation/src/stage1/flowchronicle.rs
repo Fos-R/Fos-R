@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use crate::structs::*;
 use crate::stage1::*;
 use serde::Deserialize;
