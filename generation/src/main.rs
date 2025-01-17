@@ -8,10 +8,8 @@ mod icmp;
 
 mod stage0;
 mod stage1;
-use stage1::Stage1;
 use stage1::flowchronicle;
 mod stage2;
-use stage2::Stage2;
 use stage2::tadam;
 mod stage3;
 mod stage4;
@@ -54,11 +52,12 @@ fn main() {
 
     let args = cmd::Args::parse();
     log::trace!("{:?}", &args);
-    let (online, noise) =
-        match args.command {
-            cmd::Command::Offline { noise, .. } => (false, noise),
-            cmd::Command::Online { } => (true, false),
-        };
+    let online = matches!(args.command, cmd::Command::Online { });
+    // let (online, noise) =
+    //     match args.command {
+    //         cmd::Command::Offline { noise, .. } => (false, noise),
+    //         cmd::Command::Online { } => (true, false),
+    //     };
 
     let seed = args.seed.unwrap_or(42); //rand::random() TODO: change for release
     log::trace!("Generating with seed {}",seed);
@@ -89,8 +88,8 @@ fn main() {
         let mut tx_s3_hm = HashMap::new();
         for iface in local_interfaces.iter() {
             let (tx, rx) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
-            tx_s3_hm.insert(iface.clone(), tx);
-            rx_s4.insert((iface.clone(), proto), rx);
+            tx_s3_hm.insert(*iface, tx);
+            rx_s4.insert((*iface, proto), rx);
         }
         tx_s3.insert(proto, tx_s3_hm);
     }
@@ -99,17 +98,9 @@ fn main() {
 
     // STAGE 0
 
-    let builder = thread::Builder::new()
-        .name("Stage0".into());
-    gen_threads.push(builder.spawn(move || {
-        log::trace!("Start S0");
-        let s0 = stage0::UniformGenerator::new(seed, online, 2, 100);
-        for ts in s0 {
-            log::trace!("S0 generates {:?}",ts);
-            tx_s0.send(ts).unwrap();
-        }
-        log::trace!("S0 stops");
-    }).unwrap());
+    let s0 = Box::new(stage0::UniformGenerator::new(seed, online, 2, 100));
+    let builder = thread::Builder::new().name("Stage0".into());
+    gen_threads.push(builder.spawn(move || { stage0::run(s0, tx_s0); }).unwrap());
 
     // STAGE 1
 
@@ -117,26 +108,16 @@ fn main() {
     for _ in 0..STAGE1_COUNT {
         let rx_s1 = rx_s1.clone();
         let tx_s1 = tx_s1.clone();
-        let patterns = Arc::clone(&patterns);
         let local_interfaces = local_interfaces.clone();
-        let builder = thread::Builder::new()
-            .name("Stage1".into());
+        let constant_generator = stage1::ConstantFlowGenerator::new(*local_interfaces.first().unwrap(), *local_interfaces.last().unwrap());
+        let flowchronicle_generator = flowchronicle::FCGenerator::new(Arc::clone(&patterns), online);
+        let builder = thread::Builder::new().name("Stage1".into());
         gen_threads.push(builder.spawn(move || {
-            log::trace!("Start S1");
-            let s1 = flowchronicle::FCGenerator::new(patterns, online);
-            while let Ok(ts) = rx_s1.recv() {
-                let flows = s1.generate_flows(ts).into_iter();
-                log::trace!("S1 generates {:?}", flows);
-                if online { // only keep relevant flows
-                    flows.filter(|f| {
-                        let data = f.data.get_data();
-                        local_interfaces.contains(&data.src_ip) || local_interfaces.contains(&data.dst_ip)
-                    }).for_each(|f| tx_s1.send(f).unwrap());
-                } else {
-                    flows.for_each(|f| tx_s1.send(f).unwrap());
-                }
+            if online {
+                stage1::run(constant_generator, rx_s1, tx_s1, online, local_interfaces.clone());
+            } else {
+                stage1::run(flowchronicle_generator, rx_s1, tx_s1, online, local_interfaces.clone());
             }
-            log::trace!("S1 stops");
         }).unwrap());
     }
     drop(rx_s1);
@@ -150,29 +131,10 @@ fn main() {
         let tx_s2_tcp = tx_s2_tcp.clone();
         let tx_s2_udp = tx_s2_udp.clone();
         let tx_s2_icmp = tx_s2_icmp.clone();
-        let automata_library = Arc::clone(&automata_library);
-        let builder = thread::Builder::new()
-            .name("Stage2".into());
+        let generator = tadam::TadamGenerator::new(Arc::clone(&automata_library));
+        let builder = thread::Builder::new().name("Stage2".into());
         gen_threads.push(builder.spawn(move || {
-            log::trace!("Start S2");
-            // Prepare stage 2 by loading the automata
-            let s2 = tadam::TadamGenerator::new(automata_library);
-            while let Ok(flow) = rx_s2.recv() {
-                log::trace!("S2 waits");
-                log::trace!("S2 generates");
-                match flow.data {
-                    Flow::TCP(data) => {
-                        tx_s2_tcp.send(s2.generate_tcp_packets_info(SeededData { seed : flow.seed, data })).unwrap();
-                    }
-                    Flow::UDP(data) => {
-                        tx_s2_udp.send(s2.generate_udp_packets_info(SeededData { seed : flow.seed, data })).unwrap();
-                    },
-                    Flow::ICMP(data) => {
-                        tx_s2_icmp.send(s2.generate_icmp_packets_info(SeededData { seed : flow.seed, data })).unwrap();
-                    },
-                }
-            }
-            log::trace!("S2 stops");
+            stage2::run(generator, rx_s2, tx_s2_tcp, tx_s2_udp, tx_s2_icmp);
         }).unwrap());
     }
     drop(rx_s2);
@@ -185,54 +147,18 @@ fn main() {
     for (proto, tx_s3_hm) in tx_s3.into_iter() {
         if proto == TCP_PROTO {
             for _ in 0..STAGE3_COUNT {
-                let tx_s3_hm = tx_s3_hm.clone();
                 let rx_s3_tcp = rx_s3_tcp.clone();
+                let rx_s3_udp = rx_s3_udp.clone();
+                let rx_s3_icmp = rx_s3_icmp.clone();
+                let tx_s3_hm = tx_s3_hm.clone();
                 let tx_s3_to_collector = tx_s3_to_collector.clone();
                 let packets_counter = Arc::clone(&packets_counter);
                 let bytes_counter = Arc::clone(&bytes_counter);
 
-                let builder = thread::Builder::new()
-                    .name("Stage3-TCP".into());
+                let s3 = stage3::Stage3::new(args.taint);
+                let builder = thread::Builder::new().name("Stage3-TCP".into());
                 gen_threads.push(builder.spawn(move || {
-                    // Prepare stage 3 for TCP
-                    log::trace!("Start S3");
-                    let s3 = stage3::Stage3::new(args.taint);
-                    while let Ok(headers) = rx_s3_tcp.recv() {
-                        log::trace!("S3 generates");
-                        let mut flow_packets = s3.generate_tcp_packets(headers);
-                        {
-                            let mut pc = packets_counter.lock().unwrap();
-                            *pc += flow_packets.data.packets.len();
-                            let mut bc = bytes_counter.lock().unwrap();
-                            *bc += flow_packets.data.flow.get_data().fwd_total_payload_length + flow_packets.data.flow.get_data().bwd_total_payload_length;
-                        }
-                        if online {
-
-                            let f = flow_packets.data.flow.get_data();
-                            let src_s4 = tx_s3_hm.get(&f.src_ip).clone();
-                            let dst_s4 = tx_s3_hm.get(&f.dst_ip).clone();
-                            if let (Some(tx1), Some(tx2)) = (src_s4, dst_s4) {
-                                // only copy if we have to
-                                tx1.send(flow_packets.clone()).unwrap();
-                                // ensure stage 4 is always the source
-                                flow_packets.data.directions = flow_packets.data.directions.into_iter().map(|d| d.into_reverse()).collect();
-                                tx2.send(flow_packets).unwrap();
-                            } else if let Some(tx1) = src_s4 {
-                                tx1.send(flow_packets).unwrap();
-                            } else if let Some(tx2) = dst_s4 {
-                                // ensure stage 4 is always the source
-                                flow_packets.data.directions = flow_packets.data.directions.into_iter().map(|d| d.into_reverse()).collect();
-                                tx2.send(flow_packets).unwrap();
-                            }
-                        } else {
-                            let mut noisy_flow = SeededData { seed: flow_packets.seed, data: flow_packets.data };
-                            if noise { // insert noise
-                                stage3::insert_noise(&mut noisy_flow);
-                            }
-                            tx_s3_to_collector.send(noisy_flow.data).unwrap();
-                        }
-                    }
-                    log::trace!("S3 stops");
+                    stage3::run(s3, rx_s3_tcp, rx_s3_udp, rx_s3_icmp, tx_s3_hm, tx_s3_to_collector, packets_counter, bytes_counter, online);
                 }).unwrap());
             }
         }
@@ -245,8 +171,7 @@ fn main() {
     // PCAP EXPORT
 
     if let cmd::Command::Offline { outfile, .. } = &args.command {
-        let builder = thread::Builder::new()
-            .name("Pcap-collector".into());
+        let builder = thread::Builder::new().name("Pcap-collector".into());
         gen_threads.push(builder.spawn(move || {
             log::trace!("Start pcap collector thread");
             let mut again = true;
@@ -266,8 +191,7 @@ fn main() {
         }).unwrap());
 
         let outfile = outfile.clone();
-        let builder = thread::Builder::new()
-            .name("Pcap-export".into());
+        let builder = thread::Builder::new().name("Pcap-export".into());
         gen_threads.push(builder.spawn(move || {
             log::trace!("Start pcap export thread");
             if let Ok(packets_record) = rx_pcap.recv() {
@@ -287,11 +211,10 @@ fn main() {
         for ((iface, proto), rx) in rx_s4.into_iter() {
             for _ in 0..STAGE4_COUNT {
                 let rx = rx.clone();
-                let builder = thread::Builder::new()
-                    .name(format!("Stage4-TCP-{}",iface).into());
+                let builder = thread::Builder::new().name(format!("Stage4-TCP-{}",iface));
                 gen_threads.push(builder.spawn(move || {
                     log::trace!("Start S4");
-                    let s4 = stage4::Stage4::new(iface.clone(), proto);
+                    let s4 = stage4::Stage4::new(iface, proto);
                     while let Ok(packets) = rx.recv() {
                         s4.send(packets)
                     }
@@ -305,8 +228,7 @@ fn main() {
         let packets_counter = Arc::clone(&packets_counter);
         let bytes_counter = Arc::clone(&bytes_counter);
         let running = Arc::clone(&running);
-        let builder = thread::Builder::new()
-            .name("Monitoring".into());
+        let builder = thread::Builder::new().name("Monitoring".into());
         threads.push(builder.spawn(move || {
             loop {
                 thread::sleep(Duration::new(1,0));

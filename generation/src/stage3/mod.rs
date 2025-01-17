@@ -11,6 +11,7 @@ use pnet_packet::ipv4::{self, Ipv4Flags, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
 use rand::prelude::*;
 use rand_pcg::Pcg32;
+use crossbeam_channel::{Sender, Receiver};
 
 pub struct Stage3 {
     taint: bool,
@@ -283,4 +284,52 @@ pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool)  -> Resul
     Ok(())
 }
 
+pub fn run(generator: Stage3,
+    rx_s3_tcp: Receiver<SeededData<PacketsIR<TCPPacketInfo>>>,
+    rx_s3_udp: Receiver<SeededData<PacketsIR<UDPPacketInfo>>>,
+    rx_s3_icmp: Receiver<SeededData<PacketsIR<ICMPPacketInfo>>>,
+    tx_s3_hm: HashMap<Ipv4Addr,Sender<SeededData<Packets>>>,
+    tx_s3_to_collector: Sender<Packets>,
+    packets_counter: Arc<Mutex<usize>>,
+    bytes_counter: Arc<Mutex<u32>>,
+    online: bool) {
 
+    // Prepare stage 3 for TCP
+    log::trace!("Start S3");
+    while let Ok(headers) = rx_s3_tcp.recv() {
+        log::trace!("S3 generates");
+        let mut flow_packets = generator.generate_tcp_packets(headers);
+        {
+            let mut pc = packets_counter.lock().unwrap();
+            *pc += flow_packets.data.packets.len();
+            let mut bc = bytes_counter.lock().unwrap();
+            *bc += flow_packets.data.flow.get_data().fwd_total_payload_length + flow_packets.data.flow.get_data().bwd_total_payload_length;
+        }
+        if online {
+            let f = flow_packets.data.flow.get_data();
+            let src_s4 = tx_s3_hm.get(&f.src_ip);
+            let dst_s4 = tx_s3_hm.get(&f.dst_ip);
+            if let (Some(tx1), Some(tx2)) = (src_s4, dst_s4) {
+                // only copy if we have to
+                tx1.send(flow_packets.clone()).unwrap();
+                // ensure stage 4 is always the source
+                flow_packets.data.directions = flow_packets.data.directions.into_iter().map(|d| d.into_reverse()).collect();
+                tx2.send(flow_packets).unwrap();
+            } else if let Some(tx1) = src_s4 {
+                tx1.send(flow_packets).unwrap();
+            } else if let Some(tx2) = dst_s4 {
+                // ensure stage 4 is always the source
+                flow_packets.data.directions = flow_packets.data.directions.into_iter().map(|d| d.into_reverse()).collect();
+                tx2.send(flow_packets).unwrap();
+            }
+        } else {
+            let mut noisy_flow = SeededData { seed: flow_packets.seed, data: flow_packets.data };
+            // if noise { // insert noise // TODO: find a better way to do it
+            //     stage3::insert_noise(&mut noisy_flow);
+            // }
+            tx_s3_to_collector.send(noisy_flow.data).unwrap();
+        }
+    }
+    log::trace!("S3 stops");
+
+}
