@@ -104,7 +104,7 @@ impl Payload {
     }
 }
 
-pub trait Protocol { // TODO: renommer
+pub trait PacketInfo {
     #[allow(unused)]
     fn get_noise_type(&self) -> NoiseType;
     fn get_direction(&self) -> PacketDirection;
@@ -112,7 +112,7 @@ pub trait Protocol { // TODO: renommer
 }
 
 #[derive(Debug, Clone)]
-pub struct PacketsIR<T: Protocol> {
+pub struct PacketsIR<T: PacketInfo> {
     // Intermediate representation (as output by stage 2)
     pub packets_info: Vec<T>,
     pub flow: Flow,

@@ -180,9 +180,9 @@ enum JsonPayload {
     NoPayload,
 }
 
-impl Into<PayloadType> for JsonPayload {
-    fn into(self) -> PayloadType {
-        match self {
+impl From<JsonPayload> for PayloadType {
+    fn from(p: JsonPayload) -> Self {
+        match p {
             JsonPayload::Lengths { lengths: l } => PayloadType::Random(l),
             JsonPayload::NoPayload => PayloadType::Empty,
             JsonPayload::HexCodes { content: p } => PayloadType::Replay(

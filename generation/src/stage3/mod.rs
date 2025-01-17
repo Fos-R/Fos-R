@@ -360,10 +360,10 @@ pub fn run_export(rx_pcap: Receiver<Vec<Packet>>, outfile: &str) {
     log::trace!("Start pcap export thread");
     if let Ok(packets_record) = rx_pcap.recv() {
         log::trace!("Saving into {}", outfile);
-        stage3::pcap_export(packets_record, &outfile, false).expect("Error during pcap export!");
+        stage3::pcap_export(packets_record, outfile, false).expect("Error during pcap export!");
         while let Ok(packets_record) = rx_pcap.recv() {
             log::trace!("Saving into {}", outfile);
-            pcap_export(packets_record, &outfile, true).expect("Error during pcap export!");
+            pcap_export(packets_record, outfile, true).expect("Error during pcap export!");
         }
     }
 }

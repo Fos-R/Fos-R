@@ -11,7 +11,7 @@ pub struct UDPPacketInfo {
     pub noise: NoiseType,
 }
 
-impl Protocol for UDPPacketInfo {
+impl PacketInfo for UDPPacketInfo {
     fn get_direction(&self) -> PacketDirection {
         self.direction
     }
@@ -39,7 +39,7 @@ pub fn parse_udp_symbol(symbol: String, p: PayloadType) -> UDPEdgeTuple {
     let strings: Vec<&str> = symbol.split("_").collect();
     UDPEdgeTuple {
         direction: match strings[0] {
-            _ if strings[0] == ">" => PacketDirection::Forward,
+            ">" => PacketDirection::Forward,
             _ => PacketDirection::Backward,
         },
         payload_type: p,

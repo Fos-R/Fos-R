@@ -17,7 +17,7 @@ pub struct TCPPacketInfo {
     pub p_flag: bool,
 }
 
-impl Protocol for TCPPacketInfo {
+impl PacketInfo for TCPPacketInfo {
     fn get_direction(&self) -> PacketDirection {
         self.direction
     }
@@ -51,7 +51,7 @@ pub fn parse_tcp_symbol(symbol: String, p: PayloadType) -> TCPEdgeTuple {
     let strings: Vec<&str> = symbol.split("_").collect();
     TCPEdgeTuple {
         direction: match strings[1] {
-            _ if strings[1] == ">" => PacketDirection::Forward,
+            ">" => PacketDirection::Forward,
             _ => PacketDirection::Backward,
         },
         payload_type: p,
