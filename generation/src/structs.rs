@@ -1,8 +1,8 @@
 use pcap::PacketHeader;
+use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::net::Ipv4Addr;
 use std::time::Duration;
-use std::cmp::Ordering;
 
 // A general wrapper to pass a seed along with actual data
 #[derive(Debug, Clone)]
@@ -117,11 +117,23 @@ pub struct Packet {
     pub data: Vec<u8>,
 }
 
+impl Packet {
+    pub fn into_packet(&self) -> pnet::packet::ipv4::Ipv4Packet {
+        pnet::packet::ipv4::Ipv4Packet::new(
+            &self.data[pnet::packet::ethernet::EthernetPacket::minimum_packet_size()..],
+        )
+        .unwrap()
+    }
+}
+
 impl Ord for Packet {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.header.ts.tv_sec.cmp(&other.header.ts.tv_sec).then(self.header.ts.tv_usec.cmp(&other.header.ts.tv_usec))
+        self.header
+            .ts
+            .tv_sec
+            .cmp(&other.header.ts.tv_sec)
+            .then(self.header.ts.tv_usec.cmp(&other.header.ts.tv_usec))
     }
-
 }
 
 impl PartialOrd for Packet {
@@ -132,7 +144,8 @@ impl PartialOrd for Packet {
 
 impl PartialEq for Packet {
     fn eq(&self, other: &Self) -> bool {
-        self.header.ts.tv_usec == other.header.ts.tv_usec && self.header.ts.tv_sec == other.header.ts.tv_sec
+        self.header.ts.tv_usec == other.header.ts.tv_usec
+            && self.header.ts.tv_sec == other.header.ts.tv_sec
     }
 }
 
