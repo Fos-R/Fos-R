@@ -30,9 +30,9 @@ struct PartiallyDefinedFlowData {
     proto: Option<Protocol>,
 }
 
-impl PartiallyDefinedFlowData {
+impl Into<Flow> for PartiallyDefinedFlowData {
 
-    fn into_flow(self) -> Flow {
+    fn into(self) -> Flow {
         let d = FlowData {
             src_ip: self.src_ip.unwrap(),
             dst_ip: self.dst_ip.unwrap(),
@@ -53,6 +53,11 @@ impl PartiallyDefinedFlowData {
             Protocol::ICMP => Flow::ICMP(d),
         }
     }
+
+
+}
+
+impl PartiallyDefinedFlowData {
 
     fn set_value(&mut self, rng: &mut Pcg32, f: &Feature, index: usize) {
         match f {
@@ -218,7 +223,7 @@ impl Pattern {
                 };
             }
         }
-        partially_defined_flows.into_iter().map(PartiallyDefinedFlowData::into_flow).collect()
+        partially_defined_flows.into_iter().map(|p| p.into()).collect()
     }
 
 }
