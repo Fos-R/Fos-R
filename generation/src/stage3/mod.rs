@@ -266,11 +266,11 @@ impl Stage3 {
     }
 }
 
-pub fn insert_noise(data: &mut SeededData<Packets>) {
+fn insert_noise(data: &mut SeededData<Packets>) {
     todo!()
 }
 
-pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool)  -> Result<(), pcap::Error> {
+fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool)  -> Result<(), pcap::Error> {
     let mut capture = Capture::dead(pcap::Linktype(1))?;
     let mut savefile = if append { capture.savefile_append(outfile)? } else { capture.savefile(outfile)? };
     // data.sort();
@@ -284,10 +284,15 @@ pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool)  -> Resul
     Ok(())
 }
 
+#[derive(Debug, Clone)]
+pub struct S3Receiver {
+    pub tcp: Receiver<SeededData<PacketsIR<TCPPacketInfo>>>,
+    pub udp: Receiver<SeededData<PacketsIR<UDPPacketInfo>>>,
+    pub icmp: Receiver<SeededData<PacketsIR<ICMPPacketInfo>>>,
+}
+
 pub fn run(generator: Stage3,
-    rx_s3_tcp: Receiver<SeededData<PacketsIR<TCPPacketInfo>>>,
-    rx_s3_udp: Receiver<SeededData<PacketsIR<UDPPacketInfo>>>,
-    rx_s3_icmp: Receiver<SeededData<PacketsIR<ICMPPacketInfo>>>,
+    rx_s3: S3Receiver,
     tx_s3_hm: HashMap<Ipv4Addr,Sender<SeededData<Packets>>>,
     tx_s3_to_collector: Sender<Packets>,
     packets_counter: Arc<Mutex<usize>>,
@@ -296,7 +301,7 @@ pub fn run(generator: Stage3,
 
     // Prepare stage 3 for TCP
     log::trace!("Start S3");
-    while let Ok(headers) = rx_s3_tcp.recv() {
+    while let Ok(headers) = rx_s3.tcp.recv() {
         log::trace!("S3 generates");
         let mut flow_packets = generator.generate_tcp_packets(headers);
         {
@@ -331,5 +336,34 @@ pub fn run(generator: Stage3,
         }
     }
     log::trace!("S3 stops");
+}
 
+pub fn run_collector(rx_collector: Receiver<Packets>, tx_collector: Sender<Vec<Packet>>) {
+    log::trace!("Start pcap collector thread");
+    let mut again = true;
+    while again {
+        let mut packets_record = Vec::with_capacity(10_010_000);
+        while packets_record.len() < 10_000_000 {
+            if let Ok(mut packets) = rx_collector.recv() {
+                // TODO: utiliser extend avec l’itérator
+                packets_record.append(&mut packets.packets);
+            } else {
+                again = false;
+                break;
+            }
+        }
+        tx_collector.send(packets_record).unwrap();
+    }
+}
+
+pub fn run_export(rx_pcap: Receiver<Vec<Packet>>, outfile: &str) {
+    log::trace!("Start pcap export thread");
+    if let Ok(packets_record) = rx_pcap.recv() {
+        log::trace!("Saving into {}", outfile);
+        stage3::pcap_export(packets_record, &outfile, false).expect("Error during pcap export!");
+        while let Ok(packets_record) = rx_pcap.recv() {
+            log::trace!("Saving into {}", outfile);
+            pcap_export(packets_record, &outfile, true).expect("Error during pcap export!");
+        }
+    }
 }

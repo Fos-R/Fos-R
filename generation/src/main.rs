@@ -76,12 +76,15 @@ fn main() {
     let mut threads = vec![];
     let mut gen_threads = vec![];
 
-    // All the channels
+    // Channels creation
     let (tx_s0, rx_s1) = bounded::<SeededData<Duration>>(CHANNEL_SIZE);
     let (tx_s1, rx_s2) = bounded::<SeededData<Flow>>(CHANNEL_SIZE);
     let (tx_s2_tcp, rx_s3_tcp) = bounded::<SeededData<PacketsIR<tcp::TCPPacketInfo>>>(CHANNEL_SIZE);
     let (tx_s2_udp, rx_s3_udp) = bounded::<SeededData<PacketsIR<udp::UDPPacketInfo>>>(CHANNEL_SIZE);
     let (tx_s2_icmp, rx_s3_icmp) = bounded::<SeededData<PacketsIR<icmp::ICMPPacketInfo>>>(CHANNEL_SIZE);
+    let tx_s2 = stage2::S2Sender { tcp: tx_s2_tcp, udp: tx_s2_udp, icmp: tx_s2_icmp };
+    let rx_s3 = stage3::S3Receiver { tcp: rx_s3_tcp, udp: rx_s3_udp, icmp: rx_s3_icmp };
+
     let mut tx_s3 = HashMap::new();
     let mut rx_s4 = HashMap::new();
     for proto in PROTOCOLS {
@@ -114,9 +117,9 @@ fn main() {
         let builder = thread::Builder::new().name("Stage1".into());
         gen_threads.push(builder.spawn(move || {
             if online {
-                stage1::run(constant_generator, rx_s1, tx_s1, online, local_interfaces.clone());
+                stage1::run(constant_generator, rx_s1, tx_s1, online, local_interfaces);
             } else {
-                stage1::run(flowchronicle_generator, rx_s1, tx_s1, online, local_interfaces.clone());
+                stage1::run(flowchronicle_generator, rx_s1, tx_s1, online, local_interfaces);
             }
         }).unwrap());
     }
@@ -128,28 +131,22 @@ fn main() {
     let automata_library = Arc::new(tadam::AutomataLibrary::from_dir(Path::new(&args.models).join("tas").to_str().unwrap()));
     for _ in 0..STAGE2_COUNT {
         let rx_s2 = rx_s2.clone();
-        let tx_s2_tcp = tx_s2_tcp.clone();
-        let tx_s2_udp = tx_s2_udp.clone();
-        let tx_s2_icmp = tx_s2_icmp.clone();
+        let tx_s2 = tx_s2.clone();
         let generator = tadam::TadamGenerator::new(Arc::clone(&automata_library));
         let builder = thread::Builder::new().name("Stage2".into());
         gen_threads.push(builder.spawn(move || {
-            stage2::run(generator, rx_s2, tx_s2_tcp, tx_s2_udp, tx_s2_icmp);
+            stage2::run(generator, rx_s2, tx_s2);
         }).unwrap());
     }
     drop(rx_s2);
-    drop(tx_s2_tcp);
-    drop(tx_s2_udp);
-    drop(tx_s2_icmp);
+    drop(tx_s2);
 
     // STAGE 3
 
     for (proto, tx_s3_hm) in tx_s3.into_iter() {
         if proto == TCP_PROTO {
             for _ in 0..STAGE3_COUNT {
-                let rx_s3_tcp = rx_s3_tcp.clone();
-                let rx_s3_udp = rx_s3_udp.clone();
-                let rx_s3_icmp = rx_s3_icmp.clone();
+                let rx_s3 = rx_s3.clone();
                 let tx_s3_hm = tx_s3_hm.clone();
                 let tx_s3_to_collector = tx_s3_to_collector.clone();
                 let packets_counter = Arc::clone(&packets_counter);
@@ -158,14 +155,12 @@ fn main() {
                 let s3 = stage3::Stage3::new(args.taint);
                 let builder = thread::Builder::new().name("Stage3-TCP".into());
                 gen_threads.push(builder.spawn(move || {
-                    stage3::run(s3, rx_s3_tcp, rx_s3_udp, rx_s3_icmp, tx_s3_hm, tx_s3_to_collector, packets_counter, bytes_counter, online);
+                    stage3::run(s3, rx_s3, tx_s3_hm, tx_s3_to_collector, packets_counter, bytes_counter, online);
                 }).unwrap());
             }
         }
     }
-    drop(rx_s3_tcp);
-    drop(rx_s3_udp);
-    drop(rx_s3_icmp);
+    drop(rx_s3);
     drop(tx_s3_to_collector);
 
     // PCAP EXPORT
@@ -173,35 +168,13 @@ fn main() {
     if let cmd::Command::Offline { outfile, .. } = &args.command {
         let builder = thread::Builder::new().name("Pcap-collector".into());
         gen_threads.push(builder.spawn(move || {
-            log::trace!("Start pcap collector thread");
-            let mut again = true;
-            while again {
-                let mut packets_record = Vec::with_capacity(10_010_000);
-                while packets_record.len() < 10_000_000 {
-                    if let Ok(mut packets) = rx_collector.recv() {
-                        // TODO: utiliser extend avec l’itérator
-                        packets_record.append(&mut packets.packets);
-                    } else {
-                        again = false;
-                        break;
-                    }
-                }
-                tx_collector.send(packets_record).unwrap();
-            }
+            stage3::run_collector(rx_collector, tx_collector);
         }).unwrap());
 
         let outfile = outfile.clone();
         let builder = thread::Builder::new().name("Pcap-export".into());
         gen_threads.push(builder.spawn(move || {
-            log::trace!("Start pcap export thread");
-            if let Ok(packets_record) = rx_pcap.recv() {
-                log::trace!("Saving into {}", outfile);
-                stage3::pcap_export(packets_record, &outfile, false).expect("Error during pcap export!");
-                while let Ok(packets_record) = rx_pcap.recv() {
-                    log::trace!("Saving into {}", outfile);
-                    stage3::pcap_export(packets_record, &outfile, true).expect("Error during pcap export!");
-                }
-            }
+            stage3::run_export(rx_pcap, &outfile);
         }).unwrap());
     }
 
