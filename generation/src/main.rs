@@ -33,14 +33,28 @@ const STAGE3_COUNT: usize = 1; // per protocol
 const STAGE4_COUNT: usize = 1; // per protocol
 // monitor threads with "top -H -p $(pgrep fosr)"
 
+#[derive(Default)]
+pub struct Stats {
+    pub packets_counter: Mutex<u64>,
+    pub bytes_counter: Mutex<u64>,
+}
+
+impl Stats {
+    pub fn increase(&self, p: &Packets) {
+        let mut pc = self.packets_counter.lock().unwrap();
+        *pc += p.packets.len() as u64;
+        let mut bc = self.bytes_counter.lock().unwrap();
+        *bc += (p.flow.get_data().fwd_total_payload_length + p.flow.get_data().bwd_total_payload_length) as u64;
+    }
+}
+
 fn main() {
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info") // default log level: info
     }
     env_logger::init();
     let start_time = Instant::now();
-    let packets_counter = Arc::new(Mutex::new(0)); // TODO: créer une struct
-    let bytes_counter = Arc::new(Mutex::new(0));
+    let stats = Arc::new(Stats::default());
     let running = Arc::new(Mutex::new(true)); // TODO: use std::sync::atomic instead
 
     let args = cmd::Args::parse();
@@ -187,16 +201,15 @@ fn main() {
     }
 
     {
-        let packets_counter = Arc::clone(&packets_counter);
-        let bytes_counter = Arc::clone(&bytes_counter);
+        let stats = Arc::clone(&stats);
         let running = Arc::clone(&running);
         let builder = thread::Builder::new().name("Monitoring".into());
         threads.push(builder.spawn(move || {
             loop {
                 thread::sleep(Duration::new(1,0));
                 {
-                    let pc = packets_counter.lock().unwrap();
-                    let bc = bytes_counter.lock().unwrap();
+                    let pc = stats.packets_counter.lock().unwrap();
+                    let bc = stats.bytes_counter.lock().unwrap();
                     let throughput = 8. * (*bc as f64) / (Instant::now().duration_since(start_time).as_secs() as f64) / 1_000_000.;
                     if throughput < 1000. {
                         log::info!("{pc} created packets ({} Mbps)", throughput);

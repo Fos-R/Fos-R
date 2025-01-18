@@ -295,8 +295,7 @@ pub fn run(generator: Stage3,
     rx_s3: S3Receiver,
     tx_s3_hm: HashMap<Ipv4Addr,Sender<SeededData<Packets>>>,
     tx_s3_to_collector: Sender<Packets>,
-    packets_counter: Arc<Mutex<usize>>,
-    bytes_counter: Arc<Mutex<u32>>,
+    stats: Arc<Stats>,
     online: bool) {
 
     // Prepare stage 3 for TCP
@@ -304,12 +303,7 @@ pub fn run(generator: Stage3,
     while let Ok(headers) = rx_s3.tcp.recv() {
         log::trace!("S3 generates");
         let mut flow_packets = generator.generate_tcp_packets(headers);
-        {
-            let mut pc = packets_counter.lock().unwrap();
-            *pc += flow_packets.data.packets.len();
-            let mut bc = bytes_counter.lock().unwrap();
-            *bc += flow_packets.data.flow.get_data().fwd_total_payload_length + flow_packets.data.flow.get_data().bwd_total_payload_length;
-        }
+        stats.increase(&flow_packets.data);
         if online {
             let f = flow_packets.data.flow.get_data();
             let src_s4 = tx_s3_hm.get(&f.src_ip);
