@@ -27,7 +27,7 @@ struct TcpPacketData {
 }
 
 impl TcpPacketData {
-    fn new(rng: &mut Pcg32,) -> Self {
+    fn new(rng: &mut impl RngCore) -> Self {
         TcpPacketData {
             forward: rng.next_u32(),
             backward: rng.next_u32(),
@@ -92,7 +92,7 @@ impl Stage3 {
 
     fn setup_tcp_packet(
         &self,
-        rng: &mut Pcg32,
+        rng: &mut impl RngCore,
         packet: &mut [u8],
         flow: &FlowData,
         packet_info: &TCPPacketInfo,

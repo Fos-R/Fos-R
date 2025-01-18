@@ -54,7 +54,7 @@ impl From<PartiallyDefinedFlowData> for Flow {
 
 impl PartiallyDefinedFlowData {
 
-    fn set_value(&mut self, rng: &mut Pcg32, f: &Feature, index: usize) {
+    fn set_value(&mut self, rng: &mut impl RngCore, f: &Feature, index: usize) {
         match f {
             Feature::SrcIP(ref v) => self.src_ip = Some(v.0[index]),
             Feature::DstIP(ref v) => self.dst_ip = Some(v.0[index]),
@@ -120,7 +120,7 @@ struct CptLineJSON {
 struct CptLine(HashMap<Vec<u32>,WeightedIndex<f32>>);
 
 impl CptLine {
-    fn sample(&self, rng: &mut Pcg32, parents_values: &Vec<u32>) -> usize {
+    fn sample(&self, rng: &mut impl RngCore, parents_values: &Vec<u32>) -> usize {
         self.0[parents_values].sample(rng)
     }
 }
@@ -138,7 +138,7 @@ impl From<CptLineJSON> for CptLine {
 
 impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
-    fn sample_index(&self, rng: &mut Pcg32) -> usize {
+    fn sample_index(&self, rng: &mut impl RngCore) -> usize {
         todo!()
     }
 }
@@ -161,7 +161,7 @@ struct BayesianNetwork {
 
 impl BayesianNetwork {
     /// Sample a vector from the Bayesian network
-    fn sample_free_cells(&self, rng: &mut Pcg32, flow_count: usize) -> Vec<PartiallyDefinedFlowData> {
+    fn sample_free_cells(&self, rng: &mut impl RngCore, flow_count: usize) -> Vec<PartiallyDefinedFlowData> {
         let mut p = PartiallyDefinedFlowData { src_ip: None, dst_ip: None, src_port: None, dst_port: None,
             ttl_client: None, ttl_server: None,
             fwd_packets_count: None,
@@ -196,7 +196,7 @@ struct Pattern {
 
 impl Pattern {
     /// Sample flows
-    fn sample(&self, rng: &mut Pcg32, ts: Duration) -> Vec<Flow> {
+    fn sample(&self, rng: &mut impl RngCore, ts: Duration) -> Vec<Flow> {
         let mut partially_defined_flows = self.bayesian_network.sample_free_cells(rng, self.partial_flows.len());
         for (r_index,p) in self.partial_flows.iter().enumerate() {
             partially_defined_flows.get_mut(r_index).unwrap().timestamp = Some(ts); // TODO tirage
