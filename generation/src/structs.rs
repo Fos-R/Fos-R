@@ -30,8 +30,9 @@ impl Protocol {
         }
     }
 
-    pub fn iter() -> [Protocol; 3] {
-        [Protocol::TCP, Protocol::UDP, Protocol::ICMP]
+    pub fn iter() -> [Protocol; 1] {
+        // TODO: add the other protocols when they are implemented
+        [Protocol::TCP] //, Protocol::UDP, Protocol::ICMP]
     }
 
     pub fn wrap(&self, d: FlowData) -> Flow {
