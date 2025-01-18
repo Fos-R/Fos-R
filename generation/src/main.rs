@@ -32,13 +32,6 @@ const STAGE2_COUNT: usize = 1;
 const STAGE3_COUNT: usize = 1; // per protocol
 const STAGE4_COUNT: usize = 1; // per protocol
 // monitor threads with "top -H -p $(pgrep fosr)"
-const TCP_PROTO: u8 = 6;
-#[allow(dead_code)]
-const UDP_PROTO: u8 = 17;
-#[allow(dead_code)]
-const ICMP_PROTO: u8 = 1;
-
-const PROTOCOLS: [u8;3] = [TCP_PROTO, UDP_PROTO, ICMP_PROTO];
 
 fn main() {
     if env::var("RUST_LOG").is_err() {
@@ -87,7 +80,7 @@ fn main() {
 
     let mut tx_s3 = HashMap::new();
     let mut rx_s4 = HashMap::new();
-    for proto in PROTOCOLS {
+    for proto in Protocol::iter() {
         let mut tx_s3_hm = HashMap::new();
         for iface in local_interfaces.iter() {
             let (tx, rx) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
@@ -144,20 +137,24 @@ fn main() {
     // STAGE 3
 
     for (proto, tx_s3_hm) in tx_s3.into_iter() {
-        if proto == TCP_PROTO {
-            for _ in 0..STAGE3_COUNT {
-                let rx_s3 = rx_s3.clone();
-                let tx_s3_hm = tx_s3_hm.clone();
-                let tx_s3_to_collector = tx_s3_to_collector.clone();
-                let packets_counter = Arc::clone(&packets_counter);
-                let bytes_counter = Arc::clone(&bytes_counter);
+        match proto {
+            Protocol::TCP => {
+                for _ in 0..STAGE3_COUNT {
+                    let rx_s3 = rx_s3.clone();
+                    let tx_s3_hm = tx_s3_hm.clone();
+                    let tx_s3_to_collector = tx_s3_to_collector.clone();
+                    let packets_counter = Arc::clone(&packets_counter);
+                    let bytes_counter = Arc::clone(&bytes_counter);
 
-                let s3 = stage3::Stage3::new(args.taint);
-                let builder = thread::Builder::new().name("Stage3-TCP".into());
-                gen_threads.push(builder.spawn(move || {
-                    stage3::run(s3, rx_s3, tx_s3_hm, tx_s3_to_collector, packets_counter, bytes_counter, online);
-                }).unwrap());
-            }
+                    let s3 = stage3::Stage3::new(args.taint);
+                    let builder = thread::Builder::new().name("Stage3-TCP".into());
+                    gen_threads.push(builder.spawn(move || {
+                        stage3::run(s3, rx_s3, tx_s3_hm, tx_s3_to_collector, packets_counter, bytes_counter, online);
+                    }).unwrap());
+                }
+            },
+            Protocol::UDP => todo!(),
+            Protocol::ICMP => todo!(),
         }
     }
     drop(rx_s3);
@@ -187,7 +184,7 @@ fn main() {
                 let builder = thread::Builder::new().name(format!("Stage4-TCP-{}",iface));
                 gen_threads.push(builder.spawn(move || {
                     log::trace!("Start S4");
-                    let s4 = stage4::Stage4::new(iface, proto);
+                    let s4 = stage4::Stage4::new(iface, proto.get_number());
                     while let Ok(packets) = rx.recv() {
                         s4.send(packets)
                     }

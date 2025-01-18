@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use std::net::Ipv4Addr;
 use std::time::Duration;
 use std::cmp::Ordering;
+use serde::Deserialize;
 
 // A general wrapper to pass a seed along with actual data
 #[derive(Debug, Clone)]
@@ -12,6 +13,35 @@ pub struct SeededData<T: Clone> {
 }
 
 // Stage 1 and 2 structures
+
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Protocol {
+    TCP,
+    UDP,
+    ICMP,
+}
+
+impl Protocol {
+    pub fn get_number(&self) -> u8 {
+        match &self {
+            Protocol::TCP => 6,
+            Protocol::UDP => 17,
+            Protocol::ICMP => 1,
+        }
+    }
+
+    pub fn iter() -> [Protocol; 3] {
+        [Protocol::TCP, Protocol::UDP, Protocol::ICMP]
+    }
+
+    pub fn wrap(&self, d: FlowData) -> Flow {
+        match &self {
+            Protocol::TCP => Flow::TCP(d),
+            Protocol::UDP => Flow::UDP(d),
+            Protocol::ICMP => Flow::ICMP(d),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum Flow {
@@ -28,6 +58,14 @@ impl Flow {
             Flow::ICMP(data) => data,
         }
     }
+
+    // pub fn get_proto(&self) -> Protocol {
+    //     match &self {
+    //         Flow::TCP(_) => Protocol::TCP,
+    //         Flow::UDP(_) => Protocol::UDP,
+    //         Flow::ICMP(_) => Protocol::ICMP,
+    //     }
+    // }
 }
 
 #[derive(Debug, Clone)]
@@ -45,6 +83,17 @@ pub struct FlowData {
     pub timestamp: Duration,
     pub total_duration: Duration,
 }
+
+impl From<Flow> for FlowData {
+    fn from(f: Flow) -> FlowData {
+        match f {
+            Flow::TCP(data) => data,
+            Flow::UDP(data) => data,
+            Flow::ICMP(data) => data,
+        }
+    }
+}
+
 
 // Stage 2 structures
 
