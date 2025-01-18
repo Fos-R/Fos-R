@@ -47,11 +47,7 @@ impl From<PartiallyDefinedFlowData> for Flow {
             timestamp: p.timestamp.unwrap(),
             total_duration: p.total_duration.unwrap(),
         };
-        match p.proto.unwrap() {
-            Protocol::TCP => Flow::TCP(d),
-            Protocol::UDP => Flow::UDP(d),
-            Protocol::ICMP => Flow::ICMP(d),
-        }
+        p.proto.unwrap().wrap(d)
     }
 
 }
@@ -69,14 +65,6 @@ impl PartiallyDefinedFlowData {
             Feature::Proto(ref v) => self.proto = Some(v.clone()),
         }
     }
-}
-
-
-#[derive(Deserialize, Debug, Clone)]
-enum Protocol {
-    TCP,
-    UDP,
-    ICMP,
 }
 
 /// A node of the Bayesian network
