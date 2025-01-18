@@ -154,7 +154,7 @@ impl Payload {
     }
 }
 
-pub trait PacketInfo {
+pub trait PacketInfo: Clone {
     #[allow(unused)]
     fn get_noise_type(&self) -> NoiseType;
     fn get_direction(&self) -> PacketDirection;

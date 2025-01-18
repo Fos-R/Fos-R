@@ -93,7 +93,6 @@ fn main() {
         let (tx_s2_udp, rx_s3_udp) = bounded::<SeededData<PacketsIR<udp::UDPPacketInfo>>>(CHANNEL_SIZE);
         let (tx_s2_icmp, rx_s3_icmp) = bounded::<SeededData<PacketsIR<icmp::ICMPPacketInfo>>>(CHANNEL_SIZE);
         let tx_s2 = stage2::S2Sender { tcp: tx_s2_tcp, udp: tx_s2_udp, icmp: tx_s2_icmp };
-        let rx_s3 = stage3::S3Receiver { tcp: rx_s3_tcp, udp: rx_s3_udp, icmp: rx_s3_icmp };
 
         let mut tx_s3 = HashMap::new();
         let mut rx_s4 = HashMap::new();
@@ -149,22 +148,28 @@ fn main() {
         // STAGE 3
 
         for (proto, tx_s3_hm) in tx_s3.into_iter() {
-            match proto {
-                Protocol::TCP => {
-                    for _ in 0..STAGE3_COUNT {
-                        let rx_s3 = rx_s3.clone();
-                        let tx_s3_hm = tx_s3_hm.clone();
-                        let tx_s3_to_collector = tx_s3_to_collector.clone();
-                        let packets_counter = Arc::clone(&packets_counter);
-                        let bytes_counter = Arc::clone(&bytes_counter);
+            for _ in 0..STAGE3_COUNT {
+                let tx_s3_hm = tx_s3_hm.clone();
+                let tx_s3_to_collector = tx_s3_to_collector.clone();
+                let stats = Arc::clone(&stats);
 
-                        let s3 = stage3::Stage3::new(args.taint);
-                        let builder = thread::Builder::new().name("Stage3-TCP".into());
-                        gen_threads.push(builder.spawn(move || stage3::run(s3, rx_s3, tx_s3_hm, tx_s3_to_collector, packets_counter, bytes_counter, online)).unwrap());
+                let s3 = stage3::Stage3::new(args.taint);
+                let builder = thread::Builder::new().name(format!("Stage3-{:?}", proto).into());
+
+                match proto {
+                    Protocol::TCP => {
+                            let rx_s3_tcp = rx_s3_tcp.clone();
+                            gen_threads.push(builder.spawn(move || stage3::run(|f| s3.generate_tcp_packets(f), rx_s3_tcp, tx_s3_hm, tx_s3_to_collector, stats, online)).unwrap());
+                        },
+                    Protocol::UDP => {
+                            let rx_s3_udp = rx_s3_udp.clone();
+                            gen_threads.push(builder.spawn(move || stage3::run(|f| s3.generate_udp_packets(f), rx_s3_udp, tx_s3_hm, tx_s3_to_collector, stats, online)).unwrap());
+                    },
+                    Protocol::ICMP => {
+                            let rx_s3_icmp = rx_s3_icmp.clone();
+                            gen_threads.push(builder.spawn(move || stage3::run(|f| s3.generate_icmp_packets(f), rx_s3_icmp, tx_s3_hm, tx_s3_to_collector, stats, online)).unwrap());
                     }
-                },
-                Protocol::UDP => todo!(),
-                Protocol::ICMP => todo!(), 
+                }
             }
         }
 
@@ -224,6 +229,7 @@ fn main() {
             }
         }).unwrap());
     }
+
 
     // Wait for the generation threads to end
     for thread in gen_threads.into_iter() {
