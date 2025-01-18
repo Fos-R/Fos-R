@@ -154,7 +154,7 @@ fn main() {
                 let stats = Arc::clone(&stats);
 
                 let s3 = stage3::Stage3::new(args.taint);
-                let builder = thread::Builder::new().name(format!("Stage3-{:?}", proto).into());
+                let builder = thread::Builder::new().name(format!("Stage3-{:?}", proto));
 
                 match proto {
                     Protocol::TCP => {
