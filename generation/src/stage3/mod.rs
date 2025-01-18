@@ -284,25 +284,18 @@ fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool)  -> Result<()
     Ok(())
 }
 
-#[derive(Debug, Clone)]
-pub struct S3Receiver {
-    pub tcp: Receiver<SeededData<PacketsIR<TCPPacketInfo>>>,
-    pub udp: Receiver<SeededData<PacketsIR<UDPPacketInfo>>>,
-    pub icmp: Receiver<SeededData<PacketsIR<ICMPPacketInfo>>>,
-}
-
-pub fn run(generator: Stage3,
-    rx_s3: S3Receiver,
+pub fn run<T: PacketInfo>(generator: impl Fn(SeededData<PacketsIR<T>>) -> SeededData<Packets>,
+    rx_s3: Receiver<SeededData<PacketsIR<T>>>,
     tx_s3_hm: HashMap<Ipv4Addr,Sender<SeededData<Packets>>>,
     tx_s3_to_collector: Sender<Packets>,
     stats: Arc<Stats>,
     online: bool) {
 
-    // Prepare stage 3 for TCP
+    // Prepare stage 3
     log::trace!("Start S3");
-    while let Ok(headers) = rx_s3.tcp.recv() {
+    while let Ok(headers) = rx_s3.recv() {
         log::trace!("S3 generates");
-        let mut flow_packets = generator.generate_tcp_packets(headers);
+        let mut flow_packets = generator(headers);
         stats.increase(&flow_packets.data);
         if online {
             let f = flow_packets.data.flow.get_data();
