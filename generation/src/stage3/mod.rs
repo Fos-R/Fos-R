@@ -27,10 +27,10 @@ struct TcpPacketData {
 }
 
 impl TcpPacketData {
-    fn new() -> Self {
+    fn new(rng: &mut Pcg32,) -> Self {
         TcpPacketData {
-            forward: random::<u32>(),
-            backward: random::<u32>(),
+            forward: rng.next_u32(),
+            backward: rng.next_u32(),
             cwnd: 65535,     // Initial congestion window size (in bytes)
             rwnd: 65535,     // Receiver's advertised window size
             ssthresh: 65535, // Slow start threshold
@@ -158,7 +158,7 @@ impl Stage3 {
 
         // Simulate the congestion window
         let mut cwr_flag = false;
-        if rand::random::<f32>() < 0.05 {
+        if rng.next_u32() % 100 < 5 {
             // 5% chance of congestion
             new_tcp_data.ssthresh = new_tcp_data.cwnd / 2; // Halve the threshold
             new_tcp_data.cwnd = new_tcp_data.ssthresh; // Enter congestion avoidance
@@ -224,7 +224,7 @@ impl Stage3 {
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let tcp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
         let flow = &input.data.flow.get_data();
-        let mut tcp_data = TcpPacketData::new();
+        let mut tcp_data = TcpPacketData::new(&mut rng);
         let mut packets = Vec::new();
         let mut directions = Vec::new();
 
