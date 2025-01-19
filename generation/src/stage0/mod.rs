@@ -41,7 +41,7 @@ impl Iterator for UniformGenerator {
                 }
             }
             self.remaining = self.flows_per_window;
-            self.next_ts += Duration::new(WINDOW_WIDTH_IN_SECS, 0);
+            self.next_ts += Duration::from_secs(WINDOW_WIDTH_IN_SECS);
             self.time_distrib = Uniform::new(self.next_ts.as_millis() as u64, self.next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS);
         }
         self.remaining -= 1;
@@ -57,7 +57,7 @@ impl Iterator for UniformGenerator {
 impl UniformGenerator {
 
     pub fn new(seed: u64, online: bool, flows_per_window: u64, max_flow_count: u64) -> Self {
-        let next_ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap() + Duration::new(WINDOW_WIDTH_IN_SECS, 0);
+        let next_ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap() + Duration::from_secs(WINDOW_WIDTH_IN_SECS);
         let time_distrib = Uniform::new(next_ts.as_millis() as u64, next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS);
         UniformGenerator { online, next_ts, max_flow_count, total_flow_count: 0, remaining: flows_per_window, flows_per_window, rng: Pcg32::seed_from_u64(seed), time_distrib }
     }
