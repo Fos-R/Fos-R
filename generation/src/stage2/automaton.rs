@@ -148,7 +148,7 @@ pub struct JsonAutomaton {
     noise: Noise,
     initial_state: usize,
     accepting_state: usize,
-    pub protocol: JsonProtocol,
+    pub protocol: Protocol,
     metadata: AutomatonMetaData,
 }
 
@@ -161,13 +161,6 @@ struct JsonEdge {
     mu: Vec<f32>,
     cov: Vec<Vec<f32>>,
     payloads: JsonPayload,
-}
-
-#[derive(Deserialize, Debug)]
-pub enum JsonProtocol {
-    TCP,
-    UDP,
-    ICMP,
 }
 
 #[derive(Deserialize, Debug)]

@@ -51,11 +51,11 @@ impl AutomataLibrary {
         let f = File::open(filename)?;
         let a : automaton::JsonAutomaton = serde_json::from_reader(f)?;
         match a.protocol {
-            automaton::JsonProtocol::TCP => {
+            Protocol::TCP => {
                 self.tcp_automata.push(automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(a,parse_tcp_symbol)); },
-            automaton::JsonProtocol::UDP => {
+            Protocol::UDP => {
                 self.udp_automata.push(automaton::TimedAutomaton::<UDPEdgeTuple>::import_timed_automaton(a,parse_udp_symbol)); },
-            automaton::JsonProtocol::ICMP => {
+            Protocol::ICMP => {
                 self.icmp_automata.push(automaton::TimedAutomaton::<ICMPEdgeTuple>::import_timed_automaton(a,parse_icmp_symbol)); },
         }
         Ok(())
@@ -80,7 +80,7 @@ impl Stage2 for TadamGenerator {
 
     fn generate_tcp_packets_info(&self, mut flow: SeededData<FlowData>) -> SeededData<PacketsIR<TCPPacketInfo>> {
         let mut rng = Pcg32::seed_from_u64(flow.seed);
-        let automata = self.lib.tcp_automata.iter().find(|a| a.is_compatible_with(flow.data.dst_port)).expect(&format!("Fatal error: no automaton for destination port {}", flow.data.dst_port));
+        let automata = self.lib.tcp_automata.iter().find(|a| a.is_compatible_with(flow.data.dst_port)).expect("Fatal error: no automaton for destination port {flow.data.dst_port}");
         let packets_info = automata.sample(&mut rng, flow.data.timestamp, create_tcp_header);
 
         // TODO
