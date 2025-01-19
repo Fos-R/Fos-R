@@ -58,11 +58,13 @@ impl PartiallyDefinedFlowData {
         match f {
             Feature::SrcIP(ref v) => self.src_ip = Some(v.0[index]),
             Feature::DstIP(ref v) => self.dst_ip = Some(v.0[index]),
+            Feature::DstPt(ref v) => self.dst_port = Some(v.0[index].sample(rng) as u16),
             Feature::FwdPkt(ref v) => self.fwd_packets_count = Some(v.0[index].sample(rng)),
             Feature::BwdPkt(ref v) => self.bwd_packets_count = Some(v.0[index].sample(rng)),
             Feature::FwdByt(ref v) => self.fwd_total_payload_length = Some(v.0[index].sample(rng)),
             Feature::BwdByt(ref v) => self.bwd_total_payload_length = Some(v.0[index].sample(rng)),
-            Feature::Proto(ref v) => self.proto = Some(*v),
+            Feature::Duration(ref v) => self.total_duration = Some(Duration::from_millis(v.0[index].sample(rng) as u64)),
+            Feature::Proto(ref v) => self.proto = Some(v[0]),
         }
     }
 }
@@ -73,7 +75,7 @@ struct BayesianNetworkNode {
     feature: Feature,
     partial_flow_number: usize,
     parents: Vec<usize>, // indices in the Bayesian network’s nodes
-    cpt: CptLine
+    cpt: CPT
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -102,32 +104,36 @@ impl From<Vec<(u32,u32)>> for Intervals {
 enum Feature {
     SrcIP(Ipv4Vector),
     DstIP(Ipv4Vector),
+    DstPt(Intervals),
     FwdPkt(Intervals),
     BwdPkt(Intervals),
     FwdByt(Intervals),
     BwdByt(Intervals),
-    Proto(Protocol)
+    Proto(Vec<Protocol>),
+    Duration(Intervals),
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Deserialize, Debug, Clone)]
-struct CptLineJSON {
+struct CPTJSON {
     probas: Vec<Vec<f32>>,
     parents_values: Vec<Vec<usize>>
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Deserialize, Debug, Clone)]
-#[serde(from = "CptLineJSON")]
-struct CptLine(HashMap<Vec<usize>,WeightedIndex<f32>>);
+#[serde(from = "CPTJSON")]
+struct CPT(HashMap<Vec<usize>,WeightedIndex<f32>>);
 
-impl From<CptLineJSON> for CptLine {
-    fn from(line: CptLineJSON) -> CptLine {
+impl From<CPTJSON> for CPT {
+    fn from(line: CPTJSON) -> CPT {
         assert_eq!(line.probas.len(), line.parents_values.len());
-        let mut cptline = HashMap::new();
+        let mut cpt = HashMap::new();
         let mut iter_probas = line.probas.into_iter();
         for v in line.parents_values.into_iter() {
-            cptline.insert(v, WeightedIndex::new(iter_probas.next().unwrap()).unwrap());
+            cpt.insert(v, WeightedIndex::new(iter_probas.next().unwrap()).unwrap());
         }
-        CptLine(cptline)
+        CPT(cpt)
     }
 }
 
@@ -153,20 +159,15 @@ enum CellType {
     ReuseDrcAsDst { row: usize },
 }
 
-#[derive(Deserialize, Debug, Clone)]
-struct BayesianNetwork {
-    graph: Vec<BayesianNetworkNode>, // order is assumed to be topological
-}
-
-impl BayesianNetwork {
+impl Pattern {
     /// Sample a vector from the Bayesian network
     fn sample_free_cells(&self, rng: &mut impl RngCore, flow_count: usize) -> Vec<PartiallyDefinedFlowData> {
         let mut p = Vec::new();
-        let mut indices = Vec::with_capacity(self.graph.len());
+        let mut indices = Vec::with_capacity(self.bayesian_network.len());
         for _ in 0..flow_count {
             p.push(PartiallyDefinedFlowData::default());
         }
-        for (n,v) in self.graph.iter().enumerate() {
+        for (n,v) in self.bayesian_network.iter().enumerate() {
             let i = v.sample_index(rng, &indices);
             indices[n] = i;
             p[v.partial_flow_number].set_value(rng, &v.feature, i);
@@ -177,22 +178,28 @@ impl BayesianNetwork {
 
 #[derive(Deserialize, Debug, Clone)]
 struct PartialFlowRow {
-    time_distrib: f32, // either the starting timestamp distribution or the IAT distribution
     row: Vec<CellType>
 }
 
 /// Each pattern has partial flows and a Bayesian network that describes the distribution of "free" cells
 #[derive(Deserialize, Debug, Clone)]
 struct Pattern {
-    weight: u32,
+    // TODO: add time distribution
     partial_flows: Vec<PartialFlowRow>,
-    bayesian_network: BayesianNetwork,
+    bayesian_network: Vec<BayesianNetworkNode>,
 }
 
 impl Pattern {
     /// Sample flows
     fn sample(&self, rng: &mut impl RngCore, ts: Duration) -> Vec<Flow> {
-        let mut partially_defined_flows = self.bayesian_network.sample_free_cells(rng, self.partial_flows.len());
+        let mut partially_defined_flows = self.sample_free_cells(rng, self.partial_flows.len());
+        for p in partially_defined_flows.iter_mut() {
+            p.ttl_client = Some(64);
+            p.ttl_server = Some(64);
+            p.src_port = Some(Uniform::new(32000, 65535).sample(rng) as u16);
+
+        }
+        // TODO: set TTL, source port, etc.
         for (r_index,p) in self.partial_flows.iter().enumerate() {
             partially_defined_flows.get_mut(r_index).unwrap().timestamp = Some(ts); // TODO tirage
             for (c_index,c) in p.row.iter().enumerate() {
@@ -210,10 +217,26 @@ impl Pattern {
 
 }
 
-#[derive(Deserialize, Debug, Clone)]
-pub struct PatternSet {
+#[derive(Deserialize, Debug)]
+pub struct PatternSetJSON {
     patterns: Vec<Pattern>, // the empty pattern is considered to be a pattern like the others
     metadata: PatternMetaData,
+    pattern_weights: Vec<u32>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(from = "PatternSetJSON")]
+pub struct PatternSet {
+    patterns: Vec<Pattern>, // the empty pattern is considered to be a pattern like the others
+    pattern_distrib: WeightedIndex<u32>, // constructed from the weight
+    metadata: PatternMetaData,
+}
+
+impl From<PatternSetJSON> for PatternSet {
+    fn from(p: PatternSetJSON) -> PatternSet {
+        let pattern_distrib = WeightedIndex::new(p.pattern_weights).unwrap();
+        PatternSet { patterns: p.patterns, metadata: p.metadata, pattern_distrib }
+    }
 }
 
 impl PatternSet {
@@ -223,12 +246,10 @@ impl PatternSet {
 
     /// Import patterns from a file
     pub fn from_file(filename: &str) -> std::io::Result<Self> {
-        Ok(PatternSet { patterns: vec![], metadata: PatternMetaData { input_file: "".to_string(), creation_time: "".to_string() } }) // TODO
-
-        // let f = File::open(filename)?;
-        // let set : PatternSet = serde_json::from_reader(f)?;
-        // log::info!("Patterns loaded from {:?}",filename);
-        // Ok(set)
+        let f = File::open(filename)?;
+        let set : PatternSet = serde_json::from_reader(f)?;
+        log::info!("Patterns loaded from {:?}",filename);
+        Ok(set)
     }
 
     /// Import patterns from a file
@@ -260,33 +281,13 @@ impl FCGenerator {
 
 impl Stage1 for FCGenerator {
 
-    // /// Generates flows
-    // pub fn generate_flows2(&self, ts: SeededData<Duration>) -> Vec<SeededData<Flow>> {
-    //     let mut rng = Pcg32::seed_from_u64(ts.seed);
-    //     // select pattern TODO
-    //     let pattern = &self.set.patterns[0];
-    //     // TODO
-    //     pattern.sample(&mut rng, ts.data).into_iter().map(|f| SeededData { seed: rng.next_u64(), data: f }).collect()
-    // }
-
-    /// Placeholder
+    /// Generates flows
     fn generate_flows(&self, ts: SeededData<Duration>) -> Vec<SeededData<Flow>> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
-        let flow = Flow::TCP(FlowData {
-            src_ip: Ipv4Addr::new(192, 168, 1, 8),
-            dst_ip: Ipv4Addr::new(192, 168, 1, 14),
-            src_port: 34200,
-            dst_port: 21,
-            ttl_client: 23,
-            ttl_server: 68,
-            fwd_packets_count: 3,
-            bwd_packets_count: 2,
-            fwd_total_payload_length: 122,
-            bwd_total_payload_length: 88,
-            timestamp: ts.data,
-            total_duration: Duration::from_millis(2300),
-            } );
-        vec![SeededData { seed: rng.next_u64(), data: flow }] // TODO
+        // select pattern TODO
+        let pattern = &self.set.patterns[0];
+        // TODO
+        pattern.sample(&mut rng, ts.data).into_iter().map(|f| SeededData { seed: rng.next_u64(), data: f }).collect()
     }
 
 }
