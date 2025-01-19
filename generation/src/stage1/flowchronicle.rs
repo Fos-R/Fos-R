@@ -62,7 +62,7 @@ impl PartiallyDefinedFlowData {
             Feature::BwdPkt(ref v) => self.bwd_packets_count = Some(v.0[index].sample(rng)),
             Feature::FwdByt(ref v) => self.fwd_total_payload_length = Some(v.0[index].sample(rng)),
             Feature::BwdByt(ref v) => self.bwd_total_payload_length = Some(v.0[index].sample(rng)),
-            Feature::Proto(ref v) => self.proto = Some(v.clone()),
+            Feature::Proto(ref v) => self.proto = Some(*v),
         }
     }
 }

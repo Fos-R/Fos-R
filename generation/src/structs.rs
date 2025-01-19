@@ -14,6 +14,7 @@ pub struct SeededData<T: Clone> {
 
 // Stage 1 and 2 structures
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Protocol {
     TCP,
@@ -44,6 +45,7 @@ impl Protocol {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone)]
 pub enum Flow {
     TCP(FlowData),
