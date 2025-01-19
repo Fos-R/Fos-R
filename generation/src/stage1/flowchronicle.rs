@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use rand::distributions::WeightedIndex;
 use rand::distributions::Uniform;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 struct PartiallyDefinedFlowData {
     src_ip: Option<Ipv4Addr>,
     dst_ip: Option<Ipv4Addr>,
@@ -73,7 +73,7 @@ struct BayesianNetworkNode {
     feature: Feature,
     partial_flow_number: usize,
     parents: Vec<usize>, // indices in the Bayesian network’s nodes
-    cpt: Vec<CptLine>
+    cpt: CptLine
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -112,21 +112,16 @@ enum Feature {
 #[derive(Deserialize, Debug, Clone)]
 struct CptLineJSON {
     probas: Vec<Vec<f32>>,
-    parents_values: Vec<Vec<u32>>
+    parents_values: Vec<Vec<usize>>
 }
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(from = "CptLineJSON")]
-struct CptLine(HashMap<Vec<u32>,WeightedIndex<f32>>);
-
-impl CptLine {
-    fn sample(&self, rng: &mut impl RngCore, parents_values: &Vec<u32>) -> usize {
-        self.0[parents_values].sample(rng)
-    }
-}
+struct CptLine(HashMap<Vec<usize>,WeightedIndex<f32>>);
 
 impl From<CptLineJSON> for CptLine {
     fn from(line: CptLineJSON) -> CptLine {
+        assert_eq!(line.probas.len(), line.parents_values.len());
         let mut cptline = HashMap::new();
         let mut iter_probas = line.probas.into_iter();
         for v in line.parents_values.into_iter() {
@@ -138,8 +133,12 @@ impl From<CptLineJSON> for CptLine {
 
 impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
-    fn sample_index(&self, rng: &mut impl RngCore) -> usize {
-        todo!()
+    fn sample_index(&self, rng: &mut impl RngCore, current: &[usize]) -> usize {
+        let mut parents_values = Vec::new();
+        for (i,p) in self.parents.iter().enumerate() {
+            parents_values[i] = current[*p];
+        }
+        self.cpt.0[&parents_values].sample(rng)
     }
 }
 
@@ -162,22 +161,18 @@ struct BayesianNetwork {
 impl BayesianNetwork {
     /// Sample a vector from the Bayesian network
     fn sample_free_cells(&self, rng: &mut impl RngCore, flow_count: usize) -> Vec<PartiallyDefinedFlowData> {
-        let mut p = PartiallyDefinedFlowData { src_ip: None, dst_ip: None, src_port: None, dst_port: None,
-            ttl_client: None, ttl_server: None,
-            fwd_packets_count: None,
-            bwd_packets_count: None,
-            fwd_total_payload_length: None,
-            bwd_total_payload_length: None,
-            timestamp: None, total_duration: None,
-            proto: None, };
-
-        for v in self.graph.iter() {
-            let i = v.sample_index(rng);
-            p.set_value(rng, &v.feature, i);
+        let mut p = Vec::new();
+        let mut indices = Vec::with_capacity(self.graph.len());
+        for _ in 0..flow_count {
+            p.push(PartiallyDefinedFlowData::default());
         }
-        todo!()
+        for (n,v) in self.graph.iter().enumerate() {
+            let i = v.sample_index(rng, &indices);
+            indices[n] = i;
+            p[v.partial_flow_number].set_value(rng, &v.feature, i);
+        }
+        p
     }
-
 }
 
 #[derive(Deserialize, Debug, Clone)]
