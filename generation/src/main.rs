@@ -21,6 +21,8 @@ use std::sync::{Mutex, Arc};
 use std::net::Ipv4Addr;
 use std::env;
 use std::collections::HashMap;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
 use clap::Parser;
 use crossbeam_channel::bounded;
@@ -50,12 +52,12 @@ impl Stats {
 
 fn main() {
     if env::var("RUST_LOG").is_err() {
-        env::set_var("RUST_LOG", "info") // default log level: info
+        env::set_var("RUST_LOG", "info"); // default log level: info
     }
     env_logger::init();
     let start_time = Instant::now();
     let stats = Arc::new(Stats::default());
-    let running = Arc::new(Mutex::new(true)); // TODO: use std::sync::atomic instead
+    let running = Arc::new(AtomicBool::new(true)); // TODO: use std::sync::atomic instead
 
     let args = cmd::Args::parse();
     log::trace!("{:?}", &args);
@@ -98,7 +100,7 @@ fn main() {
         let mut rx_s4 = HashMap::new();
         for proto in Protocol::iter() {
             let mut tx_s3_hm = HashMap::new();
-            for iface in local_interfaces.iter() {
+            for iface in &local_interfaces {
                 let (tx, rx) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
                 tx_s3_hm.insert(*iface, tx);
                 rx_s4.insert((*iface, proto), rx);
@@ -190,7 +192,7 @@ fn main() {
             for ((iface, proto), rx) in rx_s4.into_iter() {
                 for _ in 0..STAGE4_COUNT {
                     let rx = rx.clone();
-                    let builder = thread::Builder::new().name(format!("Stage4-TCP-{}",iface));
+                    let builder = thread::Builder::new().name(format!("Stage4-{:?}-{iface}", proto));
                     gen_threads.push(builder.spawn(move || {
                         log::trace!("Start S4");
                         let s4 = stage4::Stage4::new(iface, proto.get_number());
@@ -221,8 +223,7 @@ fn main() {
                     } else {
                         log::info!("{pc} created packets ({} Gbps)", throughput/1000.);
                     }
-                    let running = running.lock().unwrap();
-                    if !*running {
+                    if !running.load(Ordering::Relaxed) {
                         break;
                     }
                 }
@@ -239,8 +240,7 @@ fn main() {
     }
     {
         // Tell the other threads to stop
-        let mut running = running.lock().unwrap();
-        *running = false;
+        running.store(false, Ordering::Relaxed);
     }
     // Wait for the other threads to stop
     for thread in threads.into_iter() {
