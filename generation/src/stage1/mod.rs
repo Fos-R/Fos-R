@@ -6,16 +6,17 @@ use crossbeam_channel::{Sender, Receiver};
 pub mod flowchronicle;
 
 /// Stage 1: generates flow descriptions
-pub trait Stage1 {
+pub trait Stage1: Clone + std::marker::Send + 'static {
     fn generate_flows(&self, ts: SeededData<Duration>) -> Vec<SeededData<Flow>>;
 }
 
-pub fn run(generator: impl Stage1, rx_s1: Receiver<SeededData<Duration>>, tx_s1: Sender<SeededData<Flow>>, online: bool, local_interfaces: Vec<Ipv4Addr>) {
+pub fn run(generator: impl Stage1, rx_s1: Receiver<SeededData<Duration>>, tx_s1: Sender<SeededData<Flow>>, local_interfaces: Vec<Ipv4Addr>) {
     log::trace!("Start S1");
     while let Ok(ts) = rx_s1.recv() {
         let flows = generator.generate_flows(ts).into_iter();
         log::trace!("S1 generates {:?}", flows);
-        if online { // only keep relevant flows
+        // TODO: verify logic (wait if we save pcap too?)
+        if !local_interfaces.is_empty() { // only keep relevant flows
             flows.filter(|f| {
                 let data = f.data.get_data();
                 local_interfaces.contains(&data.src_ip) || local_interfaces.contains(&data.dst_ip)
@@ -27,6 +28,7 @@ pub fn run(generator: impl Stage1, rx_s1: Receiver<SeededData<Duration>>, tx_s1:
     log::trace!("S1 stops");
 }
 
+#[derive(Debug, Clone)]
 pub struct ConstantFlowGenerator {
     src_ip: Ipv4Addr,
     dst_ip: Ipv4Addr,

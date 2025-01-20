@@ -1,6 +1,7 @@
 mod structs;
 use crate::structs::*;
 mod cmd;
+mod ui;
 
 mod tcp;
 mod udp;
@@ -14,10 +15,10 @@ use stage2::tadam;
 mod stage3;
 mod stage4;
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use std::thread;
 use std::path::Path;
-use std::sync::{Mutex, Arc};
+use std::sync::Arc;
 use std::net::Ipv4Addr;
 use std::env;
 use std::collections::HashMap;
@@ -29,58 +30,60 @@ use crossbeam_channel::bounded;
 use pnet::{ipnetwork::IpNetwork, datalink};
 
 const CHANNEL_SIZE: usize = 50; // TODO: increase
-const STAGE1_COUNT: usize = 1; // TODO: mettre en variable. Mode online _ou_ mode "économe", un seul thread. Sinon, un nombre qui dépend des cœurs disponibles.
-const STAGE2_COUNT: usize = 1;
-const STAGE3_COUNT: usize = 1; // per protocol
-const STAGE4_COUNT: usize = 1; // per protocol
 // monitor threads with "top -H -p $(pgrep fosr)"
-
-#[derive(Default)]
-pub struct Stats {
-    pub packets_counter: Mutex<u64>,
-    pub bytes_counter: Mutex<u64>,
-}
-
-impl Stats {
-    pub fn increase(&self, p: &Packets) {
-        let mut pc = self.packets_counter.lock().unwrap();
-        *pc += p.packets.len() as u64;
-        let mut bc = self.bytes_counter.lock().unwrap();
-        *bc += (p.flow.get_data().fwd_total_payload_length + p.flow.get_data().bwd_total_payload_length) as u64;
-    }
-}
 
 fn main() {
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info"); // default log level: info
     }
     env_logger::init();
-    let start_time = Instant::now();
-    let stats = Arc::new(Stats::default());
-    let running = Arc::new(AtomicBool::new(true)); // TODO: use std::sync::atomic instead
-
     let args = cmd::Args::parse();
     log::trace!("{:?}", &args);
-    let online = matches!(args.command, cmd::Command::Online { });
-    // let (online, noise) =
-    //     match args.command {
-    //         cmd::Command::Offline { noise, .. } => (false, noise),
-    //         cmd::Command::Online { } => (true, false),
-    //     };
 
-    let seed = args.seed.unwrap_or(42); //rand::random() TODO: change for release
-    log::trace!("Generating with seed {}",seed);
+    // Extract all IPv4 local interfaces (except loopback)
+    let extract_addr = |iface: datalink::NetworkInterface| iface.ips.into_iter().filter(IpNetwork::is_ipv4).map(|i| match i { IpNetwork::V4(data) => data.ip(), _ => panic!("Impossible") });
+    let local_interfaces: Vec<Ipv4Addr> = datalink::interfaces().into_iter().flat_map(extract_addr).filter(|i| !i.is_loopback()).collect();
+    log::trace!("IPv4 interfaces: {:?}", &local_interfaces);
 
-    let local_interfaces: Vec<Ipv4Addr> = 
-        if online {
-            // Extract all IPv4 local interfaces (except loopback)
-            let extract_addr = |iface: datalink::NetworkInterface| iface.ips.into_iter().filter(IpNetwork::is_ipv4).map(|i| match i { IpNetwork::V4(data) => data.ip(), _ => panic!("Impossible") });
-            let ifaces = datalink::interfaces().into_iter().flat_map(extract_addr).filter(|i| !i.is_loopback()).collect();
-            log::trace!("IPv4 interfaces: {:?}", &ifaces);
-            ifaces
-        } else {
-            vec![]
-        };
+    match args.command {
+        cmd::Command::Replay { .. }=> replay(),
+        cmd::Command::Honeynet { taint, models, .. } => {
+            assert!(!local_interfaces.is_empty());
+            let models = models.unwrap_or("../models/test".to_string()); // remove
+            // TODO: modify seed initialization
+            let s0 = stage0::UniformGenerator::new(Some(0), true, 2, 100);
+            let s1 = stage1::ConstantFlowGenerator::new(*local_interfaces.first().unwrap(), *local_interfaces.last().unwrap());
+            let automata_library = Arc::new(tadam::AutomataLibrary::from_dir(Path::new(&models).join("tas").to_str().unwrap()));
+            let s2 = tadam::TadamGenerator::new(automata_library);
+            let s3 = stage3::Stage3::new(taint);
+            // TODO: allow outfile
+            run(local_interfaces, None, s0, s1, 3, s2, 1, s3, 1);
+        },
+        cmd::Command::PcapAugmentation { seed, models, outfile, .. } => {
+            // TODO: default seed
+            if let Some(s) = seed {
+                log::trace!("Generating with seed {}",s);
+            }
+            // TODO utiliser include_bytes à la place
+            let s0 = stage0::UniformGenerator::new(seed, false, 2, 100);
+            let patterns = Arc::new(flowchronicle::PatternSet::from_file(Path::new(&models).join("patterns.json").to_str().unwrap()).expect("Cannot load patterns"));
+            let s1 = flowchronicle::FCGenerator::new(patterns, false);
+            let automata_library = Arc::new(tadam::AutomataLibrary::from_dir(Path::new(&models).join("tas").to_str().unwrap()));
+            let s2 = tadam::TadamGenerator::new(automata_library);
+            let s3 = stage3::Stage3::new(false);
+
+            run(vec![], Some(outfile), s0, s1, 3, s2, 3, s3, 6);
+        },
+    };
+}
+
+fn replay() {
+    todo!()
+}
+
+fn run(local_interfaces: Vec<Ipv4Addr>, outfile: Option<String>, s0: impl stage0::Stage0, s1: impl stage1::Stage1, s1_count: u8, s2: impl stage2::Stage2, s2_count: u8, s3: stage3::Stage3, s3_count: u8) {
+    let stats = Arc::new(ui::Stats::default());
+    let running = Arc::new(AtomicBool::new(true));
 
     let mut threads = vec![];
     let mut gen_threads = vec![];
@@ -95,7 +98,6 @@ fn main() {
         let (tx_s2_udp, rx_s3_udp) = bounded::<SeededData<PacketsIR<udp::UDPPacketInfo>>>(CHANNEL_SIZE);
         let (tx_s2_icmp, rx_s3_icmp) = bounded::<SeededData<PacketsIR<icmp::ICMPPacketInfo>>>(CHANNEL_SIZE);
         let tx_s2 = stage2::S2Sender { tcp: tx_s2_tcp, udp: tx_s2_udp, icmp: tx_s2_icmp };
-
         let mut tx_s3 = HashMap::new();
         let mut rx_s4 = HashMap::new();
         for proto in Protocol::iter() {
@@ -112,52 +114,43 @@ fn main() {
 
         // STAGE 0
 
-        let s0 = Box::new(stage0::UniformGenerator::new(seed, online, 2, 100));
         let builder = thread::Builder::new().name("Stage0".into());
         gen_threads.push(builder.spawn(move || stage0::run(s0, tx_s0)).unwrap());
 
         // STAGE 1
 
-        let patterns = Arc::new(flowchronicle::PatternSet::from_file(Path::new(&args.models).join("patterns.json").to_str().unwrap()).expect("Cannot load patterns"));
-        for _ in 0..STAGE1_COUNT {
+        for _ in 0..s1_count {
             let rx_s1 = rx_s1.clone();
             let tx_s1 = tx_s1.clone();
+            let s1 = s1.clone();
             let local_interfaces = local_interfaces.clone();
-            let patterns = Arc::clone(&patterns);
             let builder = thread::Builder::new().name("Stage1".into());
             gen_threads.push(builder.spawn(move || {
-                if online {
-                    let constant_generator = stage1::ConstantFlowGenerator::new(*local_interfaces.first().unwrap(), *local_interfaces.last().unwrap());
-                    stage1::run(constant_generator, rx_s1, tx_s1, online, local_interfaces);
-                } else {
-                    let flowchronicle_generator = flowchronicle::FCGenerator::new(patterns, online);
-                    stage1::run(flowchronicle_generator, rx_s1, tx_s1, online, local_interfaces);
-                }
+                stage1::run(s1, rx_s1, tx_s1, local_interfaces);
             }).unwrap());
         }
 
         // STAGE 2
 
-        let automata_library = Arc::new(tadam::AutomataLibrary::from_dir(Path::new(&args.models).join("tas").to_str().unwrap()));
-        for _ in 0..STAGE2_COUNT {
+        for _ in 0..s2_count {
             let rx_s2 = rx_s2.clone();
             let tx_s2 = tx_s2.clone();
-            let generator = tadam::TadamGenerator::new(Arc::clone(&automata_library));
+            let s2 = s2.clone();
             let builder = thread::Builder::new().name("Stage2".into());
-            gen_threads.push(builder.spawn(move || stage2::run(generator, rx_s2, tx_s2)).unwrap());
+            gen_threads.push(builder.spawn(move || stage2::run(s2, rx_s2, tx_s2)).unwrap());
         }
 
         // STAGE 3
 
         for (proto, tx_s3_hm) in tx_s3.into_iter() {
-            for _ in 0..STAGE3_COUNT {
+            for _ in 0..s3_count {
                 let tx_s3_hm = tx_s3_hm.clone();
                 let tx_s3_to_collector = tx_s3_to_collector.clone();
+                let s3 = s3.clone();
                 let stats = Arc::clone(&stats);
 
-                let s3 = stage3::Stage3::new(args.taint);
                 let builder = thread::Builder::new().name(format!("Stage3-{:?}", proto));
-
+                let online = !local_interfaces.is_empty();
                 match proto {
                     Protocol::TCP => {
                             let rx_s3_tcp = rx_s3_tcp.clone();
@@ -177,31 +170,28 @@ fn main() {
 
         // PCAP EXPORT
 
-        if let cmd::Command::Offline { outfile, .. } = &args.command {
+        if let Some(actual_outfile) = outfile {
             let builder = thread::Builder::new().name("Pcap-collector".into());
             gen_threads.push(builder.spawn(move || stage3::run_collector(rx_collector, tx_collector)).unwrap());
 
-            let outfile = outfile.clone();
             let builder = thread::Builder::new().name("Pcap-export".into());
-            gen_threads.push(builder.spawn(move || stage3::run_export(rx_pcap, &outfile)).unwrap());
+            gen_threads.push(builder.spawn(move || stage3::run_export(rx_pcap, &actual_outfile)).unwrap());
         }
 
         // STAGE 4 (online mode only)
 
-        if online {
+        if !local_interfaces.is_empty() {
             for ((iface, proto), rx) in rx_s4.into_iter() {
-                for _ in 0..STAGE4_COUNT {
-                    let rx = rx.clone();
-                    let builder = thread::Builder::new().name(format!("Stage4-{:?}-{iface}", proto));
-                    gen_threads.push(builder.spawn(move || {
-                        log::trace!("Start S4");
-                        let s4 = stage4::Stage4::new(iface, proto.get_number());
-                        while let Ok(packets) = rx.recv() {
-                            s4.send(packets)
-                        }
-                        log::trace!("S4 stops");
-                    }).unwrap());
-                }
+                // let rx = rx.clone();
+                let builder = thread::Builder::new().name(format!("Stage4-{:?}-{iface}", proto));
+                gen_threads.push(builder.spawn(move || {
+                    log::trace!("Start S4");
+                    let s4 = stage4::Stage4::new(iface, proto.get_number());
+                    while let Ok(packets) = rx.recv() {
+                        s4.send(packets)
+                    }
+                    log::trace!("S4 stops");
+                }).unwrap());
             }
         }
 
@@ -211,26 +201,8 @@ fn main() {
         let stats = Arc::clone(&stats);
         let running = Arc::clone(&running);
         let builder = thread::Builder::new().name("Monitoring".into());
-        threads.push(builder.spawn(move || {
-            loop {
-                thread::sleep(Duration::new(1,0));
-                {
-                    let pc = stats.packets_counter.lock().unwrap();
-                    let bc = stats.bytes_counter.lock().unwrap();
-                    let throughput = 8. * (*bc as f64) / (Instant::now().duration_since(start_time).as_secs() as f64) / 1_000_000.;
-                    if throughput < 1000. {
-                        log::info!("{pc} created packets ({} Mbps)", throughput);
-                    } else {
-                        log::info!("{pc} created packets ({} Gbps)", throughput/1000.);
-                    }
-                    if !running.load(Ordering::Relaxed) {
-                        break;
-                    }
-                }
-            }
-        }).unwrap());
+        threads.push(builder.spawn(move || ui::run(stats, running)).unwrap());
     }
-
 
     // Wait for the generation threads to end
     for thread in gen_threads.into_iter() {
@@ -238,10 +210,8 @@ fn main() {
         thread.join().unwrap();
         log::trace!("Thread ended");
     }
-    {
-        // Tell the other threads to stop
-        running.store(false, Ordering::Relaxed);
-    }
+    // Tell the other threads to stop
+    running.store(false, Ordering::Relaxed);
     // Wait for the other threads to stop
     for thread in threads.into_iter() {
         log::trace!("Waiting for thread {}", thread.thread().name().unwrap());

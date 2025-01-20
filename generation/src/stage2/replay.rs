@@ -1,5 +1,6 @@
 use crate::stage2::*;
 
+#[derive(Debug, Clone)]
 pub struct ReplayGenerator;
 
 #[allow(unused)]

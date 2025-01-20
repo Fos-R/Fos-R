@@ -8,7 +8,7 @@ mod automaton;
 pub mod tadam;
 pub mod replay;
 
-pub trait Stage2 {
+pub trait Stage2: Clone + std::marker::Send + 'static {
     fn generate_tcp_packets_info(&self, flow: SeededData<FlowData>) -> SeededData<PacketsIR<TCPPacketInfo>>;
     fn generate_udp_packets_info(&self, flow: SeededData<FlowData>) -> SeededData<PacketsIR<UDPPacketInfo>>;
     fn generate_icmp_packets_info(&self, flow: SeededData<FlowData>) -> SeededData<PacketsIR<ICMPPacketInfo>>;

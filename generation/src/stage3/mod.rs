@@ -4,6 +4,7 @@ use crate::icmp::*;
 use crate::tcp::*;
 use crate::udp::*;
 use crate::*;
+use crate::ui::*;
 use pcap::{Capture, PacketHeader};
 use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
 use pnet_packet::ip::IpNextHeaderProtocols;
@@ -13,6 +14,7 @@ use rand::prelude::*;
 use rand_pcg::Pcg32;
 use crossbeam_channel::{Sender, Receiver};
 
+#[derive(Debug, Clone)]
 pub struct Stage3 {
     taint: bool,
 } // In the future, add network/system configuration here
@@ -286,8 +288,8 @@ fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool)  -> Result<()
 
 pub fn run<T: PacketInfo>(generator: impl Fn(SeededData<PacketsIR<T>>) -> SeededData<Packets>,
     rx_s3: Receiver<SeededData<PacketsIR<T>>>,
-    tx_s3_hm: HashMap<Ipv4Addr,Sender<SeededData<Packets>>>,
-    tx_s3_to_collector: Sender<Packets>,
+    tx_s3_hm: HashMap<Ipv4Addr,Sender<SeededData<Packets>>>, // TODO: Option
+    tx_s3_to_collector: Sender<Packets>, // TODO: Option
     stats: Arc<Stats>,
     online: bool) {
 
@@ -297,7 +299,7 @@ pub fn run<T: PacketInfo>(generator: impl Fn(SeededData<PacketsIR<T>>) -> Seeded
         log::trace!("S3 generates");
         let mut flow_packets = generator(headers);
         stats.increase(&flow_packets.data);
-        if online {
+        if online { // check if exist
             let f = flow_packets.data.flow.get_data();
             let src_s4 = tx_s3_hm.get(&f.src_ip);
             let dst_s4 = tx_s3_hm.get(&f.dst_ip);
