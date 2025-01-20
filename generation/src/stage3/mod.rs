@@ -379,10 +379,8 @@ mod tests {
             dst_ip: Ipv4Addr::new(192, 168, 1, 2),
             src_port: 12345,
             dst_port: 80,
-            recorded_ttl_client: 64,
-            recorded_ttl_server: 64,
-            initial_ttl_client: 64,
-            initial_ttl_server: 64,
+            ttl_client: 64,
+            ttl_server: 64,
             fwd_packets_count: 0,
             bwd_packets_count: 0,
             fwd_total_payload_length: 0,
@@ -415,7 +413,7 @@ mod tests {
         assert_eq!(ipv4_packet.get_header_length(), 5);
         //assert_eq!(ipv4_packet.get_total_length(), packet.len() as u16);
         assert_eq!(ipv4_packet.get_next_level_protocol(), IpNextHeaderProtocols::Tcp);
-        assert_eq!(ipv4_packet.get_ttl(), flow_data.recorded_ttl_client);
+        assert_eq!(ipv4_packet.get_ttl(), flow_data.ttl_client);
         assert_eq!(ipv4_packet.get_source(), flow_data.src_ip);
         assert_eq!(ipv4_packet.get_destination(), flow_data.dst_ip);
         assert_eq!(ipv4_packet.get_flags(), Ipv4Flags::DontFragment);
@@ -431,10 +429,8 @@ mod tests {
             dst_ip: Ipv4Addr::new(192, 168, 1, 2),
             src_port: 12345,
             dst_port: 80,
-            recorded_ttl_client: 64,
-            recorded_ttl_server: 64,
-            initial_ttl_client: 64,
-            initial_ttl_server: 64,
+            ttl_client: 64,
+            ttl_server: 64,
             fwd_packets_count: 0,
             bwd_packets_count: 0,
             fwd_total_payload_length: 0,
@@ -467,7 +463,7 @@ mod tests {
         assert_eq!(ipv4_packet.get_header_length(), 5);
         //assert_eq!(ipv4_packet.get_total_length(), packet.len() as u16);
         assert_eq!(ipv4_packet.get_next_level_protocol(), IpNextHeaderProtocols::Tcp);
-        assert_eq!(ipv4_packet.get_ttl(), flow_data.recorded_ttl_server);
+        assert_eq!(ipv4_packet.get_ttl(), flow_data.ttl_server);
         assert_eq!(ipv4_packet.get_source(), flow_data.dst_ip);
         assert_eq!(ipv4_packet.get_destination(), flow_data.src_ip);
         assert_eq!(ipv4_packet.get_flags(), Ipv4Flags::DontFragment);
@@ -486,10 +482,8 @@ mod tests {
             dst_ip: "192.168.1.2".parse().unwrap(),
             src_port: 12345,
             dst_port: 80,
-            recorded_ttl_client: 64,
-            recorded_ttl_server: 64,
-            initial_ttl_client: 64,
-            initial_ttl_server: 64,
+            ttl_client: 64,
+            ttl_server: 64,
             fwd_packets_count: 0,
             bwd_packets_count: 0,
             fwd_total_payload_length: 0,
@@ -546,10 +540,8 @@ mod tests {
             dst_ip: Ipv4Addr::new(192, 168, 1, 2),
             src_port: 12345,
             dst_port: 80,
-            recorded_ttl_client: 64,
-            recorded_ttl_server: 64,
-            initial_ttl_client: 64,
-            initial_ttl_server: 64,
+            ttl_client: 64,
+            ttl_server: 64,
             fwd_packets_count: 10,
             bwd_packets_count: 10,
             fwd_total_payload_length: 500,
