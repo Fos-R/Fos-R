@@ -579,9 +579,9 @@ mod tests {
         let result = stage3.generate_tcp_packets(input);
 
         // Validate the result
-        assert_eq!(result.data.len(), 1); 
+        assert_eq!(result.data.packets.len(), 1); 
 
-        let packet = &result.data[0];
+        let packet = &result.data.packets[0];
         assert_eq!(packet.header.caplen, packet.data.len() as u32);
         assert_eq!(packet.data.len(), MutableEthernetPacket::minimum_packet_size() +
                                        MutableIpv4Packet::minimum_packet_size() +
