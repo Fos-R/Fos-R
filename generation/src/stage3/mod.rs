@@ -336,6 +336,12 @@ impl Stage3 {
 
         SeededData { seed: rng.next_u64(), data: Packets { packets, directions, flow: input.data.flow } }
     }
+
+    /// Generate ICMP packets from an intermediate representation
+    pub fn generate_icmp_packets(&self, input: SeededData<PacketsIR<ICMPPacketInfo>>) -> SeededData<Packets> {
+        let mut rng = Pcg32::seed_from_u64(input.seed);
+        todo!()
+    }
 }
 
 fn insert_noise(data: &mut SeededData<Packets>) {
