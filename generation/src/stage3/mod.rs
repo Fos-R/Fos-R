@@ -506,7 +506,7 @@ mod tests {
             p_flag: false,
         };
 
-        let tcp_data = TcpPacketData::new();
+        let tcp_data = TcpPacketData::new(&mut Pcg32::seed_from_u64(42));
 
         // Prepare a mutable packet buffer
         let mut packet = vec![0u8; MutableEthernetPacket::minimum_packet_size() +
