@@ -63,6 +63,7 @@ impl AutomataLibrary {
 
 }
 
+#[derive(Clone)]
 pub struct TadamGenerator {
     lib: Arc<AutomataLibrary>,
 }

@@ -111,6 +111,7 @@ enum Feature {
     BwdByt(Intervals),
     Proto(Vec<Protocol>),
     Duration(Intervals),
+    // TODO: gérer la génération d’IP publiques
 }
 
 #[allow(clippy::upper_case_acronyms)]
@@ -145,6 +146,7 @@ impl BayesianNetworkNode {
             parents_values[i] = current[*p];
         }
         self.cpt.0[&parents_values].sample(rng)
+        // TODO: vérifier que IP source différent de IP destination
     }
 }
 
@@ -267,6 +269,7 @@ struct PatternMetaData {
 }
 
 /// Stage 1: generates flow descriptions
+#[derive(Clone)]
 pub struct FCGenerator {
     set: Arc<PatternSet>,
     online: bool, // used to generate the TTL, either initial or at the capture point

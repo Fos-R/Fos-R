@@ -5,33 +5,45 @@ use clap::{Parser, Subcommand};
 pub struct Args {
     #[clap(subcommand)]
     pub command: Command,
-
-    #[arg(short, long, global=true, default_value_t=false, help="Taint the packets to easily identify them")]
-    pub taint: bool,
-    #[arg(short, long, global=true, help="Seed for random number generation")]
-    pub seed: Option<u64>,
-    #[arg(short, long, global=true, default_value="../models/test", help="Path to models directory")] // TODO utiliser include_str
-    pub models: String,
-
 }
 
 #[derive(Debug, Subcommand, Clone)]
 pub enum Command {
-    /// Online mode: send packets through the network interfaces
-    Online {
-        // TODO: API pour synchroniser les agents online
+    /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
+    /// hosts, etc.) are ignored.
+    Replay {
+        #[arg(short, long, help="Input pcap file to replay")]
+        infile: String,
+        #[arg(short, long, default_value=None, help="Time to start the replay of the pcap file. Default: starts now.")]
+        start_time: Option<String>,
+        #[arg(short, long, default_value_t=false, help="Taint the packets to easily identify them")]
+        taint: bool,
     },
-    /// Offline mode: generate a pcap file
-    Offline {
-        #[arg(short, long, default_value="output.pcap", help="Output pcap file for synthetic network packets")] // TODO: remove default for release
+    /// Generate and play network activity between hosts. Computers defined in the config file can
+    /// easily join or exit the activity.
+    Honeynet {
+        #[arg(short, long, default_value=None, help="Output pcap file of generated packets")]
+        outfile: Option<String>,
+        #[arg(short, long, default_value_t=false, help="Taint the packets to easily identify them")]
+        taint: bool,
+        #[arg(short, long, default_value=None, help="Path to models directory")]
+        models: Option<String>,
+        // TODO: add config file
+    },
+    /// Do data augmentation on a pcap file. You should use models
+    PcapAugmentation {
+        #[arg(short, long, default_value="output.pcap", help="Output pcap file for synthetic network packets")]
         outfile: String,
         #[arg(short, long, default_value_t=false, help="Add noise in the output file")]
         noise: bool,
         #[arg(short, long, default_value_t=1, help="Minimum number of flows to generate.")] // TODO: use default value "1" for release
         flow_count: i32,
         #[arg(short='d', long, default_value=None, help="Unix time for the beginning of the pcap. By default, use current time.")]
-        start_unix_time: Option<u64>
+        start_unix_time: Option<u64>,
+        #[arg(short, long, help="Seed for random number generation")]
+        seed: Option<u64>,
+        #[arg(short, long, default_value="../models/medium", help="Path to models directory")]
+        models: String,
     }
 }
-
 
