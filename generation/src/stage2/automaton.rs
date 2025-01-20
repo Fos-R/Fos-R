@@ -40,7 +40,7 @@ struct TimedEdge<T: EdgeType> { // TODO: plutôt que "Option<T>" pour data, util
 impl EdgeDistribution {
     // https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Conditional_distributions
 
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R, cond_mu: f32, cond_var: f32) -> f32 {
+    fn sample(&self, rng: &mut impl RngCore, cond_mu: f32, cond_var: f32) -> f32 {
         match &self {
             EdgeDistribution::Normal => {
                 let normal = Normal::new(cond_mu, cond_var.sqrt()).unwrap();
@@ -91,9 +91,9 @@ impl<T: EdgeType> TimedAutomaton<T> {
         &self.metadata.automaton_name
     }
 
-    pub fn sample<R: Rng + ?Sized, U>(
+    pub fn sample<U>(
         &self,
-        rng: &mut R,
+        rng: &mut impl RngCore,
         initial_ts: Duration,
         header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
     ) -> Vec<U> {
