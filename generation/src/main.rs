@@ -52,7 +52,7 @@ fn main() {
             let models = models.unwrap_or("../models/test".to_string()); // remove
             // TODO: modify seed initialization
             let s0 = stage0::UniformGenerator::new(Some(0), true, 2, 100);
-            let s1 = stage1::ConstantFlowGenerator::new(*local_interfaces.first().unwrap(), *local_interfaces.last().unwrap());
+            let s1 = stage1::ConstantFlowGenerator::new(*local_interfaces.first().unwrap(), *local_interfaces.last().unwrap()); // TODO: modify, only for testing
             let automata_library = Arc::new(tadam::AutomataLibrary::from_dir(Path::new(&models).join("tas").to_str().unwrap()));
             let s2 = tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(taint);
@@ -60,12 +60,11 @@ fn main() {
             run(local_interfaces, None, s0, s1, 3, s2, 1, s3, 1);
         },
         cmd::Command::PcapAugmentation { seed, models, outfile, .. } => {
-            // TODO: default seed
             if let Some(s) = seed {
                 log::trace!("Generating with seed {}",s);
             }
-            // TODO utiliser include_bytes à la place
             let s0 = stage0::UniformGenerator::new(seed, false, 2, 100);
+            // TODO utiliser include_bytes à la place
             let patterns = Arc::new(flowchronicle::PatternSet::from_file(Path::new(&models).join("patterns.json").to_str().unwrap()).expect("Cannot load patterns"));
             let s1 = flowchronicle::FCGenerator::new(patterns, false);
             let automata_library = Arc::new(tadam::AutomataLibrary::from_dir(Path::new(&models).join("tas").to_str().unwrap()));

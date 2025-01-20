@@ -193,7 +193,7 @@ struct Pattern {
 
 impl Pattern {
     /// Sample flows
-    fn sample(&self, rng: &mut impl RngCore, ts: Duration) -> Vec<Flow> {
+    fn sample(&self, rng: &mut impl RngCore, ts: Duration) -> impl Iterator<Item=Flow> {
         let mut partially_defined_flows = self.sample_free_cells(rng, self.partial_flows.len());
         for p in partially_defined_flows.iter_mut() {
             p.ttl_client = Some(64);
@@ -214,7 +214,7 @@ impl Pattern {
                 };
             }
         }
-        partially_defined_flows.into_iter().map(|p| p.into()).collect()
+        partially_defined_flows.into_iter().map(|p| p.into())
     }
 
 }
@@ -285,12 +285,11 @@ impl FCGenerator {
 impl Stage1 for FCGenerator {
 
     /// Generates flows
-    fn generate_flows(&self, ts: SeededData<Duration>) -> Vec<SeededData<Flow>> {
+    fn generate_flows(&self, ts: SeededData<Duration>) -> impl Iterator<Item=SeededData<Flow>> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
-        // select pattern TODO
-        let pattern = &self.set.patterns[0];
-        // TODO
-        pattern.sample(&mut rng, ts.data).into_iter().map(|f| SeededData { seed: rng.next_u64(), data: f }).collect()
+        let index = self.set.pattern_distrib.sample(&mut rng);
+        let pattern = &self.set.patterns[index];
+        pattern.sample(&mut rng, ts.data).map(move |f| SeededData { seed: rng.next_u64(), data: f })
     }
 
 }
