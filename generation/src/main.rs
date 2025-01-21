@@ -60,6 +60,7 @@ fn main() {
             run(local_interfaces, None, s0, s1, 3, s2, 1, s3, 1);
         },
         cmd::Command::PcapAugmentation { seed, models, outfile, .. } => {
+            let models = models.unwrap_or("../models/test".to_string()); // remove
             if let Some(s) = seed {
                 log::trace!("Generating with seed {}",s);
             }
