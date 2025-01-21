@@ -14,7 +14,7 @@ pub enum Command {
     Replay {
         #[arg(short, long, help="Input pcap file to replay")]
         infile: String,
-        #[arg(short, long, default_value=None, help="Time to start the replay of the pcap file. Default: starts now.")]
+        #[arg(short='d', long, default_value=None, help="Time to start the replay of the pcap file. Default: starts now.")]
         start_time: Option<String>,
         #[arg(short, long, default_value_t=false, help="Taint the packets to easily identify them")]
         taint: bool,
@@ -28,22 +28,23 @@ pub enum Command {
         taint: bool,
         #[arg(short, long, default_value=None, help="Path to models directory")]
         models: Option<String>,
-        // TODO: add config file
+        // #[arg(short, long, help="Path to the information system configuration file")]
+        // config: String,
     },
-    /// Do data augmentation on a pcap file. You should use models
+    /// Do data augmentation on a pcap file. You should use your own models
     PcapAugmentation {
         #[arg(short, long, default_value="output.pcap", help="Output pcap file for synthetic network packets")]
         outfile: String,
         #[arg(short, long, default_value_t=false, help="Add noise in the output file")]
         noise: bool,
-        #[arg(short, long, default_value_t=1, help="Minimum number of flows to generate.")] // TODO: use default value "1" for release
+        #[arg(short, long, default_value_t=10, help="Minimum number of flows to generate.")] // TODO: remove default value for release
         flow_count: i32,
         #[arg(short='d', long, default_value=None, help="Unix time for the beginning of the pcap. By default, use current time.")]
         start_unix_time: Option<u64>,
         #[arg(short, long, help="Seed for random number generation")]
         seed: Option<u64>,
-        #[arg(short, long, default_value="../models/medium", help="Path to models directory")]
-        models: String,
+        #[arg(short, long, default_value=None, help="Path to models directory")]
+        models: Option<String>,
     }
 }
 

@@ -25,7 +25,7 @@ impl Stats {
         let mut pc = self.packets_counter.lock().unwrap();
         *pc += p.packets.len() as u64;
         let mut bc = self.bytes_counter.lock().unwrap();
-        *bc += (p.flow.get_data().fwd_total_payload_length + p.flow.get_data().bwd_total_payload_length) as u64;
+        *bc += p.packets.iter().map(|p| p.header.len).sum::<u32>() as u64;
     }
 }
 

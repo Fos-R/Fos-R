@@ -1,5 +1,24 @@
 # FosR - Generation
 
+Fos-R is a network traffic generator based on AI models. It does not require GPU and can generate in the order of Gbps of network traffic with a laptop.
+
+Several modes are available:
+
+## Pcap-augmentation
+
+In this mode, Fos-R output a pcap file generated with the AI models.
+
+## Honeynet
+
+In this mode, Fos-R generates and play network traffic between different machines in the same network.
+Fos-R needs to be executed on these machines and provided a configuration file.
+
+## Replay
+
+In this mode, Fos-R does not generate data but merely replay a pcap through the local interfaces. Provided for convenience.
+
+# Technical details
+
 The generation is split in three stages. Each stage has its own directory.
 
 At the root of the projects, there are some files that describes structures used in several stages. It consist of :
