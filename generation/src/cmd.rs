@@ -32,7 +32,7 @@ pub enum Command {
         // config: String,
     },
     /// Do data augmentation on a pcap file. You should use your own models
-    PcapAugmentation {
+    CreatePcap {
         #[arg(short, long, default_value="output.pcap", help="Output pcap file for synthetic network packets")]
         outfile: String,
         #[arg(short, long, default_value_t=false, help="Add noise in the output file")]

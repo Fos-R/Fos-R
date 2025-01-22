@@ -40,8 +40,8 @@ impl From<PartiallyDefinedFlowData> for Flow {
             dst_port: p.dst_port.unwrap(),
             ttl_client: p.ttl_client.unwrap(),
             ttl_server: p.ttl_server.unwrap(),
-            fwd_packets_count: p.fwd_packets_count.unwrap(),
-            bwd_packets_count: p.bwd_packets_count.unwrap(),
+            fwd_packets_count: p.fwd_packets_count.unwrap() as usize,
+            bwd_packets_count: p.bwd_packets_count.unwrap() as usize,
             fwd_total_payload_length: p.fwd_total_payload_length.unwrap(),
             bwd_total_payload_length: p.bwd_total_payload_length.unwrap(),
             timestamp: p.timestamp.unwrap(),
@@ -131,7 +131,7 @@ impl From<CPTJSON> for CPT {
         assert_eq!(line.probas.len(), line.parents_values.len());
         let mut cpt = HashMap::new();
         let mut iter_probas = line.probas.into_iter();
-        for v in line.parents_values.into_iter() {
+        for v in line.parents_values {
             cpt.insert(v, WeightedIndex::new(iter_probas.next().unwrap()).unwrap());
         }
         CPT(cpt)

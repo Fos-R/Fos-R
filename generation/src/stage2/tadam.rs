@@ -12,9 +12,9 @@ use std::sync::Arc;
 
 pub struct AutomataLibrary {
     // TODO: map port -> automata
-    tcp_automata: Vec<automaton::TimedAutomaton<TCPEdgeTuple>>,
-    udp_automata: Vec<automaton::TimedAutomaton<UDPEdgeTuple>>,
-    icmp_automata: Vec<automaton::TimedAutomaton<ICMPEdgeTuple>>,
+    tcp_automata: Vec<automaton::CrossProductTimedAutomaton<TCPEdgeTuple>>,
+    udp_automata: Vec<automaton::CrossProductTimedAutomaton<UDPEdgeTuple>>,
+    icmp_automata: Vec<automaton::CrossProductTimedAutomaton<ICMPEdgeTuple>>,
 }
 
 impl AutomataLibrary {
@@ -35,7 +35,7 @@ impl AutomataLibrary {
             if !p.is_dir() && p.extension() == Some(OsStr::new("json")) {
                 match lib.import_from_file(&p) {
                     Ok(()) => {
-                        log::info!("Automaton {:?} is loaded",p.file_name().unwrap());
+                        log::debug!("Automaton {:?} is loaded",p.file_name().unwrap());
                         nb += 1
                     },
                     Err(s) => log::error!("Could not load automaton {:?} ({})",p.file_name().unwrap(), s),
@@ -46,17 +46,16 @@ impl AutomataLibrary {
         lib
     }
 
-
     pub fn import_from_file(&mut self, filename: &PathBuf) -> std::io::Result<()> {
         let f = File::open(filename)?;
         let a : automaton::JsonAutomaton = serde_json::from_reader(f)?;
         match a.protocol {
             Protocol::TCP => {
-                self.tcp_automata.push(automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(a,parse_tcp_symbol)); },
+                self.tcp_automata.push(automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(a,parse_tcp_symbol).into()); },
             Protocol::UDP => {
-                self.udp_automata.push(automaton::TimedAutomaton::<UDPEdgeTuple>::import_timed_automaton(a,parse_udp_symbol)); },
+                self.udp_automata.push(automaton::TimedAutomaton::<UDPEdgeTuple>::import_timed_automaton(a,parse_udp_symbol).into()); },
             Protocol::ICMP => {
-                self.icmp_automata.push(automaton::TimedAutomaton::<ICMPEdgeTuple>::import_timed_automaton(a,parse_icmp_symbol)); },
+                self.icmp_automata.push(automaton::TimedAutomaton::<ICMPEdgeTuple>::import_timed_automaton(a,parse_icmp_symbol).into()); },
         }
         Ok(())
     }
@@ -81,17 +80,26 @@ impl Stage2 for TadamGenerator {
 
     fn generate_tcp_packets_info(&self, mut flow: SeededData<FlowData>) -> SeededData<PacketsIR<TCPPacketInfo>> {
         let mut rng = Pcg32::seed_from_u64(flow.seed);
-        let automata = self.lib.tcp_automata.iter().find(|a| a.is_compatible_with(flow.data.dst_port)).expect("Fatal error: no automaton for destination port {flow.data.dst_port}");
-        let packets_info = automata.sample(&mut rng, flow.data.timestamp, create_tcp_header);
+        let automata = self.lib.tcp_automata.iter().find(|a| a.is_compatible_with(flow.data.dst_port));
 
-        // TODO
-        flow.data.fwd_packets_count = packets_info.iter().filter(|p| p.direction == PacketDirection::Forward).count() as u32;
-        flow.data.bwd_packets_count = packets_info.iter().filter(|p| p.direction == PacketDirection::Backward).count() as u32;
-        flow.data.fwd_total_payload_length = packets_info.iter().filter(|p| p.direction == PacketDirection::Forward).map(|p| p.payload.get_payload_size()).sum::<usize>() as u32;
-        flow.data.bwd_total_payload_length = packets_info.iter().filter(|p| p.direction == PacketDirection::Backward).map(|p| p.payload.get_payload_size()).sum::<usize>() as u32;
-        flow.data.total_duration = packets_info.last().unwrap().ts - flow.data.timestamp;
+        match automata {
+            None => {
+                log::error!("No automaton for destination port {}", flow.data.dst_port);
+                todo!() // TODO: trouver comment gérer ce cas
+            }
+            Some(automata) => {
+                let packets_info = automata.sample(&mut rng, &flow.data, create_tcp_header);
 
-        SeededData { seed: rng.next_u64(), data: PacketsIR::<TCPPacketInfo> { packets_info, flow: Flow::TCP(flow.data) } }
+                // TODO
+                flow.data.fwd_packets_count = packets_info.iter().filter(|p| p.direction == PacketDirection::Forward).count();
+                flow.data.bwd_packets_count = packets_info.iter().filter(|p| p.direction == PacketDirection::Backward).count();
+                flow.data.fwd_total_payload_length = packets_info.iter().filter(|p| p.direction == PacketDirection::Forward).map(|p| p.payload.get_payload_size()).sum::<usize>() as u32;
+                flow.data.bwd_total_payload_length = packets_info.iter().filter(|p| p.direction == PacketDirection::Backward).map(|p| p.payload.get_payload_size()).sum::<usize>() as u32;
+                flow.data.total_duration = packets_info.last().unwrap().ts - flow.data.timestamp;
+
+                SeededData { seed: rng.next_u64(), data: PacketsIR::<TCPPacketInfo> { packets_info, flow: Flow::TCP(flow.data) } }
+            }
+        }
     }
 
     fn generate_udp_packets_info(&self, flow: SeededData<FlowData>) -> SeededData<PacketsIR<UDPPacketInfo>> {

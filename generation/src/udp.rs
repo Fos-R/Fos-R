@@ -33,6 +33,9 @@ impl EdgeType for UDPEdgeTuple {
     fn get_payload_type(&self) -> &PayloadType {
         &self.payload_type
     }
+    fn get_direction(&self) -> PacketDirection {
+        self.direction
+    }
 }
 
 pub fn parse_udp_symbol(symbol: String, p: PayloadType) -> UDPEdgeTuple {

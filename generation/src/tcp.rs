@@ -45,6 +45,9 @@ impl EdgeType for TCPEdgeTuple {
     fn get_payload_type(&self) -> &PayloadType {
         &self.payload_type
     }
+    fn get_direction(&self) -> PacketDirection {
+        self.direction
+    }
 }
 
 pub fn parse_tcp_symbol(symbol: String, p: PayloadType) -> TCPEdgeTuple {

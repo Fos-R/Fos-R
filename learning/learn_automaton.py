@@ -191,6 +191,7 @@ if __name__ == '__main__':
             d["payloads"] = { "type": "NoPayload" }
         # if empty: keep tss empty
         d["p"] = e.proba
+        d["count"] = len(e.tss)
         d["src"] = ta.states.index(e.source)
         d["dst"] = ta.states.index(e.destination)
         d["symbol"] = e.symbol

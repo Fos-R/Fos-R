@@ -5,6 +5,7 @@
                 "type": "NoPayload"
             },
             "p": 1.0,
+            "count": 1,
             "src": 0,
             "dst": 1,
             "symbol": "S_>_Empty",
@@ -28,6 +29,7 @@
                 "type": "NoPayload"
             },
             "p": 1.0,
+            "count": 1,
             "src": 1,
             "dst": 2,
             "symbol": "AS_<_Empty",
@@ -51,6 +53,7 @@
                 "type": "NoPayload"
             },
             "p": 0.21428571428571427,
+            "count": 1,
             "src": 2,
             "dst": 3,
             "symbol": "A_>_Empty",
@@ -77,6 +80,7 @@
                 "type": "Text"
             },
             "p": 0.3333333333333333,
+            "count": 1,
             "src": 3,
             "dst": 2,
             "symbol": "AP_<_Text:220",
@@ -103,6 +107,7 @@
                 "type": "Text"
             },
             "p": 0.3333333333333333,
+            "count": 1,
             "src": 3,
             "dst": 4,
             "symbol": "AP_>_Text:USER",
@@ -126,6 +131,7 @@
                 "type": "NoPayload"
             },
             "p": 1.0,
+            "count": 1,
             "src": 4,
             "dst": 2,
             "symbol": "A_<_Empty",
@@ -157,6 +163,7 @@
                 ]
             },
             "p": 0.42857142857142855,
+            "count": 1,
             "src": 2,
             "dst": 2,
             "symbol": "AP_<_Random",
@@ -183,6 +190,7 @@
                 "type": "Text"
             },
             "p": 0.07142857142857142,
+            "count": 1,
             "src": 2,
             "dst": 4,
             "symbol": "AP_>_Text:PASS",
@@ -209,6 +217,7 @@
                 "type": "Text"
             },
             "p": 0.07142857142857142,
+            "count": 1,
             "src": 2,
             "dst": 4,
             "symbol": "AP_>_Text:TYPE",
@@ -235,6 +244,7 @@
                 "type": "Text"
             },
             "p": 0.07142857142857142,
+            "count": 1,
             "src": 2,
             "dst": 5,
             "symbol": "AP_>_Text:PASV",
@@ -261,6 +271,7 @@
                 "type": "Text"
             },
             "p": 1.0,
+            "count": 1,
             "src": 5,
             "dst": 6,
             "symbol": "AP_<_Text:227",
@@ -287,6 +298,7 @@
                 "type": "Text"
             },
             "p": 1.0,
+            "count": 1,
             "src": 6,
             "dst": 2,
             "symbol": "AP_>_Text:STOR",
@@ -313,6 +325,7 @@
                 "type": "Text"
             },
             "p": 0.3333333333333333,
+            "count": 1,
             "src": 3,
             "dst": 2,
             "symbol": "AP_>_Text:QUIT",
@@ -336,6 +349,7 @@
                 "type": "NoPayload"
             },
             "p": 0.07142857142857142,
+            "count": 1,
             "src": 2,
             "dst": 7,
             "symbol": "AF_<_Empty",
@@ -359,6 +373,7 @@
                 "type": "NoPayload"
             },
             "p": 1.0,
+            "count": 1,
             "src": 7,
             "dst": 4,
             "symbol": "AF_>_Empty",
@@ -382,6 +397,7 @@
                 "type": "NoPayload"
             },
             "p": 0.07142857142857142,
+            "count": 1,
             "src": 2,
             "dst": 8,
             "symbol": "$",
@@ -417,7 +433,7 @@
         ],
         "input_file": "mini.csv",
         "ignore_dst_ports": [],
-        "creation_time": "2024-12-05 14:31:21.520104",
         "automaton_name": "ftp"
+        "creation_time": "2025-01-22 08:37:46.103746",
     }
 }

@@ -33,6 +33,9 @@ impl EdgeType for ICMPEdgeTuple {
     fn get_payload_type(&self) -> &PayloadType {
         &PayloadType::Empty
     }
+    fn get_direction(&self) -> PacketDirection {
+        self.direction
+    }
 }
 
 pub fn parse_icmp_symbol(symbol: String, _t: PayloadType) -> ICMPEdgeTuple {

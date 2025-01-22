@@ -79,8 +79,8 @@ pub struct FlowData {
     pub dst_port: u16,
     pub ttl_client: u8,
     pub ttl_server: u8,
-    pub fwd_packets_count: u32,
-    pub bwd_packets_count: u32,
+    pub fwd_packets_count: usize,
+    pub bwd_packets_count: usize,
     pub fwd_total_payload_length: u32,
     pub bwd_total_payload_length: u32,
     pub timestamp: Duration,
@@ -108,8 +108,9 @@ pub enum PayloadType {
     Random(Vec<usize>),
 }
 
-pub trait EdgeType: Debug {
+pub trait EdgeType: Debug + Clone {
     fn get_payload_type(&self) -> &PayloadType;
+    fn get_direction(&self) -> PacketDirection;
 }
 
 // Stage 2 and 3 structures
