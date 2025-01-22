@@ -29,7 +29,6 @@ use clap::Parser;
 use crossbeam_channel::bounded;
 use pnet::{ipnetwork::IpNetwork, datalink};
 
-const CHANNEL_SIZE: usize = 50; // TODO: increase
 // monitor threads with "top -H -p $(pgrep fosr)"
 
 fn main() {
@@ -59,7 +58,7 @@ fn main() {
             // TODO: allow outfile
             run(local_interfaces, None, s0, s1, 3, s2, 1, s3, 1);
         },
-        cmd::Command::PcapAugmentation { seed, models, outfile, .. } => {
+        cmd::Command::CreatePcap { seed, models, outfile, .. } => {
             let models = models.unwrap_or("../models/test".to_string()); // remove
             if let Some(s) = seed {
                 log::trace!("Generating with seed {}",s);
@@ -92,6 +91,7 @@ fn run(local_interfaces: Vec<Ipv4Addr>, outfile: Option<String>, s0: impl stage0
     {
 
         // Channels creation
+        const CHANNEL_SIZE: usize = 500;
         let (tx_s0, rx_s1) = bounded::<SeededData<Duration>>(CHANNEL_SIZE);
         let (tx_s1, rx_s2) = bounded::<SeededData<Flow>>(CHANNEL_SIZE);
         let (tx_s2_tcp, rx_s3_tcp) = bounded::<SeededData<PacketsIR<tcp::TCPPacketInfo>>>(CHANNEL_SIZE);
@@ -142,7 +142,7 @@ fn run(local_interfaces: Vec<Ipv4Addr>, outfile: Option<String>, s0: impl stage0
 
         // STAGE 3
 
-        for (proto, tx_s3_hm) in tx_s3.into_iter() {
+        for (proto, tx_s3_hm) in tx_s3 {
             for _ in 0..s3_count {
                 let tx_s3_hm = tx_s3_hm.clone();
                 let tx_s3_to_collector = tx_s3_to_collector.clone();
@@ -181,7 +181,7 @@ fn run(local_interfaces: Vec<Ipv4Addr>, outfile: Option<String>, s0: impl stage0
         // STAGE 4 (online mode only)
 
         if !local_interfaces.is_empty() {
-            for ((iface, proto), rx) in rx_s4.into_iter() {
+            for ((iface, proto), rx) in rx_s4 {
                 // let rx = rx.clone();
                 let builder = thread::Builder::new().name(format!("Stage4-{:?}-{iface}", proto));
                 gen_threads.push(builder.spawn(move || {
@@ -205,7 +205,7 @@ fn run(local_interfaces: Vec<Ipv4Addr>, outfile: Option<String>, s0: impl stage0
     }
 
     // Wait for the generation threads to end
-    for thread in gen_threads.into_iter() {
+    for thread in gen_threads {
         log::trace!("Waiting for thread {}", thread.thread().name().unwrap());
         thread.join().unwrap();
         log::trace!("Thread ended");
@@ -213,7 +213,7 @@ fn run(local_interfaces: Vec<Ipv4Addr>, outfile: Option<String>, s0: impl stage0
     // Tell the other threads to stop
     running.store(false, Ordering::Relaxed);
     // Wait for the other threads to stop
-    for thread in threads.into_iter() {
+    for thread in threads {
         log::trace!("Waiting for thread {}", thread.thread().name().unwrap());
         thread.join().unwrap();
         log::trace!("Thread ended");
