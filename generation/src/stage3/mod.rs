@@ -11,7 +11,7 @@ use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
 use pnet_packet::ip::IpNextHeaderProtocols;
 use pnet_packet::ipv4::{self, Ipv4Flags, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
-use pnet_packet::udp::{MutableUdpPacket, ipv4_checksum};
+use pnet_packet::udp::{ipv4_checksum, MutableUdpPacket};
 use rand::prelude::*;
 use rand_pcg::Pcg32;
 
@@ -226,13 +226,13 @@ impl Stage3 {
         match &packet_info.payload {
             Payload::Empty => (),
             Payload::Random(size) => {
-                let mut payload = vec![0_u8;*size];
+                let mut payload = vec![0_u8; *size];
                 rng.fill_bytes(&mut payload);
                 udp_packet.set_payload(payload.as_slice());
             }
             Payload::Replay(payload) => {
                 udp_packet.set_payload(payload);
-            },
+            }
         }
 
         // Compute the checksum
@@ -249,7 +249,6 @@ impl Stage3 {
         ));
         Some(())
     }
-
 
     fn get_pcap_header(&self, packet_size: usize, ts: Duration) -> PacketHeader {
         PacketHeader {
@@ -345,19 +344,28 @@ impl Stage3 {
 
             let mut packet = vec![0u8; packet_size];
 
-            self.setup_ethernet_frame(&mut packet[..]).expect("Incorrect Ethernet frame");
-            self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info).expect("Incorrect IP packet");
-            self.setup_udp_packet(&mut rng, &mut packet[udp_start..], flow, packet_info).expect("Incorrect TCP packet");
+            self.setup_ethernet_frame(&mut packet[..])
+                .expect("Incorrect Ethernet frame");
+            self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info)
+                .expect("Incorrect IP packet");
+            self.setup_udp_packet(&mut rng, &mut packet[udp_start..], flow, packet_info)
+                .expect("Incorrect TCP packet");
 
             packets.push(Packet {
-                header: self
-                    .get_pcap_header(packet_size, packet_info.get_ts()),
+                header: self.get_pcap_header(packet_size, packet_info.get_ts()),
                 data: packet.clone(),
             });
             directions.push(packet_info.get_direction());
         }
 
-        SeededData { seed: rng.next_u64(), data: Packets { packets, directions, flow: input.data.flow } }
+        SeededData {
+            seed: rng.next_u64(),
+            data: Packets {
+                packets,
+                directions,
+                flow: input.data.flow,
+            },
+        }
     }
 
     /// Generate ICMP packets from an intermediate representation
@@ -482,7 +490,7 @@ mod tests {
     use pnet_packet::Packet;
 
     #[test]
-    fn test_ethernet(){
+    fn test_ethernet() {
         let stage3 = Stage3::new(false);
         let mut packet = [0u8; 200];
         let result = stage3.setup_ethernet_frame(&mut packet);
@@ -525,7 +533,9 @@ mod tests {
         };
 
         // Call the method under test
-        stage.setup_ip_packet(&mut packet, &flow_data, &packet_info).expect("Failed to setup IP packet");
+        stage
+            .setup_ip_packet(&mut packet, &flow_data, &packet_info)
+            .expect("Failed to setup IP packet");
 
         // Create a mutable IP packet from the packet buffer
         let ipv4_packet = MutableIpv4Packet::new(&mut packet).expect("Failed to create IP packet");
@@ -534,14 +544,17 @@ mod tests {
         assert_eq!(ipv4_packet.get_version(), 4);
         assert_eq!(ipv4_packet.get_header_length(), 5);
         //assert_eq!(ipv4_packet.get_total_length(), packet.len() as u16);
-        assert_eq!(ipv4_packet.get_next_level_protocol(), IpNextHeaderProtocols::Tcp);
+        assert_eq!(
+            ipv4_packet.get_next_level_protocol(),
+            IpNextHeaderProtocols::Tcp
+        );
         assert_eq!(ipv4_packet.get_ttl(), flow_data.ttl_client);
         assert_eq!(ipv4_packet.get_source(), flow_data.src_ip);
         assert_eq!(ipv4_packet.get_destination(), flow_data.dst_ip);
         assert_eq!(ipv4_packet.get_flags(), Ipv4Flags::DontFragment);
     }
 
-        #[test]
+    #[test]
     fn test_setup_ip_packet_backward() {
         let stage = Stage3::new(false);
         let mut packet = vec![0u8; MutableIpv4Packet::minimum_packet_size()];
@@ -575,7 +588,9 @@ mod tests {
         };
 
         // Call the method under test
-        stage.setup_ip_packet(&mut packet, &flow_data, &packet_info).expect("Failed to setup IP packet");
+        stage
+            .setup_ip_packet(&mut packet, &flow_data, &packet_info)
+            .expect("Failed to setup IP packet");
 
         // Create a mutable IP packet from the packet buffer
         let ipv4_packet = MutableIpv4Packet::new(&mut packet).expect("Failed to create IP packet");
@@ -584,14 +599,16 @@ mod tests {
         assert_eq!(ipv4_packet.get_version(), 4);
         assert_eq!(ipv4_packet.get_header_length(), 5);
         //assert_eq!(ipv4_packet.get_total_length(), packet.len() as u16);
-        assert_eq!(ipv4_packet.get_next_level_protocol(), IpNextHeaderProtocols::Tcp);
+        assert_eq!(
+            ipv4_packet.get_next_level_protocol(),
+            IpNextHeaderProtocols::Tcp
+        );
         assert_eq!(ipv4_packet.get_ttl(), flow_data.ttl_server);
         assert_eq!(ipv4_packet.get_source(), flow_data.dst_ip);
         assert_eq!(ipv4_packet.get_destination(), flow_data.src_ip);
         assert_eq!(ipv4_packet.get_flags(), Ipv4Flags::DontFragment);
     }
 
-    
     #[test]
     fn test_setup_tcp_packet() {
         let stage3 = Stage3::new(false);
@@ -619,7 +636,7 @@ mod tests {
             payload: Payload::Random(payload_size),
             ts: Duration::new(0, 0),
             direction: PacketDirection::Forward,
-            noise: NoiseType::None, 
+            noise: NoiseType::None,
             s_flag: true,
             a_flag: true,
             f_flag: false,
@@ -631,27 +648,45 @@ mod tests {
         let tcp_data = TcpPacketData::new(&mut Pcg32::seed_from_u64(42));
 
         // Prepare a mutable packet buffer
-        let mut packet = vec![0u8; MutableEthernetPacket::minimum_packet_size() +
-            MutableIpv4Packet::minimum_packet_size() +
-            MutableTcpPacket::minimum_packet_size() + payload_size]; 
+        let mut packet = vec![
+            0u8;
+            MutableEthernetPacket::minimum_packet_size()
+                + MutableIpv4Packet::minimum_packet_size()
+                + MutableTcpPacket::minimum_packet_size()
+                + payload_size
+        ];
 
         // Call the setup_tcp_packet method
-        let new_tcp_data = stage3.setup_tcp_packet(&mut rng, &mut packet[MutableEthernetPacket::minimum_packet_size() +
-            MutableIpv4Packet::minimum_packet_size()..], &flow, &packet_info, tcp_data).expect("Failed to setup TCP packet");
+        let new_tcp_data = stage3
+            .setup_tcp_packet(
+                &mut rng,
+                &mut packet[MutableEthernetPacket::minimum_packet_size()
+                    + MutableIpv4Packet::minimum_packet_size()..],
+                &flow,
+                &packet_info,
+                tcp_data,
+            )
+            .expect("Failed to setup TCP packet");
 
         // Validate the TCP packet
-        let tcp_packet = MutableTcpPacket::new(&mut packet[MutableEthernetPacket::minimum_packet_size() +
-            MutableIpv4Packet::minimum_packet_size()..]).unwrap();
+        let tcp_packet = MutableTcpPacket::new(
+            &mut packet[MutableEthernetPacket::minimum_packet_size()
+                + MutableIpv4Packet::minimum_packet_size()..],
+        )
+        .unwrap();
 
         // Check fields
         assert_eq!(tcp_packet.get_source(), flow.src_port);
         assert_eq!(tcp_packet.get_destination(), flow.dst_port);
-        assert_eq!(tcp_packet.get_sequence() + payload_size as u32, new_tcp_data.forward);
+        assert_eq!(
+            tcp_packet.get_sequence() + payload_size as u32,
+            new_tcp_data.forward
+        );
         assert_eq!(tcp_packet.get_acknowledgement(), new_tcp_data.backward);
         assert!(tcp_packet.get_flags() & TcpFlags::SYN != 0);
         assert!(tcp_packet.get_flags() & TcpFlags::ACK != 0);
         assert_eq!(tcp_packet.payload().len(), payload_size);
-        assert!(new_tcp_data.forward > 0); 
+        assert!(new_tcp_data.forward > 0);
     }
 
     #[test]
@@ -673,10 +708,10 @@ mod tests {
         };
 
         let packet_info = TCPPacketInfo {
-            payload: Payload::Random(100), 
+            payload: Payload::Random(100),
             ts: Duration::new(1, 0),
             direction: PacketDirection::Forward,
-            noise: NoiseType::None, 
+            noise: NoiseType::None,
             s_flag: true,
             a_flag: true,
             f_flag: false,
@@ -695,19 +730,22 @@ mod tests {
             data: packets_ir,
         };
 
-        let stage3 = Stage3::new(false); 
+        let stage3 = Stage3::new(false);
 
         // Call the method under test
         let result = stage3.generate_tcp_packets(input);
 
         // Validate the result
-        assert_eq!(result.data.packets.len(), 1); 
+        assert_eq!(result.data.packets.len(), 1);
 
         let packet = &result.data.packets[0];
         assert_eq!(packet.header.caplen, packet.data.len() as u32);
-        assert_eq!(packet.data.len(), MutableEthernetPacket::minimum_packet_size() +
-                                       MutableIpv4Packet::minimum_packet_size() +
-                                       MutableTcpPacket::minimum_packet_size() +
-                                       packet_info.payload.get_payload_size() as usize);
+        assert_eq!(
+            packet.data.len(),
+            MutableEthernetPacket::minimum_packet_size()
+                + MutableIpv4Packet::minimum_packet_size()
+                + MutableTcpPacket::minimum_packet_size()
+                + packet_info.payload.get_payload_size() as usize
+        );
     }
 }
