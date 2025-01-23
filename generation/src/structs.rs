@@ -1,9 +1,9 @@
 use pcap::PacketHeader;
+use serde::Deserialize;
+use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::net::Ipv4Addr;
 use std::time::Duration;
-use std::cmp::Ordering;
-use serde::Deserialize;
 
 // A general wrapper to pass a seed along with actual data
 #[derive(Debug, Clone)]
@@ -97,7 +97,6 @@ impl From<Flow> for FlowData {
     }
 }
 
-
 // Stage 2 structures
 
 #[derive(Debug, Clone)]
@@ -181,9 +180,12 @@ pub struct Packet {
 
 impl Ord for Packet {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.header.ts.tv_sec.cmp(&other.header.ts.tv_sec).then(self.header.ts.tv_usec.cmp(&other.header.ts.tv_usec))
+        self.header
+            .ts
+            .tv_sec
+            .cmp(&other.header.ts.tv_sec)
+            .then(self.header.ts.tv_usec.cmp(&other.header.ts.tv_usec))
     }
-
 }
 
 impl PartialOrd for Packet {
@@ -194,7 +196,8 @@ impl PartialOrd for Packet {
 
 impl PartialEq for Packet {
     fn eq(&self, other: &Self) -> bool {
-        self.header.ts.tv_usec == other.header.ts.tv_usec && self.header.ts.tv_sec == other.header.ts.tv_sec
+        self.header.ts.tv_usec == other.header.ts.tv_usec
+            && self.header.ts.tv_sec == other.header.ts.tv_sec
     }
 }
 

@@ -12,11 +12,16 @@ pub enum Command {
     /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
     /// hosts, etc.) are ignored.
     Replay {
-        #[arg(short, long, help="Input pcap file to replay")]
+        #[arg(short, long, help = "Input pcap file to replay")]
         infile: String,
         #[arg(short='d', long, default_value=None, help="Time to start the replay of the pcap file. Default: starts now.")]
         start_time: Option<String>,
-        #[arg(short, long, default_value_t=false, help="Taint the packets to easily identify them")]
+        #[arg(
+            short,
+            long,
+            default_value_t = false,
+            help = "Taint the packets to easily identify them"
+        )]
         taint: bool,
     },
     /// Generate and play network activity between hosts. Computers defined in the config file can
@@ -24,7 +29,12 @@ pub enum Command {
     Honeynet {
         #[arg(short, long, default_value=None, help="Output pcap file of generated packets")]
         outfile: Option<String>,
-        #[arg(short, long, default_value_t=false, help="Taint the packets to easily identify them")]
+        #[arg(
+            short,
+            long,
+            default_value_t = false,
+            help = "Taint the packets to easily identify them"
+        )]
         taint: bool,
         #[arg(short, long, default_value=None, help="Path to models directory")]
         models: Option<String>,
@@ -33,18 +43,32 @@ pub enum Command {
     },
     /// Do data augmentation on a pcap file. You should use your own models
     CreatePcap {
-        #[arg(short, long, default_value="output.pcap", help="Output pcap file for synthetic network packets")]
+        #[arg(
+            short,
+            long,
+            default_value = "output.pcap",
+            help = "Output pcap file for synthetic network packets"
+        )]
         outfile: String,
-        #[arg(short, long, default_value_t=false, help="Add noise in the output file")]
+        #[arg(
+            short,
+            long,
+            default_value_t = false,
+            help = "Add noise in the output file"
+        )]
         noise: bool,
-        #[arg(short, long, default_value_t=10, help="Minimum number of flows to generate.")] // TODO: remove default value for release
+        #[arg(
+            short,
+            long,
+            default_value_t = 10,
+            help = "Minimum number of flows to generate."
+        )] // TODO: remove default value for release
         flow_count: u64,
         #[arg(short='d', long, default_value=None, help="Unix time for the beginning of the pcap. By default, use current time.")]
         start_unix_time: Option<u64>,
-        #[arg(short, long, help="Seed for random number generation")]
+        #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,
         #[arg(short, long, default_value=None, help="Path to models directory")]
         models: Option<String>,
-    }
+    },
 }
-

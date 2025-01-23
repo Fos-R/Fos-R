@@ -3,8 +3,9 @@
 use crate::icmp::*;
 use crate::tcp::*;
 use crate::udp::*;
-use crate::*;
 use crate::ui::*;
+use crate::*;
+use crossbeam_channel::{Receiver, Sender};
 use pcap::{Capture, PacketHeader};
 use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
 use pnet_packet::ip::IpNextHeaderProtocols;
@@ -12,7 +13,6 @@ use pnet_packet::ipv4::{self, Ipv4Flags, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
 use rand::prelude::*;
 use rand_pcg::Pcg32;
-use crossbeam_channel::{Sender, Receiver};
 
 #[derive(Debug, Clone)]
 pub struct Stage3 {
@@ -139,13 +139,13 @@ impl Stage3 {
         match &packet_info.payload {
             Payload::Empty => (),
             Payload::Random(size) => {
-                let mut payload = vec![0_u8;*size];
+                let mut payload = vec![0_u8; *size];
                 rng.fill_bytes(&mut payload);
                 tcp_packet.set_payload(payload.as_slice());
             }
             Payload::Replay(payload) => {
                 tcp_packet.set_payload(payload);
-            },
+            }
         }
 
         // Set the s | a | f | r | u | p flags
@@ -221,7 +221,10 @@ impl Stage3 {
     }
 
     /// Generate TCP packets from an intermediate representation
-    pub fn generate_tcp_packets(&self, input: SeededData<PacketsIR<TCPPacketInfo>>) -> SeededData<Packets> {
+    pub fn generate_tcp_packets(
+        &self,
+        input: SeededData<PacketsIR<TCPPacketInfo>>,
+    ) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let tcp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
@@ -239,30 +242,51 @@ impl Stage3 {
 
             let mut packet = vec![0u8; packet_size];
 
-            self.setup_ethernet_frame(&mut packet[..]).expect("Incorrect Ethernet frame");
-            self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info).expect("Incorrect IP packet");
-            tcp_data =
-                self.setup_tcp_packet(&mut rng, &mut packet[tcp_start..], flow, packet_info, tcp_data).expect("Incorrect TCP packet");
+            self.setup_ethernet_frame(&mut packet[..])
+                .expect("Incorrect Ethernet frame");
+            self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info)
+                .expect("Incorrect IP packet");
+            tcp_data = self
+                .setup_tcp_packet(
+                    &mut rng,
+                    &mut packet[tcp_start..],
+                    flow,
+                    packet_info,
+                    tcp_data,
+                )
+                .expect("Incorrect TCP packet");
 
             packets.push(Packet {
-                header: self
-                    .get_pcap_header(packet_size, packet_info.get_ts()),
+                header: self.get_pcap_header(packet_size, packet_info.get_ts()),
                 data: packet.clone(),
             });
             directions.push(packet_info.get_direction());
         }
 
-        SeededData { seed: rng.next_u64(), data: Packets { packets, directions, flow: input.data.flow } }
+        SeededData {
+            seed: rng.next_u64(),
+            data: Packets {
+                packets,
+                directions,
+                flow: input.data.flow,
+            },
+        }
     }
 
     /// Generate UDP packets from an intermediate representation
-    pub fn generate_udp_packets(&self, input: SeededData<PacketsIR<UDPPacketInfo>>) -> SeededData<Packets> {
+    pub fn generate_udp_packets(
+        &self,
+        input: SeededData<PacketsIR<UDPPacketInfo>>,
+    ) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         todo!()
     }
 
     /// Generate ICMP packets from an intermediate representation
-    pub fn generate_icmp_packets(&self, input: SeededData<PacketsIR<ICMPPacketInfo>>) -> SeededData<Packets> {
+    pub fn generate_icmp_packets(
+        &self,
+        input: SeededData<PacketsIR<ICMPPacketInfo>>,
+    ) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         todo!()
     }
@@ -272,9 +296,13 @@ fn insert_noise(data: &mut SeededData<Packets>) {
     todo!()
 }
 
-fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool)  -> Result<(), pcap::Error> {
+fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(), pcap::Error> {
     let mut capture = Capture::dead(pcap::Linktype(1))?;
-    let mut savefile = if append { capture.savefile_append(outfile)? } else { capture.savefile(outfile)? };
+    let mut savefile = if append {
+        capture.savefile_append(outfile)?
+    } else {
+        capture.savefile(outfile)?
+    };
     // data.sort();
     for packet in data {
         savefile.write(&pcap::Packet {
@@ -286,19 +314,21 @@ fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool)  -> Result<()
     Ok(())
 }
 
-pub fn run<T: PacketInfo>(generator: impl Fn(SeededData<PacketsIR<T>>) -> SeededData<Packets>,
+pub fn run<T: PacketInfo>(
+    generator: impl Fn(SeededData<PacketsIR<T>>) -> SeededData<Packets>,
     rx_s3: Receiver<SeededData<PacketsIR<T>>>,
-    tx_s3_hm: HashMap<Ipv4Addr,Sender<SeededData<Packets>>>, // TODO: Option
-    tx_s3_to_collector: Sender<Packets>, // TODO: Option
+    tx_s3_hm: HashMap<Ipv4Addr, Sender<SeededData<Packets>>>, // TODO: Option
+    tx_s3_to_collector: Sender<Packets>,                      // TODO: Option
     stats: Arc<Stats>,
-    online: bool) {
-
+    online: bool,
+) {
     // Prepare stage 3
     log::trace!("Start S3");
     while let Ok(headers) = rx_s3.recv() {
         let mut flow_packets = generator(headers);
         stats.increase(&flow_packets.data);
-        if online { // check if exist
+        if online {
+            // check if exist
             let f = flow_packets.data.flow.get_data();
             let src_s4 = tx_s3_hm.get(&f.src_ip);
             let dst_s4 = tx_s3_hm.get(&f.dst_ip);
@@ -306,17 +336,30 @@ pub fn run<T: PacketInfo>(generator: impl Fn(SeededData<PacketsIR<T>>) -> Seeded
                 // only copy if we have to
                 tx1.send(flow_packets.clone()).unwrap();
                 // ensure stage 4 is always the source
-                flow_packets.data.directions = flow_packets.data.directions.into_iter().map(|d| d.into_reverse()).collect();
+                flow_packets.data.directions = flow_packets
+                    .data
+                    .directions
+                    .into_iter()
+                    .map(|d| d.into_reverse())
+                    .collect();
                 tx2.send(flow_packets).unwrap();
             } else if let Some(tx1) = src_s4 {
                 tx1.send(flow_packets).unwrap();
             } else if let Some(tx2) = dst_s4 {
                 // ensure stage 4 is always the source
-                flow_packets.data.directions = flow_packets.data.directions.into_iter().map(|d| d.into_reverse()).collect();
+                flow_packets.data.directions = flow_packets
+                    .data
+                    .directions
+                    .into_iter()
+                    .map(|d| d.into_reverse())
+                    .collect();
                 tx2.send(flow_packets).unwrap();
             }
         } else {
-            let mut noisy_flow = SeededData { seed: flow_packets.seed, data: flow_packets.data };
+            let mut noisy_flow = SeededData {
+                seed: flow_packets.seed,
+                data: flow_packets.data,
+            };
             // if noise { // insert noise // TODO: find a better way to do it
             //     stage3::insert_noise(&mut noisy_flow);
             // }

@@ -3,9 +3,9 @@ use crate::structs::*;
 mod cmd;
 mod ui;
 
+mod icmp;
 mod tcp;
 mod udp;
-mod icmp;
 
 mod stage0;
 mod stage1;
@@ -15,19 +15,19 @@ use stage2::tadam;
 mod stage3;
 mod stage4;
 
-use std::time::Duration;
-use std::thread;
-use std::path::Path;
-use std::sync::Arc;
-use std::net::Ipv4Addr;
-use std::env;
 use std::collections::HashMap;
+use std::env;
+use std::net::Ipv4Addr;
+use std::path::Path;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
 use clap::Parser;
 use crossbeam_channel::bounded;
-use pnet::{ipnetwork::IpNetwork, datalink};
+use pnet::{datalink, ipnetwork::IpNetwork};
 
 // monitor threads with "top -H -p $(pgrep fosr)"
 
@@ -40,41 +40,71 @@ fn main() {
     log::debug!("{:?}", &args);
 
     // Extract all IPv4 local interfaces (except loopback)
-    let extract_addr = |iface: datalink::NetworkInterface| iface.ips.into_iter().filter(IpNetwork::is_ipv4).map(|i| match i { IpNetwork::V4(data) => data.ip(), _ => panic!("Impossible") });
-    let local_interfaces: Vec<Ipv4Addr> = datalink::interfaces().into_iter().flat_map(extract_addr).filter(|i| !i.is_loopback()).collect();
+    let extract_addr = |iface: datalink::NetworkInterface| {
+        iface
+            .ips
+            .into_iter()
+            .filter(IpNetwork::is_ipv4)
+            .map(|i| match i {
+                IpNetwork::V4(data) => data.ip(),
+                _ => panic!("Impossible"),
+            })
+    };
+    let local_interfaces: Vec<Ipv4Addr> = datalink::interfaces()
+        .into_iter()
+        .flat_map(extract_addr)
+        .filter(|i| !i.is_loopback())
+        .collect();
     log::debug!("IPv4 interfaces: {:?}", &local_interfaces);
 
     match args.command {
-        cmd::Command::Replay { .. }=> replay(),
+        cmd::Command::Replay { .. } => replay(),
         cmd::Command::Honeynet { taint, models, .. } => {
             assert!(!local_interfaces.is_empty());
             let models = models.unwrap_or("../models/test".to_string()); // remove
             log::info!("Model initialization");
             // TODO: modify seed initialization
             let s0 = stage0::UniformGenerator::new(Some(0), true, 2, 100);
-            let s1 = stage1::ConstantFlowGenerator::new(*local_interfaces.first().unwrap(), *local_interfaces.last().unwrap()); // TODO: modify, only for testing
-            let automata_library = Arc::new(tadam::AutomataLibrary::from_dir(Path::new(&models).join("tas").to_str().unwrap()));
+            let s1 = stage1::ConstantFlowGenerator::new(
+                *local_interfaces.first().unwrap(),
+                *local_interfaces.last().unwrap(),
+            ); // TODO: modify, only for testing
+            let automata_library = Arc::new(tadam::AutomataLibrary::from_dir(
+                Path::new(&models).join("tas").to_str().unwrap(),
+            ));
             let s2 = tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(taint);
             // TODO: allow outfile
             run(local_interfaces, None, s0, s1, 3, s2, 1, s3, 1);
-        },
-        cmd::Command::CreatePcap { seed, models, outfile, flow_count, .. } => {
+        }
+        cmd::Command::CreatePcap {
+            seed,
+            models,
+            outfile,
+            flow_count,
+            ..
+        } => {
             let models = models.unwrap_or("../models/test".to_string()); // remove
             if let Some(s) = seed {
-                log::trace!("Generating with seed {}",s);
+                log::trace!("Generating with seed {}", s);
             }
             log::info!("Model initialization");
             let s0 = stage0::UniformGenerator::new(seed, false, 2, flow_count);
             // TODO utiliser include_bytes à la place
-            let patterns = Arc::new(flowchronicle::PatternSet::from_file(Path::new(&models).join("patterns.json").to_str().unwrap()).expect("Cannot load patterns"));
-            let s1 = flowchronicle::FCGenerator::new(patterns, false);
-            let automata_library = Arc::new(tadam::AutomataLibrary::from_dir(Path::new(&models).join("tas").to_str().unwrap()));
+            let s1 = stage1::ConstantFlowGenerator::new(
+                *local_interfaces.first().unwrap(),
+                *local_interfaces.last().unwrap(),
+            ); // TODO: modify, only for testing
+               // let patterns = Arc::new(flowchronicle::PatternSet::from_file(Path::new(&models).join("patterns.json").to_str().unwrap()).expect("Cannot load patterns"));
+               // let s1 = flowchronicle::FCGenerator::new(patterns, false);
+            let automata_library = Arc::new(tadam::AutomataLibrary::from_dir(
+                Path::new(&models).join("tas").to_str().unwrap(),
+            ));
             let s2 = tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(false);
 
             run(vec![], Some(outfile), s0, s1, 3, s2, 3, s3, 6);
-        },
+        }
     };
 }
 
@@ -82,7 +112,17 @@ fn replay() {
     todo!()
 }
 
-fn run(local_interfaces: Vec<Ipv4Addr>, outfile: Option<String>, s0: impl stage0::Stage0, s1: impl stage1::Stage1, s1_count: u8, s2: impl stage2::Stage2, s2_count: u8, s3: stage3::Stage3, s3_count: u8) {
+fn run(
+    local_interfaces: Vec<Ipv4Addr>,
+    outfile: Option<String>,
+    s0: impl stage0::Stage0,
+    s1: impl stage1::Stage1,
+    s1_count: u8,
+    s2: impl stage2::Stage2,
+    s2_count: u8,
+    s3: stage3::Stage3,
+    s3_count: u8,
+) {
     let stats = Arc::new(ui::Stats::default());
     let running = Arc::new(AtomicBool::new(true));
 
@@ -91,15 +131,21 @@ fn run(local_interfaces: Vec<Ipv4Addr>, outfile: Option<String>, s0: impl stage0
 
     // block to automatically drop channels before the joins
     {
-
         // Channels creation
         const CHANNEL_SIZE: usize = 500;
         let (tx_s0, rx_s1) = bounded::<SeededData<Duration>>(CHANNEL_SIZE);
         let (tx_s1, rx_s2) = bounded::<SeededData<Flow>>(CHANNEL_SIZE);
-        let (tx_s2_tcp, rx_s3_tcp) = bounded::<SeededData<PacketsIR<tcp::TCPPacketInfo>>>(CHANNEL_SIZE);
-        let (tx_s2_udp, rx_s3_udp) = bounded::<SeededData<PacketsIR<udp::UDPPacketInfo>>>(CHANNEL_SIZE);
-        let (tx_s2_icmp, rx_s3_icmp) = bounded::<SeededData<PacketsIR<icmp::ICMPPacketInfo>>>(CHANNEL_SIZE);
-        let tx_s2 = stage2::S2Sender { tcp: tx_s2_tcp, udp: tx_s2_udp, icmp: tx_s2_icmp };
+        let (tx_s2_tcp, rx_s3_tcp) =
+            bounded::<SeededData<PacketsIR<tcp::TCPPacketInfo>>>(CHANNEL_SIZE);
+        let (tx_s2_udp, rx_s3_udp) =
+            bounded::<SeededData<PacketsIR<udp::UDPPacketInfo>>>(CHANNEL_SIZE);
+        let (tx_s2_icmp, rx_s3_icmp) =
+            bounded::<SeededData<PacketsIR<icmp::ICMPPacketInfo>>>(CHANNEL_SIZE);
+        let tx_s2 = stage2::S2Sender {
+            tcp: tx_s2_tcp,
+            udp: tx_s2_udp,
+            icmp: tx_s2_icmp,
+        };
         let mut tx_s3 = HashMap::new();
         let mut rx_s4 = HashMap::new();
         for proto in Protocol::iter() {
@@ -127,9 +173,13 @@ fn run(local_interfaces: Vec<Ipv4Addr>, outfile: Option<String>, s0: impl stage0
             let s1 = s1.clone();
             let local_interfaces = local_interfaces.clone();
             let builder = thread::Builder::new().name("Stage1".into());
-            gen_threads.push(builder.spawn(move || {
-                stage1::run(s1, rx_s1, tx_s1, local_interfaces);
-            }).unwrap());
+            gen_threads.push(
+                builder
+                    .spawn(move || {
+                        stage1::run(s1, rx_s1, tx_s1, local_interfaces);
+                    })
+                    .unwrap(),
+            );
         }
 
         // STAGE 2
@@ -139,7 +189,11 @@ fn run(local_interfaces: Vec<Ipv4Addr>, outfile: Option<String>, s0: impl stage0
             let tx_s2 = tx_s2.clone();
             let s2 = s2.clone();
             let builder = thread::Builder::new().name("Stage2".into());
-            gen_threads.push(builder.spawn(move || stage2::run(s2, rx_s2, tx_s2)).unwrap());
+            gen_threads.push(
+                builder
+                    .spawn(move || stage2::run(s2, rx_s2, tx_s2))
+                    .unwrap(),
+            );
         }
 
         // STAGE 3
@@ -155,16 +209,55 @@ fn run(local_interfaces: Vec<Ipv4Addr>, outfile: Option<String>, s0: impl stage0
                 let online = !local_interfaces.is_empty();
                 match proto {
                     Protocol::TCP => {
-                            let rx_s3_tcp = rx_s3_tcp.clone();
-                            gen_threads.push(builder.spawn(move || stage3::run(|f| s3.generate_tcp_packets(f), rx_s3_tcp, tx_s3_hm, tx_s3_to_collector, stats, online)).unwrap());
-                        },
+                        let rx_s3_tcp = rx_s3_tcp.clone();
+                        gen_threads.push(
+                            builder
+                                .spawn(move || {
+                                    stage3::run(
+                                        |f| s3.generate_tcp_packets(f),
+                                        rx_s3_tcp,
+                                        tx_s3_hm,
+                                        tx_s3_to_collector,
+                                        stats,
+                                        online,
+                                    )
+                                })
+                                .unwrap(),
+                        );
+                    }
                     Protocol::UDP => {
-                            let rx_s3_udp = rx_s3_udp.clone();
-                            gen_threads.push(builder.spawn(move || stage3::run(|f| s3.generate_udp_packets(f), rx_s3_udp, tx_s3_hm, tx_s3_to_collector, stats, online)).unwrap());
-                    },
+                        let rx_s3_udp = rx_s3_udp.clone();
+                        gen_threads.push(
+                            builder
+                                .spawn(move || {
+                                    stage3::run(
+                                        |f| s3.generate_udp_packets(f),
+                                        rx_s3_udp,
+                                        tx_s3_hm,
+                                        tx_s3_to_collector,
+                                        stats,
+                                        online,
+                                    )
+                                })
+                                .unwrap(),
+                        );
+                    }
                     Protocol::ICMP => {
-                            let rx_s3_icmp = rx_s3_icmp.clone();
-                            gen_threads.push(builder.spawn(move || stage3::run(|f| s3.generate_icmp_packets(f), rx_s3_icmp, tx_s3_hm, tx_s3_to_collector, stats, online)).unwrap());
+                        let rx_s3_icmp = rx_s3_icmp.clone();
+                        gen_threads.push(
+                            builder
+                                .spawn(move || {
+                                    stage3::run(
+                                        |f| s3.generate_icmp_packets(f),
+                                        rx_s3_icmp,
+                                        tx_s3_hm,
+                                        tx_s3_to_collector,
+                                        stats,
+                                        online,
+                                    )
+                                })
+                                .unwrap(),
+                        );
                     }
                 }
             }
@@ -174,10 +267,18 @@ fn run(local_interfaces: Vec<Ipv4Addr>, outfile: Option<String>, s0: impl stage0
 
         if let Some(actual_outfile) = outfile {
             let builder = thread::Builder::new().name("Pcap-collector".into());
-            gen_threads.push(builder.spawn(move || stage3::run_collector(rx_collector, tx_collector)).unwrap());
+            gen_threads.push(
+                builder
+                    .spawn(move || stage3::run_collector(rx_collector, tx_collector))
+                    .unwrap(),
+            );
 
             let builder = thread::Builder::new().name("Pcap-export".into());
-            gen_threads.push(builder.spawn(move || stage3::run_export(rx_pcap, &actual_outfile)).unwrap());
+            gen_threads.push(
+                builder
+                    .spawn(move || stage3::run_export(rx_pcap, &actual_outfile))
+                    .unwrap(),
+            );
         }
 
         // STAGE 4 (online mode only)
@@ -186,17 +287,20 @@ fn run(local_interfaces: Vec<Ipv4Addr>, outfile: Option<String>, s0: impl stage0
             for ((iface, proto), rx) in rx_s4 {
                 // let rx = rx.clone();
                 let builder = thread::Builder::new().name(format!("Stage4-{:?}-{iface}", proto));
-                gen_threads.push(builder.spawn(move || {
-                    log::trace!("Start S4");
-                    let s4 = stage4::Stage4::new(iface, proto.get_number());
-                    while let Ok(packets) = rx.recv() {
-                        s4.send(packets)
-                    }
-                    log::trace!("S4 stops");
-                }).unwrap());
+                gen_threads.push(
+                    builder
+                        .spawn(move || {
+                            log::trace!("Start S4");
+                            let s4 = stage4::Stage4::new(iface, proto.get_number());
+                            while let Ok(packets) = rx.recv() {
+                                s4.send(packets)
+                            }
+                            log::trace!("S4 stops");
+                        })
+                        .unwrap(),
+                );
             }
         }
-
     }
 
     {
@@ -216,5 +320,4 @@ fn run(local_interfaces: Vec<Ipv4Addr>, outfile: Option<String>, s0: impl stage0
     for thread in threads {
         thread.join().unwrap();
     }
-
 }
