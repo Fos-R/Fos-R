@@ -105,6 +105,11 @@ impl Stage4 {
                     PacketDirection::Backward
                 };
 
+                log::info!(
+                    "Number of flows in the heap: {}",
+                    current_flows.lock().unwrap().len()
+                );
+
                 current_flows
                     .lock()
                     .unwrap()
@@ -141,7 +146,12 @@ impl Stage4 {
             if direction == current_flow.direction {
                 log::info!("Sending packet to {:?}", destination);
                 // If the direction matches the flow's direction, send the packet
-                self.tx.send_to(packet, std::net::IpAddr::V4(destination));
+                println!(
+                    "{:?}",
+                    self.tx
+                        .send_to(packet, std::net::IpAddr::V4(destination))
+                        .unwrap()
+                );
             } else {
                 // If the direction doesn't match, wait for the packet to be received
                 while let Ok((recv_packet, addr)) = rx_iter.next() {
