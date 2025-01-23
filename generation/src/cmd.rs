@@ -38,6 +38,9 @@ pub enum Command {
         taint: bool,
         #[arg(short, long, default_value=None, help="Path to models directory")]
         models: Option<String>,
+        #[arg(short, long, default_value_t=false, help="Show CPU usage per thread")]
+        cpu_usage: bool,
+
         // #[arg(short, long, help="Path to the information system configuration file")]
         // config: String,
     },
@@ -70,5 +73,7 @@ pub enum Command {
         seed: Option<u64>,
         #[arg(short, long, default_value=None, help="Path to models directory")]
         models: Option<String>,
+        #[arg(short, long, default_value_t=false, help="Show CPU usage per thread")]
+        cpu_usage: bool,
     },
 }

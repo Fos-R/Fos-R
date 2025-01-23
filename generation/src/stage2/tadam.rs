@@ -1,7 +1,4 @@
-use crate::icmp::*;
 use crate::stage2::*;
-use crate::tcp::*;
-use crate::udp::*;
 use rand::prelude::*;
 use rand_pcg::Pcg32;
 use std::ffi::OsStr;

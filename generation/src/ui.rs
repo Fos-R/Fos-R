@@ -5,6 +5,7 @@ use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
+use std::process::{Command, Stdio};
 
 pub struct Stats {
     pub start_time: Instant,
@@ -33,7 +34,18 @@ impl Stats {
     }
 }
 
-pub fn run(stats: Arc<Stats>, running: Arc<AtomicBool>) {
+pub fn run(stats: Arc<Stats>, running: Arc<AtomicBool>, cpu_usage: bool) {
+    let child = if cpu_usage {
+        Some(Command::new("top")
+        .arg("-H")
+        .arg("-p")
+        .arg(std::process::id().to_string())
+        .spawn()
+        .expect("command failed to start"))
+    } else {
+        None
+    };
+
     loop {
         thread::sleep(Duration::new(1, 0));
         {
@@ -53,5 +65,8 @@ pub fn run(stats: Arc<Stats>, running: Arc<AtomicBool>) {
                 break;
             }
         }
+    }
+    if let Some(mut c) = child {
+        c.kill().expect("command couldn't be killed");
     }
 }

@@ -4,12 +4,12 @@ use crate::*;
 
 pub struct Stage4 {
     interface: Ipv4Addr,
-    proto: u8,
+    proto: Protocol,
     // TODO: add raw socket
 }
 
 impl Stage4 {
-    pub fn new(interface: Ipv4Addr, proto: u8) -> Self {
+    pub fn new(interface: Ipv4Addr, proto: Protocol) -> Self {
         Stage4 { interface, proto }
     }
 

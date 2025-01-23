@@ -12,6 +12,7 @@ mod stage1;
 use stage1::flowchronicle;
 mod stage2;
 use stage2::tadam;
+mod replay;
 mod stage3;
 mod stage4;
 
@@ -30,6 +31,7 @@ use crossbeam_channel::bounded;
 use pnet::{datalink, ipnetwork::IpNetwork};
 
 // monitor threads with "top -H -p $(pgrep fosr)"
+const CHANNEL_SIZE: usize = 500;
 
 fn main() {
     if env::var("RUST_LOG").is_err() {
@@ -58,8 +60,8 @@ fn main() {
     log::debug!("IPv4 interfaces: {:?}", &local_interfaces);
 
     match args.command {
-        cmd::Command::Replay { .. } => replay(),
-        cmd::Command::Honeynet { taint, models, .. } => {
+        cmd::Command::Replay { infile, .. } => replay::replay(&infile),
+        cmd::Command::Honeynet { taint, models, cpu_usage, .. } => {
             assert!(!local_interfaces.is_empty());
             let models = models.unwrap_or("../models/test".to_string()); // remove
             log::info!("Model initialization");
@@ -75,13 +77,14 @@ fn main() {
             let s2 = tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(taint);
             // TODO: allow outfile
-            run(local_interfaces, None, s0, s1, 3, s2, 1, s3, 1);
+            run(local_interfaces, None, s0, s1, 3, s2, 1, s3, 1, cpu_usage);
         }
         cmd::Command::CreatePcap {
             seed,
             models,
             outfile,
             flow_count,
+            cpu_usage,
             ..
         } => {
             let models = models.unwrap_or("../models/test".to_string()); // remove
@@ -103,13 +106,9 @@ fn main() {
             let s2 = tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(false);
 
-            run(vec![], Some(outfile), s0, s1, 3, s2, 3, s3, 6);
+            run(vec![], Some(outfile), s0, s1, 3, s2, 3, s3, 6, cpu_usage);
         }
     };
-}
-
-fn replay() {
-    todo!()
 }
 
 fn run(
@@ -122,6 +121,7 @@ fn run(
     s2_count: u8,
     s3: stage3::Stage3,
     s3_count: u8,
+    cpu_usage: bool,
 ) {
     let stats = Arc::new(ui::Stats::default());
     let running = Arc::new(AtomicBool::new(true));
@@ -132,7 +132,6 @@ fn run(
     // block to automatically drop channels before the joins
     {
         // Channels creation
-        const CHANNEL_SIZE: usize = 500;
         let (tx_s0, rx_s1) = bounded::<SeededData<Duration>>(CHANNEL_SIZE);
         let (tx_s1, rx_s2) = bounded::<SeededData<Flow>>(CHANNEL_SIZE);
         let (tx_s2_tcp, rx_s3_tcp) =
@@ -291,7 +290,7 @@ fn run(
                     builder
                         .spawn(move || {
                             log::trace!("Start S4");
-                            let s4 = stage4::Stage4::new(iface, proto.get_number());
+                            let s4 = stage4::Stage4::new(iface, proto);
                             while let Ok(packets) = rx.recv() {
                                 s4.send(packets)
                             }
@@ -307,7 +306,7 @@ fn run(
         let stats = Arc::clone(&stats);
         let running = Arc::clone(&running);
         let builder = thread::Builder::new().name("Monitoring".into());
-        threads.push(builder.spawn(move || ui::run(stats, running)).unwrap());
+        threads.push(builder.spawn(move || ui::run(stats, running, cpu_usage)).unwrap());
     }
 
     // Wait for the generation threads to end
