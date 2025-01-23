@@ -76,6 +76,7 @@ fn main() {
         };
         let ifaces = datalink::interfaces()
             .into_iter()
+            .filter(|iface| [String::from("veth0"), String::from("veth1")].contains(&iface.name))
             .flat_map(extract_addr)
             .filter(|i| !i.is_loopback())
             .collect();
@@ -116,7 +117,7 @@ fn main() {
         builder
             .spawn(move || {
                 log::trace!("Start S0");
-                let s0 = stage0::UniformGenerator::new(seed, online, 2, 100);
+                let s0 = stage0::UniformGenerator::new(seed, online, 2, 1);
                 for ts in s0 {
                     log::trace!("S0 generates {:?}", ts);
                     tx_s0.send(ts).unwrap();

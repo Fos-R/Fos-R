@@ -135,23 +135,22 @@ impl Stage4 {
             let now = std::time::SystemTime::now();
             let now = now.duration_since(std::time::UNIX_EPOCH).unwrap();
             let expected_ts = std::time::Duration::new(ts.tv_sec as u64, ts.tv_usec as u32);
-            let remaining = expected_ts.checked_sub(now).unwrap();
+            let remaining = expected_ts
+                .checked_sub(now)
+                .unwrap_or(std::time::Duration::new(0, 0));
             log::info!("Expected ts: {:?}", remaining);
             // Sleep for the remaining time
             std::thread::sleep(remaining);
 
             let packet = packet.into_packet();
-            let destination = packet.get_destination();
+            let destination = std::net::IpAddr::V4(packet.get_destination());
             let tcp_packet = pnet::packet::tcp::TcpPacket::new(packet.payload()).unwrap();
             if direction == current_flow.direction {
-                log::info!("Sending packet to {:?}", destination);
-                // If the direction matches the flow's direction, send the packet
-                println!(
-                    "{:?}",
-                    self.tx
-                        .send_to(packet, std::net::IpAddr::V4(destination))
-                        .unwrap()
-                );
+                // Send the packet
+                match self.tx.send_to(&tcp_packet, destination) {
+                    Ok(n) => assert_eq!(n, tcp_packet.packet().len()),
+                    Err(e) => panic!("failed to send packet: {}", e),
+                }
             } else {
                 // If the direction doesn't match, wait for the packet to be received
                 while let Ok((recv_packet, addr)) = rx_iter.next() {
