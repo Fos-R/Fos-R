@@ -2,15 +2,15 @@
 
 use crate::structs::*;
 use crate::tcp::*;
+use kd_tree::KdTree;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use rand::Rng;
 use rand_distr::{Distribution, Normal, Poisson};
 use serde::Deserialize;
-use std::time::Duration;
 use std::collections::HashMap;
 use std::sync::Arc;
-use kd_tree::KdTree;
+use std::time::Duration;
 
 // Automaton are graphs. Graphs are not straightforward in Rust due to ownership, so we reference nodes by their index in the graph.
 
@@ -36,15 +36,16 @@ enum EdgeDistribution {
 }
 
 #[derive(Debug, Clone)]
-struct TimedEdge<T: EdgeType> { // TODO: plutôt que "Option<T>" pour data, utiliser un enum
-                                // "EpsilonEdge"/"NonEpsilonEdge" pour tout ce qui étiquette une
-                                // transition (symbole et valeur)
+struct TimedEdge<T: EdgeType> {
+    // TODO: plutôt que "Option<T>" pour data, utiliser un enum
+    // "EpsilonEdge"/"NonEpsilonEdge" pour tout ce qui étiquette une
+    // transition (symbole et valeur)
     dst_node: usize,
-    data: Option<Arc<T>>, // no data if transition to sink state
+    data: Option<Arc<T>>,  // no data if transition to sink state
     transition_proba: f32, // not used
     count: u32,
     mu: [f32; 2],
-    cov: [[f32; 2]; 2], // TODO: créer directement loi normale / poisson 
+    cov: [[f32; 2]; 2], // TODO: créer directement loi normale / poisson
     p: EdgeDistribution,
 }
 
@@ -61,7 +62,7 @@ impl EdgeDistribution {
                 let poisson = Poisson::new((cond_mu + cond_var) / 2.0).unwrap();
                 poisson.sample(rng).max(0.)
             }
-            EdgeDistribution::Gamma => todo!()
+            EdgeDistribution::Gamma => todo!(),
         }
     }
 }
@@ -70,8 +71,8 @@ impl EdgeDistribution {
 pub struct CrossProductTimedAutomaton<T: EdgeType> {
     graph: Vec<CrossProductTimedNode<T>>,
     initial_state: usize,
-    accepting_states: KdTree<([i32;2], usize)>, // to quickly find the closest possible accepting
-                                                // state
+    accepting_states: KdTree<([i32; 2], usize)>, // to quickly find the closest possible accepting
+    // state
     metadata: AutomatonMetaData,
 }
 
@@ -86,13 +87,21 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
             bwd: usize,
         };
 
-        log::trace!("Computing cross-product automata for {}",automaton.metadata.automaton_name);
-        let max_state_count = (MAX_FLOW_COUNT+1) * automaton.graph.len();
+        log::trace!(
+            "Computing cross-product automata for {}",
+            automaton.metadata.automaton_name
+        );
+        let max_state_count = (MAX_FLOW_COUNT + 1) * automaton.graph.len();
         let mut openset = Vec::with_capacity(max_state_count);
-        openset.push(CrossProductNode { state: automaton.initial_state, fwd: 0, bwd: 0 });
-        let mut predecessors: HashMap<CrossProductNode, Vec<TimedEdge<T>>> = HashMap::with_capacity(max_state_count);
+        openset.push(CrossProductNode {
+            state: automaton.initial_state,
+            fwd: 0,
+            bwd: 0,
+        });
+        let mut predecessors: HashMap<CrossProductNode, Vec<TimedEdge<T>>> =
+            HashMap::with_capacity(max_state_count);
         let mut closeset = Vec::with_capacity(max_state_count);
-        let mut seen : HashMap<CrossProductNode, ()> = HashMap::with_capacity(max_state_count);
+        let mut seen: HashMap<CrossProductNode, ()> = HashMap::with_capacity(max_state_count);
         let mut current_node_index = 0;
         while let Some(node) = openset.pop() {
             if seen.contains_key(&node) {
@@ -102,9 +111,21 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
             seen.insert(node, ());
             for e in automaton.graph[node.state].out_edges.iter() {
                 let successor_node = match &e.data {
-                    None => CrossProductNode { state: e.dst_node, fwd: node.fwd, bwd: node.bwd }, // epsilon-transitions do not affect the counts
-                    Some(d) if d.get_direction() == PacketDirection::Forward => CrossProductNode { state: e.dst_node, fwd: node.fwd + 1, bwd: node.bwd },
-                    _ => CrossProductNode { state: e.dst_node, fwd: node.fwd, bwd: node.bwd + 1 },
+                    None => CrossProductNode {
+                        state: e.dst_node,
+                        fwd: node.fwd,
+                        bwd: node.bwd,
+                    }, // epsilon-transitions do not affect the counts
+                    Some(d) if d.get_direction() == PacketDirection::Forward => CrossProductNode {
+                        state: e.dst_node,
+                        fwd: node.fwd + 1,
+                        bwd: node.bwd,
+                    },
+                    _ => CrossProductNode {
+                        state: e.dst_node,
+                        fwd: node.fwd,
+                        bwd: node.bwd + 1,
+                    },
                 };
                 if successor_node.fwd + successor_node.bwd <= MAX_FLOW_COUNT {
                     openset.push(successor_node);
@@ -122,13 +143,13 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
         }
 
         log::trace!("Cross-product automaton has {} states", closeset.len());
-        
+
         // transform it into a CrossProductTimedAutomaton
         let mut graph: Vec<CrossProductTimedNode<T>> = Vec::new();
         let mut accepting_states = Vec::new();
-        for (i,node) in closeset.into_iter().enumerate() {
+        for (i, node) in closeset.into_iter().enumerate() {
             if node.state == automaton.accepting_state {
-                accepting_states.push(([node.fwd as i32,node.bwd as i32],i));
+                accepting_states.push(([node.fwd as i32, node.bwd as i32], i));
             }
             let in_edges: Option<Vec<TimedEdge<T>>> = predecessors.remove(&node);
             let dist = match &in_edges {
@@ -136,15 +157,23 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                 None => None,
             };
             let in_edges = in_edges.unwrap_or(vec![]);
-            graph.push(CrossProductTimedNode { in_edges, dist, fwd_pkt_count: node.fwd, bwd_pkt_count: node.bwd });
+            graph.push(CrossProductTimedNode {
+                in_edges,
+                dist,
+                fwd_pkt_count: node.fwd,
+                bwd_pkt_count: node.bwd,
+            });
         }
-        CrossProductTimedAutomaton { graph, initial_state: 0, accepting_states: KdTree::build(accepting_states), metadata: automaton.metadata }
+        CrossProductTimedAutomaton {
+            graph,
+            initial_state: 0,
+            accepting_states: KdTree::build(accepting_states),
+            metadata: automaton.metadata,
+        }
     }
-
 }
 
 impl<T: EdgeType> CrossProductTimedAutomaton<T> {
-
     pub fn is_compatible_with(&self, port: u16) -> bool {
         self.metadata.select_dst_ports.contains(&port)
     }
@@ -156,14 +185,19 @@ impl<T: EdgeType> CrossProductTimedAutomaton<T> {
         header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
     ) -> Vec<U> {
         let mut output = vec![];
-        let mut current_state = self.accepting_states.nearest(&([fd.fwd_packets_count as i32,fd.bwd_packets_count as i32])).unwrap().item.1;
+        let mut current_state = self
+            .accepting_states
+            .nearest(&([fd.fwd_packets_count as i32, fd.bwd_packets_count as i32]))
+            .unwrap()
+            .item
+            .1;
         let mut current_ts = fd.timestamp;
         // TODO: sample with noise
         while current_state != self.initial_state {
             debug_assert!(!self.graph[current_state].in_edges.is_empty());
             let index = match &self.graph[current_state].dist {
                 None => 0, // only one outgoing edge
-                Some(d) => d.sample(rng)
+                Some(d) => d.sample(rng),
             };
             let e = &self.graph[current_state].in_edges[index];
             if let Some(data) = &e.data {
@@ -248,7 +282,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
             assert!(!self.graph[current_state].out_edges.is_empty());
             let index = match &self.graph[current_state].dist {
                 None => 0, // only one outgoing edge
-                Some(d) => d.sample(rng)
+                Some(d) => d.sample(rng),
             };
             let e = &self.graph[current_state].out_edges[index];
             if let Some(data) = &e.data {
@@ -341,7 +375,10 @@ impl<T: EdgeType> TimedAutomaton<T> {
         let mut graph: Vec<TimedNode<T>> = vec![];
         for _ in 0..a.edges.len() + 1 {
             // the automaton is connected, so #edges+1 >= #nodes
-            graph.push(TimedNode { out_edges: vec![], dist: None });
+            graph.push(TimedNode {
+                out_edges: vec![],
+                dist: None,
+            });
         }
         // TODO: transition proba devrait être stocké dans une structure temporaire pour ne pas
         // prendre inutilement de la place dans le modèle
@@ -365,7 +402,9 @@ impl<T: EdgeType> TimedAutomaton<T> {
         }
         for s in graph.iter_mut() {
             if s.out_edges.len() > 1 {
-                s.dist = Some(WeightedIndex::new(s.out_edges.iter().map(|e| e.transition_proba)).unwrap());
+                s.dist = Some(
+                    WeightedIndex::new(s.out_edges.iter().map(|e| e.transition_proba)).unwrap(),
+                );
             }
         }
         // println!("{:?} {:?}",weights, self.graph[current_state].out_edges);

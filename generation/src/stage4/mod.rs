@@ -9,7 +9,6 @@ pub struct Stage4 {
 }
 
 impl Stage4 {
-
     pub fn new(interface: Ipv4Addr, proto: u8) -> Self {
         Stage4 { interface, proto }
     }
@@ -22,5 +21,4 @@ impl Stage4 {
         // the part must be cross-platform and use raw socket
         todo!()
     }
-
 }

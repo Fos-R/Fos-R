@@ -1,17 +1,17 @@
 #![allow(unused)]
 
-use crate::structs::*;
 use crate::stage1::*;
-use serde::Deserialize;
-use std::fs::File;
-use rand_pcg::Pcg32;
-use rand::prelude::*;
-use std::time::Duration;
-use std::sync::Arc;
-use std::net::Ipv4Addr;
-use std::collections::HashMap;
-use rand::distributions::WeightedIndex;
+use crate::structs::*;
 use rand::distributions::Uniform;
+use rand::distributions::WeightedIndex;
+use rand::prelude::*;
+use rand_pcg::Pcg32;
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::fs::File;
+use std::net::Ipv4Addr;
+use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Debug, Clone, Default)]
 struct PartiallyDefinedFlowData {
@@ -31,7 +31,6 @@ struct PartiallyDefinedFlowData {
 }
 
 impl From<PartiallyDefinedFlowData> for Flow {
-
     fn from(p: PartiallyDefinedFlowData) -> Self {
         let d = FlowData {
             src_ip: p.src_ip.unwrap(),
@@ -49,11 +48,9 @@ impl From<PartiallyDefinedFlowData> for Flow {
         };
         p.proto.unwrap().wrap(d)
     }
-
 }
 
 impl PartiallyDefinedFlowData {
-
     fn set_value(&mut self, rng: &mut impl RngCore, f: &Feature, index: usize) {
         match f {
             Feature::SrcIP(ref v) => self.src_ip = Some(v.0[index]),
@@ -63,7 +60,9 @@ impl PartiallyDefinedFlowData {
             Feature::BwdPkt(ref v) => self.bwd_packets_count = Some(v.0[index].sample(rng)),
             Feature::FwdByt(ref v) => self.fwd_total_payload_length = Some(v.0[index].sample(rng)),
             Feature::BwdByt(ref v) => self.bwd_total_payload_length = Some(v.0[index].sample(rng)),
-            Feature::Duration(ref v) => self.total_duration = Some(Duration::from_millis(v.0[index].sample(rng) as u64)),
+            Feature::Duration(ref v) => {
+                self.total_duration = Some(Duration::from_millis(v.0[index].sample(rng) as u64))
+            }
             Feature::Proto(ref v) => self.proto = Some(v[0]),
         }
     }
@@ -75,7 +74,7 @@ struct BayesianNetworkNode {
     feature: Feature,
     partial_flow_number: usize,
     parents: Vec<usize>, // indices in the Bayesian network’s nodes
-    cpt: CPT
+    cpt: CPT,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -93,9 +92,13 @@ impl From<Vec<String>> for Ipv4Vector {
 #[serde(from = "Vec<(u32,u32)>")]
 struct Intervals(Vec<Uniform<u32>>);
 
-impl From<Vec<(u32,u32)>> for Intervals {
-    fn from(v: Vec<(u32,u32)>) -> Intervals {
-        Intervals(v.into_iter().map(|(low,high)| Uniform::new(low, high)).collect())
+impl From<Vec<(u32, u32)>> for Intervals {
+    fn from(v: Vec<(u32, u32)>) -> Intervals {
+        Intervals(
+            v.into_iter()
+                .map(|(low, high)| Uniform::new(low, high))
+                .collect(),
+        )
     }
 }
 
@@ -118,13 +121,13 @@ enum Feature {
 #[derive(Deserialize, Debug, Clone)]
 struct CPTJSON {
     probas: Vec<Vec<f32>>,
-    parents_values: Vec<Vec<usize>>
+    parents_values: Vec<Vec<usize>>,
 }
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Deserialize, Debug, Clone)]
 #[serde(from = "CPTJSON")]
-struct CPT(HashMap<Vec<usize>,WeightedIndex<f32>>);
+struct CPT(HashMap<Vec<usize>, WeightedIndex<f32>>);
 
 impl From<CPTJSON> for CPT {
     fn from(line: CPTJSON) -> CPT {
@@ -142,7 +145,7 @@ impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
     fn sample_index(&self, rng: &mut impl RngCore, current: &[usize]) -> usize {
         let mut parents_values = Vec::new();
-        for (i,p) in self.parents.iter().enumerate() {
+        for (i, p) in self.parents.iter().enumerate() {
             parents_values[i] = current[*p];
         }
         self.cpt.0[&parents_values].sample(rng)
@@ -154,7 +157,7 @@ impl BayesianNetworkNode {
 #[derive(Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
 enum CellType {
-    Fixed { feature: Feature }, // only one value in the Feature domain
+    Fixed { feature: Feature },   // only one value in the Feature domain
     ReuseSrcAsSrc { row: usize }, // reuse the IP from that row
     ReuseSrcAsDst { row: usize },
     ReuseDrcAsSrc { row: usize },
@@ -163,13 +166,17 @@ enum CellType {
 
 impl Pattern {
     /// Sample a vector from the Bayesian network
-    fn sample_free_cells(&self, rng: &mut impl RngCore, flow_count: usize) -> Vec<PartiallyDefinedFlowData> {
+    fn sample_free_cells(
+        &self,
+        rng: &mut impl RngCore,
+        flow_count: usize,
+    ) -> Vec<PartiallyDefinedFlowData> {
         let mut p = Vec::new();
         let mut indices = Vec::with_capacity(self.bayesian_network.len());
         for _ in 0..flow_count {
             p.push(PartiallyDefinedFlowData::default());
         }
-        for (n,v) in self.bayesian_network.iter().enumerate() {
+        for (n, v) in self.bayesian_network.iter().enumerate() {
             let i = v.sample_index(rng, &indices);
             indices[n] = i;
             p[v.partial_flow_number].set_value(rng, &v.feature, i);
@@ -180,7 +187,7 @@ impl Pattern {
 
 #[derive(Deserialize, Debug, Clone)]
 struct PartialFlowRow {
-    row: Vec<CellType>
+    row: Vec<CellType>,
 }
 
 /// Each pattern has partial flows and a Bayesian network that describes the distribution of "free" cells
@@ -193,30 +200,43 @@ struct Pattern {
 
 impl Pattern {
     /// Sample flows
-    fn sample(&self, rng: &mut impl RngCore, ts: Duration) -> impl Iterator<Item=Flow> {
+    fn sample(&self, rng: &mut impl RngCore, ts: Duration) -> impl Iterator<Item = Flow> {
         let mut partially_defined_flows = self.sample_free_cells(rng, self.partial_flows.len());
         for p in partially_defined_flows.iter_mut() {
             p.ttl_client = Some(64);
             p.ttl_server = Some(64);
             p.src_port = Some(Uniform::new(32000, 65535).sample(rng) as u16);
-
         }
         // TODO: set TTL, source port, etc.
-        for (r_index,p) in self.partial_flows.iter().enumerate() {
+        for (r_index, p) in self.partial_flows.iter().enumerate() {
             partially_defined_flows.get_mut(r_index).unwrap().timestamp = Some(ts); // TODO tirage
-            for (c_index,c) in p.row.iter().enumerate() {
+            for (c_index, c) in p.row.iter().enumerate() {
                 match c {
-                    CellType::ReuseSrcAsSrc{ row } => { partially_defined_flows.get_mut(r_index).unwrap().src_ip = partially_defined_flows[*row].src_ip },
-                    CellType::ReuseSrcAsDst{ row } => { partially_defined_flows.get_mut(r_index).unwrap().dst_ip = partially_defined_flows[*row].src_ip },
-                    CellType::ReuseDrcAsSrc{ row } => { partially_defined_flows.get_mut(r_index).unwrap().src_ip = partially_defined_flows[*row].dst_ip },
-                    CellType::ReuseDrcAsDst{ row } => { partially_defined_flows.get_mut(r_index).unwrap().dst_ip = partially_defined_flows[*row].dst_ip },
-                    CellType::Fixed{ feature } => partially_defined_flows.get_mut(r_index).unwrap().set_value(rng, feature, 0),
+                    CellType::ReuseSrcAsSrc { row } => {
+                        partially_defined_flows.get_mut(r_index).unwrap().src_ip =
+                            partially_defined_flows[*row].src_ip
+                    }
+                    CellType::ReuseSrcAsDst { row } => {
+                        partially_defined_flows.get_mut(r_index).unwrap().dst_ip =
+                            partially_defined_flows[*row].src_ip
+                    }
+                    CellType::ReuseDrcAsSrc { row } => {
+                        partially_defined_flows.get_mut(r_index).unwrap().src_ip =
+                            partially_defined_flows[*row].dst_ip
+                    }
+                    CellType::ReuseDrcAsDst { row } => {
+                        partially_defined_flows.get_mut(r_index).unwrap().dst_ip =
+                            partially_defined_flows[*row].dst_ip
+                    }
+                    CellType::Fixed { feature } => partially_defined_flows
+                        .get_mut(r_index)
+                        .unwrap()
+                        .set_value(rng, feature, 0),
                 };
             }
         }
         partially_defined_flows.into_iter().map(|p| p.into())
     }
-
 }
 
 #[derive(Deserialize, Debug)]
@@ -237,7 +257,11 @@ pub struct PatternSet {
 impl From<PatternSetJSON> for PatternSet {
     fn from(p: PatternSetJSON) -> PatternSet {
         let pattern_distrib = WeightedIndex::new(p.pattern_weights).unwrap();
-        PatternSet { patterns: p.patterns, metadata: p.metadata, pattern_distrib }
+        PatternSet {
+            patterns: p.patterns,
+            metadata: p.metadata,
+            pattern_distrib,
+        }
     }
 }
 
@@ -249,14 +273,14 @@ impl PatternSet {
     /// Import patterns from a file
     pub fn from_file(filename: &str) -> std::io::Result<Self> {
         let f = File::open(filename)?;
-        let set : PatternSet = serde_json::from_reader(f)?;
-        log::info!("Patterns loaded from {:?}",filename);
+        let set: PatternSet = serde_json::from_reader(f)?;
+        log::info!("Patterns loaded from {:?}", filename);
         Ok(set)
     }
 
     /// Import patterns from a file
     pub fn from_str(data: &str) -> std::io::Result<Self> {
-        let set : PatternSet = serde_json::from_str(data)?;
+        let set: PatternSet = serde_json::from_str(data)?;
         log::info!("Default patterns loaded");
         Ok(set)
     }
@@ -275,22 +299,24 @@ pub struct FCGenerator {
     online: bool, // used to generate the TTL, either initial or at the capture point
 }
 
-
 impl FCGenerator {
     pub fn new(patterns: Arc<PatternSet>, online: bool) -> Self {
-        FCGenerator { set: patterns, online }
+        FCGenerator {
+            set: patterns,
+            online,
+        }
     }
 }
 
 impl Stage1 for FCGenerator {
-
     /// Generates flows
-    fn generate_flows(&self, ts: SeededData<Duration>) -> impl Iterator<Item=SeededData<Flow>> {
+    fn generate_flows(&self, ts: SeededData<Duration>) -> impl Iterator<Item = SeededData<Flow>> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
         let index = self.set.pattern_distrib.sample(&mut rng);
         let pattern = &self.set.patterns[index];
-        pattern.sample(&mut rng, ts.data).map(move |f| SeededData { seed: rng.next_u64(), data: f })
+        pattern.sample(&mut rng, ts.data).map(move |f| SeededData {
+            seed: rng.next_u64(),
+            data: f,
+        })
     }
-
 }
-

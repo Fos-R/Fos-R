@@ -1,10 +1,10 @@
 use crate::structs::*;
 
-use std::sync::{Mutex, Arc};
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
+use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::{Instant,Duration};
+use std::time::{Duration, Instant};
 
 pub struct Stats {
     pub start_time: Instant,
@@ -14,7 +14,11 @@ pub struct Stats {
 
 impl Default for Stats {
     fn default() -> Self {
-        Stats { start_time: Instant::now(), packets_counter: Mutex::default(), bytes_counter: Mutex::default() }
+        Stats {
+            start_time: Instant::now(),
+            packets_counter: Mutex::default(),
+            bytes_counter: Mutex::default(),
+        }
     }
 }
 
@@ -31,18 +35,19 @@ impl Stats {
 
 pub fn run(stats: Arc<Stats>, running: Arc<AtomicBool>) {
     loop {
-        thread::sleep(Duration::new(1,0));
+        thread::sleep(Duration::new(1, 0));
         {
             let pc = stats.packets_counter.lock().unwrap();
             let bc = stats.bytes_counter.lock().unwrap();
-            let throughput = 8. * (*bc as f64) / (Instant::now().duration_since(stats.start_time).as_secs() as f64) / 1_000_000.;
+            let throughput = 8. * (*bc as f64)
+                / (Instant::now().duration_since(stats.start_time).as_secs() as f64)
+                / 1_000_000.;
             if throughput < 1. {
-                log::info!("{pc} created packets ({:.2} kbps)", throughput*1000.);
-
+                log::info!("{pc} created packets ({:.2} kbps)", throughput * 1000.);
             } else if throughput < 1000. {
                 log::info!("{pc} created packets ({:.2} Mbps)", throughput);
             } else {
-                log::info!("{pc} created packets ({:.2} Gbps)", throughput/1000.);
+                log::info!("{pc} created packets ({:.2} Gbps)", throughput / 1000.);
             }
             if !running.load(Ordering::Relaxed) {
                 break;
