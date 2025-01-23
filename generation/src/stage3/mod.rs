@@ -296,7 +296,6 @@ pub fn run<T: PacketInfo>(generator: impl Fn(SeededData<PacketsIR<T>>) -> Seeded
     // Prepare stage 3
     log::trace!("Start S3");
     while let Ok(headers) = rx_s3.recv() {
-        log::trace!("S3 generates");
         let mut flow_packets = generator(headers);
         stats.increase(&flow_packets.data);
         if online { // check if exist

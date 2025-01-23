@@ -36,7 +36,10 @@ pub fn run(stats: Arc<Stats>, running: Arc<AtomicBool>) {
             let pc = stats.packets_counter.lock().unwrap();
             let bc = stats.bytes_counter.lock().unwrap();
             let throughput = 8. * (*bc as f64) / (Instant::now().duration_since(stats.start_time).as_secs() as f64) / 1_000_000.;
-            if throughput < 1000. {
+            if throughput < 1. {
+                log::info!("{pc} created packets ({:.2} kbps)", throughput*1000.);
+
+            } else if throughput < 1000. {
                 log::info!("{pc} created packets ({:.2} Mbps)", throughput);
             } else {
                 log::info!("{pc} created packets ({:.2} Gbps)", throughput/1000.);

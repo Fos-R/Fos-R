@@ -433,7 +433,7 @@
         ],
         "input_file": "mini.csv",
         "ignore_dst_ports": [],
-        "automaton_name": "ftp"
-        "creation_time": "2025-01-22 08:37:46.103746",
+        "automaton_name": "ftp",
+        "creation_time": "2025-01-22 08:37:46.103746"
     }
 }

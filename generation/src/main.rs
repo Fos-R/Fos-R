@@ -37,12 +37,12 @@ fn main() {
     }
     env_logger::init();
     let args = cmd::Args::parse();
-    log::trace!("{:?}", &args);
+    log::debug!("{:?}", &args);
 
     // Extract all IPv4 local interfaces (except loopback)
     let extract_addr = |iface: datalink::NetworkInterface| iface.ips.into_iter().filter(IpNetwork::is_ipv4).map(|i| match i { IpNetwork::V4(data) => data.ip(), _ => panic!("Impossible") });
     let local_interfaces: Vec<Ipv4Addr> = datalink::interfaces().into_iter().flat_map(extract_addr).filter(|i| !i.is_loopback()).collect();
-    log::trace!("IPv4 interfaces: {:?}", &local_interfaces);
+    log::debug!("IPv4 interfaces: {:?}", &local_interfaces);
 
     match args.command {
         cmd::Command::Replay { .. }=> replay(),
@@ -58,12 +58,12 @@ fn main() {
             // TODO: allow outfile
             run(local_interfaces, None, s0, s1, 3, s2, 1, s3, 1);
         },
-        cmd::Command::CreatePcap { seed, models, outfile, .. } => {
+        cmd::Command::CreatePcap { seed, models, outfile, flow_count, .. } => {
             let models = models.unwrap_or("../models/test".to_string()); // remove
             if let Some(s) = seed {
                 log::trace!("Generating with seed {}",s);
             }
-            let s0 = stage0::UniformGenerator::new(seed, false, 2, 100);
+            let s0 = stage0::UniformGenerator::new(seed, false, 2, flow_count);
             // TODO utiliser include_bytes à la place
             let patterns = Arc::new(flowchronicle::PatternSet::from_file(Path::new(&models).join("patterns.json").to_str().unwrap()).expect("Cannot load patterns"));
             let s1 = flowchronicle::FCGenerator::new(patterns, false);
@@ -206,17 +206,13 @@ fn run(local_interfaces: Vec<Ipv4Addr>, outfile: Option<String>, s0: impl stage0
 
     // Wait for the generation threads to end
     for thread in gen_threads {
-        log::trace!("Waiting for thread {}", thread.thread().name().unwrap());
         thread.join().unwrap();
-        log::trace!("Thread ended");
     }
     // Tell the other threads to stop
     running.store(false, Ordering::Relaxed);
     // Wait for the other threads to stop
     for thread in threads {
-        log::trace!("Waiting for thread {}", thread.thread().name().unwrap());
         thread.join().unwrap();
-        log::trace!("Thread ended");
     }
 
 }
