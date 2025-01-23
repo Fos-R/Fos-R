@@ -49,6 +49,7 @@ fn main() {
         cmd::Command::Honeynet { taint, models, .. } => {
             assert!(!local_interfaces.is_empty());
             let models = models.unwrap_or("../models/test".to_string()); // remove
+            log::info!("Model initialization");
             // TODO: modify seed initialization
             let s0 = stage0::UniformGenerator::new(Some(0), true, 2, 100);
             let s1 = stage1::ConstantFlowGenerator::new(*local_interfaces.first().unwrap(), *local_interfaces.last().unwrap()); // TODO: modify, only for testing
@@ -63,6 +64,7 @@ fn main() {
             if let Some(s) = seed {
                 log::trace!("Generating with seed {}",s);
             }
+            log::info!("Model initialization");
             let s0 = stage0::UniformGenerator::new(seed, false, 2, flow_count);
             // TODO utiliser include_bytes à la place
             let patterns = Arc::new(flowchronicle::PatternSet::from_file(Path::new(&models).join("patterns.json").to_str().unwrap()).expect("Cannot load patterns"));

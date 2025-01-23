@@ -87,16 +87,19 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
         };
 
         log::trace!("Computing cross-product automata for {}",automaton.metadata.automaton_name);
-        let mut openset: Vec<CrossProductNode> = vec![ CrossProductNode { state: automaton.initial_state, fwd: 0, bwd: 0 }];
-        let mut predecessors: HashMap<CrossProductNode, Vec<TimedEdge<T>>> = HashMap::new();
-        let mut closeset = Vec::new();
-        // construct the intersection
+        let max_state_count = (MAX_FLOW_COUNT+1) * automaton.graph.len();
+        let mut openset = Vec::with_capacity(max_state_count);
+        openset.push(CrossProductNode { state: automaton.initial_state, fwd: 0, bwd: 0 });
+        let mut predecessors: HashMap<CrossProductNode, Vec<TimedEdge<T>>> = HashMap::with_capacity(max_state_count);
+        let mut closeset = Vec::with_capacity(max_state_count);
+        let mut seen : HashMap<CrossProductNode, ()> = HashMap::with_capacity(max_state_count);
         let mut current_node_index = 0;
         while let Some(node) = openset.pop() {
-            if closeset.contains(&node) {
+            if seen.contains_key(&node) {
                 continue;
             }
             closeset.push(node);
+            seen.insert(node, ());
             for e in automaton.graph[node.state].out_edges.iter() {
                 let successor_node = match &e.data {
                     None => CrossProductNode { state: e.dst_node, fwd: node.fwd, bwd: node.bwd }, // epsilon-transitions do not affect the counts
