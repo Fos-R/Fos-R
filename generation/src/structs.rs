@@ -23,14 +23,6 @@ pub enum Protocol {
 }
 
 impl Protocol {
-    pub fn get_number(&self) -> u8 {
-        match &self {
-            Protocol::TCP => 6,
-            Protocol::UDP => 17,
-            Protocol::ICMP => 1,
-        }
-    }
-
     pub fn iter() -> [Protocol; 1] {
         // TODO: add the other protocols when they are implemented
         [Protocol::TCP] //, Protocol::UDP, Protocol::ICMP]

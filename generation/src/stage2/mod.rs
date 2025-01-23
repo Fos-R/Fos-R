@@ -5,7 +5,6 @@ use crate::udp::*;
 use crossbeam_channel::{Receiver, Sender};
 
 mod automaton;
-pub mod replay;
 pub mod tadam;
 
 pub trait Stage2: Clone + std::marker::Send + 'static {
