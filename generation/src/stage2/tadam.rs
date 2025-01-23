@@ -90,7 +90,8 @@ impl Stage2 for TadamGenerator {
             Some(automata) => {
                 let packets_info = automata.sample(&mut rng, &flow.data, create_tcp_header);
 
-                // TODO
+                // Depending on the automata, the packets count may not be exact, so we need to
+                // update it
                 flow.data.fwd_packets_count = packets_info.iter().filter(|p| p.direction == PacketDirection::Forward).count();
                 flow.data.bwd_packets_count = packets_info.iter().filter(|p| p.direction == PacketDirection::Backward).count();
                 flow.data.fwd_total_payload_length = packets_info.iter().filter(|p| p.direction == PacketDirection::Forward).map(|p| p.payload.get_payload_size()).sum::<usize>() as u32;

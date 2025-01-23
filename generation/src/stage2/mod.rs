@@ -24,7 +24,6 @@ pub struct S2Sender {
 pub fn run(generator: impl Stage2, rx_s2: Receiver<SeededData<Flow>>, tx_s2: S2Sender) {
     log::trace!("Start S2");
     while let Ok(flow) = rx_s2.recv() {
-        log::trace!("S2 generates");
         match flow.data {
             Flow::TCP(data) => {
                 tx_s2.tcp.send(generator.generate_tcp_packets_info(SeededData { seed : flow.seed, data })).unwrap();

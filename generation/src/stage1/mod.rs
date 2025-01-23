@@ -14,7 +14,6 @@ pub fn run(generator: impl Stage1, rx_s1: Receiver<SeededData<Duration>>, tx_s1:
     log::trace!("Start S1");
     while let Ok(ts) = rx_s1.recv() {
         let flows = generator.generate_flows(ts);
-        log::trace!("S1 generates");
         // TODO: verify logic (wait if we save pcap too?)
         if !local_interfaces.is_empty() { // only keep relevant flows
             flows.filter(|f| {
