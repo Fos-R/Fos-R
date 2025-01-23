@@ -11,6 +11,7 @@ use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
 use pnet_packet::ip::IpNextHeaderProtocols;
 use pnet_packet::ipv4::{self, Ipv4Flags, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
+use pnet_packet::udp::{MutableUdpPacket, ipv4_checksum};
 use rand::prelude::*;
 use rand_pcg::Pcg32;
 
@@ -49,11 +50,11 @@ impl Stage3 {
         Some(())
     }
 
-    fn setup_ip_packet(
+    fn setup_ip_packet<P: PacketInfo>(
         &self,
         packet: &mut [u8],
         flow: &FlowData,
-        packet_info: &TCPPacketInfo,
+        packet_info: &P,
     ) -> Option<()> {
         let len = packet.len();
         let mut ipv4_packet = MutableIpv4Packet::new(packet)?;
@@ -201,6 +202,55 @@ impl Stage3 {
         Some(new_tcp_data) // Return the new tcp_data and an empty tuple
     }
 
+    fn setup_udp_packet(
+        &self,
+        rng: &mut Pcg32,
+        packet: &mut [u8],
+        flow: &FlowData,
+        packet_info: &UDPPacketInfo,
+    ) -> Option<()> {
+        let mut udp_packet = MutableUdpPacket::new(packet)?;
+
+        // Set the source and destination ports
+        match packet_info.get_direction() {
+            PacketDirection::Forward => {
+                udp_packet.set_source(flow.src_port);
+                udp_packet.set_destination(flow.dst_port);
+            }
+            PacketDirection::Backward => {
+                udp_packet.set_source(flow.dst_port);
+                udp_packet.set_destination(flow.src_port);
+            }
+        }
+        // Set the payload
+        match &packet_info.payload {
+            Payload::Empty => (),
+            Payload::Random(size) => {
+                let mut payload = vec![0_u8;*size];
+                rng.fill_bytes(&mut payload);
+                udp_packet.set_payload(payload.as_slice());
+            }
+            Payload::Replay(payload) => {
+                udp_packet.set_payload(payload);
+            },
+        }
+
+        // Compute the checksum
+        udp_packet.set_checksum(pnet_packet::udp::ipv4_checksum(
+            &udp_packet.to_immutable(),
+            match packet_info.get_direction() {
+                PacketDirection::Forward => &flow.src_ip,
+                PacketDirection::Backward => &flow.dst_ip,
+            },
+            match packet_info.get_direction() {
+                PacketDirection::Forward => &flow.dst_ip,
+                PacketDirection::Backward => &flow.src_ip,
+            },
+        ));
+        Some(())
+    }
+
+
     fn get_pcap_header(&self, packet_size: usize, ts: Duration) -> PacketHeader {
         PacketHeader {
             ts: self.instant_to_timeval(ts),
@@ -279,7 +329,35 @@ impl Stage3 {
         input: SeededData<PacketsIR<UDPPacketInfo>>,
     ) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
-        todo!()
+        let ip_start = MutableEthernetPacket::minimum_packet_size();
+        let udp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
+        let flow = &input.data.flow.get_data();
+        let mut tcp_data = TcpPacketData::new(&mut rng);
+        let mut packets = Vec::new();
+        let mut directions = Vec::new();
+
+        // TODO: plutôt générer un iterator en consommant input.data.packets_info
+        for packet_info in &input.data.packets_info {
+            let packet_size = MutableEthernetPacket::minimum_packet_size()
+                + MutableIpv4Packet::minimum_packet_size()
+                + MutableUdpPacket::minimum_packet_size()
+                + packet_info.payload.get_payload_size();
+
+            let mut packet = vec![0u8; packet_size];
+
+            self.setup_ethernet_frame(&mut packet[..]).expect("Incorrect Ethernet frame");
+            self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info).expect("Incorrect IP packet");
+            self.setup_udp_packet(&mut rng, &mut packet[udp_start..], flow, packet_info).expect("Incorrect TCP packet");
+
+            packets.push(Packet {
+                header: self
+                    .get_pcap_header(packet_size, packet_info.get_ts()),
+                data: packet.clone(),
+            });
+            directions.push(packet_info.get_direction());
+        }
+
+        SeededData { seed: rng.next_u64(), data: Packets { packets, directions, flow: input.data.flow } }
     }
 
     /// Generate ICMP packets from an intermediate representation
