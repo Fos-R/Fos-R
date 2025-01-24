@@ -48,6 +48,13 @@ pub enum Command {
         #[arg(
             short,
             long,
+            default_value_t = 10,
+            help = "Overall number of flow per second to generate"
+        )]
+        flow_per_second: u64,
+        #[arg(
+            short,
+            long,
             help = "Path to the information system configuration file"
         )]
         config_path: String,

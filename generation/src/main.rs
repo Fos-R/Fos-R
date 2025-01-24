@@ -26,7 +26,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use clap::Parser;
 use crossbeam_channel::bounded;
@@ -67,6 +67,8 @@ fn main() {
             models,
             config_path,
             cpu_usage,
+            outfile,
+            flow_per_second,
             ..
         } => {
             let config_str =
@@ -76,8 +78,10 @@ fn main() {
             assert!(!local_interfaces.is_empty());
             let models = models.unwrap_or("../models/test".to_string()); // remove
             log::info!("Model initialization");
-            // TODO: modify seed initialization
-            let s0 = stage0::UniformGenerator::new(Some(0), true, 2, 100);
+            let s0 = stage0::UniformGenerator::new_for_honeypot(
+                SystemTime::now().duration_since(UNIX_EPOCH).unwrap(),
+                flow_per_second,
+            );
             let s1 = stage1::ConstantFlowGenerator::new(
                 *local_interfaces.first().unwrap(),
                 *local_interfaces.last().unwrap(),
@@ -89,8 +93,18 @@ fn main() {
             ));
             let s2 = tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(taint);
-            // TODO: allow outfile
-            run(local_interfaces, None, s0, s1, 3, s2, 1, s3, 1, cpu_usage);
+            run(
+                local_interfaces,
+                outfile,
+                s0,
+                s1,
+                3,
+                s2,
+                1,
+                s3,
+                1,
+                cpu_usage,
+            );
         }
         cmd::Command::CreatePcap {
             seed,

@@ -45,7 +45,10 @@ pub fn import_config(config: &str) -> Hosts {
     };
     for mut host in hosts_toml {
         for iface in host.remove("interfaces").expect("Host without interface!") {
-            let ip_toml = iface.ip.parse().expect("Cannot parse into an IPv4 address!");
+            let ip_toml = iface
+                .ip
+                .parse()
+                .expect("Cannot parse into an IPv4 address!");
             let provides_toml = iface.provides.unwrap_or_default();
             for port in provides_toml {
                 let current_ips = hosts.provides.get_mut(&port);
