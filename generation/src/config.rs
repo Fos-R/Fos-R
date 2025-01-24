@@ -10,13 +10,6 @@ struct Interface {
     uses: Option<Vec<u16>>,
 }
 
-#[derive(Deserialize, Debug)]
-struct Host {
-    #[allow(unused)]
-    name: String,
-    ifaces: Vec<Interface>,
-}
-
 #[derive(Debug, Clone)]
 pub struct Hosts {
     provides: HashMap<u16, Vec<Ipv4Addr>>,
@@ -42,7 +35,7 @@ impl Hosts {
 }
 
 pub fn import_config(config: &str) -> Hosts {
-    let mut table: HashMap<String, Vec<HashMap<String, Host>>> =
+    let mut table: HashMap<String, Vec<HashMap<String, Vec<Interface>>>> =
         toml::from_str(config).expect("Ill-formed configuration file");
 
     let hosts_toml = table.remove("hosts").expect("No host in the config file!");
@@ -51,15 +44,8 @@ pub fn import_config(config: &str) -> Hosts {
         uses: HashMap::new(),
     };
     for mut host in hosts_toml {
-        for iface in host
-            .remove("interfaces")
-            .expect("Host without interface!")
-            .ifaces
-        {
-            let ip_toml = iface
-                .ip
-                .parse()
-                .expect("Cannot parse into an IPv4 address!");
+        for iface in host.remove("interfaces").expect("Host without interface!") {
+            let ip_toml = iface.ip.parse().expect("Cannot parse into an IPv4 address!");
             let provides_toml = iface.provides.unwrap_or_default();
             for port in provides_toml {
                 let current_ips = hosts.provides.get_mut(&port);
