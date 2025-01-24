@@ -54,6 +54,14 @@ impl Flow {
         }
     }
 
+    pub fn get_data_mut(&mut self) -> &mut FlowData {
+        match self {
+            Flow::TCP(data) => data,
+            Flow::UDP(data) => data,
+            Flow::ICMP(data) => data,
+        }
+    }
+
     // pub fn get_proto(&self) -> Protocol {
     //     match &self {
     //         Flow::TCP(_) => Protocol::TCP,
