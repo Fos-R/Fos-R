@@ -1,0 +1,22 @@
+[[hosts]]
+    name = "Host1"
+    [[hosts.interfaces]]
+        ip = "10.25.100.11"
+        provides = [80, 21]
+        uses = [53,22]
+[[hosts]]
+    name = "Host2"
+    [[hosts.interfaces]]
+        ip = "10.25.100.12"
+        provides = [53]
+[[hosts]]
+    name = "Host3"
+    [[hosts.interfaces]]
+        ip = "10.25.100.13"
+        provides = [22]
+        uses = [21]
+[[hosts]]
+    name = "Host4"
+    [[hosts.interfaces]]
+        ip = "10.25.100.20"
+        uses = [22, 21]
