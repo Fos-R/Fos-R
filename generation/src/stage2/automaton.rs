@@ -152,11 +152,10 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                 accepting_states.push(([node.fwd as i32, node.bwd as i32], i));
             }
             let in_edges: Option<Vec<TimedEdge<T>>> = predecessors.remove(&node);
-            let dist = match &in_edges {
-                Some(v) => Some(WeightedIndex::new(v.iter().map(|e| e.count)).unwrap()),
-                None => None,
-            };
-            let in_edges = in_edges.unwrap_or(vec![]);
+            let dist = in_edges
+                .as_ref()
+                .map(|v| WeightedIndex::new(v.iter().map(|e| e.count)).unwrap());
+            let in_edges = in_edges.unwrap_or_default();
             graph.push(CrossProductTimedNode {
                 in_edges,
                 dist,
@@ -257,63 +256,6 @@ struct Noise {
     reemission: f32,
     transposition: f32,
     addition: f32,
-}
-
-impl<T: EdgeType> TimedAutomaton<T> {
-    // pub fn is_compatible_with(&self, port: u16) -> bool {
-    //     self.metadata.select_dst_ports.contains(&port)
-    // }
-
-    pub fn get_name(&self) -> &str {
-        &self.metadata.automaton_name
-    }
-
-    pub fn sample<U>(
-        &self,
-        rng: &mut impl RngCore,
-        initial_ts: Duration,
-        header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
-    ) -> Vec<U> {
-        let mut output = vec![];
-        let mut current_state = self.initial_state;
-        let mut current_ts = initial_ts;
-        // TODO: sample with noise
-        while current_state != self.accepting_state {
-            assert!(!self.graph[current_state].out_edges.is_empty());
-            let index = match &self.graph[current_state].dist {
-                None => 0, // only one outgoing edge
-                Some(d) => d.sample(rng),
-            };
-            let e = &self.graph[current_state].out_edges[index];
-            if let Some(data) = &e.data {
-                // if $-transition, don’t create a header
-                let (payload, payload_size) = match data.get_payload_type() {
-                    PayloadType::Empty => (Payload::Empty, 0),
-                    PayloadType::Random(sizes) => {
-                        let size = *sizes.choose(rng).unwrap();
-                        (Payload::Random(size), size)
-                    }
-                    PayloadType::Text(tss) => {
-                        // TODO
-                        let ts = tss.choose(rng).unwrap();
-                        (Payload::Replay(ts.clone().into()), ts.len())
-                    }
-                    PayloadType::Replay(tss) => {
-                        let ts = tss.choose(rng).unwrap();
-                        (Payload::Replay(ts.clone()), ts.len())
-                    }
-                };
-                let cond_mu = e.mu[0] + e.cov[0][1] / e.cov[1][1] * (payload_size as f32 - e.mu[1]);
-                let cond_var = e.cov[0][0] - e.cov[0][1] * e.cov[0][1] / e.cov[1][1];
-                let iat = e.p.sample(rng, cond_mu, cond_var);
-                current_ts += Duration::from_micros(iat as u64);
-                let data = header_creator(payload, NoiseType::None, current_ts, data);
-                output.push(data);
-            }
-            current_state = e.dst_node;
-        }
-        output
-    }
 }
 
 // IMPORT FROM JSON

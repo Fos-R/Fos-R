@@ -400,6 +400,50 @@ fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(),
     Ok(())
 }
 
+fn send_online(
+    mut flow_packets: SeededData<Packets>,
+    tx_s3_hm: &HashMap<Ipv4Addr, Sender<SeededData<Packets>>>,
+) {
+    // check if exist
+    let f = flow_packets.data.flow.get_data();
+    let src_s4 = tx_s3_hm.get(&f.src_ip);
+    let dst_s4 = tx_s3_hm.get(&f.dst_ip);
+    if let (Some(tx1), Some(tx2)) = (src_s4, dst_s4) {
+        // only copy if we have to
+        tx1.send(flow_packets.clone()).unwrap();
+        // ensure stage 4 is always the source
+        flow_packets.data.directions = flow_packets
+            .data
+            .directions
+            .into_iter()
+            .map(|d| d.into_reverse())
+            .collect();
+        tx2.send(flow_packets).unwrap();
+    } else if let Some(tx1) = src_s4 {
+        tx1.send(flow_packets).unwrap();
+    } else if let Some(tx2) = dst_s4 {
+        // ensure stage 4 is always the source
+        flow_packets.data.directions = flow_packets
+            .data
+            .directions
+            .into_iter()
+            .map(|d| d.into_reverse())
+            .collect();
+        tx2.send(flow_packets).unwrap();
+    }
+}
+
+fn send_pcap(flow_packets: SeededData<Packets>, tx_s3_to_collector: &Sender<Packets>) {
+    let mut noisy_flow = SeededData {
+        seed: flow_packets.seed,
+        data: flow_packets.data,
+    };
+    // if noise { // insert noise // TODO: find a better way to do it
+    //     stage3::insert_noise(&mut noisy_flow);
+    // }
+    tx_s3_to_collector.send(noisy_flow.data).unwrap();
+}
+
 pub fn run<T: PacketInfo>(
     generator: impl Fn(SeededData<PacketsIR<T>>) -> SeededData<Packets>,
     rx_s3: Receiver<SeededData<PacketsIR<T>>>,
@@ -407,49 +451,21 @@ pub fn run<T: PacketInfo>(
     tx_s3_to_collector: Sender<Packets>,                      // TODO: Option
     stats: Arc<Stats>,
     online: bool,
+    pcap_export: bool,
 ) {
     // Prepare stage 3
     log::trace!("Start S3");
     while let Ok(headers) = rx_s3.recv() {
         let mut flow_packets = generator(headers);
         stats.increase(&flow_packets.data);
+        // only copy the flows if we need to send it to online and pcap
         if online {
-            // check if exist
-            let f = flow_packets.data.flow.get_data();
-            let src_s4 = tx_s3_hm.get(&f.src_ip);
-            let dst_s4 = tx_s3_hm.get(&f.dst_ip);
-            if let (Some(tx1), Some(tx2)) = (src_s4, dst_s4) {
-                // only copy if we have to
-                tx1.send(flow_packets.clone()).unwrap();
-                // ensure stage 4 is always the source
-                flow_packets.data.directions = flow_packets
-                    .data
-                    .directions
-                    .into_iter()
-                    .map(|d| d.into_reverse())
-                    .collect();
-                tx2.send(flow_packets).unwrap();
-            } else if let Some(tx1) = src_s4 {
-                tx1.send(flow_packets).unwrap();
-            } else if let Some(tx2) = dst_s4 {
-                // ensure stage 4 is always the source
-                flow_packets.data.directions = flow_packets
-                    .data
-                    .directions
-                    .into_iter()
-                    .map(|d| d.into_reverse())
-                    .collect();
-                tx2.send(flow_packets).unwrap();
+            if pcap_export {
+                send_pcap(flow_packets.clone(), &tx_s3_to_collector)
             }
-        } else {
-            let mut noisy_flow = SeededData {
-                seed: flow_packets.seed,
-                data: flow_packets.data,
-            };
-            // if noise { // insert noise // TODO: find a better way to do it
-            //     stage3::insert_noise(&mut noisy_flow);
-            // }
-            tx_s3_to_collector.send(noisy_flow.data).unwrap();
+            send_online(flow_packets, &tx_s3_hm);
+        } else if pcap_export {
+            send_pcap(flow_packets, &tx_s3_to_collector)
         }
     }
     log::trace!("S3 stops");

@@ -38,11 +38,19 @@ pub enum Command {
         taint: bool,
         #[arg(short, long, default_value=None, help="Path to models directory")]
         models: Option<String>,
-        #[arg(short, long, default_value_t=false, help="Show CPU usage per thread")]
+        #[arg(
+            short = 'u',
+            long,
+            default_value_t = false,
+            help = "Show CPU usage per thread"
+        )]
         cpu_usage: bool,
-
-        // #[arg(short, long, help="Path to the information system configuration file")]
-        // config: String,
+        #[arg(
+            short,
+            long,
+            help = "Path to the information system configuration file"
+        )]
+        config_path: String,
     },
     /// Do data augmentation on a pcap file. You should use your own models
     CreatePcap {
@@ -53,13 +61,13 @@ pub enum Command {
             help = "Output pcap file for synthetic network packets"
         )]
         outfile: String,
-        #[arg(
-            short,
-            long,
-            default_value_t = false,
-            help = "Add noise in the output file"
-        )]
-        noise: bool,
+        // #[arg(
+        //     short,
+        //     long,
+        //     default_value_t = false,
+        //     help = "Add noise in the output file"
+        // )]
+        // noise: bool,
         #[arg(
             short,
             long,
@@ -73,7 +81,12 @@ pub enum Command {
         seed: Option<u64>,
         #[arg(short, long, default_value=None, help="Path to models directory")]
         models: Option<String>,
-        #[arg(short, long, default_value_t=false, help="Show CPU usage per thread")]
+        #[arg(
+            short = 'u',
+            long,
+            default_value_t = false,
+            help = "Show CPU usage per thread"
+        )]
         cpu_usage: bool,
     },
 }

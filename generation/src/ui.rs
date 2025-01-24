@@ -1,11 +1,11 @@
 use crate::structs::*;
 
+use std::process::Command;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-use std::process::{Command, Stdio};
 
 pub struct Stats {
     pub start_time: Instant,
@@ -36,12 +36,14 @@ impl Stats {
 
 pub fn run(stats: Arc<Stats>, running: Arc<AtomicBool>, cpu_usage: bool) {
     let child = if cpu_usage {
-        Some(Command::new("top")
-        .arg("-H")
-        .arg("-p")
-        .arg(std::process::id().to_string())
-        .spawn()
-        .expect("command failed to start"))
+        Some(
+            Command::new("top")
+                .arg("-H")
+                .arg("-p")
+                .arg(std::process::id().to_string())
+                .spawn()
+                .expect("command failed to start"),
+        )
     } else {
         None
     };

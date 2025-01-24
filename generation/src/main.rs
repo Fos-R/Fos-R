@@ -1,6 +1,7 @@
 mod structs;
 use crate::structs::*;
 mod cmd;
+mod config;
 mod ui;
 
 mod icmp;
@@ -18,6 +19,7 @@ mod stage4;
 
 use std::collections::HashMap;
 use std::env;
+use std::fs;
 use std::net::Ipv4Addr;
 use std::path::Path;
 use std::sync::atomic::AtomicBool;
@@ -30,7 +32,6 @@ use clap::Parser;
 use crossbeam_channel::bounded;
 use pnet::{datalink, ipnetwork::IpNetwork};
 
-// monitor threads with "top -H -p $(pgrep fosr)"
 const CHANNEL_SIZE: usize = 500;
 
 fn main() {
@@ -61,7 +62,17 @@ fn main() {
 
     match args.command {
         cmd::Command::Replay { infile, .. } => replay::replay(&infile),
-        cmd::Command::Honeynet { taint, models, cpu_usage, .. } => {
+        cmd::Command::Honeynet {
+            taint,
+            models,
+            config_path,
+            cpu_usage,
+            ..
+        } => {
+            let config_str =
+                fs::read_to_string(config_path).expect("Cannot access the configuration file.");
+            let hosts = config::import_config(&config_str);
+            log::debug!("Configuration: {:?}", hosts);
             assert!(!local_interfaces.is_empty());
             let models = models.unwrap_or("../models/test".to_string()); // remove
             log::info!("Model initialization");
@@ -71,6 +82,8 @@ fn main() {
                 *local_interfaces.first().unwrap(),
                 *local_interfaces.last().unwrap(),
             ); // TODO: modify, only for testing
+            let s1 = stage1::ConfigBasedModifier::new(hosts, s1);
+            let s1 = stage1::FilterForOnline::new(local_interfaces.clone(), s1);
             let automata_library = Arc::new(tadam::AutomataLibrary::from_dir(
                 Path::new(&models).join("tas").to_str().unwrap(),
             ));
@@ -170,12 +183,11 @@ fn run(
             let rx_s1 = rx_s1.clone();
             let tx_s1 = tx_s1.clone();
             let s1 = s1.clone();
-            let local_interfaces = local_interfaces.clone();
             let builder = thread::Builder::new().name("Stage1".into());
             gen_threads.push(
                 builder
                     .spawn(move || {
-                        stage1::run(s1, rx_s1, tx_s1, local_interfaces);
+                        stage1::run(s1, rx_s1, tx_s1);
                     })
                     .unwrap(),
             );
@@ -206,6 +218,7 @@ fn run(
 
                 let builder = thread::Builder::new().name(format!("Stage3-{:?}", proto));
                 let online = !local_interfaces.is_empty();
+                let pcap_export = outfile.is_some();
                 match proto {
                     Protocol::TCP => {
                         let rx_s3_tcp = rx_s3_tcp.clone();
@@ -219,6 +232,7 @@ fn run(
                                         tx_s3_to_collector,
                                         stats,
                                         online,
+                                        pcap_export,
                                     )
                                 })
                                 .unwrap(),
@@ -236,6 +250,7 @@ fn run(
                                         tx_s3_to_collector,
                                         stats,
                                         online,
+                                        pcap_export,
                                     )
                                 })
                                 .unwrap(),
@@ -253,6 +268,7 @@ fn run(
                                         tx_s3_to_collector,
                                         stats,
                                         online,
+                                        pcap_export,
                                     )
                                 })
                                 .unwrap(),
@@ -306,7 +322,11 @@ fn run(
         let stats = Arc::clone(&stats);
         let running = Arc::clone(&running);
         let builder = thread::Builder::new().name("Monitoring".into());
-        threads.push(builder.spawn(move || ui::run(stats, running, cpu_usage)).unwrap());
+        threads.push(
+            builder
+                .spawn(move || ui::run(stats, running, cpu_usage))
+                .unwrap(),
+        );
     }
 
     // Wait for the generation threads to end
