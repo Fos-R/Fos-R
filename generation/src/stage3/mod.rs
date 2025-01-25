@@ -279,10 +279,9 @@ impl Stage3 {
         let tcp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
         let flow = &input.data.flow.get_data();
         let mut tcp_data = TcpPacketData::new(&mut rng);
-        let mut packets = Vec::new();
-        let mut directions = Vec::new();
+        let mut packets = Vec::with_capacity(input.data.packets_info.len());
+        let mut directions = Vec::with_capacity(input.data.packets_info.len());
 
-        // TODO: plutôt générer un iterator en consommant input.data.packets_info
         for packet_info in &input.data.packets_info {
             let packet_size = MutableEthernetPacket::minimum_packet_size()
                 + MutableIpv4Packet::minimum_packet_size()
@@ -335,7 +334,6 @@ impl Stage3 {
         let mut packets = Vec::new();
         let mut directions = Vec::new();
 
-        // TODO: plutôt générer un iterator en consommant input.data.packets_info
         for packet_info in &input.data.packets_info {
             let packet_size = MutableEthernetPacket::minimum_packet_size()
                 + MutableIpv4Packet::minimum_packet_size()
@@ -461,6 +459,8 @@ pub fn run<T: PacketInfo>(
         // only copy the flows if we need to send it to online and pcap
         if online {
             if pcap_export {
+                // TODO: le mode online a la priorité, donc peut-être ne pas se laisser bloquer par
+                // l’export s’il prend trop de temps ?
                 send_pcap(flow_packets.clone(), &tx_s3_to_collector)
             }
             send_online(flow_packets, &tx_s3_hm);
@@ -489,6 +489,7 @@ pub fn run_collector(rx_collector: Receiver<Packets>, tx_collector: Sender<Vec<P
     }
 }
 
+// TODO: éviter de créer des vecteurs dans "collector" et de les détruire dans "export"…
 pub fn run_export(rx_pcap: Receiver<Vec<Packet>>, outfile: &str) {
     log::trace!("Start pcap export thread");
     if let Ok(packets_record) = rx_pcap.recv() {

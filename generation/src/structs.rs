@@ -102,8 +102,8 @@ impl From<Flow> for FlowData {
 #[derive(Debug, Clone)]
 pub enum PayloadType {
     Empty,
-    Text(Vec<String>),
-    Replay(Vec<Vec<u8>>),
+    Text(&'static Vec<Vec<u8>>),
+    Replay(&'static Vec<Vec<u8>>),
     Random(Vec<usize>),
 }
 
@@ -142,7 +142,7 @@ impl PacketDirection {
 #[derive(Debug, Clone)]
 pub enum Payload {
     Empty,
-    Replay(Vec<u8>),
+    Replay(&'static Vec<u8>),
     Random(usize),
 }
 
