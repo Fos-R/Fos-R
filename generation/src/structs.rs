@@ -81,8 +81,6 @@ pub struct FlowData {
     pub ttl_server: u8,
     pub fwd_packets_count: usize,
     pub bwd_packets_count: usize,
-    pub fwd_total_payload_length: u32,
-    pub bwd_total_payload_length: u32,
     pub timestamp: Duration,
     pub total_duration: Duration,
 }

@@ -108,8 +108,6 @@ impl Stage1 for ConstantFlowGenerator {
             ttl_server: 68,
             fwd_packets_count: 15,
             bwd_packets_count: 10,
-            fwd_total_payload_length: 122,
-            bwd_total_payload_length: 88,
             timestamp: ts.data,
             total_duration: Duration::from_millis(2300),
         });
