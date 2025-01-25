@@ -183,7 +183,7 @@ impl<T: EdgeType> CrossProductTimedAutomaton<T> {
         fd: &FlowData,
         header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
     ) -> Vec<U> {
-        let mut output = vec![];
+        let mut output = Vec::with_capacity(fd.fwd_packets_count + fd.bwd_packets_count + 20); // approximate final size + some margin
         let mut current_state = self
             .accepting_states
             .nearest(&([fd.fwd_packets_count as i32, fd.bwd_packets_count as i32]))
@@ -208,13 +208,12 @@ impl<T: EdgeType> CrossProductTimedAutomaton<T> {
                         (Payload::Random(size), size)
                     }
                     PayloadType::Text(tss) => {
-                        // TODO
                         let ts = tss.choose(rng).unwrap();
-                        (Payload::Replay(ts.clone().into()), ts.len())
+                        (Payload::Replay(ts), ts.len())
                     }
                     PayloadType::Replay(tss) => {
                         let ts = tss.choose(rng).unwrap();
-                        (Payload::Replay(ts.clone()), ts.len())
+                        (Payload::Replay(ts), ts.len())
                     }
                 };
                 let cond_mu = e.mu[0] + e.cov[0][1] / e.cov[1][1] * (payload_size as f32 - e.mu[1]);
@@ -298,12 +297,14 @@ impl From<JsonPayload> for PayloadType {
         match p {
             JsonPayload::Lengths { lengths: l } => PayloadType::Random(l),
             JsonPayload::NoPayload => PayloadType::Empty,
-            JsonPayload::HexCodes { content: p } => PayloadType::Replay(
+            JsonPayload::HexCodes { content: p } => PayloadType::Replay(Box::leak(Box::new(
                 p.into_iter()
                     .map(|s| hex::decode(s).expect("Payload decoding failed"))
                     .collect(),
-            ),
-            JsonPayload::Text { content: p } => PayloadType::Text(p),
+            ))),
+            JsonPayload::Text { content: p } => PayloadType::Text(Box::leak(Box::new(
+                p.into_iter().map(|v| v.into()).collect(),
+            ))),
         }
     }
 }
