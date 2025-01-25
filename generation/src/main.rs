@@ -61,7 +61,7 @@ fn main() {
     log::debug!("IPv4 interfaces: {:?}", &local_interfaces);
 
     match args.command {
-        cmd::Command::Replay { infile, .. } => replay::replay(&infile),
+        // cmd::Command::Replay { infile, .. } => replay::replay(&infile),
         cmd::Command::Honeynet {
             taint,
             models,

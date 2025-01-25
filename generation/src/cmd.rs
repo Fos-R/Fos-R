@@ -9,21 +9,21 @@ pub struct Args {
 
 #[derive(Debug, Subcommand, Clone)]
 pub enum Command {
-    /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
-    /// hosts, etc.) are ignored.
-    Replay {
-        #[arg(short, long, help = "Input pcap file to replay")]
-        infile: String,
-        #[arg(short='d', long, default_value=None, help="Time to start the replay of the pcap file. Default: starts now.")]
-        start_time: Option<String>,
-        #[arg(
-            short,
-            long,
-            default_value_t = false,
-            help = "Taint the packets to easily identify them"
-        )]
-        taint: bool,
-    },
+    // /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
+    // /// hosts, etc.) are ignored.
+    // Replay {
+    //     #[arg(short, long, help = "Input pcap file to replay")]
+    //     infile: String,
+    //     #[arg(short='d', long, default_value=None, help="Time to start the replay of the pcap file. Default: starts now.")]
+    //     start_time: Option<String>,
+    //     #[arg(
+    //         short,
+    //         long,
+    //         default_value_t = false,
+    //         help = "Taint the packets to easily identify them"
+    //     )]
+    //     taint: bool,
+    // },
     /// Generate and play network activity between hosts. Computers defined in the config file can
     /// easily join or exit the activity.
     Honeynet {
@@ -49,7 +49,7 @@ pub enum Command {
             short,
             long,
             default_value_t = 10,
-            help = "Overall number of flow per second to generate"
+            help = "Overall number of flows to generate per second"
         )]
         flow_per_second: u64,
         #[arg(
@@ -59,7 +59,8 @@ pub enum Command {
         )]
         config_path: String,
     },
-    /// Do data augmentation on a pcap file. You should use your own models
+    /// Perform data augmentation on a pcap file. You should use your own models that have been
+    /// fitted on that pcap file.
     CreatePcap {
         #[arg(
             short,
