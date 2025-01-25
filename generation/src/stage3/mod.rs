@@ -489,7 +489,6 @@ pub fn run_collector(rx_collector: Receiver<Packets>, tx_collector: Sender<Vec<P
     }
 }
 
-// TODO: éviter de créer des vecteurs dans "collector" et de les détruire dans "export"…
 pub fn run_export(rx_pcap: Receiver<Vec<Packet>>, outfile: &str) {
     log::trace!("Start pcap export thread");
     if let Ok(packets_record) = rx_pcap.recv() {

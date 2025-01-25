@@ -23,8 +23,6 @@ struct PartiallyDefinedFlowData {
     ttl_server: Option<u8>,
     fwd_packets_count: Option<u32>,
     bwd_packets_count: Option<u32>,
-    fwd_total_payload_length: Option<u32>,
-    bwd_total_payload_length: Option<u32>,
     timestamp: Option<Duration>,
     total_duration: Option<Duration>,
     proto: Option<Protocol>,
@@ -41,8 +39,6 @@ impl From<PartiallyDefinedFlowData> for Flow {
             ttl_server: p.ttl_server.unwrap(),
             fwd_packets_count: p.fwd_packets_count.unwrap() as usize,
             bwd_packets_count: p.bwd_packets_count.unwrap() as usize,
-            fwd_total_payload_length: p.fwd_total_payload_length.unwrap(),
-            bwd_total_payload_length: p.bwd_total_payload_length.unwrap(),
             timestamp: p.timestamp.unwrap(),
             total_duration: p.total_duration.unwrap(),
         };
@@ -58,8 +54,6 @@ impl PartiallyDefinedFlowData {
             Feature::DstPt(ref v) => self.dst_port = Some(v.0[index].sample(rng) as u16),
             Feature::FwdPkt(ref v) => self.fwd_packets_count = Some(v.0[index].sample(rng)),
             Feature::BwdPkt(ref v) => self.bwd_packets_count = Some(v.0[index].sample(rng)),
-            Feature::FwdByt(ref v) => self.fwd_total_payload_length = Some(v.0[index].sample(rng)),
-            Feature::BwdByt(ref v) => self.bwd_total_payload_length = Some(v.0[index].sample(rng)),
             Feature::Duration(ref v) => {
                 self.total_duration = Some(Duration::from_millis(v.0[index].sample(rng) as u64))
             }
@@ -110,8 +104,8 @@ enum Feature {
     DstPt(Intervals),
     FwdPkt(Intervals),
     BwdPkt(Intervals),
-    FwdByt(Intervals),
-    BwdByt(Intervals),
+    // FwdByt(Intervals),
+    // BwdByt(Intervals),
     Proto(Vec<Protocol>),
     Duration(Intervals),
     // TODO: gérer la génération d’IP publiques

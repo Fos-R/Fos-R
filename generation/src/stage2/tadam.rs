@@ -134,16 +134,6 @@ impl Stage2 for TadamGenerator {
                     .iter()
                     .filter(|p| p.direction == PacketDirection::Backward)
                     .count();
-                flow.data.fwd_total_payload_length = packets_info
-                    .iter()
-                    .filter(|p| p.direction == PacketDirection::Forward)
-                    .map(|p| p.payload.get_payload_size())
-                    .sum::<usize>() as u32;
-                flow.data.bwd_total_payload_length = packets_info
-                    .iter()
-                    .filter(|p| p.direction == PacketDirection::Backward)
-                    .map(|p| p.payload.get_payload_size())
-                    .sum::<usize>() as u32;
                 flow.data.total_duration = packets_info.last().unwrap().ts - flow.data.timestamp;
 
                 SeededData {
