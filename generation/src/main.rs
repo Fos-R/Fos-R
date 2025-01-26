@@ -18,7 +18,6 @@ mod stage3;
 mod stage4;
 
 use std::collections::HashMap;
-use std::env;
 use std::fs;
 use std::net::Ipv4Addr;
 use std::path::Path;
@@ -35,10 +34,7 @@ use pnet::{datalink, ipnetwork::IpNetwork};
 const CHANNEL_SIZE: usize = 500;
 
 fn main() {
-    if env::var("RUST_LOG").is_err() {
-        env::set_var("RUST_LOG", "info"); // default log level: info
-    }
-    env_logger::init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args = cmd::Args::parse();
     log::debug!("{:?}", &args);
 

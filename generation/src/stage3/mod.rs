@@ -453,7 +453,7 @@ pub fn run<T: PacketInfo>(
 ) {
     // Prepare stage 3
     log::trace!("Start S3");
-    while let Ok(headers) = rx_s3.recv() {
+    for headers in rx_s3 {
         let mut flow_packets = generator(headers);
         stats.increase(&flow_packets.data);
         // only copy the flows if we need to send it to online and pcap
@@ -494,7 +494,7 @@ pub fn run_export(rx_pcap: Receiver<Vec<Packet>>, outfile: &str) {
     if let Ok(packets_record) = rx_pcap.recv() {
         log::trace!("Saving into {}", outfile);
         stage3::pcap_export(packets_record, outfile, false).expect("Error during pcap export!");
-        while let Ok(packets_record) = rx_pcap.recv() {
+        for packets_record in rx_pcap {
             log::trace!("Saving into {}", outfile);
             pcap_export(packets_record, outfile, true).expect("Error during pcap export!");
         }
