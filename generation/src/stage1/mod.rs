@@ -19,7 +19,7 @@ pub fn run(
     tx_s1: Sender<SeededData<Flow>>,
 ) {
     log::trace!("Start S1");
-    while let Ok(ts) = rx_s1.recv() {
+    for ts in rx_s1 {
         generator
             .generate_flows(ts)
             .for_each(|f| tx_s1.send(f).unwrap());
