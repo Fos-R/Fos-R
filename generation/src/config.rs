@@ -12,8 +12,7 @@ struct Interface {
 
 #[derive(Debug, Clone)]
 pub struct Hosts {
-    provides: HashMap<u16, Vec<Ipv4Addr>>,
-    uses: HashMap<u16, Vec<Ipv4Addr>>,
+    hosts_pairs: HashMap<u16, Vec<(Ipv4Addr, Ipv4Addr)>>,
 }
 
 impl Hosts {
@@ -21,16 +20,10 @@ impl Hosts {
         &self,
         rng: &mut impl RngCore,
         dst_port: u16,
-    ) -> (Option<Ipv4Addr>, Option<Ipv4Addr>) {
-        // TODO: check they are different!
-        (
-            self.uses
-                .get(&dst_port)
-                .map(|vec| vec[(rng.next_u32() as usize) % vec.len()]),
-            self.provides
-                .get(&dst_port)
-                .map(|vec| vec[(rng.next_u32() as usize) % vec.len()]),
-        )
+    ) -> Option<(Ipv4Addr, Ipv4Addr)> {
+        self.hosts_pairs
+            .get(&dst_port)
+            .map(|v| v[(rng.next_u32() as usize) % v.len()])
     }
 }
 
@@ -39,10 +32,8 @@ pub fn import_config(config: &str) -> Hosts {
         toml::from_str(config).expect("Ill-formed configuration file");
 
     let hosts_toml = table.remove("hosts").expect("No host in the config file!");
-    let mut hosts = Hosts {
-        provides: HashMap::new(),
-        uses: HashMap::new(),
-    };
+    let mut provides: HashMap<u16, Vec<Ipv4Addr>> = HashMap::new();
+    let mut uses: HashMap<u16, Vec<Ipv4Addr>> = HashMap::new();
     for mut host in hosts_toml {
         for iface in host.remove("interfaces").expect("Host without interface!") {
             let ip_toml = iface
@@ -51,23 +42,39 @@ pub fn import_config(config: &str) -> Hosts {
                 .expect("Cannot parse into an IPv4 address!");
             let provides_toml = iface.provides.unwrap_or_default();
             for port in provides_toml {
-                let current_ips = hosts.provides.get_mut(&port);
+                let current_ips = provides.get_mut(&port);
                 if let Some(vec) = current_ips {
                     vec.push(ip_toml);
                 } else {
-                    hosts.provides.insert(port, vec![ip_toml]);
+                    provides.insert(port, vec![ip_toml]);
                 }
             }
             let uses_toml = iface.uses.unwrap_or_default();
             for port in uses_toml {
-                let current_ips = hosts.uses.get_mut(&port);
+                let current_ips = uses.get_mut(&port);
                 if let Some(vec) = current_ips {
                     vec.push(ip_toml);
                 } else {
-                    hosts.uses.insert(port, vec![ip_toml]);
+                    uses.insert(port, vec![ip_toml]);
                 }
             }
         }
     }
-    hosts
+
+    let mut hosts_pairs = HashMap::new();
+    for (port, ip1_vec) in uses {
+        if let Some(ip2_vec) = provides.remove(&port) {
+            let mut pairs_port = Vec::new();
+            for ip1 in ip1_vec.iter() {
+                for ip2 in ip2_vec.iter() {
+                    if ip1 != ip2 {
+                        // we avoid src_ip = dst_ip
+                        pairs_port.push((*ip1, *ip2));
+                    }
+                }
+            }
+            hosts_pairs.insert(port, pairs_port);
+        }
+    }
+    Hosts { hosts_pairs }
 }

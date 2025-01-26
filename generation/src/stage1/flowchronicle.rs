@@ -54,6 +54,8 @@ impl PartiallyDefinedFlowData {
             Feature::DstPt(ref v) => self.dst_port = Some(v.0[index].sample(rng) as u16),
             Feature::FwdPkt(ref v) => self.fwd_packets_count = Some(v.0[index].sample(rng)),
             Feature::BwdPkt(ref v) => self.bwd_packets_count = Some(v.0[index].sample(rng)),
+            Feature::FwdByt(ref v) => (), // ignore
+            Feature::BwdByt(ref v) => (), // ignore
             Feature::Duration(ref v) => {
                 self.total_duration = Some(Duration::from_millis(v.0[index].sample(rng) as u64))
             }
@@ -77,8 +79,8 @@ struct Ipv4Vector(Vec<Ipv4Addr>);
 
 impl From<Vec<String>> for Ipv4Vector {
     fn from(v: Vec<String>) -> Ipv4Vector {
-        // TODO: et les IP publiques anonymisées ?
-        Ipv4Vector(v.into_iter().map(|s| s.parse().unwrap()).collect())
+        // ignore non-IPv4, like anonymised public IP addresses
+        Ipv4Vector(v.into_iter().flat_map(|s| s.parse()).collect())
     }
 }
 
@@ -104,8 +106,8 @@ enum Feature {
     DstPt(Intervals),
     FwdPkt(Intervals),
     BwdPkt(Intervals),
-    // FwdByt(Intervals),
-    // BwdByt(Intervals),
+    FwdByt(Intervals),
+    BwdByt(Intervals),
     Proto(Vec<Protocol>),
     Duration(Intervals),
     // TODO: gérer la génération d’IP publiques
