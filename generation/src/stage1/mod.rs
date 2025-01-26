@@ -61,17 +61,15 @@ impl<T: Stage1> ConfigBasedModifier<T> {
 
     fn modify_flow(&self, mut f: SeededData<Flow>) -> SeededData<Flow> {
         let mut rng = Pcg32::seed_from_u64(f.seed);
-        let (new_src_ip, new_dst_ip) = self
+        let src_and_dst_ips = self
             .conf
             .get_src_and_dst_ip(&mut rng, f.data.get_data().dst_port);
-        if let Some(ip) = new_src_ip {
+        if let Some((src_ip, dst_ip)) = src_and_dst_ips {
             let dataflow = f.data.get_data_mut();
-            dataflow.src_ip = ip;
+            dataflow.src_ip = src_ip;
+            dataflow.dst_ip = dst_ip;
         }
-        if let Some(ip) = new_dst_ip {
-            let dataflow = f.data.get_data_mut();
-            dataflow.dst_ip = ip;
-        }
+        // TODO: et si c’est pas le cas ?
         SeededData {
             seed: rng.next_u64(),
             data: f.data,
