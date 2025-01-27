@@ -175,7 +175,7 @@ impl<T: EdgeType> CrossProductTimedAutomaton<T> {
         self.metadata.select_dst_ports.contains(&port)
     }
 
-    pub fn sample<U>(
+    pub fn sample<U: PacketInfo>(
         &self,
         rng: &mut impl RngCore,
         fd: &FlowData,
