@@ -1,9 +1,8 @@
 use crate::structs::*;
 use crossbeam_channel::Sender;
-use rand::distributions::Uniform;
-use rand::RngCore;
-use rand::SeedableRng;
+use rand_core::*;
 use rand_distr::Distribution;
+use rand_distr::Uniform;
 use rand_pcg::Pcg32;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};

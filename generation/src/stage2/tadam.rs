@@ -1,5 +1,5 @@
 use crate::stage2::*;
-use rand::prelude::*;
+use rand_core::*;
 use rand_pcg::Pcg32;
 use std::ffi::OsStr;
 use std::fs;

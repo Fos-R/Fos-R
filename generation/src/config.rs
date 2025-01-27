@@ -1,4 +1,4 @@
-use rand::prelude::*;
+use rand_core::*;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;

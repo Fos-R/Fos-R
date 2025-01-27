@@ -3,10 +3,8 @@
 use crate::structs::*;
 use crate::tcp::*;
 use kd_tree::KdTree;
-use rand::distributions::WeightedIndex;
-use rand::prelude::*;
-use rand::Rng;
-use rand_distr::{Distribution, Normal, Poisson};
+use rand_core::*;
+use rand_distr::{Distribution, Normal, Poisson, Uniform, WeightedIndex};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -204,15 +202,15 @@ impl<T: EdgeType> CrossProductTimedAutomaton<T> {
                 let (payload, payload_size) = match data.get_payload_type() {
                     PayloadType::Empty => (Payload::Empty, 0),
                     PayloadType::Random(sizes) => {
-                        let size = *sizes.choose(rng).unwrap();
+                        let size = sizes[(rng.next_u32() as usize) % sizes.len()];
                         (Payload::Random(size), size)
                     }
                     PayloadType::Text(tss) => {
-                        let ts = tss.choose(rng).unwrap();
+                        let ts = &tss[(rng.next_u32() as usize) % tss.len()];
                         (Payload::Replay(ts), ts.len())
                     }
                     PayloadType::Replay(tss) => {
-                        let ts = tss.choose(rng).unwrap();
+                        let ts = &tss[(rng.next_u32() as usize) % tss.len()];
                         (Payload::Replay(ts), ts.len())
                     }
                 };
@@ -305,14 +303,21 @@ impl From<JsonPayload> for PayloadType {
         };
 
         match p {
-            JsonPayload::Lengths { lengths: l } => PayloadType::Random(l),
+            JsonPayload::Lengths { lengths: l } => {
+                assert!(!l.is_empty());
+                PayloadType::Random(l)
+            }
             JsonPayload::NoPayload => PayloadType::Empty,
             JsonPayload::HexCodes { content: p } => {
+                assert!(!p.is_empty());
                 PayloadType::Replay(Box::leak(Box::new(p.into_iter().map(decode).collect())))
             }
-            JsonPayload::Text { content: p } => PayloadType::Text(Box::leak(Box::new(
-                p.into_iter().map(|v| v.into()).collect(),
-            ))),
+            JsonPayload::Text { content: p } => {
+                assert!(!p.is_empty());
+                PayloadType::Text(Box::leak(Box::new(
+                    p.into_iter().map(|v| v.into()).collect(),
+                )))
+            }
         }
     }
 }

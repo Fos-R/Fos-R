@@ -2,9 +2,8 @@
 
 use crate::stage1::*;
 use crate::structs::*;
-use rand::distributions::Uniform;
-use rand::distributions::WeightedIndex;
-use rand::prelude::*;
+use rand_distr::Uniform;
+use rand_distr::{Distribution, WeightedIndex};
 use rand_pcg::Pcg32;
 use serde::Deserialize;
 use std::collections::HashMap;
