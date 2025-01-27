@@ -261,6 +261,15 @@ impl From<PatternSetJSON> for PatternSet {
     }
 }
 
+impl Default for PatternSet {
+    fn default() -> Self {
+        let set: PatternSet =
+            serde_json::from_str(include_str!("../../../models/medium/patterns.json")).unwrap();
+        log::info!("Default patterns loaded");
+        set
+    }
+}
+
 impl PatternSet {
     pub fn merge(&mut self, other: PatternSet, weight: Option<f64>) {
         todo!()
@@ -271,13 +280,6 @@ impl PatternSet {
         let f = File::open(filename)?;
         let set: PatternSet = serde_json::from_reader(f)?;
         log::info!("Patterns loaded from {:?}", filename);
-        Ok(set)
-    }
-
-    /// Import patterns from a file
-    pub fn from_str(data: &str) -> std::io::Result<Self> {
-        let set: PatternSet = serde_json::from_str(data)?;
-        log::info!("Default patterns loaded");
         Ok(set)
     }
 }
