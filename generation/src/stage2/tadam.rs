@@ -3,7 +3,6 @@ use rand::prelude::*;
 use rand_pcg::Pcg32;
 use std::ffi::OsStr;
 use std::fs;
-use std::fs::File;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -14,17 +13,23 @@ pub struct AutomataLibrary {
     icmp_automata: Vec<automaton::CrossProductTimedAutomaton<ICMPEdgeTuple>>,
 }
 
-impl AutomataLibrary {
-    #[allow(unused)]
-    pub fn default_library() -> Self {
-        // TODO: utiliser include_str pour mettre les automates par défaut
-        AutomataLibrary {
+impl Default for AutomataLibrary {
+    fn default() -> Self {
+        let mut lib = AutomataLibrary {
             tcp_automata: vec![],
             udp_automata: vec![],
             icmp_automata: vec![],
-        }
-    }
+        };
 
+        lib.import_from_str(include_str!("../../../models/test/tas/ftp.json"))
+            .unwrap();
+        lib.import_from_str(include_str!("../../../models/test/tas/http.json"))
+            .unwrap();
+        lib
+    }
+}
+
+impl AutomataLibrary {
     pub fn from_dir(directory_name: &str) -> Self {
         let mut nb = 0;
         let mut lib = AutomataLibrary {
@@ -55,8 +60,12 @@ impl AutomataLibrary {
     }
 
     pub fn import_from_file(&mut self, filename: &PathBuf) -> std::io::Result<()> {
-        let f = File::open(filename)?;
-        let a: automaton::JsonAutomaton = serde_json::from_reader(f)?;
+        let string = fs::read_to_string(filename)?;
+        self.import_from_str(&string)
+    }
+
+    pub fn import_from_str(&mut self, string: &str) -> std::io::Result<()> {
+        let a: automaton::JsonAutomaton = serde_json::from_str(string)?;
         match a.protocol {
             Protocol::TCP => {
                 self.tcp_automata.push(
