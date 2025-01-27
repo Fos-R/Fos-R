@@ -292,25 +292,18 @@ enum JsonPayload {
     NoPayload,
 }
 
-fn decode(s: String) -> Vec<u8> {
-    fn hex_to_dec(c: u8) -> u8 {
-        if c >= b'a' && c <= b'f' {
-            c - b'a' + 10
-        } else if c >= b'0' && c <= b'9' {
-            c - b'0'
-        } else {
-            panic!("Error during decoding hex")
-        }
-    }
-
-    s.as_bytes()
-        .chunks(2)
-        .map(|pair| hex_to_dec(pair[0]) << 4 | hex_to_dec(pair[1]))
-        .collect()
-}
-
 impl From<JsonPayload> for PayloadType {
     fn from(p: JsonPayload) -> Self {
+        let decode = |s: String| {
+            s.as_bytes()
+                .chunks(2)
+                .map(|pair| {
+                    ((pair[0] as char).to_digit(16).unwrap() * 16
+                        + (pair[1] as char).to_digit(16).unwrap()) as u8
+                })
+                .collect()
+        };
+
         match p {
             JsonPayload::Lengths { lengths: l } => PayloadType::Random(l),
             JsonPayload::NoPayload => PayloadType::Empty,
