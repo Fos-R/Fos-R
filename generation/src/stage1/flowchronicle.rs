@@ -109,7 +109,6 @@ enum Feature {
     BwdByt(Intervals),
     Proto(Vec<Protocol>),
     Duration(Intervals),
-    // TODO: gérer la génération d’IP publiques
 }
 
 #[allow(clippy::upper_case_acronyms)]
@@ -133,6 +132,7 @@ impl From<CPTJSON> for CPT {
             cpt.insert(v, WeightedIndex::new(iter_probas.next().unwrap()).unwrap());
         }
         CPT(cpt)
+        // TODO projeter les IP sur la configuration ?
     }
 }
 
@@ -144,7 +144,6 @@ impl BayesianNetworkNode {
             parents_values[i] = current[*p];
         }
         self.cpt.0[&parents_values].sample(rng)
-        // TODO: vérifier que IP source différent de IP destination
     }
 }
 
@@ -195,14 +194,11 @@ struct Pattern {
 
 impl Pattern {
     /// Sample flows
-    fn sample(&self, rng: &mut impl RngCore, ts: Duration) -> impl Iterator<Item = Flow> {
+    fn sample(&self, rng: &mut impl RngCore, config: &Hosts, ts: Duration) -> impl Iterator<Item = Flow> {
         let mut partially_defined_flows = self.sample_free_cells(rng, self.partial_flows.len());
         for p in partially_defined_flows.iter_mut() {
-            p.ttl_client = Some(64);
-            p.ttl_server = Some(64);
             p.src_port = Some(Uniform::new(32000, 65535).sample(rng) as u16);
         }
-        // TODO: set TTL, source port, etc.
         for (r_index, p) in self.partial_flows.iter().enumerate() {
             partially_defined_flows.get_mut(r_index).unwrap().timestamp = Some(ts); // TODO tirage
             for (c_index, c) in p.row.iter().enumerate() {
@@ -229,6 +225,10 @@ impl Pattern {
                         .set_value(rng, feature, 0),
                 };
             }
+        }
+        for p in partially_defined_flows.iter_mut() {
+            p.ttl_client = config.get_default_ttl(&p.src_ip.unwrap());
+            p.ttl_server = config.get_default_ttl(&p.dst_ip.unwrap());
         }
         partially_defined_flows.into_iter().map(|p| p.into())
     }
@@ -293,13 +293,15 @@ struct PatternMetaData {
 #[derive(Clone)]
 pub struct FCGenerator {
     set: Arc<PatternSet>,
+    config: Hosts,
     online: bool, // used to generate the TTL, either initial or at the capture point
 }
 
 impl FCGenerator {
-    pub fn new(patterns: Arc<PatternSet>, online: bool) -> Self {
+    pub fn new(patterns: Arc<PatternSet>, config: Hosts, online: bool) -> Self {
         FCGenerator {
             set: patterns,
+            config,
             online,
         }
     }
@@ -311,7 +313,7 @@ impl Stage1 for FCGenerator {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
         let index = self.set.pattern_distrib.sample(&mut rng);
         let pattern = &self.set.patterns[index];
-        pattern.sample(&mut rng, ts.data).map(move |f| SeededData {
+        pattern.sample(&mut rng, &self.config, ts.data).map(move |f| SeededData {
             seed: rng.next_u64(),
             data: f,
         })
