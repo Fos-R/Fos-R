@@ -1,7 +1,7 @@
 use crate::config::Hosts;
 use crate::structs::*;
 use crossbeam_channel::{Receiver, Sender};
-use rand::prelude::*;
+use rand_core::*;
 use rand_pcg::Pcg32;
 use std::net::Ipv4Addr;
 use std::time::Duration;

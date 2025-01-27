@@ -12,7 +12,7 @@ use pnet_packet::ip::IpNextHeaderProtocols;
 use pnet_packet::ipv4::{self, Ipv4Flags, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
 use pnet_packet::udp::{ipv4_checksum, MutableUdpPacket};
-use rand::prelude::*;
+use rand_core::*;
 use rand_pcg::Pcg32;
 
 #[derive(Debug, Clone)]

@@ -137,8 +137,7 @@ fn main() {
                 *local_interfaces.first().unwrap(),
                 *local_interfaces.last().unwrap(),
             ); // TODO: modify, only for testing
-               // let patterns = Arc::new(flowchronicle::PatternSet::from_file(Path::new(&models).join("patterns.json").to_str().unwrap()).expect("Cannot load patterns"));
-            // let s1 = flowchronicle::FCGenerator::new(patterns, false);
+               // let s1 = flowchronicle::FCGenerator::new(patterns, false);
             let s2 = tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(false);
 

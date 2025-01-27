@@ -11,16 +11,16 @@ license = "GPL-3.0"
 [dependencies]
 clap = { version = "4.5.22", features = ["derive"] }
 crossbeam-channel = "0.5.13"
-env_logger = "0.11.6"
+env_logger = { version = "0.11.6", default-features = false, features = ["auto-color"] }
 log = "0.4.22"
 pnet_packet = "0.35.0"
 pcap = "2.2.0"
-rand = "0.8.5"
 rand_distr = "0.4.3"
 rand_pcg = "0.3.1"
-serde = {version = "1.0.210", features = ["derive"]}
+serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0"
 libc = "0.2.162"
 pnet = "0.35.0"
-toml = "0.8.19"
+toml = { version = "0.8.19", default-features = false, features = ["parse"] }
 kd-tree = "0.6.0"
+rand_core = "0.6.4"
