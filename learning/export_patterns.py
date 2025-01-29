@@ -15,7 +15,7 @@ from flowchronicle import search
 from flowchronicle import model
 from flowchronicle import attribute_value
 
-feature_rename = {"Dst IP Addr": "DstIP", "Src IP Addr": "SrcIP", "In Packet": "FwdPkt", "Out Packet": "BwdPkt", "In Byte": "FwdByt", "Out Byte": "BwdByt", "Proto": "Proto", "Dst Pt": "DstPt", "Duration": "Duration"}
+feature_rename = {"Dst IP Addr": "DstIP", "Src IP Addr": "SrcIP", "In Packet": "FwdPkt", "Out Packet": "BwdPkt", "In Byte": "FwdByt", "Out Byte": "BwdByt", "Proto": "Proto", "Dst Pt": "DstPt", "Duration": "Duration", "Flags": "Flags"}
 
 def describe_bn(bn, dataset):
     topo_order = []
@@ -53,13 +53,19 @@ def describe_bn(bn, dataset):
                     domain = [intervals.get(i), intervals.get(i)+1]
                 else:
                     assert intervals.get(i).closed == "right"
-                    domain = [math.floor(intervals.get(i).left)+1, math.floor(intervals.get(i).right)+1]
+                    if feature_name == "Duration":
+                        domain = [intervals.get(i).left, intervals.get(i).right]
+                    else:
+                        domain = [math.floor(intervals.get(i).left)+1, math.floor(intervals.get(i).right)+1]
+                # print(feature_name, intervals.get(i))
+                assert domain[0] < domain[1]
                 domains.append(domain)
         else: # not an interval
             values = dataset.column_value_dict[feature_name]
-            if type(values[0]) == np.int64:
+            if type(values[0]) == np.int64 or type(values[0]) == int or type(values[0]) == float or type(values[0]) == np.float64:
                 domains = [int(values[i]) for i in range(len(values))]
             else:
+                assert type(values[0]) == str
                 domains = [values[i] for i in range(len(values))]
 
         d["feature"] = { "type": feature_rename[feature_name], "domain": domains }
@@ -144,15 +150,18 @@ if __name__ == "__main__":
                     intervals = dataset.cont_repr.get_cutpoints().get(col)
                     val = dataset.column_value_dict[col][v.value]
                     domain = []
-                    if intervals:
+                    if intervals: # Duration should be not FIXED
                         if type(intervals.get(val)) == int:
                             domain = [[intervals.get(val), intervals.get(val)+1]]
                         else:
                             assert intervals.get(val).closed == "right"
                             domain = [[math.floor(intervals.get(val).left)+1, math.floor(intervals.get(val).right)+1]]
-                    elif type(val) == np.int64:
+                        assert domain[0] < domain[1]
+                    elif type(val) == np.int64 or type(val) == int or type(val) == float or type(val) == np.float64:
                         domain = [int(val)]
                     else:
+                        print(type(val))
+                        assert type(val) == str
                         domain = [val]
                     current_pf.append({ "type": "Fixed", "feature": { "type": feature_rename[col], "domain": domain } })
                 elif v.attr_type == attribute_value.AttributeType.USE_PLACEHOLDER:
@@ -172,12 +181,16 @@ if __name__ == "__main__":
 
             partial_flows.append(current_pf)
         d["partial_flows"] = partial_flows
-        d["bayesian_network"] = describe_bn(p.bn, dataset)
+        if p.bn.bn:
+            d["bayesian_network"] = describe_bn(p.bn, dataset)
+        else:
+            d["bayesian_network"] = []
         # assert len(partial_flows)*(len(df.columns)-1) - len(pf.pattern) == len([k for pf in partial_flows for k in pf if k.get("type")=="Free"]) # check there is the correct number of "Free" cells
         patterns.append(d)
         weights.append(patterns_usage[p])
 
-    patterns.append({"partial_flows": [[]], "bayesian_network": describe_bn(m.get_base_bn(), dataset)})
+    base_bn = m._ChunkyModel__base_bn
+    patterns.append({"partial_flows": [[]], "bayesian_network": describe_bn(base_bn, dataset)})
     weights.append(m.cover.get_empty_pattern_usage())
     d = {}
     d["pattern_weights"] = weights
@@ -187,7 +200,7 @@ if __name__ == "__main__":
     try:
         # out_file = open(args.output, "w") // FIXME
         out_file = open("patterns.json", "w")
-        json.dump(d, out_file, indent=4)
+        json.dump(d, out_file)
         print("JSON file successfully created")
     except Exception as e:
         print("Error during json save:",e)
