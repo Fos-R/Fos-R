@@ -180,6 +180,7 @@ fn run(
             udp: tx_s2_udp,
             icmp: tx_s2_icmp,
         };
+        // TODO: only create if online
         let mut tx_s3 = HashMap::new();
         let mut rx_s4 = HashMap::new();
         for proto in Protocol::iter() {
@@ -191,13 +192,23 @@ fn run(
             }
             tx_s3.insert(proto, tx_s3_hm);
         }
+        // TODO: only create if offline
         let (tx_s3_to_collector, rx_collector) = bounded::<Packets>(CHANNEL_SIZE);
+        // TODO: mettre un channel_size = 1 ici ?
         let (tx_collector, rx_pcap) = bounded::<Vec<Packet>>(CHANNEL_SIZE);
 
         // STAGE 0
+        // Handle ctrl+C
+        let s0_running = Arc::new(AtomicBool::new(true));
+        let r = s0_running.clone();
+        ctrlc::set_handler(move || {
+            log::info!("Ending the generation");
+            r.store(false, Ordering::Relaxed);
+        }).expect("Error setting Ctrl-C handler");
+
 
         let builder = thread::Builder::new().name("Stage0".into());
-        gen_threads.push(builder.spawn(move || stage0::run(s0, tx_s0)).unwrap());
+        gen_threads.push(builder.spawn(move || stage0::run(s0, tx_s0, s0_running)).unwrap());
 
         // STAGE 1
 

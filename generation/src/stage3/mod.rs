@@ -478,7 +478,6 @@ pub fn run_collector(rx_collector: Receiver<Packets>, tx_collector: Sender<Vec<P
         let mut packets_record = Vec::with_capacity(10_010_000);
         while packets_record.len() < 10_000_000 {
             if let Ok(mut packets) = rx_collector.recv() {
-                // TODO: utiliser extend avec l’itérator
                 packets_record.append(&mut packets.packets);
             } else {
                 again = false;
