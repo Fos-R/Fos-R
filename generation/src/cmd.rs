@@ -87,8 +87,10 @@ pub enum Command {
         start_unix_time: Option<u64>,
         #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,
-        #[arg(short, long, default_value=None, help="Path to models directory")]
-        models: Option<String>,
+        #[arg(short, long, default_value=None, help="Path to the patterns file")]
+        patterns: Option<String>,
+        #[arg(short, long, default_value=None, help="Path to automata directory")]
+        automata: Option<String>,
         #[arg(
             short = 'u',
             long,

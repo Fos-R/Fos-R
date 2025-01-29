@@ -104,7 +104,8 @@ fn main() {
         }
         cmd::Command::CreatePcap {
             seed,
-            models,
+            automata,
+            patterns,
             outfile,
             flow_count,
             cpu_usage,
@@ -115,17 +116,17 @@ fn main() {
                 fs::read_to_string(config_path).expect("Cannot access the configuration file.");
             let hosts = config::import_config(&config_str);
 
-            let automata_library = match &models {
-                Some(models) => tadam::AutomataLibrary::from_dir(
-                    Path::new(models).join("tas").to_str().unwrap(),
+            let automata_library = match &automata {
+                Some(automata) => tadam::AutomataLibrary::from_dir(
+                    Path::new(automata).to_str().unwrap(),
                 ),
                 None => tadam::AutomataLibrary::default(),
             };
             let automata_library = Arc::new(automata_library);
 
-            let patterns = match &models {
-                Some(models) => flowchronicle::PatternSet::from_file(
-                    Path::new(models).join("patterns.json").to_str().unwrap(),
+            let patterns = match &patterns {
+                Some(patterns) => flowchronicle::PatternSet::from_file(
+                    Path::new(patterns).to_str().unwrap(),
                 )
                 .expect("Cannot load patterns"),
                 None => flowchronicle::PatternSet::default(),
