@@ -20,6 +20,7 @@ pub enum Protocol {
     TCP,
     UDP,
     ICMP,
+    IGMP,
 }
 
 impl Protocol {
@@ -33,6 +34,7 @@ impl Protocol {
             Protocol::TCP => Flow::TCP(d),
             Protocol::UDP => Flow::UDP(d),
             Protocol::ICMP => Flow::ICMP(d),
+            Protocol::IGMP => todo!(),
         }
     }
 }
