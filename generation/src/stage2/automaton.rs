@@ -77,6 +77,7 @@ pub struct CrossProductTimedAutomaton<T: EdgeType> {
 impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
     fn from(automaton: TimedAutomaton<T>) -> Self {
         const MAX_FLOW_COUNT: usize = 100;
+        const MAX_FWD_BWD_INDEX: usize = MAX_FLOW_COUNT * (MAX_FLOW_COUNT + 1) / 2 + MAX_FLOW_COUNT;
 
         #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
         struct CrossProductNode {
@@ -85,11 +86,20 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
             bwd: usize,
         };
 
+        impl CrossProductNode {
+            fn get_index(&self) -> usize {
+                // Cantor pairing function: https://en.wikipedia.org/wiki/Pairing_function
+                self.state * (MAX_FWD_BWD_INDEX + 1)
+                    + (self.fwd + self.bwd) * (self.fwd + self.bwd + 1) / 2
+                    + self.bwd
+            }
+        }
+
         log::trace!(
             "Computing cross-product automata for {}",
             automaton.metadata.automaton_name
         );
-        let max_state_count = (MAX_FLOW_COUNT + 1) * automaton.graph.len();
+        let max_state_count = (MAX_FWD_BWD_INDEX + 1) * automaton.graph.len();
         let mut openset = Vec::with_capacity(max_state_count);
         openset.push(CrossProductNode {
             state: automaton.initial_state,
@@ -99,14 +109,16 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
         let mut predecessors: HashMap<CrossProductNode, Vec<TimedEdge<T>>> =
             HashMap::with_capacity(max_state_count);
         let mut closeset = Vec::with_capacity(max_state_count);
-        let mut seen: HashMap<CrossProductNode, ()> = HashMap::with_capacity(max_state_count);
+        let mut seen: Vec<bool> = Vec::with_capacity(max_state_count);
+        seen.resize(max_state_count, false);
         let mut current_node_index = 0;
         while let Some(node) = openset.pop() {
-            if seen.contains_key(&node) {
+            let index = node.get_index();
+            if seen[index] {
                 continue;
             }
             closeset.push(node);
-            seen.insert(node, ());
+            seen[index] = true;
             for e in automaton.graph[node.state].out_edges.iter() {
                 let successor_node = match &e.data {
                     None => CrossProductNode {
