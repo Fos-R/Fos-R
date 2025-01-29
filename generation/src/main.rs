@@ -123,14 +123,14 @@ fn main() {
             };
             let automata_library = Arc::new(automata_library);
 
-            // let patterns = match &models {
-            //     Some(models) => flowchronicle::PatternSet::from_file(
-            //         Path::new(models).join("patterns.json").to_str().unwrap(),
-            //     )
-            //     .expect("Cannot load patterns"),
-            //     None => flowchronicle::PatternSet::default(),
-            // };
-            // let patterns = Arc::new(patterns);
+            let patterns = match &models {
+                Some(models) => flowchronicle::PatternSet::from_file(
+                    Path::new(models).join("patterns.json").to_str().unwrap(),
+                )
+                .expect("Cannot load patterns"),
+                None => flowchronicle::PatternSet::default(),
+            };
+            let patterns = Arc::new(patterns);
 
             if let Some(s) = seed {
                 log::trace!("Generating with seed {}", s);
@@ -138,11 +138,11 @@ fn main() {
             log::info!("Model initialization");
             let s0 = stage0::UniformGenerator::new(seed, false, 2, flow_count);
             // TODO utiliser include_bytes à la place
-            let s1 = stage1::ConstantFlowGenerator::new(
-                *local_interfaces.first().unwrap(),
-                *local_interfaces.last().unwrap(),
-            ); // TODO: modify, only for testing
-               // let s1 = flowchronicle::FCGenerator::new(patterns, false);
+            // let s1 = stage1::ConstantFlowGenerator::new(
+            //     *local_interfaces.first().unwrap(),
+            //     *local_interfaces.last().unwrap(),
+            // ); // TODO: modify, only for testing
+            let s1 = flowchronicle::FCGenerator::new(patterns, hosts, false);
             let s2 = tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(false);
 
