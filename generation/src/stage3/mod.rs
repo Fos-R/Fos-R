@@ -388,13 +388,14 @@ fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(),
         capture.savefile(outfile)?
     };
     // data.sort();
+    // TODO: find a way to not write packets one by one...
     for packet in data {
         savefile.write(&pcap::Packet {
             header: &packet.header,
             data: &packet.data,
         });
     }
-
+    savefile.flush();
     Ok(())
 }
 
