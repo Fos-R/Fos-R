@@ -33,8 +33,12 @@ pub struct Hosts {
 }
 
 impl Hosts {
-    pub fn get_default_ttl(&self, ip: &Ipv4Addr) -> Option<u8> {
-        self.os.get(ip).map(|os| os.get_default_ttl())
+    pub fn get_default_ttl(&self, ip: &Ipv4Addr) -> u8 {
+        // by default, assume Linux
+        self.os
+            .get(ip)
+            .map(|os| os.get_default_ttl())
+            .unwrap_or(OS::Linux.get_default_ttl())
     }
 
     pub fn get_src_and_dst_ip(

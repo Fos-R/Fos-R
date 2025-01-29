@@ -115,7 +115,7 @@ impl Stage2 for TadamGenerator {
     fn generate_tcp_packets_info(
         &self,
         mut flow: SeededData<FlowData>,
-    ) -> SeededData<PacketsIR<TCPPacketInfo>> {
+    ) -> Option<SeededData<PacketsIR<TCPPacketInfo>>> {
         let mut rng = Pcg32::seed_from_u64(flow.seed);
         let automata = self
             .lib
@@ -126,7 +126,7 @@ impl Stage2 for TadamGenerator {
         match automata {
             None => {
                 log::error!("No automaton for destination port {}", flow.data.dst_port);
-                todo!() // TODO: trouver comment gérer ce cas
+                None
             }
             Some(automata) => {
                 let packets_info = automata.sample(&mut rng, &flow.data, create_tcp_header);
@@ -145,13 +145,13 @@ impl Stage2 for TadamGenerator {
                     .count();
                 flow.data.total_duration = packets_info.last().unwrap().ts - flow.data.timestamp;
 
-                SeededData {
+                Some(SeededData {
                     seed: rng.next_u64(),
                     data: PacketsIR::<TCPPacketInfo> {
                         packets_info,
                         flow: Flow::TCP(flow.data),
                     },
-                }
+                })
             }
         }
     }
@@ -159,14 +159,14 @@ impl Stage2 for TadamGenerator {
     fn generate_udp_packets_info(
         &self,
         flow: SeededData<FlowData>,
-    ) -> SeededData<PacketsIR<UDPPacketInfo>> {
+    ) -> Option<SeededData<PacketsIR<UDPPacketInfo>>> {
         todo!()
     }
 
     fn generate_icmp_packets_info(
         &self,
         flow: SeededData<FlowData>,
-    ) -> SeededData<PacketsIR<ICMPPacketInfo>> {
+    ) -> Option<SeededData<PacketsIR<ICMPPacketInfo>>> {
         todo!()
     }
 }

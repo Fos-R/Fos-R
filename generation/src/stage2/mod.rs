@@ -11,15 +11,15 @@ pub trait Stage2: Clone + std::marker::Send + 'static {
     fn generate_tcp_packets_info(
         &self,
         flow: SeededData<FlowData>,
-    ) -> SeededData<PacketsIR<TCPPacketInfo>>;
+    ) -> Option<SeededData<PacketsIR<TCPPacketInfo>>>;
     fn generate_udp_packets_info(
         &self,
         flow: SeededData<FlowData>,
-    ) -> SeededData<PacketsIR<UDPPacketInfo>>;
+    ) -> Option<SeededData<PacketsIR<UDPPacketInfo>>>;
     fn generate_icmp_packets_info(
         &self,
         flow: SeededData<FlowData>,
-    ) -> SeededData<PacketsIR<ICMPPacketInfo>>;
+    ) -> Option<SeededData<PacketsIR<ICMPPacketInfo>>>;
 }
 
 #[derive(Debug, Clone)]
@@ -34,31 +34,28 @@ pub fn run(generator: impl Stage2, rx_s2: Receiver<SeededData<Flow>>, tx_s2: S2S
     for flow in rx_s2 {
         match flow.data {
             Flow::TCP(data) => {
-                tx_s2
-                    .tcp
-                    .send(generator.generate_tcp_packets_info(SeededData {
-                        seed: flow.seed,
-                        data,
-                    }))
-                    .unwrap();
+                if let Some(pir) = generator.generate_tcp_packets_info(SeededData {
+                    seed: flow.seed,
+                    data,
+                }) {
+                    tx_s2.tcp.send(pir).unwrap();
+                }
             }
             Flow::UDP(data) => {
-                tx_s2
-                    .udp
-                    .send(generator.generate_udp_packets_info(SeededData {
-                        seed: flow.seed,
-                        data,
-                    }))
-                    .unwrap();
+                if let Some(pir) = generator.generate_udp_packets_info(SeededData {
+                    seed: flow.seed,
+                    data,
+                }) {
+                    tx_s2.udp.send(pir).unwrap();
+                }
             }
             Flow::ICMP(data) => {
-                tx_s2
-                    .icmp
-                    .send(generator.generate_icmp_packets_info(SeededData {
-                        seed: flow.seed,
-                        data,
-                    }))
-                    .unwrap();
+                if let Some(pir) = generator.generate_icmp_packets_info(SeededData {
+                    seed: flow.seed,
+                    data,
+                }) {
+                    tx_s2.icmp.send(pir).unwrap();
+                }
             }
         }
     }

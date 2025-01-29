@@ -139,10 +139,8 @@ impl From<CPTJSON> for CPT {
 impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
     fn sample_index(&self, rng: &mut impl RngCore, current: &[usize]) -> usize {
-        let mut parents_values = Vec::new();
-        for (i, p) in self.parents.iter().enumerate() {
-            parents_values[i] = current[*p];
-        }
+        // TODO: mettre dans la structure pour ne pas allouer à chaque fois
+        let parents_values: Vec<usize> = self.parents.iter().map(|p| current[*p]).collect();
         self.cpt.0[&parents_values].sample(rng)
     }
 }
@@ -170,9 +168,9 @@ impl Pattern {
         for _ in 0..flow_count {
             p.push(PartiallyDefinedFlowData::default());
         }
-        for (n, v) in self.bayesian_network.iter().enumerate() {
+        for v in self.bayesian_network.iter() {
             let i = v.sample_index(rng, &indices);
-            indices[n] = i;
+            indices.push(i);
             p[v.partial_flow_number].set_value(rng, &v.feature, i);
         }
         p
@@ -227,8 +225,8 @@ impl Pattern {
             }
         }
         for p in partially_defined_flows.iter_mut() {
-            p.ttl_client = config.get_default_ttl(&p.src_ip.unwrap());
-            p.ttl_server = config.get_default_ttl(&p.dst_ip.unwrap());
+            p.ttl_client = Some(config.get_default_ttl(&p.src_ip.unwrap()));
+            p.ttl_server = Some(config.get_default_ttl(&p.dst_ip.unwrap()));
         }
         partially_defined_flows.into_iter().map(|p| p.into())
     }
@@ -264,7 +262,7 @@ impl Default for PatternSet {
     fn default() -> Self {
         let set: PatternSet =
             serde_json::from_str(include_str!("../../../learning/patterns.json")).unwrap();
-            // serde_json::from_str(include_str!("../../../models/medium/patterns.json")).unwrap();
+        // serde_json::from_str(include_str!("../../../models/medium/patterns.json")).unwrap();
         log::info!("Default patterns loaded");
         set
     }
