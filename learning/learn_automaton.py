@@ -2,6 +2,7 @@ import os
 import argparse
 import re
 import json
+from functools import partial
 from tadam.tadam import exhaustive_search, opportunistic_search
 from tadam.mdl import NoiseModel
 from tadam.options import Options, GuardsFormat, Init, Search
@@ -10,7 +11,7 @@ import datetime
 from scipy.stats import chisquare
 import numpy as np
 
-def add_payload_type(row):
+def add_payload_type(payload_type, row):
     if row['protocol'] == "ICMP":
         return row["time_sequence"] # no payload to analyze
 
@@ -32,7 +33,7 @@ def add_payload_type(row):
                 for j in range(4):
                     obs[j] += hnibbles.count(j)
                 random = (chisquare(obs).pvalue >= 0.05)
-            if random:
+            if random or payload_type == "encrypted":
                 headers[i]+="/Random"
                 nb_random += 1
             else:
@@ -40,7 +41,7 @@ def add_payload_type(row):
                 try:
                     s = bytes.fromhex(p).decode('utf-8')
                     s = s.translate({10: "", 13: ""}) # remove CR and LF
-                    if s.isprintable():
+                    if s.isprintable() or payload_type == "text":
                         headers[i]+="/Text:"+s.split()[0]
                         # print(s, s.split()[0])
                         replay = False
@@ -90,7 +91,9 @@ if __name__ == '__main__':
     group.add_argument('--select_dst_ports', type=int, nargs="+", help="Learn from these specific destination ports. Cannot be used with --ignore_dst_ports.")
     group.add_argument('--ignore_dst_ports', type=int, nargs="+", help="Learn from all ports except these. Cannot be used with --select_dst_ports.")
     parser.add_argument('--input', required=True, help="Select the input file. It must a FosR-netflow file.")
+    parser.add_argument('--payload_type', choices=["encrypted", "text", "binary"], help="Select a payload type.", type=str.lower)
     parser.add_argument('--automaton_name', help="The name of the automaton.")
+    parser.add_argument('--subsample', type=int, help="How many flows to learn from at most.")
     parser.add_argument('--output', help="Select the output file to create.")
     parser.add_argument('--output_dot', help="Select the dot output file for visualization.")
     parser.add_argument('--verbose', help="Increase TADAM’s verbosity.", action="store_true")
@@ -141,12 +144,16 @@ if __name__ == '__main__':
     else:
         df = df[df["protocol"] == protocol]
 
-    df["time_sequence"] = df.apply(add_payload_type, axis=1)
+    df["time_sequence"] = df.apply(partial(add_payload_type,args.payload_type), axis=1)
 
     len_before = len(df)
     df = df[df["time_sequence"].str.len() < 20000]
     if len(df) < len_before:
         print((len_before-len(df)),"flows have been ignored because they are too long.")
+
+    if args.subsample and len(df) > args.subsample:
+        df = df.sample(n=args.subsample)
+        print("Subsampling to",args.subsample,"examples")
 
     df = df.reset_index(drop=True)
 
@@ -225,7 +232,9 @@ if __name__ == '__main__':
     metadata["automaton_name"] = args.automaton_name or "none"
     d["metadata"] = metadata
     try:
-        out_file = open(args.output, "w")
+        out_file2 = open(args.output, "w")
+        json.dump(d, out_file2)
+        out_file = open(args.output.rsplit(".",1)[0]+"_human_readable.json", "w")
         json.dump(d, out_file, indent=4)
         print("JSON file successfully created:",args.output)
     except Exception as e:
