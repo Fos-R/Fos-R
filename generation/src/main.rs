@@ -108,8 +108,13 @@ fn main() {
             outfile,
             flow_count,
             cpu_usage,
+            config_path,
             ..
         } => {
+            let config_str =
+                fs::read_to_string(config_path).expect("Cannot access the configuration file.");
+            let hosts = config::import_config(&config_str);
+
             let automata_library = match &models {
                 Some(models) => tadam::AutomataLibrary::from_dir(
                     Path::new(models).join("tas").to_str().unwrap(),

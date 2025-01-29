@@ -20,8 +20,8 @@ struct PartiallyDefinedFlowData {
     dst_port: Option<u16>,
     ttl_client: Option<u8>,
     ttl_server: Option<u8>,
-    fwd_packets_count: Option<u32>,
-    bwd_packets_count: Option<u32>,
+    fwd_packets_count: Option<u64>,
+    bwd_packets_count: Option<u64>,
     timestamp: Option<Duration>,
     total_duration: Option<Duration>,
     proto: Option<Protocol>,
@@ -50,7 +50,7 @@ impl PartiallyDefinedFlowData {
         match f {
             Feature::SrcIP(ref v) => self.src_ip = Some(v.0[index]),
             Feature::DstIP(ref v) => self.dst_ip = Some(v.0[index]),
-            Feature::DstPt(ref v) => self.dst_port = Some(v.0[index].sample(rng) as u16),
+            Feature::DstPt(ref v) => self.dst_port = Some(v[index]),
             Feature::FwdPkt(ref v) => self.fwd_packets_count = Some(v.0[index].sample(rng)),
             Feature::BwdPkt(ref v) => self.bwd_packets_count = Some(v.0[index].sample(rng)),
             Feature::FwdByt(ref v) => (), // ignore
@@ -84,11 +84,11 @@ impl From<Vec<String>> for Ipv4Vector {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-#[serde(from = "Vec<(u32,u32)>")]
-struct Intervals(Vec<Uniform<u32>>);
+#[serde(from = "Vec<(u64,u64)>")]
+struct Intervals(Vec<Uniform<u64>>);
 
-impl From<Vec<(u32, u32)>> for Intervals {
-    fn from(v: Vec<(u32, u32)>) -> Intervals {
+impl From<Vec<(u64, u64)>> for Intervals {
+    fn from(v: Vec<(u64, u64)>) -> Intervals {
         Intervals(
             v.into_iter()
                 .map(|(low, high)| Uniform::new(low, high))
@@ -102,7 +102,7 @@ impl From<Vec<(u32, u32)>> for Intervals {
 enum Feature {
     SrcIP(Ipv4Vector),
     DstIP(Ipv4Vector),
-    DstPt(Intervals),
+    DstPt(Vec<u16>),
     FwdPkt(Intervals),
     BwdPkt(Intervals),
     FwdByt(Intervals),
@@ -179,16 +179,11 @@ impl Pattern {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
-struct PartialFlowRow {
-    row: Vec<CellType>,
-}
-
 /// Each pattern has partial flows and a Bayesian network that describes the distribution of "free" cells
 #[derive(Deserialize, Debug, Clone)]
 struct Pattern {
     // TODO: add time distribution
-    partial_flows: Vec<PartialFlowRow>,
+    partial_flows: Vec<Vec<CellType>>,
     bayesian_network: Vec<BayesianNetworkNode>,
 }
 
@@ -206,7 +201,7 @@ impl Pattern {
         }
         for (r_index, p) in self.partial_flows.iter().enumerate() {
             partially_defined_flows.get_mut(r_index).unwrap().timestamp = Some(ts); // TODO tirage
-            for (c_index, c) in p.row.iter().enumerate() {
+            for (c_index, c) in p.iter().enumerate() {
                 match c {
                     CellType::ReuseSrcAsSrc { row } => {
                         partially_defined_flows.get_mut(r_index).unwrap().src_ip =
@@ -268,7 +263,8 @@ impl From<PatternSetJSON> for PatternSet {
 impl Default for PatternSet {
     fn default() -> Self {
         let set: PatternSet =
-            serde_json::from_str(include_str!("../../../models/medium/patterns.json")).unwrap();
+            serde_json::from_str(include_str!("../../../learning/patterns.json")).unwrap();
+            // serde_json::from_str(include_str!("../../../models/medium/patterns.json")).unwrap();
         log::info!("Default patterns loaded");
         set
     }

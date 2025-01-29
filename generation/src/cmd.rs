@@ -96,5 +96,11 @@ pub enum Command {
             help = "Show CPU usage per thread"
         )]
         cpu_usage: bool,
+        #[arg(
+            short,
+            long,
+            help = "Path to the information system configuration file"
+        )]
+        config_path: String,
     },
 }
