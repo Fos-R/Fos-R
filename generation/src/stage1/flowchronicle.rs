@@ -55,10 +55,10 @@ impl PartiallyDefinedFlowData {
             Feature::BwdPkt(ref v) => self.bwd_packets_count = Some(v.0[index].sample(rng)),
             Feature::FwdByt(ref v) => (), // ignore
             Feature::BwdByt(ref v) => (), // ignore
-            Feature::Duration(ref v) => {
-                self.total_duration = Some(Duration::from_millis(v.0[index].sample(rng) as u64))
-            }
+            Feature::Duration(_) => (),
+//                self.total_duration = Some(Duration::from_millis(v.0[index].sample(rng) as u64))
             Feature::Proto(ref v) => self.proto = Some(v[0]),
+            Feature::Flags(_) => (),
         }
     }
 }
@@ -108,7 +108,8 @@ enum Feature {
     FwdByt(Intervals),
     BwdByt(Intervals),
     Proto(Vec<Protocol>),
-    Duration(Intervals),
+    Duration(Vec<(f64,f64)>),
+    Flags(Vec<String>),
 }
 
 #[allow(clippy::upper_case_acronyms)]
@@ -275,6 +276,7 @@ impl PatternSet {
 
     /// Import patterns from a file
     pub fn from_file(filename: &str) -> std::io::Result<Self> {
+        log::info!("Loading patterns…");
         let f = File::open(filename)?;
         let set: PatternSet = serde_json::from_reader(f)?;
         log::info!("Patterns loaded from {:?}", filename);
