@@ -204,11 +204,15 @@ fn run(
         ctrlc::set_handler(move || {
             log::info!("Ending the generation");
             r.store(false, Ordering::Relaxed);
-        }).expect("Error setting Ctrl-C handler");
-
+        })
+        .expect("Error setting Ctrl-C handler");
 
         let builder = thread::Builder::new().name("Stage0".into());
-        gen_threads.push(builder.spawn(move || stage0::run(s0, tx_s0, s0_running)).unwrap());
+        gen_threads.push(
+            builder
+                .spawn(move || stage0::run(s0, tx_s0, s0_running))
+                .unwrap(),
+        );
 
         // STAGE 1
 

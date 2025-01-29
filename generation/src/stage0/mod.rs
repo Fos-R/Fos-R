@@ -1,15 +1,15 @@
 use crate::structs::*;
 
-use std::sync::atomic::Ordering;
 use crossbeam_channel::Sender;
-use std::sync::atomic::AtomicBool;
 use rand_core::*;
 use rand_distr::Distribution;
 use rand_distr::Uniform;
 use rand_pcg::Pcg32;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use std::sync::Arc;
 
 const WINDOW_WIDTH_IN_SECS: u64 = 5;
 
@@ -139,11 +139,15 @@ impl UniformGenerator {
     }
 }
 
-pub fn run(generator: impl Stage0, tx_s0: Sender<SeededData<Duration>>, s0_running: Arc<AtomicBool>) {
+pub fn run(
+    generator: impl Stage0,
+    tx_s0: Sender<SeededData<Duration>>,
+    s0_running: Arc<AtomicBool>,
+) {
     log::trace!("Start S0");
     for ts in generator {
         if !s0_running.load(Ordering::Relaxed) {
-            break
+            break;
         }
         log::trace!("S0 generates {:?}", ts);
         tx_s0.send(ts).unwrap();

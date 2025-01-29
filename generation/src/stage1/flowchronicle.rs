@@ -194,7 +194,12 @@ struct Pattern {
 
 impl Pattern {
     /// Sample flows
-    fn sample(&self, rng: &mut impl RngCore, config: &Hosts, ts: Duration) -> impl Iterator<Item = Flow> {
+    fn sample(
+        &self,
+        rng: &mut impl RngCore,
+        config: &Hosts,
+        ts: Duration,
+    ) -> impl Iterator<Item = Flow> {
         let mut partially_defined_flows = self.sample_free_cells(rng, self.partial_flows.len());
         for p in partially_defined_flows.iter_mut() {
             p.src_port = Some(Uniform::new(32000, 65535).sample(rng) as u16);
@@ -313,9 +318,11 @@ impl Stage1 for FCGenerator {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
         let index = self.set.pattern_distrib.sample(&mut rng);
         let pattern = &self.set.patterns[index];
-        pattern.sample(&mut rng, &self.config, ts.data).map(move |f| SeededData {
-            seed: rng.next_u64(),
-            data: f,
-        })
+        pattern
+            .sample(&mut rng, &self.config, ts.data)
+            .map(move |f| SeededData {
+                seed: rng.next_u64(),
+                data: f,
+            })
     }
 }
