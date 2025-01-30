@@ -529,8 +529,6 @@ mod tests {
             ttl_server: 64,
             fwd_packets_count: 0,
             bwd_packets_count: 0,
-            fwd_total_payload_length: 0,
-            bwd_total_payload_length: 0,
             timestamp: Duration::new(0, 0),
             total_duration: Duration::new(0, 0),
         };
@@ -584,8 +582,6 @@ mod tests {
             ttl_server: 64,
             fwd_packets_count: 0,
             bwd_packets_count: 0,
-            fwd_total_payload_length: 0,
-            bwd_total_payload_length: 0,
             timestamp: Duration::new(0, 0),
             total_duration: Duration::new(0, 0),
         };
@@ -641,8 +637,6 @@ mod tests {
             ttl_server: 64,
             fwd_packets_count: 0,
             bwd_packets_count: 0,
-            fwd_total_payload_length: 0,
-            bwd_total_payload_length: 0,
             timestamp: Duration::new(0, 0),
             total_duration: Duration::new(0, 0),
         };
@@ -717,8 +711,6 @@ mod tests {
             ttl_server: 64,
             fwd_packets_count: 10,
             bwd_packets_count: 10,
-            fwd_total_payload_length: 500,
-            bwd_total_payload_length: 500,
             timestamp: Duration::new(0, 0),
             total_duration: Duration::new(10, 0),
         };
