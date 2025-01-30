@@ -74,11 +74,11 @@ fn main() {
                     _ => panic!("Impossible"),
                 })
         };
+        println!("Interfaces: {:?}", datalink::interfaces());
         let ifaces = datalink::interfaces()
             .into_iter()
-            .filter(|iface| [String::from("veth0"), String::from("veth1")].contains(&iface.name))
             .flat_map(extract_addr)
-            .filter(|i| !i.is_loopback())
+            .filter(|i| i.is_loopback())
             .collect();
         log::trace!("IPv4 interfaces: {:?}", &ifaces);
         ifaces

@@ -89,34 +89,7 @@ impl Stage4 {
         }
     }
 
-    pub fn start(&mut self, mut incoming_flows: Receiver<SeededData<Packets>>) {
-        log::info!("stage4 started on interface {}", self.interface);
-        // Create a thread to receive incoming flows and add them to the current_flows
-        let mut current_flows = self.current_flows.clone();
-        let interface = self.interface;
-        let join_handle = std::thread::spawn(move || {
-            while let Ok(flow) = incoming_flows.recv() {
-                log::info!("Received a new flow");
-
-                // Get the flow's direction by peeking the first packet sender ip
-                let direction = if flow.data.flow.get_data().src_ip == interface {
-                    PacketDirection::Forward
-                } else {
-                    PacketDirection::Backward
-                };
-
-                log::info!(
-                    "Number of flows in the heap: {}",
-                    current_flows.lock().unwrap().len()
-                );
-
-                current_flows
-                    .lock()
-                    .unwrap()
-                    .push(OnlineFlow { flow, direction });
-            }
-        });
-
+    pub fn handle_packets(&mut self) {
         // Send and receive packets in this thread
         let mut rx_iter = tcp_packet_iter(&mut self.rx);
         loop {
@@ -175,5 +148,62 @@ impl Stage4 {
                 self.current_flows.lock().unwrap().push(current_flow);
             }
         }
+    }
+
+    pub fn handle_packet(&mut self) {
+        loop {
+            // Peek the first flow of the heap
+            let Some(mut current_flow) = self.current_flows.lock().unwrap().pop() else {
+                continue;
+                // Wait for a flow to be added maybe using a condition variable
+            };
+
+            // Get the first packet of the flow
+            let packet = current_flow.flow.data.packets.remove(0);
+            let direction = current_flow.flow.data.directions.remove(0);
+
+            let eth_packet = pnet::packet::ethernet::EthernetPacket::new(&packet.data).unwrap();
+            let packet = pnet::packet::ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
+            let tcp_packet = pnet::packet::tcp::TcpPacket::new(packet.payload()).unwrap();
+
+            // Send the packet to the destination
+            let destination = std::net::IpAddr::V4(packet.get_destination());
+
+            self.tx.send_to(packet, destination).unwrap();
+
+            break;
+        }
+    }
+
+    pub fn start(&mut self, mut incoming_flows: Receiver<SeededData<Packets>>) {
+        log::info!("stage4 started on interface {}", self.interface);
+        // Create a thread to receive incoming flows and add them to the current_flows
+        let mut current_flows = self.current_flows.clone();
+        let interface = self.interface;
+        let join_handle = std::thread::spawn(move || {
+            while let Ok(flow) = incoming_flows.recv() {
+                log::info!("Received a new flow");
+
+                // Get the flow's direction by peeking the first packet sender ip
+                let direction = if flow.data.flow.get_data().src_ip == interface {
+                    PacketDirection::Forward
+                } else {
+                    PacketDirection::Backward
+                };
+
+                log::info!(
+                    "Number of flows in the heap: {}",
+                    current_flows.lock().unwrap().len()
+                );
+
+                current_flows
+                    .lock()
+                    .unwrap()
+                    .push(OnlineFlow { flow, direction });
+            }
+        });
+
+        // Handle packets
+        self.handle_packet();
     }
 }
