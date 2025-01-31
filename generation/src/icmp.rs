@@ -22,6 +22,9 @@ impl PacketInfo for ICMPPacketInfo {
     fn get_noise_type(&self) -> NoiseType {
         self.noise
     }
+    fn set_ts(&mut self, ts: Duration) {
+        self.ts = ts
+    }
 }
 
 #[derive(Debug, Clone)]

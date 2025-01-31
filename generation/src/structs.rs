@@ -161,6 +161,7 @@ pub trait PacketInfo: Clone + Debug {
     fn get_noise_type(&self) -> NoiseType;
     fn get_direction(&self) -> PacketDirection;
     fn get_ts(&self) -> Duration;
+    fn set_ts(&mut self, ts: Duration);
 }
 
 #[derive(Debug, Clone)]
