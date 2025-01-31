@@ -110,6 +110,7 @@ impl Stage4 {
             let tcp_packet = pnet::packet::tcp::TcpPacket::new(ipv4_packet.payload()).unwrap();
 
             let destination = std::net::IpAddr::V4(ipv4_packet.get_destination());
+
             if direction == current_flow.direction {
                 let ts = packet.header.ts;
                 let now = std::time::SystemTime::now();
@@ -123,8 +124,8 @@ impl Stage4 {
                 std::thread::sleep(remaining);
                 // Send the packet
                 log::info!("Sending packet to {:?}", destination);
-                match self.tx.send_to(&tcp_packet, destination) {
-                    Ok(n) => assert_eq!(n, tcp_packet.packet().len()),
+                match self.tx.send_to(&ipv4_packet, destination) {
+                    Ok(n) => assert_eq!(n, ipv4_packet.packet().len()), // Check if the whole packet was sent
                     Err(e) => panic!("failed to send packet: {}", e),
                 }
             } else {
