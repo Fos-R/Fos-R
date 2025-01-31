@@ -78,7 +78,7 @@ fn main() {
         let ifaces = datalink::interfaces()
             .into_iter()
             .flat_map(extract_addr)
-            .filter(|i| i.is_loopback())
+            .filter(|i| !i.is_loopback())
             .collect();
         log::trace!("IPv4 interfaces: {:?}", &ifaces);
         ifaces

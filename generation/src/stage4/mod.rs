@@ -104,27 +104,31 @@ impl Stage4 {
             let direction = current_flow.flow.data.directions.remove(0);
 
             // Get the expected time of arrival of the packet to know if we should wait before sending or receiving it
-            let ts = packet.header.ts;
-            let now = std::time::SystemTime::now();
-            let now = now.duration_since(std::time::UNIX_EPOCH).unwrap();
-            let expected_ts = std::time::Duration::new(ts.tv_sec as u64, ts.tv_usec as u32);
-            let remaining = expected_ts
-                .checked_sub(now)
-                .unwrap_or(std::time::Duration::new(0, 0));
-            log::info!("Expected ts: {:?}", remaining);
-            // Sleep for the remaining time
-            std::thread::sleep(remaining);
 
-            let packet = packet.into_packet();
-            let destination = std::net::IpAddr::V4(packet.get_destination());
-            let tcp_packet = pnet::packet::tcp::TcpPacket::new(packet.payload()).unwrap();
+            let eth_packet = pnet::packet::ethernet::EthernetPacket::new(&packet.data).unwrap();
+            let ipv4_packet = pnet::packet::ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
+            let tcp_packet = pnet::packet::tcp::TcpPacket::new(ipv4_packet.payload()).unwrap();
+
+            let destination = std::net::IpAddr::V4(ipv4_packet.get_destination());
             if direction == current_flow.direction {
+                let ts = packet.header.ts;
+                let now = std::time::SystemTime::now();
+                let now = now.duration_since(std::time::UNIX_EPOCH).unwrap();
+                let expected_ts = std::time::Duration::new(ts.tv_sec as u64, ts.tv_usec as u32);
+                let remaining = expected_ts
+                    .checked_sub(now)
+                    .unwrap_or(std::time::Duration::new(0, 0));
+                log::info!("Expected ts: {:?}", remaining);
+                // Sleep for the remaining time
+                std::thread::sleep(remaining);
                 // Send the packet
+                log::info!("Sending packet to {:?}", destination);
                 match self.tx.send_to(&tcp_packet, destination) {
                     Ok(n) => assert_eq!(n, tcp_packet.packet().len()),
                     Err(e) => panic!("failed to send packet: {}", e),
                 }
             } else {
+                log::info!("Waiting for packet from {:?}", ipv4_packet.get_source());
                 // If the direction doesn't match, wait for the packet to be received
                 while let Ok((recv_packet, addr)) = rx_iter.next() {
                     log::info!(
@@ -134,7 +138,7 @@ impl Stage4 {
                     // Let's compare the received packet with the one we're waiting for
                     if recv_packet.get_source() == tcp_packet.get_source()
                         && recv_packet.get_destination() == tcp_packet.get_destination()
-                        && addr == packet.get_source()
+                        && addr == ipv4_packet.get_source()
                     {
                         // If the received packet matches the one we're waiting for, we can send it
                         log::info!("Received packet from {:?}", addr);
@@ -204,6 +208,6 @@ impl Stage4 {
         });
 
         // Handle packets
-        self.handle_packet();
+        self.handle_packets();
     }
 }

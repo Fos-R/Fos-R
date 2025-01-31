@@ -1,0 +1,24 @@
+services:
+  source:
+    image: fosr/generation
+    build: .
+    cap_add:
+      - NET_RAW
+    networks:
+      default:
+        ipv4_address: 192.168.4.2
+
+  destination:
+    image: fosr/generation
+    cap_add:
+      - NET_RAW
+    networks:
+      default:
+        ipv4_address: 192.168.4.3
+
+# Create a network to force the ip address of both containers
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 192.168.4.0/24
