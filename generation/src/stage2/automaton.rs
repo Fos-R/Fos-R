@@ -200,7 +200,6 @@ impl<T: EdgeType> CrossProductTimedAutomaton<T> {
             .unwrap()
             .item
             .1;
-        let mut current_ts = fd.timestamp;
         // TODO: sample with noise
         while current_state != self.initial_state {
             debug_assert!(!self.graph[current_state].in_edges.is_empty());
@@ -229,13 +228,17 @@ impl<T: EdgeType> CrossProductTimedAutomaton<T> {
                 let cond_mu = e.mu[0] + e.cov[0][1] / e.cov[1][1] * (payload_size as f32 - e.mu[1]);
                 let cond_var = e.cov[0][0] - e.cov[0][1] * e.cov[0][1] / e.cov[1][1];
                 let iat = e.p.sample(rng, cond_mu, cond_var);
-                current_ts += Duration::from_micros(iat as u64);
-                let data = header_creator(payload, NoiseType::None, current_ts, data);
+                let data = header_creator(payload, NoiseType::None, Duration::from_micros(iat as u64), data);
                 output.push(data);
             }
             current_state = e.dst_node;
         }
         output.reverse();
+        let mut current_ts = fd.timestamp;
+        for p in output.iter_mut() {
+            current_ts += p.get_ts();
+            p.set_ts(current_ts);
+        }
         output
     }
 }
