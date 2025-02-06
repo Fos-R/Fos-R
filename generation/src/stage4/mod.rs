@@ -7,7 +7,8 @@ use std::{
 
 use crossbeam_channel::Receiver;
 use pnet::transport::{
-    tcp_packet_iter, transport_channel, TransportChannelType, TransportReceiver, TransportSender,
+    ipv4_packet_iter, tcp_packet_iter, transport_channel, TransportChannelType, TransportReceiver,
+    TransportSender,
 };
 use pnet_packet::{ip::IpNextHeaderProtocols, Packet};
 
@@ -91,7 +92,7 @@ impl Stage4 {
 
     pub fn handle_packets(&mut self) {
         // Send and receive packets in this thread
-        let mut rx_iter = tcp_packet_iter(&mut self.rx);
+        let mut rx_iter = ipv4_packet_iter(&mut self.rx);
         loop {
             // Peek the first flow of the heap
             let Some(mut current_flow) = self.current_flows.lock().unwrap().pop() else {
@@ -124,6 +125,7 @@ impl Stage4 {
                 std::thread::sleep(remaining);
                 // Send the packet
                 log::info!("Sending packet to {:?}", destination);
+                log::info!("Packet: {:?}", tcp_packet.get_source());
                 match self.tx.send_to(&ipv4_packet, destination) {
                     Ok(n) => assert_eq!(n, ipv4_packet.packet().len()), // Check if the whole packet was sent
                     Err(e) => panic!("failed to send packet: {}", e),
@@ -136,23 +138,36 @@ impl Stage4 {
                         "Attempting to receive a packet, received packet from {:?}",
                         addr
                     );
+                    let recv_tcp_packet = pnet::packet::tcp::TcpPacket::new(recv_packet.payload())
+                        .expect("Failed to parse received packet");
                     // Let's compare the received packet with the one we're waiting for
-                    if recv_packet.get_source() == tcp_packet.get_source() {
-                        if recv_packet.get_destination() == tcp_packet.get_destination() {
+                    if recv_tcp_packet.get_source() == tcp_packet.get_source() {
+                        if recv_tcp_packet.get_destination() == tcp_packet.get_destination() {
                             if addr == ipv4_packet.get_source() {
                                 // If the received packet matches the one we're waiting for, we can send it
                                 log::info!("Received packet from {:?}", addr);
                                 break;
                             } else {
-                                log::info!("Source address mismatch: expected {:?}, got {:?}", ipv4_packet.get_source(), addr);
+                                log::info!(
+                                    "Source address mismatch: expected {:?}, got {:?}",
+                                    ipv4_packet.get_source(),
+                                    addr
+                                );
                             }
                         } else {
-                            log::info!("Destination port mismatch: expected {:?}, got {:?}", tcp_packet.get_destination(), recv_packet.get_destination());
+                            log::info!(
+                                "Destination port mismatch: expected {:?}, got {:?}",
+                                tcp_packet.get_destination(),
+                                recv_tcp_packet.get_destination()
+                            );
                         }
                     } else {
-                        log::info!("Source port mismatch: expected {:?}, got {:?}", tcp_packet.get_source(), recv_packet.get_source());
+                        log::info!(
+                            "Source port mismatch: expected {:?}, got {:?}",
+                            tcp_packet.get_source(),
+                            recv_tcp_packet.get_source()
+                        );
                     }
-                    
                 }
             }
 
