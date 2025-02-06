@@ -144,13 +144,13 @@ impl Stage4 {
                                 log::info!("Received packet from {:?}", addr);
                                 break;
                             } else {
-                                log::info!("Packet source address mismatch: expected {:?}, got {:?}", ipv4_packet.get_source(), addr);
+                                log::info!("Source address mismatch: expected {:?}, got {:?}", ipv4_packet.get_source(), addr);
                             }
                         } else {
-                            log::info!("Packet destination mismatch: expected {:?}, got {:?}", tcp_packet.get_destination(), recv_packet.get_destination());
+                            log::info!("Destination port mismatch: expected {:?}, got {:?}", tcp_packet.get_destination(), recv_packet.get_destination());
                         }
                     } else {
-                        log::info!("Packet source mismatch: expected {:?}, got {:?}", tcp_packet.get_source(), recv_packet.get_source());
+                        log::info!("Source port mismatch: expected {:?}, got {:?}", tcp_packet.get_source(), recv_packet.get_source());
                     }
                     
                 }
