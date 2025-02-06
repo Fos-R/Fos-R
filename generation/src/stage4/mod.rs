@@ -1,10 +1,10 @@
 #![allow(unused)]
 
+use std::net::{TcpListener, TcpStream};
 use std::{
     cmp::Ordering,
     collections::{binary_heap, BinaryHeap},
 };
-use std::net::{TcpListener, TcpStream};
 
 use crossbeam_channel::Receiver;
 use pnet::transport::{
@@ -205,8 +205,6 @@ impl Stage4 {
     }
 
     pub fn start(&mut self, mut incoming_flows: Receiver<SeededData<Packets>>) {
-
-        let listener = TcpListener::bind("0.0.0.0:21").unwrap();
         log::info!("stage4 started on interface {}", self.interface);
         // Create a thread to receive incoming flows and add them to the current_flows
         let mut current_flows = self.current_flows.clone();
@@ -224,8 +222,58 @@ impl Stage4 {
 
                 log::info!(
                     "Number of flows in the heap: {}",
-                    current_flows.lock().unwrap().len()
+                    current_flows.lock().unwrap().len() + 1
                 );
+
+                if let Flow::TCP(tcp_flow) = &flow.data.flow {
+                    let src_port = tcp_flow.src_port;
+                    let dst_port = tcp_flow.dst_port;
+
+                    let src_addr = format!("0.0.0.0:{}", src_port);
+                    let dst_addr = format!("0.0.0.0:{}", dst_port);
+
+                    let src_listener = TcpListener::bind(&src_addr);
+                    match src_listener {
+                        Ok(listener) => {
+                            std::thread::spawn(move || {
+                                for stream in listener.incoming() {
+                                    match stream {
+                                        Ok(stream) => {
+                                            log::info!("New connection: {:?}", stream);
+                                        }
+                                        Err(e) => {
+                                            log::error!("Error accepting connection: {:?}", e);
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                        Err(e) => {
+                            log::error!("Error binding to address {:?}: {:?}", src_addr, e);
+                        }
+                    }
+
+                    let dst_listener = TcpListener::bind(&dst_addr);
+                    match dst_listener {
+                        Ok(listener) => {
+                            std::thread::spawn(move || {
+                                for stream in listener.incoming() {
+                                    match stream {
+                                        Ok(stream) => {
+                                            log::info!("New connection: {:?}", stream);
+                                        }
+                                        Err(e) => {
+                                            log::error!("Error accepting connection: {:?}", e);
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                        Err(e) => {
+                            log::error!("Error binding to address {:?}: {:?}", dst_addr, e);
+                        }
+                    }
+                }
 
                 current_flows
                     .lock()

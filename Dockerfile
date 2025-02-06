@@ -4,7 +4,7 @@ WORKDIR /usr/src/generation
 
 # Install libs with apt cache mount
 RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt \
-    apt-get update && apt-get install -y libpcap-dev iproute2 inetutils-ping tcpdump
+    apt-get update && apt-get install -y libpcap-dev iproute2 inetutils-ping tcpdump nmap
 
 COPY generation/Cargo.toml generation/Cargo.lock ./
 RUN mkdir src && touch src/lib.rs
