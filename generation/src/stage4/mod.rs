@@ -4,6 +4,7 @@ use std::{
     cmp::Ordering,
     collections::{binary_heap, BinaryHeap},
 };
+use std::net::{TcpListener, TcpStream};
 
 use crossbeam_channel::Receiver;
 use pnet::transport::{
@@ -204,6 +205,8 @@ impl Stage4 {
     }
 
     pub fn start(&mut self, mut incoming_flows: Receiver<SeededData<Packets>>) {
+
+        let listener = TcpListener::bind("0.0.0.0:21").unwrap();
         log::info!("stage4 started on interface {}", self.interface);
         // Create a thread to receive incoming flows and add them to the current_flows
         let mut current_flows = self.current_flows.clone();
