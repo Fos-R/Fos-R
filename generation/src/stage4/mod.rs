@@ -137,14 +137,22 @@ impl Stage4 {
                         addr
                     );
                     // Let's compare the received packet with the one we're waiting for
-                    if recv_packet.get_source() == tcp_packet.get_source()
-                        && recv_packet.get_destination() == tcp_packet.get_destination()
-                        && addr == ipv4_packet.get_source()
-                    {
-                        // If the received packet matches the one we're waiting for, we can send it
-                        log::info!("Received packet from {:?}", addr);
-                        break;
+                    if recv_packet.get_source() == tcp_packet.get_source() {
+                        if recv_packet.get_destination() == tcp_packet.get_destination() {
+                            if addr == ipv4_packet.get_source() {
+                                // If the received packet matches the one we're waiting for, we can send it
+                                log::info!("Received packet from {:?}", addr);
+                                break;
+                            } else {
+                                log::info!("Packet source address mismatch: expected {:?}, got {:?}", ipv4_packet.get_source(), addr);
+                            }
+                        } else {
+                            log::info!("Packet destination mismatch: expected {:?}, got {:?}", tcp_packet.get_destination(), recv_packet.get_destination());
+                        }
+                    } else {
+                        log::info!("Packet source mismatch: expected {:?}, got {:?}", tcp_packet.get_source(), recv_packet.get_source());
                     }
+                    
                 }
             }
 
