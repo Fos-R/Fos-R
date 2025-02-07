@@ -8,6 +8,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 
+use bind_ports::PortBinder;
 use crossbeam_channel::Receiver;
 use ongoing_flow::OngoingFlow;
 use pnet::transport::{
@@ -19,6 +20,7 @@ use pnet_packet::{
 
 use crate::{PacketDirection, Packets, SeededData, ICMP_PROTO, TCP_PROTO, UDP_PROTO};
 
+pub(crate) mod bind_ports;
 mod ongoing_flow;
 
 pub struct Stage4 {
@@ -28,11 +30,13 @@ pub struct Stage4 {
     raw_socket_tx: TransportSender,
     raw_socket_rx: TransportReceiver,
 
+    port_binder: Arc<Mutex<PortBinder>>,
+
     ongoing_flows: Arc<Mutex<BinaryHeap<OngoingFlow>>>,
 }
 
 impl Stage4 {
-    pub fn new(interface: Ipv4Addr, proto: u8) -> Self {
+    pub fn new(interface: Ipv4Addr, proto: u8, port_binder: Arc<Mutex<PortBinder>>) -> Self {
         let ip_next_header_protocol = match proto {
             TCP_PROTO => IpNextHeaderProtocols::Tcp,
             UDP_PROTO => IpNextHeaderProtocols::Udp,
@@ -58,6 +62,7 @@ impl Stage4 {
             raw_socket_tx,
             raw_socket_rx,
             ongoing_flows,
+            port_binder,
         }
     }
 
@@ -67,17 +72,24 @@ impl Stage4 {
     ) -> JoinHandle<()> {
         let thread_id = std::thread::current().id();
         let ongoing_flows = self.ongoing_flows.clone();
+        let port_binder = self.port_binder.clone();
         let interface = self.interface;
         std::thread::spawn(move || {
             while let Ok(flow) = new_flows_rx.recv() {
                 log::trace!("Stage 4 ({:?} received a new flow", thread_id);
 
                 // Get the flow's direction by peeking the first packet sender ip
+                let mut port_to_bind = 0u16;
                 let direction = if flow.data.flow.get_data().src_ip == interface {
+                    port_to_bind = flow.data.flow.get_data().src_port;
                     PacketDirection::Forward
                 } else {
+                    port_to_bind = flow.data.flow.get_data().dst_port;
                     PacketDirection::Backward
                 };
+
+                // Bind the port to the interface
+                port_binder.lock().unwrap().bind_port(port_to_bind);
 
                 ongoing_flows
                     .lock()

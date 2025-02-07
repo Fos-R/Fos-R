@@ -13,6 +13,7 @@ use stage1::Stage1;
 mod stage2;
 use stage2::tadam;
 use stage2::Stage2;
+use stage4::bind_ports::PortBinder;
 mod stage3;
 mod stage4;
 
@@ -353,15 +354,17 @@ fn main() {
     // STAGE 4 (online mode only)
 
     if online {
+        let shared_port_binder = Arc::new(Mutex::new(PortBinder::new()));
         for ((iface, proto), rx) in rx_s4.into_iter() {
             for _ in 0..STAGE4_COUNT {
                 let rx = rx.clone();
                 let builder = thread::Builder::new().name(format!("Stage4-TCP-{}", iface).into());
+                let port_binder = shared_port_binder.clone();
                 gen_threads.push(
                     builder
                         .spawn(move || {
                             log::trace!("Start S4");
-                            let mut s4 = stage4::Stage4::new(iface.clone(), proto);
+                            let mut s4 = stage4::Stage4::new(iface.clone(), proto, port_binder);
                             s4.start(rx);
                             log::trace!("S4 stops");
                         })
