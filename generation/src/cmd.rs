@@ -31,6 +31,16 @@ pub enum Command {
     /// Online mode: send packets through the network interfaces
     Online {
         // TODO: API pour synchroniser les agents online
+
+        // Optional comma separated list of interfaces to send and receive packets on
+        #[arg(
+            short,
+            long,
+            default_value = None,
+            help = "Comma separated list of interfaces to send and receive packets on",
+            value_delimiter = ','
+        )]
+        interfaces: Option<Vec<String>>,
     },
     /// Offline mode: generate a pcap file
     Offline {

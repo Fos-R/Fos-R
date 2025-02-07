@@ -56,13 +56,14 @@ fn main() {
     log::trace!("{:?}", &args);
     let (online, noise) = match args.command {
         cmd::Command::Offline { noise, .. } => (false, noise),
-        cmd::Command::Online {} => (true, false),
+        cmd::Command::Online { .. } => (true, false),
     };
 
     let seed = args.seed.unwrap_or(42); //rand::random() TODO: change for release
     log::trace!("Generating with seed {}", seed);
 
-    let local_interfaces: Vec<Ipv4Addr> = if online {
+    let local_interfaces: Vec<Ipv4Addr> = if let cmd::Command::Online { interfaces } = &args.command
+    {
         // Extract all IPv4 local interfaces (except loopback)
         let extract_addr = |iface: datalink::NetworkInterface| {
             iface
@@ -76,6 +77,7 @@ fn main() {
         };
         let ifaces = datalink::interfaces()
             .into_iter()
+            .filter(|i| interfaces.as_ref().map_or(true, |v| v.contains(&i.name)))
             .flat_map(extract_addr)
             .filter(|i| !i.is_loopback())
             .collect();
