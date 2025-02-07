@@ -136,13 +136,13 @@ impl Stage3 {
         match &packet_info.payload {
             Payload::Empty => (),
             Payload::Random(size) => {
-                let mut payload = vec![0_u8;*size];
+                let mut payload = vec![0_u8; *size];
                 rng.fill_bytes(&mut payload);
                 tcp_packet.set_payload(payload.as_slice());
             }
             Payload::Replay(payload) => {
                 tcp_packet.set_payload(payload);
-            },
+            }
         }
 
         // Set the s | a | f | r | u | p flags
@@ -218,7 +218,10 @@ impl Stage3 {
     }
 
     /// Generate TCP packets from an intermediate representation
-    pub fn generate_tcp_packets(&self, input: SeededData<PacketsIR<TCPPacketInfo>>) -> SeededData<Packets> {
+    pub fn generate_tcp_packets(
+        &self,
+        input: SeededData<PacketsIR<TCPPacketInfo>>,
+    ) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let tcp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
@@ -236,30 +239,51 @@ impl Stage3 {
 
             let mut packet = vec![0u8; packet_size];
 
-            self.setup_ethernet_frame(&mut packet[..]).expect("Incorrect Ethernet frame");
-            self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info).expect("Incorrect IP packet");
-            tcp_data =
-                self.setup_tcp_packet(&mut rng, &mut packet[tcp_start..], flow, packet_info, tcp_data).expect("Incorrect TCP packet");
+            self.setup_ethernet_frame(&mut packet[..])
+                .expect("Incorrect Ethernet frame");
+            self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info)
+                .expect("Incorrect IP packet");
+            tcp_data = self
+                .setup_tcp_packet(
+                    &mut rng,
+                    &mut packet[tcp_start..],
+                    flow,
+                    packet_info,
+                    tcp_data,
+                )
+                .expect("Incorrect TCP packet");
 
             packets.push(Packet {
-                header: self
-                    .get_pcap_header(packet_size, packet_info.get_ts()),
+                header: self.get_pcap_header(packet_size, packet_info.get_ts()),
                 data: packet.clone(),
             });
             directions.push(packet_info.get_direction());
         }
 
-        SeededData { seed: rng.next_u64(), data: Packets { packets, directions, flow: input.data.flow } }
+        SeededData {
+            seed: rng.next_u64(),
+            data: Packets {
+                packets,
+                directions,
+                flow: input.data.flow,
+            },
+        }
     }
 
     /// Generate UDP packets from an intermediate representation
-    pub fn generate_udp_packets(&self, input: SeededData<PacketsIR<UDPPacketInfo>>) -> SeededData<Packets> {
+    pub fn generate_udp_packets(
+        &self,
+        input: SeededData<PacketsIR<UDPPacketInfo>>,
+    ) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         todo!()
     }
 
     /// Generate ICMP packets from an intermediate representation
-    pub fn generate_icmp_packets(&self, input: SeededData<PacketsIR<ICMPPacketInfo>>) -> SeededData<Packets> {
+    pub fn generate_icmp_packets(
+        &self,
+        input: SeededData<PacketsIR<ICMPPacketInfo>>,
+    ) -> SeededData<Packets> {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         todo!()
     }
@@ -269,9 +293,13 @@ pub fn insert_noise(data: &mut SeededData<Packets>) {
     todo!()
 }
 
-pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool)  -> Result<(), pcap::Error> {
+pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(), pcap::Error> {
     let mut capture = Capture::dead(pcap::Linktype(1))?;
-    let mut savefile = if append { capture.savefile_append(outfile)? } else { capture.savefile(outfile)? };
+    let mut savefile = if append {
+        capture.savefile_append(outfile)?
+    } else {
+        capture.savefile(outfile)?
+    };
     // data.sort();
     for packet in data {
         savefile.write(&pcap::Packet {
@@ -282,5 +310,3 @@ pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool)  -> Resul
 
     Ok(())
 }
-
-

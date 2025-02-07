@@ -25,15 +25,16 @@ enum EdgeDistribution {
 }
 
 #[derive(Debug, Clone)]
-struct TimedEdge<T: EdgeType> { // TODO: plutôt que "Option<T>" pour data, utiliser un enum
-                                // "EpsilonEdge"/"NonEpsilonEdge" pour tout ce qui étiquette une
-                                // transition (symbole et valeur)
+struct TimedEdge<T: EdgeType> {
+    // TODO: plutôt que "Option<T>" pour data, utiliser un enum
+    // "EpsilonEdge"/"NonEpsilonEdge" pour tout ce qui étiquette une
+    // transition (symbole et valeur)
     dst_node: usize,
-    src_node: usize, // not sure if useful
-    data: Option<T>, // no data if transition to sink state
+    src_node: usize,       // not sure if useful
+    data: Option<T>,       // no data if transition to sink state
     transition_proba: f32, // not used
     mu: [f32; 2],
-    cov: [[f32; 2]; 2], // TODO: créer directement loi normale / poisson 
+    cov: [[f32; 2]; 2], // TODO: créer directement loi normale / poisson
     p: EdgeDistribution,
 }
 
@@ -50,7 +51,7 @@ impl EdgeDistribution {
                 let poisson = Poisson::new((cond_mu + cond_var) / 2.0).unwrap();
                 poisson.sample(rng).max(0.)
             }
-            EdgeDistribution::Gamma => todo!()
+            EdgeDistribution::Gamma => todo!(),
         }
     }
 }
@@ -105,7 +106,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
             assert!(!self.graph[current_state].out_edges.is_empty());
             let index = match &self.graph[current_state].dist {
                 None => 0, // only one outgoing edge
-                Some(d) => d.sample(rng)
+                Some(d) => d.sample(rng),
             };
             let e = &self.graph[current_state].out_edges[index];
             if let Some(data) = &e.data {
@@ -204,7 +205,10 @@ impl<T: EdgeType> TimedAutomaton<T> {
         let mut graph: Vec<TimedNode<T>> = vec![];
         for _ in 0..a.edges.len() + 1 {
             // the automaton is connected, so #edges+1 >= #nodes
-            graph.push(TimedNode { out_edges: vec![], dist: None });
+            graph.push(TimedNode {
+                out_edges: vec![],
+                dist: None,
+            });
         }
         for e in a.edges {
             let data = if e.symbol.eq("$") {
