@@ -322,8 +322,8 @@ impl Stage1 for FCGenerator {
     fn generate_flows(&self, ts: SeededData<Duration>) -> Vec<SeededData<Flow>> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
         let flow = Flow::TCP(FlowData {
-            src_ip: Ipv4Addr::new(192, 168, 1, 8),
-            dst_ip: Ipv4Addr::new(192, 168, 1, 14),
+            src_ip: Ipv4Addr::new(192, 168, 4, 2),
+            dst_ip: Ipv4Addr::new(192, 168, 4, 3),
             src_port: 34200,
             dst_port: 21,
             ttl_client: 23,
