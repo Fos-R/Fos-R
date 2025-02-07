@@ -17,5 +17,7 @@ COPY models ../models
 COPY generation/src src
 RUN cargo build --release
 
+ENV RUST_LOG=trace
+
 ENTRYPOINT ["./target/release/fosr"]
 CMD ["online", "--interfaces", "eth0"]
