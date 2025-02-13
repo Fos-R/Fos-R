@@ -20,10 +20,13 @@ impl Default for AutomataLibrary {
             udp_automata: vec![],
             icmp_automata: vec![],
         };
-
-        lib.import_from_str(include_str!("../../../models/test/tas/ftp.json"))
+        lib.import_from_str(include_str!("../../default_models/mqtt.json"))
             .unwrap();
-        lib.import_from_str(include_str!("../../../models/test/tas/http.json"))
+        lib.import_from_str(include_str!("../../default_models/smtp.json"))
+            .unwrap();
+        lib.import_from_str(include_str!("../../default_models/ssh.json"))
+            .unwrap();
+        lib.import_from_str(include_str!("../../default_models/https.json"))
             .unwrap();
         lib
     }
@@ -94,7 +97,7 @@ impl AutomataLibrary {
                     .into(),
                 );
             }
-            Protocol::IGMP => todo!()
+            Protocol::IGMP => todo!(),
         }
         Ok(())
     }

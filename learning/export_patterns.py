@@ -10,10 +10,8 @@ import numpy as np
 from itertools import product
 import math
 
-import flowchronicle.dataloader as dl
-from flowchronicle import search
-from flowchronicle import model
-from flowchronicle import attribute_value
+from model import Model, ChunkyModel
+import attribute_value
 
 feature_rename = {"Dst IP Addr": "DstIP", "Src IP Addr": "SrcIP", "In Packet": "FwdPkt", "Out Packet": "BwdPkt", "In Byte": "FwdByt", "Out Byte": "BwdByt", "Proto": "Proto", "Dst Pt": "DstPt", "Duration": "Duration", "Flags": "Flags"}
 
@@ -116,7 +114,7 @@ if __name__ == "__main__":
 
     print("start loading the model")
 
-    m = model.Model.load_model("../models/medium/patterns.json.tmp")
+    m = Model.load_model("cicids18.pkl")
 
     # m = model.Model.load_model(args.output)
     # m = model.Model.load_model(args.output+".tmp")

@@ -56,7 +56,7 @@ impl PartiallyDefinedFlowData {
             Feature::FwdByt(ref v) => (), // ignore
             Feature::BwdByt(ref v) => (), // ignore
             Feature::Duration(_) => (),
-//                self.total_duration = Some(Duration::from_millis(v.0[index].sample(rng) as u64))
+            //                self.total_duration = Some(Duration::from_millis(v.0[index].sample(rng) as u64))
             Feature::Proto(ref v) => self.proto = Some(v[0]),
             Feature::Flags(_) => (),
         }
@@ -108,7 +108,7 @@ enum Feature {
     FwdByt(Intervals),
     BwdByt(Intervals),
     Proto(Vec<Protocol>),
-    Duration(Vec<(f64,f64)>),
+    Duration(Vec<(f64, f64)>),
     Flags(Vec<String>),
 }
 

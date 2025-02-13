@@ -112,7 +112,7 @@ if __name__ == "__main__":
     dif1 = divmod(t1-t0,3600)
     print("Preprocessing time: {} hours, {} minutes and {} seconds".format(dif1[0], *divmod(dif1[1],60)))
 
-    m = search.search(dataset, iter_max=2, load_checkpoint=0, model_name=f'test')
+    m = search.search(dataset, load_checkpoint=0, model_name=f'test')
 
     t2 = time.time()
     dif2 = divmod(t2-t1,3600)
