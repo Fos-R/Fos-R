@@ -46,20 +46,20 @@ pub fn replay(infile: &str) {
             })
             .unwrap(),
     );
-    let proto = Protocol::TCP;
-    let builder = thread::Builder::new().name(format!("Stage4-{:?}", proto));
-    threads.push(
-        builder
-            .spawn(move || {
-                log::trace!("Start S4");
-                let s4 = stage4::Stage4::new(Ipv4Addr::new(127, 0, 0, 1), proto);
-                while let Ok(packets) = rx.recv() {
-                    s4.send(packets)
-                }
-                log::trace!("S4 stops");
-            })
-            .unwrap(),
-    );
+    // let proto = Protocol::TCP;
+    // let builder = thread::Builder::new().name(format!("Stage4-{:?}", proto));
+    // threads.push(
+    //     builder
+    //         .spawn(move || {
+    //             log::trace!("Start S4");
+    //             let s4 = stage4::Stage4::new(Ipv4Addr::new(127, 0, 0, 1), proto);
+    //             while let Ok(packets) = rx.recv() {
+    //                 s4.send(packets)
+    //             }
+    //             log::trace!("S4 stops");
+    //         })
+    //         .unwrap(),
+    // );
     for thread in threads {
         thread.join().unwrap();
     }
