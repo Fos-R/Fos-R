@@ -349,10 +349,11 @@ fn run(
                     builder
                         .spawn(move || {
                             log::trace!("Start S4");
-                            let s4 = stage4::Stage4::new(iface, proto);
-                            while let Ok(packets) = rx.recv() {
-                                s4.send(packets)
-                            }
+                            let mut s4 = stage4::Stage4::new(iface, proto);
+                            s4.start(rx);
+                            // while let Ok(packets) = rx.recv() {
+                            //     s4.send(packets)
+                            // }
                             log::trace!("S4 stops");
                         })
                         .unwrap(),
