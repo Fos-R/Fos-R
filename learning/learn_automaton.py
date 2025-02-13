@@ -100,6 +100,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
     protocol = args.proto
 
+    if args.automaton_name:
+        if args.output is None:
+            args.output = args.automaton_name+".json"
+        if args.output_dot is None:
+            args.output_dot = args.automaton_name+".dot"
+
     select_dst_ports = args.select_dst_ports or []
     ignore_dst_ports = args.ignore_dst_ports or []
 

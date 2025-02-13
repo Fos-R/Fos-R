@@ -117,33 +117,32 @@ fn main() {
             let hosts = config::import_config(&config_str);
 
             let automata_library = match &automata {
-                Some(automata) => tadam::AutomataLibrary::from_dir(
-                    Path::new(automata).to_str().unwrap(),
-                ),
+                Some(automata) => {
+                    tadam::AutomataLibrary::from_dir(Path::new(automata).to_str().unwrap())
+                }
                 None => tadam::AutomataLibrary::default(),
             };
             let automata_library = Arc::new(automata_library);
 
-            let patterns = match &patterns {
-                Some(patterns) => flowchronicle::PatternSet::from_file(
-                    Path::new(patterns).to_str().unwrap(),
-                )
-                .expect("Cannot load patterns"),
-                None => flowchronicle::PatternSet::default(),
-            };
-            let patterns = Arc::new(patterns);
+            // let patterns = match &patterns {
+            //     Some(patterns) => flowchronicle::PatternSet::from_file(
+            //         Path::new(patterns).to_str().unwrap(),
+            //     )
+            //     .expect("Cannot load patterns"),
+            //     None => flowchronicle::PatternSet::default(),
+            // };
+            // let patterns = Arc::new(patterns);
 
             if let Some(s) = seed {
                 log::trace!("Generating with seed {}", s);
             }
             log::info!("Model initialization");
             let s0 = stage0::UniformGenerator::new(seed, false, 2, flow_count);
-            // TODO utiliser include_bytes à la place
-            // let s1 = stage1::ConstantFlowGenerator::new(
-            //     *local_interfaces.first().unwrap(),
-            //     *local_interfaces.last().unwrap(),
-            // ); // TODO: modify, only for testing
-            let s1 = flowchronicle::FCGenerator::new(patterns, hosts, false);
+            let s1 = stage1::ConstantFlowGenerator::new(
+                *local_interfaces.first().unwrap(),
+                *local_interfaces.last().unwrap(),
+            ); // TODO: modify, only for testing
+               // let s1 = flowchronicle::FCGenerator::new(patterns, hosts, false);
             let s2 = tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(false);
 
@@ -317,7 +316,7 @@ fn run(
                                 .unwrap(),
                         );
                     }
-                    Protocol::IGMP => todo!()
+                    Protocol::IGMP => todo!(),
                 }
             }
         }
