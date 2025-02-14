@@ -262,7 +262,7 @@ impl From<PatternSetJSON> for PatternSet {
 impl Default for PatternSet {
     fn default() -> Self {
         let set: PatternSet =
-            serde_json::from_str(include_str!("../../../learning/patterns.json")).unwrap();
+            serde_json::from_str(include_str!("../../breizhctf-patterns.json")).unwrap();
         // serde_json::from_str(include_str!("../../../models/medium/patterns.json")).unwrap();
         log::info!("Default patterns loaded");
         set

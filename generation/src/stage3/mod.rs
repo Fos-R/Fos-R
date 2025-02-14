@@ -281,6 +281,7 @@ impl Stage3 {
         let mut tcp_data = TcpPacketData::new(&mut rng);
         let mut packets = Vec::with_capacity(input.data.packets_info.len());
         let mut directions = Vec::with_capacity(input.data.packets_info.len());
+        let mut timestamps = Vec::with_capacity(input.data.packets_info.len());
 
         for packet_info in &input.data.packets_info {
             let packet_size = MutableEthernetPacket::minimum_packet_size()
@@ -309,6 +310,7 @@ impl Stage3 {
                 data: packet.clone(),
             });
             directions.push(packet_info.get_direction());
+            timestamps.push(packet_info.get_ts());
         }
 
         SeededData {
@@ -316,6 +318,7 @@ impl Stage3 {
             data: Packets {
                 packets,
                 directions,
+                timestamps,
                 flow: input.data.flow,
             },
         }
@@ -333,6 +336,7 @@ impl Stage3 {
         let mut tcp_data = TcpPacketData::new(&mut rng);
         let mut packets = Vec::new();
         let mut directions = Vec::new();
+        let mut timestamps = Vec::with_capacity(input.data.packets_info.len());
 
         for packet_info in &input.data.packets_info {
             let packet_size = MutableEthernetPacket::minimum_packet_size()
@@ -354,6 +358,7 @@ impl Stage3 {
                 data: packet.clone(),
             });
             directions.push(packet_info.get_direction());
+            timestamps.push(packet_info.get_ts());
         }
 
         SeededData {
@@ -361,6 +366,7 @@ impl Stage3 {
             data: Packets {
                 packets,
                 directions,
+                timestamps,
                 flow: input.data.flow,
             },
         }
@@ -400,16 +406,17 @@ fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(),
 }
 
 fn send_online(
+    local_interfaces: &Vec<Ipv4Addr>,
     mut flow_packets: SeededData<Packets>,
-    tx_s3_hm: &HashMap<Ipv4Addr, Sender<SeededData<Packets>>>,
+    tx_s3: &Sender<SeededData<Packets>>,
 ) {
     // check if exist
     let f = flow_packets.data.flow.get_data();
-    let src_s4 = tx_s3_hm.get(&f.src_ip);
-    let dst_s4 = tx_s3_hm.get(&f.dst_ip);
-    if let (Some(tx1), Some(tx2)) = (src_s4, dst_s4) {
+    let src_s4 = local_interfaces.contains(&f.src_ip);
+    let dst_s4 = local_interfaces.contains(&f.dst_ip);
+    if src_s4 && dst_s4 {
         // only copy if we have to
-        tx1.send(flow_packets.clone()).unwrap();
+        tx_s3.send(flow_packets.clone()).unwrap();
         // ensure stage 4 is always the source
         flow_packets.data.directions = flow_packets
             .data
@@ -417,10 +424,10 @@ fn send_online(
             .into_iter()
             .map(|d| d.into_reverse())
             .collect();
-        tx2.send(flow_packets).unwrap();
-    } else if let Some(tx1) = src_s4 {
-        tx1.send(flow_packets).unwrap();
-    } else if let Some(tx2) = dst_s4 {
+        tx_s3.send(flow_packets).unwrap();
+    } else if src_s4 {
+        tx_s3.send(flow_packets).unwrap();
+    } else if dst_s4 {
         // ensure stage 4 is always the source
         flow_packets.data.directions = flow_packets
             .data
@@ -428,7 +435,7 @@ fn send_online(
             .into_iter()
             .map(|d| d.into_reverse())
             .collect();
-        tx2.send(flow_packets).unwrap();
+        tx_s3.send(flow_packets).unwrap();
     }
 }
 
@@ -445,8 +452,9 @@ fn send_pcap(flow_packets: SeededData<Packets>, tx_s3_to_collector: &Sender<Pack
 
 pub fn run<T: PacketInfo>(
     generator: impl Fn(SeededData<PacketsIR<T>>) -> SeededData<Packets>,
+    local_interfaces: Vec<Ipv4Addr>,
     rx_s3: Receiver<SeededData<PacketsIR<T>>>,
-    tx_s3_hm: HashMap<Ipv4Addr, Sender<SeededData<Packets>>>, // TODO: Option
+    tx_s3: Sender<SeededData<Packets>>, // TODO: Option
     tx_s3_to_collector: Sender<Packets>,                      // TODO: Option
     stats: Arc<Stats>,
     online: bool,
@@ -464,7 +472,7 @@ pub fn run<T: PacketInfo>(
                 // l’export s’il prend trop de temps ?
                 send_pcap(flow_packets.clone(), &tx_s3_to_collector)
             }
-            send_online(flow_packets, &tx_s3_hm);
+            send_online(&local_interfaces, flow_packets, &tx_s3);
         } else if pcap_export {
             send_pcap(flow_packets, &tx_s3_to_collector)
         }
