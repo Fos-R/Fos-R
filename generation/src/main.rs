@@ -189,13 +189,9 @@ fn run(
         let mut tx_s3 = HashMap::new();
         let mut rx_s4 = HashMap::new();
         for proto in Protocol::iter() {
-            let mut tx_s3_hm = HashMap::new();
-            for iface in &local_interfaces {
-                let (tx, rx) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
-                tx_s3_hm.insert(*iface, tx);
-                rx_s4.insert((*iface, proto), rx);
-            }
-            tx_s3.insert(proto, tx_s3_hm);
+            let (tx, rx) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
+            rx_s4.insert(proto, rx);
+            tx_s3.insert(proto, tx);
         }
         // TODO: only create if offline
         let (tx_s3_to_collector, rx_collector) = bounded::<Packets>(CHANNEL_SIZE);
@@ -251,12 +247,13 @@ fn run(
 
         // STAGE 3
 
-        for (proto, tx_s3_hm) in tx_s3 {
+        for (proto, tx) in tx_s3 {
             for _ in 0..s3_count {
-                let tx_s3_hm = tx_s3_hm.clone();
+                let tx = tx.clone();
                 let tx_s3_to_collector = tx_s3_to_collector.clone();
                 let s3 = s3.clone();
                 let stats = Arc::clone(&stats);
+                let local_interfaces = local_interfaces.clone();
 
                 let builder = thread::Builder::new().name(format!("Stage3-{:?}", proto));
                 let online = !local_interfaces.is_empty();
@@ -269,8 +266,9 @@ fn run(
                                 .spawn(move || {
                                     stage3::run(
                                         |f| s3.generate_tcp_packets(f),
+                                        local_interfaces,
                                         rx_s3_tcp,
-                                        tx_s3_hm,
+                                        tx,
                                         tx_s3_to_collector,
                                         stats,
                                         online,
@@ -287,8 +285,9 @@ fn run(
                                 .spawn(move || {
                                     stage3::run(
                                         |f| s3.generate_udp_packets(f),
+                                        local_interfaces,
                                         rx_s3_udp,
-                                        tx_s3_hm,
+                                        tx,
                                         tx_s3_to_collector,
                                         stats,
                                         online,
@@ -305,8 +304,9 @@ fn run(
                                 .spawn(move || {
                                     stage3::run(
                                         |f| s3.generate_icmp_packets(f),
+                                        local_interfaces,
                                         rx_s3_icmp,
-                                        tx_s3_hm,
+                                        tx,
                                         tx_s3_to_collector,
                                         stats,
                                         online,
@@ -342,14 +342,14 @@ fn run(
         // STAGE 4 (online mode only)
 
         if !local_interfaces.is_empty() {
-            for ((iface, proto), rx) in rx_s4 {
+            for (proto, rx) in rx_s4 {
                 // let rx = rx.clone();
-                let builder = thread::Builder::new().name(format!("Stage4-{:?}-{iface}", proto));
+                let builder = thread::Builder::new().name(format!("Stage4-{:?}", proto));
                 gen_threads.push(
                     builder
                         .spawn(move || {
                             log::trace!("Start S4");
-                            let mut s4 = stage4::Stage4::new(iface, proto);
+                            let mut s4 = stage4::Stage4::new(proto);
                             s4.start(rx);
                             // while let Ok(packets) = rx.recv() {
                             //     s4.send(packets)

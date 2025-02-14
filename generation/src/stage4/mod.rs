@@ -5,6 +5,7 @@ use std::{
     cmp::Ordering,
     collections::{binary_heap, BinaryHeap},
 };
+use std::collections::HashMap;
 
 use crate::*;
 use crossbeam_channel::Receiver;
@@ -14,10 +15,25 @@ use pnet::transport::{
 };
 use pnet_packet::{ip::IpNextHeaderProtocols, Packet};
 use std::sync::Mutex;
+use std::time::Duration;
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub struct FlowId {
+    pub src_ip: Ipv4Addr,
+    pub dst_ip: Ipv4Addr,
+    pub src_port: u16,
+    pub dst_port: u16,
+}
+
+impl FlowId {
+    pub fn is_compatible(&self, f: &Flow) -> bool {
+        let d = f.get_data();
+        self.src_ip == d.src_ip && self.dst_ip == d.dst_ip && self.src_port == d.src_port && self.dst_port == d.dst_port
+    }
+}
 
 pub struct Stage4 {
     // Params
-    interface: Ipv4Addr,
     proto: Protocol,
 
     // Raw Socket
@@ -25,44 +41,14 @@ pub struct Stage4 {
     rx: TransportReceiver,
 
     // Flows
-    current_flows: Arc<Mutex<BinaryHeap<OnlineFlow>>>,
+    current_flows: Arc<Mutex<Vec<Packets>>>,
+    sockets: Arc<Mutex<HashMap<FlowId, TcpListener>>>,
 }
-
-struct OnlineFlow {
-    flow: SeededData<Packets>,
-    direction: PacketDirection,
-}
-
-// Used to order packets by timestamp in a binary heap
-impl Ord for OnlineFlow {
-    fn cmp(&self, other: &Self) -> Ordering {
-        if self.flow.data.packets.is_empty() {
-            return Ordering::Greater;
-        } else if other.flow.data.packets.is_empty() {
-            return Ordering::Less;
-        }
-        self.flow.data.packets[0].cmp(&other.flow.data.packets[0])
-    }
-}
-
-impl PartialOrd for OnlineFlow {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for OnlineFlow {
-    fn eq(&self, other: &Self) -> bool {
-        self.flow.data.packets.is_empty() && other.flow.data.packets.is_empty()
-            || self.flow.data.packets[0] == other.flow.data.packets[0]
-    }
-}
-
-impl Eq for OnlineFlow {}
 
 impl Stage4 {
-    pub fn new(interface: Ipv4Addr, proto: Protocol) -> Self {
+    pub fn new(proto: Protocol) -> Self {
         // Create an l3 raw socket using libpnet
+        // TODO: utiliser IpNextHeaderProtocol::new(u8) pour éviter le match
         let ip_next_header_protocol = match proto {
             Protocol::TCP => IpNextHeaderProtocols::Tcp,
             Protocol::UDP => IpNextHeaderProtocols::Udp,
@@ -72,22 +58,17 @@ impl Stage4 {
 
         let channel_type = TransportChannelType::Layer3(ip_next_header_protocol);
 
-        let (mut tx, mut rx) = match transport_channel(4096, channel_type) {
-            Ok((tx, rx)) => (tx, rx),
-            Err(e) => panic!(
-                "An error occurred when creating the transport channel: {}",
-                e
-            ),
-        };
+        let (tx, rx) = transport_channel(4096, channel_type).expect("Error when creating transport channel");
 
-        let current_flows = Arc::new(Mutex::new(BinaryHeap::new()));
+        let current_flows = Arc::new(Mutex::new(Vec::new()));
+        let sockets = Arc::new(Mutex::new(HashMap::new()));
 
         Stage4 {
-            interface,
             proto,
             tx,
             rx,
             current_flows,
+            sockets,
         }
     }
 
@@ -95,194 +76,116 @@ impl Stage4 {
         // Send and receive packets in this thread
         let mut rx_iter = ipv4_packet_iter(&mut self.rx);
         loop {
-            // Peek the first flow of the heap
-            let Some(mut current_flow) = self.current_flows.lock().unwrap().pop() else {
-                continue;
-                // Wait for a flow to be added maybe using a condition variable
-            };
-
-            // Get the first packet of the flow
-            let packet = current_flow.flow.data.packets.remove(0);
-            let direction = current_flow.flow.data.directions.remove(0);
-
-            // Get the expected time of arrival of the packet to know if we should wait before sending or receiving it
-
-            let eth_packet = pnet::packet::ethernet::EthernetPacket::new(&packet.data).unwrap();
-            let ipv4_packet = pnet::packet::ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
-            let tcp_packet = pnet::packet::tcp::TcpPacket::new(ipv4_packet.payload()).unwrap();
-
-            let destination = std::net::IpAddr::V4(ipv4_packet.get_destination());
-
-            if direction == current_flow.direction {
-                let ts = packet.header.ts;
-                let now = std::time::SystemTime::now();
-                let now = now.duration_since(std::time::UNIX_EPOCH).unwrap();
-                let expected_ts = std::time::Duration::new(ts.tv_sec as u64, ts.tv_usec as u32);
-                let remaining = expected_ts
-                    .checked_sub(now)
-                    .unwrap_or(std::time::Duration::new(0, 0));
-                log::info!("Expected ts: {:?}", remaining);
-                // Sleep for the remaining time
-                std::thread::sleep(remaining);
-                // Send the packet
-                log::info!("Sending packet to {:?}", destination);
-                log::info!("Packet: {:?}", tcp_packet.get_source());
-                match self.tx.send_to(&ipv4_packet, destination) {
-                    Ok(n) => assert_eq!(n, ipv4_packet.packet().len()), // Check if the whole packet was sent
-                    Err(e) => panic!("failed to send packet: {}", e),
-                }
-            } else {
-                log::info!("Waiting for packet from {:?}", ipv4_packet.get_source());
-                // If the direction doesn't match, wait for the packet to be received
-                while let Ok((recv_packet, addr)) = rx_iter.next() {
-                    log::info!(
-                        "Attempting to receive a packet, received packet from {:?}",
-                        addr
-                    );
-                    let recv_tcp_packet = pnet::packet::tcp::TcpPacket::new(recv_packet.payload())
-                        .expect("Failed to parse received packet");
-                    // Let's compare the received packet with the one we're waiting for
-                    if recv_tcp_packet.get_source() == tcp_packet.get_source() {
-                        if recv_tcp_packet.get_destination() == tcp_packet.get_destination() {
-                            if addr == ipv4_packet.get_source() {
-                                // If the received packet matches the one we're waiting for, we can send it
-                                log::info!("Received packet from {:?}", addr);
-                                break;
-                            } else {
-                                log::info!(
-                                    "Source address mismatch: expected {:?}, got {:?}",
-                                    ipv4_packet.get_source(),
-                                    addr
-                                );
-                            }
-                        } else {
-                            log::info!(
-                                "Destination port mismatch: expected {:?}, got {:?}",
-                                tcp_packet.get_destination(),
-                                recv_tcp_packet.get_destination()
-                            );
-                        }
-                    } else {
-                        log::info!(
-                            "Source port mismatch: expected {:?}, got {:?}",
-                            tcp_packet.get_source(),
-                            recv_tcp_packet.get_source()
-                        );
+            let mut packet_to_send : Option<(Duration,FlowId)> = None;
+            {
+                let flows = self.current_flows.lock().unwrap();
+                for f in flows.iter() {
+                    assert!(!f.packets.is_empty());
+                    // TODO: remove the clone
+                    if f.directions[0] == PacketDirection::Forward && (packet_to_send.is_none() || packet_to_send.clone().unwrap().0 > f.timestamps[0]) {
+                        let d = f.flow.get_data();
+                        let fid = FlowId { src_ip: d.src_ip, dst_ip: d.dst_ip, src_port: d.src_port, dst_port: d.dst_port };
+                        packet_to_send = Some((f.timestamps[0], fid));
                     }
                 }
             }
 
-            // Add the flow back to the heap if it still has packets
-            if !current_flow.flow.data.packets.is_empty() {
-                self.current_flows.lock().unwrap().push(current_flow);
+            let received_data = match &packet_to_send {
+                None => Some(rx_iter.next().expect("Network error")),
+                Some((ts,_)) => {
+                    let timeout = ts.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap());
+                    rx_iter.next_with_timeout(timeout).expect("Network error")
+                }
+            };
+
+            if let Some((recv_packet, addr)) = received_data {
+                // We received a packet during our wait
+                let recv_tcp_packet = pnet::packet::tcp::TcpPacket::new(recv_packet.payload())
+                    .expect("Failed to parse received packet");
+
+                let fid = FlowId { src_ip: recv_packet.get_source(), dst_ip: recv_packet.get_destination(), src_port: recv_tcp_packet.get_source(), dst_port: recv_tcp_packet.get_destination() };
+                let mut flows = self.current_flows.lock().unwrap();
+                let flow_pos = flows.iter().position(|f| fid.is_compatible(&f.flow)).expect("Received a packet in an unknown session");
+                let mut flow = &mut flows[flow_pos];
+                // look for the first backward packet. TODO: check for that particular packet
+                let pos = flow.directions.iter().position(|d| d == &PacketDirection::Backward).unwrap();
+                flow.directions.remove(pos);
+                flow.packets.remove(pos);
+                flow.timestamps.remove(pos);
+                if flow.directions.is_empty() {
+                    flows.remove(flow_pos);
+                    self.sockets.lock().unwrap().remove(&fid); // session is complete, free the socket
+                }
+                // Go back to searching for the next packet to send because it may have changed
+            } else {
+                // We need to send a packet
+                let mut flows = self.current_flows.lock().unwrap();
+                let (ts, fid) = packet_to_send.unwrap(); // always possible by construction
+                // TODO: enumerate plutôt
+                let flow_pos = flows.iter().position(|f| fid.is_compatible(&f.flow)).expect("Need to send a packet in an unknown session");
+                let mut flow = &mut flows[flow_pos];
+                let pos = flow.directions.iter().position(|d| d == &PacketDirection::Forward).unwrap();
+                assert_eq!(pos, 0); // it should be the first in the list
+                let packet = flow.packets.remove(pos);
+                flow.directions.remove(pos);
+                flow.timestamps.remove(pos);
+
+                // Get the expected time of arrival of the packet to know if we should wait before sending or receiving it
+
+                let eth_packet = pnet::packet::ethernet::EthernetPacket::new(&packet.data).unwrap();
+                let ipv4_packet = pnet::packet::ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
+
+                match self.tx.send_to(&ipv4_packet, std::net::IpAddr::V4(fid.dst_ip)) {
+                    Ok(n) => assert_eq!(n, ipv4_packet.packet().len()), // Check if the whole packet was sent
+                    Err(e) => panic!("failed to send packet: {}", e),
+                }
+
+                if flow.directions.is_empty() {
+                    flows.remove(flow_pos);
+                    self.sockets.lock().unwrap().remove(&fid); // session is complete, free the socket
+                }
             }
         }
     }
 
-    pub fn handle_packet(&mut self) {
-        loop {
-            // Peek the first flow of the heap
-            let Some(mut current_flow) = self.current_flows.lock().unwrap().pop() else {
-                continue;
-                // Wait for a flow to be added maybe using a condition variable
-            };
-
-            // Get the first packet of the flow
-            let packet = current_flow.flow.data.packets.remove(0);
-            let direction = current_flow.flow.data.directions.remove(0);
-
-            let eth_packet = pnet::packet::ethernet::EthernetPacket::new(&packet.data).unwrap();
-            let packet = pnet::packet::ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
-            let tcp_packet = pnet::packet::tcp::TcpPacket::new(packet.payload()).unwrap();
-
-            // Send the packet to the destination
-            let destination = std::net::IpAddr::V4(packet.get_destination());
-
-            self.tx.send_to(packet, destination).unwrap();
-
-            break;
-        }
-    }
-
     pub fn start(&mut self, mut incoming_flows: Receiver<SeededData<Packets>>) {
-        log::info!("stage4 started on interface {}", self.interface);
+        // TODO: vérifier s’il faut mettre un SeededData ici ou pas
+
+        log::info!("stage4 started");
         // Create a thread to receive incoming flows and add them to the current_flows
         let mut current_flows = self.current_flows.clone();
-        let interface = self.interface;
+        let mut sockets = self.sockets.clone();
         let join_handle = std::thread::spawn(move || {
+            // TODO: faire sa propre fonction
             while let Ok(flow) = incoming_flows.recv() {
                 log::info!("Received a new flow");
-
-                // Get the flow's direction by peeking the first packet sender ip
-                let direction = if flow.data.flow.get_data().src_ip == interface {
-                    PacketDirection::Forward
-                } else {
-                    PacketDirection::Backward
-                };
 
                 log::info!(
                     "Number of flows in the heap: {}",
                     current_flows.lock().unwrap().len() + 1
                 );
 
+                // bind the socket as soon as we know we will deal with it, before receiving any
+                // packet
                 if let Flow::TCP(tcp_flow) = &flow.data.flow {
-                    let src_port = tcp_flow.src_port;
-                    let dst_port = tcp_flow.dst_port;
-
-                    let src_addr = format!("0.0.0.0:{}", src_port);
-                    let dst_addr = format!("0.0.0.0:{}", dst_port);
-
-                    let src_listener = TcpListener::bind(&src_addr);
-                    match src_listener {
-                        Ok(listener) => {
-                            std::thread::spawn(move || {
-                                for stream in listener.incoming() {
-                                    match stream {
-                                        Ok(stream) => {
-                                            log::info!("New connection: {:?}", stream);
-                                        }
-                                        Err(e) => {
-                                            log::error!("Error accepting connection: {:?}", e);
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                        Err(e) => {
-                            log::error!("Error binding to address {:?}: {:?}", src_addr, e);
-                        }
-                    }
-
-                    let dst_listener = TcpListener::bind(&dst_addr);
-                    match dst_listener {
-                        Ok(listener) => {
-                            std::thread::spawn(move || {
-                                for stream in listener.incoming() {
-                                    match stream {
-                                        Ok(stream) => {
-                                            log::info!("New connection: {:?}", stream);
-                                        }
-                                        Err(e) => {
-                                            log::error!("Error accepting connection: {:?}", e);
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                        Err(e) => {
-                            log::error!("Error binding to address {:?}: {:?}", dst_addr, e);
-                        }
-                    }
+                    let src_listener = TcpListener::bind(format!("{}:{}", tcp_flow.src_ip, tcp_flow.src_port)).expect("Error during socket creation");
+                    sockets.lock().unwrap().insert(FlowId { src_ip: tcp_flow.src_ip, dst_ip: tcp_flow.dst_ip, src_port: tcp_flow.src_port, dst_port: tcp_flow.dst_port }, src_listener);
+                } else {
+                    panic!("Only TCP is implemented");
                 }
 
                 current_flows
                     .lock()
                     .unwrap()
-                    .push(OnlineFlow { flow, direction });
+                    .push(flow.data);
             }
         });
 
+
+
         // Handle packets
         self.handle_packets();
+
+        join_handle.join().unwrap();
     }
 }

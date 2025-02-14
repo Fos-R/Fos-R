@@ -1,0 +1,48 @@
+{
+    "pattern_weights": [
+    ],
+    "metadata": {
+        "creation_time": "2025-01-29 13:57:36.959871",
+        "input_file": "test"
+    },
+    "patterns": [
+        {
+            "partial_flows": [
+                [
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "Proto",
+                            "domain": [
+                                "TCP"
+                            ]
+                        }
+                    },
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "DstPt",
+                            "domain": [
+                                443
+                            ]
+                        }
+                    },
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "BwdByt",
+                            "domain": [
+                                [
+                                    1438,
+                                    3777
+                                ]
+                            ]
+                        }
+                    }
+                ]
+            ],
+            "bayesian_network": [
+            ]
+        }
+    ]
+}

@@ -208,5 +208,6 @@ impl Eq for Packet {}
 pub struct Packets {
     pub packets: Vec<Packet>,
     pub directions: Vec<PacketDirection>,
+    pub timestamps: Vec<Duration>,
     pub flow: Flow,
 }
