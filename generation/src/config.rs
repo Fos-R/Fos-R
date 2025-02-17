@@ -102,5 +102,6 @@ pub fn import_config(config: &str) -> Hosts {
             hosts_pairs.insert(port, pairs_port);
         }
     }
+    log::info!("Environment configuration loaded");
     Hosts { hosts_pairs, os }
 }

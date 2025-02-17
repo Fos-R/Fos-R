@@ -147,7 +147,7 @@ impl Stage2 for TadamGenerator {
                     .iter()
                     .filter(|p| p.direction == PacketDirection::Backward)
                     .count();
-                flow.data.total_duration = packets_info.last().unwrap().ts - flow.data.timestamp;
+                // flow.data.total_duration = packets_info.last().unwrap().ts - flow.data.timestamp;
 
                 Some(SeededData {
                     seed: rng.next_u64(),
