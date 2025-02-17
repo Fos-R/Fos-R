@@ -123,23 +123,25 @@ impl Stage4 {
                     dst_port: recv_tcp_packet.get_destination(),
                 };
                 let mut flows = self.current_flows.lock().unwrap();
-                let flow_pos = flows
-                    .iter()
-                    .position(|f| fid.is_compatible(&f.flow))
-                    .expect("Received a packet in an unknown session");
-                let mut flow = &mut flows[flow_pos];
-                // look for the first backward packet. TODO: check for that particular packet
-                let pos = flow
-                    .directions
-                    .iter()
-                    .position(|d| d == &PacketDirection::Backward)
-                    .unwrap();
-                flow.directions.remove(pos);
-                flow.packets.remove(pos);
-                flow.timestamps.remove(pos);
-                if flow.directions.is_empty() {
-                    flows.remove(flow_pos);
-                    self.sockets.lock().unwrap().remove(&fid); // session is complete, free the socket
+                let flow_pos = flows.iter().position(|f| fid.is_compatible(&f.flow));
+                match flow_pos {
+                    Some(flow_pos) => {
+                        let mut flow = &mut flows[flow_pos];
+                        // look for the first backward packet. TODO: check for that particular packet
+                        let pos = flow
+                            .directions
+                            .iter()
+                            .position(|d| d == &PacketDirection::Backward)
+                            .unwrap();
+                        flow.directions.remove(pos);
+                        flow.packets.remove(pos);
+                        flow.timestamps.remove(pos);
+                        if flow.directions.is_empty() {
+                            flows.remove(flow_pos);
+                            self.sockets.lock().unwrap().remove(&fid); // session is complete, free the socket
+                        }
+                    }
+                    None => (), // Packet that is not for Fos-R
                 }
                 // Go back to searching for the next packet to send because it may have changed
             } else {
