@@ -21,6 +21,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::net::Ipv4Addr;
 use std::path::Path;
+use std::process;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -209,8 +210,13 @@ fn run(
         let s0_running = Arc::new(AtomicBool::new(true));
         let r = s0_running.clone();
         ctrlc::set_handler(move || {
-            log::info!("Ending the generation");
-            r.store(false, Ordering::Relaxed);
+            if r.load(Ordering::Relaxed) {
+                log::info!("Ending the generation, please wait a few seconds");
+                r.store(false, Ordering::Relaxed);
+            } else {
+                log::info!("Ending immediately");
+                process::abort();
+            }
         })
         .expect("Error setting Ctrl-C handler");
 
