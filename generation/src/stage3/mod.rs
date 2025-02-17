@@ -454,8 +454,8 @@ pub fn run<T: PacketInfo>(
     generator: impl Fn(SeededData<PacketsIR<T>>) -> SeededData<Packets>,
     local_interfaces: Vec<Ipv4Addr>,
     rx_s3: Receiver<SeededData<PacketsIR<T>>>,
-    tx_s3: Sender<SeededData<Packets>>, // TODO: Option
-    tx_s3_to_collector: Sender<Packets>,                      // TODO: Option
+    tx_s3: Sender<SeededData<Packets>>,  // TODO: Option
+    tx_s3_to_collector: Sender<Packets>, // TODO: Option
     stats: Arc<Stats>,
     online: bool,
     pcap_export: bool,

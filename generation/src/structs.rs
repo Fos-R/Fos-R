@@ -84,7 +84,7 @@ pub struct FlowData {
     pub fwd_packets_count: usize,
     pub bwd_packets_count: usize,
     pub timestamp: Duration,
-    pub total_duration: Duration,
+    // pub total_duration: Duration,
 }
 
 impl From<Flow> for FlowData {

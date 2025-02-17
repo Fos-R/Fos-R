@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
 
 #[derive(Debug, Clone, Default)]
@@ -23,7 +24,7 @@ struct PartiallyDefinedFlowData {
     fwd_packets_count: Option<u64>,
     bwd_packets_count: Option<u64>,
     timestamp: Option<Duration>,
-    total_duration: Option<Duration>,
+    // total_duration: Option<Duration>,
     proto: Option<Protocol>,
 }
 
@@ -39,7 +40,7 @@ impl From<PartiallyDefinedFlowData> for Flow {
             fwd_packets_count: p.fwd_packets_count.unwrap() as usize,
             bwd_packets_count: p.bwd_packets_count.unwrap() as usize,
             timestamp: p.timestamp.unwrap(),
-            total_duration: p.total_duration.unwrap(),
+            // total_duration: p.total_duration.unwrap(),
         };
         p.proto.unwrap().wrap(d)
     }
@@ -155,6 +156,8 @@ enum CellType {
     ReuseSrcAsDst { row: usize },
     ReuseDrcAsSrc { row: usize },
     ReuseDrcAsDst { row: usize },
+    SrcIpScenario,
+    DstIpScenario,
 }
 
 impl Pattern {
@@ -194,42 +197,73 @@ impl Pattern {
         config: &Hosts,
         ts: Duration,
     ) -> impl Iterator<Item = Flow> {
-        let mut partially_defined_flows = self.sample_free_cells(rng, self.partial_flows.len());
-        for p in partially_defined_flows.iter_mut() {
-            p.src_port = Some(Uniform::new(32000, 65535).sample(rng) as u16);
-        }
-        for (r_index, p) in self.partial_flows.iter().enumerate() {
-            partially_defined_flows.get_mut(r_index).unwrap().timestamp = Some(ts); // TODO tirage
-            for (c_index, c) in p.iter().enumerate() {
-                match c {
-                    CellType::ReuseSrcAsSrc { row } => {
-                        partially_defined_flows.get_mut(r_index).unwrap().src_ip =
-                            partially_defined_flows[*row].src_ip
-                    }
-                    CellType::ReuseSrcAsDst { row } => {
-                        partially_defined_flows.get_mut(r_index).unwrap().dst_ip =
-                            partially_defined_flows[*row].src_ip
-                    }
-                    CellType::ReuseDrcAsSrc { row } => {
-                        partially_defined_flows.get_mut(r_index).unwrap().src_ip =
-                            partially_defined_flows[*row].dst_ip
-                    }
-                    CellType::ReuseDrcAsDst { row } => {
-                        partially_defined_flows.get_mut(r_index).unwrap().dst_ip =
-                            partially_defined_flows[*row].dst_ip
-                    }
-                    CellType::Fixed { feature } => partially_defined_flows
-                        .get_mut(r_index)
-                        .unwrap()
-                        .set_value(rng, feature, 0),
-                };
+        loop {
+            // First, sample all the free cells
+            let mut partially_defined_flows = self.sample_free_cells(rng, self.partial_flows.len());
+            // Sample source port
+            for p in partially_defined_flows.iter_mut() {
+                p.src_port = Some(Uniform::new(32000, 65535).sample(rng) as u16);
             }
+            // Complete with reused Placeholder and fixed values
+            let mut current_ts = ts;
+            for (r_index, p) in self.partial_flows.iter().enumerate() {
+                partially_defined_flows.get_mut(r_index).unwrap().timestamp = Some(current_ts);
+                // TODO tirage
+                current_ts += Duration::from_millis(500);
+                for (c_index, c) in p.iter().enumerate() {
+                    match c {
+                        CellType::ReuseSrcAsSrc { row } => {
+                            partially_defined_flows.get_mut(r_index).unwrap().src_ip =
+                                partially_defined_flows[*row].src_ip
+                        }
+                        CellType::ReuseSrcAsDst { row } => {
+                            partially_defined_flows.get_mut(r_index).unwrap().dst_ip =
+                                partially_defined_flows[*row].src_ip
+                        }
+                        CellType::ReuseDrcAsSrc { row } => {
+                            partially_defined_flows.get_mut(r_index).unwrap().src_ip =
+                                partially_defined_flows[*row].dst_ip
+                        }
+                        CellType::ReuseDrcAsDst { row } => {
+                            partially_defined_flows.get_mut(r_index).unwrap().dst_ip =
+                                partially_defined_flows[*row].dst_ip
+                        }
+                        CellType::Fixed { feature } => partially_defined_flows
+                            .get_mut(r_index)
+                            .unwrap()
+                            .set_value(rng, feature, 0),
+                        _ => (),
+                    };
+                }
+            }
+            let mut restart = false;
+            // Complete with scenario dependent values
+            for p in partially_defined_flows.iter_mut() {
+                // TODO: gérer les cas où seuls l’un deux est None
+                if p.src_ip.is_none() && p.dst_ip.is_none() {
+                    if let Some((src_ip, dst_ip)) =
+                        config.get_src_and_dst_ip(rng, p.dst_port.unwrap())
+                    {
+                        p.src_ip = Some(src_ip);
+                        p.dst_ip = Some(dst_ip);
+                    } else {
+                        log::warn!(
+                            "No provider or user IP for dst port {}",
+                            p.dst_port.unwrap()
+                        );
+                        restart = true;
+                        break; // start again
+                    }
+                }
+                p.ttl_client = Some(config.get_default_ttl(&p.src_ip.unwrap()));
+                p.ttl_server = Some(config.get_default_ttl(&p.dst_ip.unwrap()));
+            }
+            if restart {
+                thread::sleep(Duration::from_millis(1));
+                continue;
+            }
+            return partially_defined_flows.into_iter().map(|p| p.into());
         }
-        for p in partially_defined_flows.iter_mut() {
-            p.ttl_client = Some(config.get_default_ttl(&p.src_ip.unwrap()));
-            p.ttl_server = Some(config.get_default_ttl(&p.dst_ip.unwrap()));
-        }
-        partially_defined_flows.into_iter().map(|p| p.into())
     }
 }
 

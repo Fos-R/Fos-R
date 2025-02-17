@@ -55,9 +55,10 @@ pub enum Command {
         #[arg(
             short,
             long,
+            default_value=None,
             help = "Path to the information system configuration file"
         )]
-        config_path: String,
+        config_path: Option<String>,
     },
     /// Perform data augmentation on a pcap file. You should use your own models that have been
     /// fitted on that pcap file.
@@ -101,8 +102,9 @@ pub enum Command {
         #[arg(
             short,
             long,
+            default_value=None,
             help = "Path to the information system configuration file"
         )]
-        config_path: String,
+        config_path: Option<String>,
     },
 }

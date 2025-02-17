@@ -1,11 +1,11 @@
 #![allow(unused)]
 
+use std::collections::HashMap;
 use std::net::{TcpListener, TcpStream};
 use std::{
     cmp::Ordering,
     collections::{binary_heap, BinaryHeap},
 };
-use std::collections::HashMap;
 
 use crate::*;
 use crossbeam_channel::Receiver;
@@ -28,7 +28,10 @@ pub struct FlowId {
 impl FlowId {
     pub fn is_compatible(&self, f: &Flow) -> bool {
         let d = f.get_data();
-        self.src_ip == d.src_ip && self.dst_ip == d.dst_ip && self.src_port == d.src_port && self.dst_port == d.dst_port
+        self.src_ip == d.src_ip
+            && self.dst_ip == d.dst_ip
+            && self.src_port == d.src_port
+            && self.dst_port == d.dst_port
     }
 }
 
@@ -58,7 +61,8 @@ impl Stage4 {
 
         let channel_type = TransportChannelType::Layer3(ip_next_header_protocol);
 
-        let (tx, rx) = transport_channel(4096, channel_type).expect("Error when creating transport channel");
+        let (tx, rx) =
+            transport_channel(4096, channel_type).expect("Error when creating transport channel");
 
         let current_flows = Arc::new(Mutex::new(Vec::new()));
         let sockets = Arc::new(Mutex::new(HashMap::new()));
@@ -76,15 +80,23 @@ impl Stage4 {
         // Send and receive packets in this thread
         let mut rx_iter = ipv4_packet_iter(&mut self.rx);
         loop {
-            let mut packet_to_send : Option<(Duration,FlowId)> = None;
+            let mut packet_to_send: Option<(Duration, FlowId)> = None;
             {
                 let flows = self.current_flows.lock().unwrap();
                 for f in flows.iter() {
                     assert!(!f.packets.is_empty());
                     // TODO: remove the clone
-                    if f.directions[0] == PacketDirection::Forward && (packet_to_send.is_none() || packet_to_send.clone().unwrap().0 > f.timestamps[0]) {
+                    if f.directions[0] == PacketDirection::Forward
+                        && (packet_to_send.is_none()
+                            || packet_to_send.clone().unwrap().0 > f.timestamps[0])
+                    {
                         let d = f.flow.get_data();
-                        let fid = FlowId { src_ip: d.src_ip, dst_ip: d.dst_ip, src_port: d.src_port, dst_port: d.dst_port };
+                        let fid = FlowId {
+                            src_ip: d.src_ip,
+                            dst_ip: d.dst_ip,
+                            src_port: d.src_port,
+                            dst_port: d.dst_port,
+                        };
                         packet_to_send = Some((f.timestamps[0], fid));
                     }
                 }
@@ -92,8 +104,9 @@ impl Stage4 {
 
             let received_data = match &packet_to_send {
                 None => Some(rx_iter.next().expect("Network error")),
-                Some((ts,_)) => {
-                    let timeout = ts.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap());
+                Some((ts, _)) => {
+                    let timeout =
+                        ts.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap());
                     rx_iter.next_with_timeout(timeout).expect("Network error")
                 }
             };
@@ -103,12 +116,24 @@ impl Stage4 {
                 let recv_tcp_packet = pnet::packet::tcp::TcpPacket::new(recv_packet.payload())
                     .expect("Failed to parse received packet");
 
-                let fid = FlowId { src_ip: recv_packet.get_source(), dst_ip: recv_packet.get_destination(), src_port: recv_tcp_packet.get_source(), dst_port: recv_tcp_packet.get_destination() };
+                let fid = FlowId {
+                    src_ip: recv_packet.get_source(),
+                    dst_ip: recv_packet.get_destination(),
+                    src_port: recv_tcp_packet.get_source(),
+                    dst_port: recv_tcp_packet.get_destination(),
+                };
                 let mut flows = self.current_flows.lock().unwrap();
-                let flow_pos = flows.iter().position(|f| fid.is_compatible(&f.flow)).expect("Received a packet in an unknown session");
+                let flow_pos = flows
+                    .iter()
+                    .position(|f| fid.is_compatible(&f.flow))
+                    .expect("Received a packet in an unknown session");
                 let mut flow = &mut flows[flow_pos];
                 // look for the first backward packet. TODO: check for that particular packet
-                let pos = flow.directions.iter().position(|d| d == &PacketDirection::Backward).unwrap();
+                let pos = flow
+                    .directions
+                    .iter()
+                    .position(|d| d == &PacketDirection::Backward)
+                    .unwrap();
                 flow.directions.remove(pos);
                 flow.packets.remove(pos);
                 flow.timestamps.remove(pos);
@@ -121,10 +146,17 @@ impl Stage4 {
                 // We need to send a packet
                 let mut flows = self.current_flows.lock().unwrap();
                 let (ts, fid) = packet_to_send.unwrap(); // always possible by construction
-                // TODO: enumerate plutôt
-                let flow_pos = flows.iter().position(|f| fid.is_compatible(&f.flow)).expect("Need to send a packet in an unknown session");
+                                                         // TODO: enumerate plutôt
+                let flow_pos = flows
+                    .iter()
+                    .position(|f| fid.is_compatible(&f.flow))
+                    .expect("Need to send a packet in an unknown session");
                 let mut flow = &mut flows[flow_pos];
-                let pos = flow.directions.iter().position(|d| d == &PacketDirection::Forward).unwrap();
+                let pos = flow
+                    .directions
+                    .iter()
+                    .position(|d| d == &PacketDirection::Forward)
+                    .unwrap();
                 assert_eq!(pos, 0); // it should be the first in the list
                 let packet = flow.packets.remove(pos);
                 flow.directions.remove(pos);
@@ -133,9 +165,13 @@ impl Stage4 {
                 // Get the expected time of arrival of the packet to know if we should wait before sending or receiving it
 
                 let eth_packet = pnet::packet::ethernet::EthernetPacket::new(&packet.data).unwrap();
-                let ipv4_packet = pnet::packet::ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
+                let ipv4_packet =
+                    pnet::packet::ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
 
-                match self.tx.send_to(&ipv4_packet, std::net::IpAddr::V4(fid.dst_ip)) {
+                match self
+                    .tx
+                    .send_to(&ipv4_packet, std::net::IpAddr::V4(fid.dst_ip))
+                {
                     Ok(n) => assert_eq!(n, ipv4_packet.packet().len()), // Check if the whole packet was sent
                     Err(e) => panic!("failed to send packet: {}", e),
                 }
@@ -168,20 +204,25 @@ impl Stage4 {
                 // bind the socket as soon as we know we will deal with it, before receiving any
                 // packet
                 if let Flow::TCP(tcp_flow) = &flow.data.flow {
-                    let src_listener = TcpListener::bind(format!("{}:{}", tcp_flow.src_ip, tcp_flow.src_port)).expect("Error during socket creation");
-                    sockets.lock().unwrap().insert(FlowId { src_ip: tcp_flow.src_ip, dst_ip: tcp_flow.dst_ip, src_port: tcp_flow.src_port, dst_port: tcp_flow.dst_port }, src_listener);
+                    let src_listener =
+                        TcpListener::bind(format!("{}:{}", tcp_flow.src_ip, tcp_flow.src_port))
+                            .expect("Error during socket creation");
+                    sockets.lock().unwrap().insert(
+                        FlowId {
+                            src_ip: tcp_flow.src_ip,
+                            dst_ip: tcp_flow.dst_ip,
+                            src_port: tcp_flow.src_port,
+                            dst_port: tcp_flow.dst_port,
+                        },
+                        src_listener,
+                    );
                 } else {
                     panic!("Only TCP is implemented");
                 }
 
-                current_flows
-                    .lock()
-                    .unwrap()
-                    .push(flow.data);
+                current_flows.lock().unwrap().push(flow.data);
             }
         });
-
-
 
         // Handle packets
         self.handle_packets();

@@ -1,5 +1,6 @@
 {
     "pattern_weights": [
+        1,1,1,1
     ],
     "metadata": {
         "creation_time": "2025-01-29 13:57:36.959871",
@@ -13,10 +14,28 @@
                         "type": "Fixed",
                         "feature": {
                             "type": "Proto",
-                            "domain": [
-                                "TCP"
-                            ]
+                            "domain": ["TCP"]
                         }
+                    },
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "FwdPkt",
+                            "domain": [[1,100]]
+                        }
+                    },
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "BwdPkt",
+                            "domain": [[1,100]]
+                        }
+                    },
+                    {
+                        "type": "SrcIpScenario"
+                    },
+                    {
+                        "type": "DstIpScenario"
                     },
                     {
                         "type": "Fixed",
@@ -26,16 +45,136 @@
                                 443
                             ]
                         }
+                    }
+                ]
+            ],
+            "bayesian_network": [
+            ]
+        },
+        {
+            "partial_flows": [
+                [
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "Proto",
+                            "domain": ["TCP"]
+                        }
                     },
                     {
                         "type": "Fixed",
                         "feature": {
-                            "type": "BwdByt",
+                            "type": "FwdPkt",
+                            "domain": [[1,100]]
+                        }
+                    },
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "BwdPkt",
+                            "domain": [[1,100]]
+                        }
+                    },
+                    {
+                        "type": "SrcIpScenario"
+                    },
+                    {
+                        "type": "DstIpScenario"
+                    },
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "DstPt",
                             "domain": [
-                                [
-                                    1438,
-                                    3777
-                                ]
+                                1883
+                            ]
+                        }
+                    }
+                ]
+            ],
+            "bayesian_network": [
+            ]
+        },
+        {
+            "partial_flows": [
+                [
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "Proto",
+                            "domain": ["TCP"]
+                        }
+                    },
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "FwdPkt",
+                            "domain": [[1,100]]
+                        }
+                    },
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "BwdPkt",
+                            "domain": [[1,100]]
+                        }
+                    },
+                    {
+                        "type": "SrcIpScenario"
+                    },
+                    {
+                        "type": "DstIpScenario"
+                    },
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "DstPt",
+                            "domain": [
+                                22
+                            ]
+                        }
+                    }
+                ]
+            ],
+            "bayesian_network": [
+            ]
+        },
+        {
+            "partial_flows": [
+                [
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "Proto",
+                            "domain": ["TCP"]
+                        }
+                    },
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "FwdPkt",
+                            "domain": [[1,100]]
+                        }
+                    },
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "BwdPkt",
+                            "domain": [[1,100]]
+                        }
+                    },
+                    {
+                        "type": "SrcIpScenario"
+                    },
+                    {
+                        "type": "DstIpScenario"
+                    },
+                    {
+                        "type": "Fixed",
+                        "feature": {
+                            "type": "DstPt",
+                            "domain": [
+                              587
                             ]
                         }
                     }
@@ -44,5 +183,6 @@
             "bayesian_network": [
             ]
         }
+
     ]
 }

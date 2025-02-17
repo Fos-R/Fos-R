@@ -107,7 +107,7 @@ impl Stage1 for ConstantFlowGenerator {
             fwd_packets_count: 15,
             bwd_packets_count: 10,
             timestamp: ts.data,
-            total_duration: Duration::from_millis(2300),
+            // total_duration: Duration::from_millis(2300),
         });
         vec![SeededData {
             seed: ts.seed,
