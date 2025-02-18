@@ -211,3 +211,17 @@ pub struct Packets {
     pub timestamps: Vec<Duration>,
     pub flow: Flow,
 }
+
+impl Packets {
+    pub fn reverse(&mut self) {
+        for d in self.directions.iter_mut() {
+            *d = d.into_reverse();
+        }
+        let data = self.flow.get_data_mut();
+        (data.src_ip, data.dst_ip) = (data.dst_ip, data.src_ip);
+        (data.src_port, data.dst_port) = (data.dst_port, data.src_port);
+        (data.ttl_client, data.ttl_server) = (data.ttl_server, data.ttl_client);
+        (data.fwd_packets_count, data.bwd_packets_count) = (data.bwd_packets_count, data.fwd_packets_count);
+    }
+}
+

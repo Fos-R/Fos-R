@@ -193,7 +193,8 @@ impl Stage4 {
         // Create a thread to receive incoming flows and add them to the current_flows
         let mut current_flows = self.current_flows.clone();
         let mut sockets = self.sockets.clone();
-        let join_handle = std::thread::spawn(move || {
+        let builder = thread::Builder::new().name("Stage4-socket".into());
+        let join_handle = builder.spawn(move || {
             // TODO: faire sa propre fonction
             while let Ok(flow) = incoming_flows.recv() {
                 log::info!("Received a new flow");
@@ -206,6 +207,7 @@ impl Stage4 {
                 // bind the socket as soon as we know we will deal with it, before receiving any
                 // packet
                 if let Flow::TCP(tcp_flow) = &flow.data.flow {
+                    log::debug!("Binding socket to {}:{}", tcp_flow.src_ip, tcp_flow.src_port);
                     let src_listener =
                         TcpListener::bind(format!("{}:{}", tcp_flow.src_ip, tcp_flow.src_port))
                             .expect("Error during socket creation");
@@ -224,7 +226,7 @@ impl Stage4 {
 
                 current_flows.lock().unwrap().push(flow.data);
             }
-        });
+        }).unwrap();
 
         // Handle packets
         self.handle_packets();

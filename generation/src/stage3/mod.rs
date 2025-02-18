@@ -393,7 +393,7 @@ fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(),
     } else {
         capture.savefile(outfile)?
     };
-    // data.sort();
+    data.sort();
     // TODO: find a way to not write packets one by one...
     for packet in data {
         savefile.write(&pcap::Packet {
@@ -415,26 +415,19 @@ fn send_online(
     let src_s4 = local_interfaces.contains(&f.src_ip);
     let dst_s4 = local_interfaces.contains(&f.dst_ip);
     if src_s4 && dst_s4 {
+        log::info!("Both source and destination IP are local");
         // only copy if we have to
         tx_s3.send(flow_packets.clone()).unwrap();
         // ensure stage 4 is always the source
-        flow_packets.data.directions = flow_packets
-            .data
-            .directions
-            .into_iter()
-            .map(|d| d.into_reverse())
-            .collect();
+        flow_packets.data.reverse();
         tx_s3.send(flow_packets).unwrap();
     } else if src_s4 {
+        log::info!("Source IP is local");
         tx_s3.send(flow_packets).unwrap();
     } else if dst_s4 {
+        log::info!("Destination IP is local");
         // ensure stage 4 is always the source
-        flow_packets.data.directions = flow_packets
-            .data
-            .directions
-            .into_iter()
-            .map(|d| d.into_reverse())
-            .collect();
+        flow_packets.data.reverse();
         tx_s3.send(flow_packets).unwrap();
     }
 }

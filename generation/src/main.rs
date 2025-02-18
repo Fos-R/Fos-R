@@ -141,7 +141,7 @@ fn main() {
             let patterns = Arc::new(patterns);
 
             if let Some(s) = seed {
-                log::trace!("Generating with seed {}", s);
+                log::info!("Generating with seed {}", s);
             }
             log::info!("Model initialization");
             let s0 = stage0::UniformGenerator::new(seed, false, 2, flow_count);
@@ -211,10 +211,10 @@ fn run(
         let r = s0_running.clone();
         ctrlc::set_handler(move || {
             if r.load(Ordering::Relaxed) {
-                log::info!("Ending the generation, please wait a few seconds");
+                log::warn!("Ending the generation, please wait a few seconds");
                 r.store(false, Ordering::Relaxed);
             } else {
-                log::info!("Ending immediately");
+                log::warn!("Ending immediately");
                 process::abort();
             }
         })
