@@ -36,8 +36,10 @@ pub enum Command {
             help = "Taint the packets to easily identify them"
         )]
         taint: bool,
-        #[arg(short, long, default_value=None, help="Path to models directory")]
-        models: Option<String>,
+        #[arg(short, long, default_value=None, help="Path to the patterns file")]
+        patterns: Option<String>,
+        #[arg(short, long, default_value=None, help="Path to automata directory")]
+        automata: Option<String>,
         #[arg(
             short = 'u',
             long,

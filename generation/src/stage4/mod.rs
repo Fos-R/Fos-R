@@ -45,8 +45,31 @@ pub struct Stage4 {
 
     // Flows
     current_flows: Arc<Mutex<Vec<Packets>>>,
-    sockets: Arc<Mutex<HashMap<FlowId, TcpListener>>>,
+    // TODO: à partager entre les différents protocoles ?
+    sockets: Arc<Mutex<Vec<SocketSessions>>>,
+    // sockets: Arc<Mutex<HashMap<FlowId, TcpListener>>>,
 }
+
+struct SocketSessions {
+    listener: TcpListener,
+    flowids: Vec<FlowId>,
+    port: u16,
+    keep_open: bool,
+}
+
+fn close_session(sockets: &Arc<Mutex<Vec<SocketSessions>>>, fid: &FlowId) {
+    let mut sockets = sockets.lock().unwrap();
+    for sessions in sockets.iter_mut() {
+        if let Some(pos) = sessions.flowids.iter().position(|f| f == fid) {
+            sessions.flowids.remove(pos);
+        } else {
+            log::error!("Flow ID not found");
+        }
+    }
+    // drop the socket if it is not used anymore
+    sockets.retain(|s| s.keep_open || !s.flowids.is_empty());
+}
+
 
 impl Stage4 {
     pub fn new(proto: Protocol) -> Self {
@@ -65,7 +88,7 @@ impl Stage4 {
             transport_channel(4096, channel_type).expect("Error when creating transport channel");
 
         let current_flows = Arc::new(Mutex::new(Vec::new()));
-        let sockets = Arc::new(Mutex::new(HashMap::new()));
+        let sockets = Arc::new(Mutex::new(Vec::new()));
 
         Stage4 {
             proto,
@@ -107,11 +130,14 @@ impl Stage4 {
                 Some((ts, _)) => {
                     let timeout =
                         ts.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap());
+                    // seulement disponible sur Unix?
                     rx_iter.next_with_timeout(timeout).expect("Network error")
                 }
             };
 
+            // TODO: timeout sur les flux dont on n’a pas reçu de paquets depuis longtemps
             if let Some((recv_packet, addr)) = received_data {
+                log::trace!("Packet received");
                 // We received a packet during our wait
                 let recv_tcp_packet = pnet::packet::tcp::TcpPacket::new(recv_packet.payload())
                     .expect("Failed to parse received packet");
@@ -124,24 +150,21 @@ impl Stage4 {
                 };
                 let mut flows = self.current_flows.lock().unwrap();
                 let flow_pos = flows.iter().position(|f| fid.is_compatible(&f.flow));
-                match flow_pos {
-                    Some(flow_pos) => {
-                        let mut flow = &mut flows[flow_pos];
-                        // look for the first backward packet. TODO: check for that particular packet
-                        let pos = flow
-                            .directions
-                            .iter()
-                            .position(|d| d == &PacketDirection::Backward)
-                            .unwrap();
-                        flow.directions.remove(pos);
-                        flow.packets.remove(pos);
-                        flow.timestamps.remove(pos);
-                        if flow.directions.is_empty() {
-                            flows.remove(flow_pos);
-                            self.sockets.lock().unwrap().remove(&fid); // session is complete, free the socket
-                        }
+                if let Some(flow_pos) = flow_pos {
+                    let mut flow = &mut flows[flow_pos];
+                    // look for the first backward packet. TODO: check for that particular packet
+                    let pos = flow
+                        .directions
+                        .iter()
+                        .position(|d| d == &PacketDirection::Backward)
+                        .unwrap();
+                    flow.directions.remove(pos);
+                    flow.packets.remove(pos);
+                    flow.timestamps.remove(pos);
+                    if flow.directions.is_empty() {
+                        flows.remove(flow_pos);
+                        close_session(&self.sockets, &fid);
                     }
-                    None => (), // Packet that is not for Fos-R
                 }
                 // Go back to searching for the next packet to send because it may have changed
             } else {
@@ -177,10 +200,12 @@ impl Stage4 {
                     Ok(n) => assert_eq!(n, ipv4_packet.packet().len()), // Check if the whole packet was sent
                     Err(e) => panic!("failed to send packet: {}", e),
                 }
+                log::trace!("Packet sent");
 
                 if flow.directions.is_empty() {
+                    // remove the flow ID from the socket list
                     flows.remove(flow_pos);
-                    self.sockets.lock().unwrap().remove(&fid); // session is complete, free the socket
+                    close_session(&self.sockets, &fid);
                 }
             }
         }
@@ -197,29 +222,50 @@ impl Stage4 {
         let join_handle = builder.spawn(move || {
             // TODO: faire sa propre fonction
             while let Ok(flow) = incoming_flows.recv() {
-                log::info!("Received a new flow");
+                log::trace!("Received a new flow");
 
-                log::info!(
-                    "Number of flows in the heap: {}",
+                log::debug!(
+                    "Currently {} ongoing flows",
                     current_flows.lock().unwrap().len() + 1
                 );
 
                 // bind the socket as soon as we know we will deal with it, before receiving any
                 // packet
                 if let Flow::TCP(tcp_flow) = &flow.data.flow {
-                    log::debug!("Binding socket to {}:{}", tcp_flow.src_ip, tcp_flow.src_port);
-                    let src_listener =
-                        TcpListener::bind(format!("{}:{}", tcp_flow.src_ip, tcp_flow.src_port))
+                    // TODO: check with self.proto
+                    let mut sockets = sockets.lock().unwrap();
+                    let mut found = false;
+                    for sessions in sockets.iter_mut() {
+                        if sessions.port == tcp_flow.src_port {
+                            sessions.flowids.push(FlowId {
+                                src_ip: tcp_flow.src_ip,
+                                dst_ip: tcp_flow.dst_ip,
+                                src_port: tcp_flow.src_port,
+                                dst_port: tcp_flow.dst_port,
+                                });
+                            found = true;
+                            break;
+                        }
+                    }
+                    if !found {
+                        // The port is not currently open
+                        log::debug!("Binding socket to {}:{}", tcp_flow.src_ip, tcp_flow.src_port);
+                        let listener =
+                            TcpListener::bind(format!("{}:{}", tcp_flow.src_ip, tcp_flow.src_port))
                             .expect("Error during socket creation");
-                    sockets.lock().unwrap().insert(
-                        FlowId {
+                        let fid = FlowId {
                             src_ip: tcp_flow.src_ip,
                             dst_ip: tcp_flow.dst_ip,
                             src_port: tcp_flow.src_port,
                             dst_port: tcp_flow.dst_port,
-                        },
-                        src_listener,
-                    );
+                                };
+                        sockets.push(SocketSessions {
+                            listener,
+                            flowids: vec![fid],
+                            port: tcp_flow.src_port,
+                            keep_open: tcp_flow.src_port < 1024 });
+
+                    }
                 } else {
                     panic!("Only TCP is implemented");
                 }

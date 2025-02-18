@@ -226,7 +226,7 @@ impl<T: EdgeType> CrossProductTimedAutomaton<T> {
                     }
                 };
                 let cond_mu = e.mu[0] + e.cov[0][1] / e.cov[1][1] * (payload_size as f32 - e.mu[1]);
-                let cond_var = e.cov[0][0] - e.cov[0][1] * e.cov[0][1] / e.cov[1][1];
+                let cond_var = (0.001_f32).max(e.cov[0][0] - e.cov[0][1] * e.cov[0][1] / e.cov[1][1]);
                 let iat = e.p.sample(rng, cond_mu, cond_var);
                 let data = header_creator(
                     payload,

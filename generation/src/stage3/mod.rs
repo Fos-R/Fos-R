@@ -406,7 +406,7 @@ fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(),
 }
 
 fn send_online(
-    local_interfaces: &Vec<Ipv4Addr>,
+    local_interfaces: &[Ipv4Addr],
     mut flow_packets: SeededData<Packets>,
     tx_s3: &Sender<SeededData<Packets>>,
 ) {
@@ -415,17 +415,17 @@ fn send_online(
     let src_s4 = local_interfaces.contains(&f.src_ip);
     let dst_s4 = local_interfaces.contains(&f.dst_ip);
     if src_s4 && dst_s4 {
-        log::info!("Both source and destination IP are local");
+        // log::info!("Both source and destination IP are local");
         // only copy if we have to
         tx_s3.send(flow_packets.clone()).unwrap();
         // ensure stage 4 is always the source
         flow_packets.data.reverse();
         tx_s3.send(flow_packets).unwrap();
     } else if src_s4 {
-        log::info!("Source IP is local");
+        // log::info!("Source IP is local");
         tx_s3.send(flow_packets).unwrap();
     } else if dst_s4 {
-        log::info!("Destination IP is local");
+        // log::info!("Destination IP is local");
         // ensure stage 4 is always the source
         flow_packets.data.reverse();
         tx_s3.send(flow_packets).unwrap();
