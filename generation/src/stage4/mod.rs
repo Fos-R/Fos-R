@@ -130,27 +130,33 @@ impl Stage4 {
                 Some((ts, _)) => {
                     let timeout =
                         ts.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap());
-                    // seulement disponible sur Unix?
-                    rx_iter.next_with_timeout(timeout).expect("Network error")
+                    if timeout.is_zero() {
+                        None
+                    } else {
+                        log::trace!("Waiting for {:?}", timeout);
+                        // seulement disponible sur Unix?
+                        rx_iter.next_with_timeout(timeout).expect("Network error")
+                    }
                 }
             };
 
             // TODO: timeout sur les flux dont on n’a pas reçu de paquets depuis longtemps
             if let Some((recv_packet, addr)) = received_data {
-                log::trace!("Packet received");
                 // We received a packet during our wait
                 let recv_tcp_packet = pnet::packet::tcp::TcpPacket::new(recv_packet.payload())
                     .expect("Failed to parse received packet");
 
+                // since this is a backward packet, we need to reverse source and destination
                 let fid = FlowId {
-                    src_ip: recv_packet.get_source(),
-                    dst_ip: recv_packet.get_destination(),
-                    src_port: recv_tcp_packet.get_source(),
-                    dst_port: recv_tcp_packet.get_destination(),
+                    dst_ip: recv_packet.get_source(),
+                    src_ip: recv_packet.get_destination(),
+                    dst_port: recv_tcp_packet.get_source(),
+                    src_port: recv_tcp_packet.get_destination(),
                 };
                 let mut flows = self.current_flows.lock().unwrap();
                 let flow_pos = flows.iter().position(|f| fid.is_compatible(&f.flow));
                 if let Some(flow_pos) = flow_pos {
+                    log::error!("Packet received: processed on port {}", fid.src_port);
                     let mut flow = &mut flows[flow_pos];
                     // look for the first backward packet. TODO: check for that particular packet
                     let pos = flow
@@ -200,7 +206,7 @@ impl Stage4 {
                     Ok(n) => assert_eq!(n, ipv4_packet.packet().len()), // Check if the whole packet was sent
                     Err(e) => panic!("failed to send packet: {}", e),
                 }
-                log::trace!("Packet sent");
+                log::trace!("Packet sent from port {}", fid.src_port);
 
                 if flow.directions.is_empty() {
                     // remove the flow ID from the socket list
@@ -273,6 +279,10 @@ impl Stage4 {
                 current_flows.lock().unwrap().push(flow.data);
             }
         }).unwrap();
+
+        // TODO: faire ça proprement
+        thread::sleep(Duration::new(2,0)); // wait a few seconds so current_flows is not empty when
+                                           // "handle_packets" is called
 
         // Handle packets
         self.handle_packets();
