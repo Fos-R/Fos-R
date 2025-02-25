@@ -255,25 +255,25 @@ impl Stage4 {
                             break;
                         }
                     }
-                    if !found {
-                        // The port is not currently open
-                        log::debug!("Binding socket to {}:{}", tcp_flow.src_ip, tcp_flow.src_port);
-                        let listener =
-                            TcpListener::bind(format!("{}:{}", tcp_flow.src_ip, tcp_flow.src_port))
-                            .expect("Error during socket creation");
-                        let fid = FlowId {
-                            src_ip: tcp_flow.src_ip,
-                            dst_ip: tcp_flow.dst_ip,
-                            src_port: tcp_flow.src_port,
-                            dst_port: tcp_flow.dst_port,
-                                };
-                        sockets.push(SocketSessions {
-                            listener,
-                            flowids: vec![fid],
-                            port: tcp_flow.src_port,
-                            keep_open: tcp_flow.src_port < 1024 });
+                    // if !found {
+                    //     // The port is not currently open
+                    //     log::debug!("Binding socket to {}:{}", tcp_flow.src_ip, tcp_flow.src_port);
+                    //     let listener =
+                    //         TcpListener::bind(format!("{}:{}", tcp_flow.src_ip, tcp_flow.src_port))
+                    //         .expect("Error during socket creation");
+                    //     let fid = FlowId {
+                    //         src_ip: tcp_flow.src_ip,
+                    //         dst_ip: tcp_flow.dst_ip,
+                    //         src_port: tcp_flow.src_port,
+                    //         dst_port: tcp_flow.dst_port,
+                    //             };
+                    //     sockets.push(SocketSessions {
+                    //         listener,
+                    //         flowids: vec![fid],
+                    //         port: tcp_flow.src_port,
+                    //         keep_open: tcp_flow.src_port < 1024 });
 
-                    }
+                    // }
                 } else {
                     panic!("Only TCP is implemented");
                 }
