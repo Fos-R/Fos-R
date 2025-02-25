@@ -171,6 +171,8 @@ impl Stage4 {
                         flows.remove(flow_pos);
                         close_session(&self.sockets, &fid);
                     }
+                } else {
+                    log::trace!("Packet received: ignored {:?}", fid);
                 }
                 // Go back to searching for the next packet to send because it may have changed
             } else {
