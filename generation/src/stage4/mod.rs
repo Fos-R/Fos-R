@@ -126,7 +126,7 @@ fn setup_iptables(port: u16) -> io::Result<()> {
         ])
         .output()?;
 
-    if !ttl_rule.status.success() {
+    if ttl_rule.status.success() {
         log::info!("iptables SET rule set for port {}", port);
     } else {
         log::info!("iptables SET rule not set for port {}", port);
@@ -190,7 +190,7 @@ fn clear_iptables(port: u16) -> io::Result<()> {
         ])
         .output()?;
 
-    if !ttl_rule.status.success() {
+    if ttl_rule.status.success() {
         log::info!("iptables SET rule cleared for port {}", port);
     } else {
         log::info!("iptables SET rule not cleared for port {}", port);
