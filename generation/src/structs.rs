@@ -221,7 +221,7 @@ impl Packets {
         (data.src_ip, data.dst_ip) = (data.dst_ip, data.src_ip);
         (data.src_port, data.dst_port) = (data.dst_port, data.src_port);
         (data.ttl_client, data.ttl_server) = (data.ttl_server, data.ttl_client);
-        (data.fwd_packets_count, data.bwd_packets_count) = (data.bwd_packets_count, data.fwd_packets_count);
+        (data.fwd_packets_count, data.bwd_packets_count) =
+            (data.bwd_packets_count, data.fwd_packets_count);
     }
 }
-
