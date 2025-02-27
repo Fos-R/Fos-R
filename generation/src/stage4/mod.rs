@@ -14,6 +14,8 @@ use pnet::transport::{
     TransportSender,
 };
 use pnet_packet::{ip::IpNextHeaderProtocols, Packet};
+use iptables::IPTables;
+
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -60,6 +62,12 @@ fn close_session(sockets: &Arc<Mutex<Vec<SocketSessions>>>, fid: &FlowId) {
     for sessions in sockets.iter_mut() {
         if let Some(pos) = sessions.flowids.iter().position(|f| f == fid) {
             sessions.flowids.remove(pos);
+            if sessions.flowids.is_empty() && !sessions.keep_open {
+                let ipt = iptables::new(false).unwrap();
+                ipt.delete("mangle", "OUTPUT", &format!("-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}", fid.src_port)).unwrap();
+                ipt.delete("mangle", "OUTPUT", &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", fid.src_port)).unwrap();
+            }
+
             // TODO: si sockets vide et keep_open est false, retirer iptables
         } else {
             log::error!("Flow ID not found");
@@ -269,7 +277,10 @@ impl Stage4 {
                                 flowids: vec![fid],
                                 port: tcp_flow.src_port,
                                 keep_open: tcp_flow.src_port < 1024 });
-                            // TODO: activer iptables pour tcp_flow.src_port
+                            // TODO: name chain "fosr"?
+                                let ipt = iptables::new(false).unwrap();
+                                ipt.append("mangle", "OUTPUT", &format!("-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}", tcp_flow.src_port)).unwrap();
+                                ipt.append("mangle", "OUTPUT", &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", tcp_flow.src_port)).unwrap();
                         }
                     } else {
                         panic!("Only TCP is implemented");

@@ -12,7 +12,7 @@ enum OS {
 impl OS {
     fn get_default_ttl(&self) -> u8 {
         match self {
-            OS::Linux => 64,
+            OS::Linux => 65, // FIXME: 65 so it is detected by iptables rules
             OS::Windows => 128,
         }
     }
