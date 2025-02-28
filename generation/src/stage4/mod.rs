@@ -312,8 +312,8 @@ impl Stage4 {
                                 keep_open: udp_flow.src_port < 1024 });
                             // TODO: name chain "fosr"?
                                 let ipt = iptables::new(false).unwrap();
-                                ipt.append("mangle", "OUTPUT", &format!("-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}", udp_flow.src_port)).unwrap();
-                                ipt.append("mangle", "OUTPUT", &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", udp_flow.src_port)).unwrap();
+                                ipt.append("mangle", "OUTPUT", &format!("-j DROP --match ttl --ttl-eq 64 -p udp --source-port {}", udp_flow.src_port)).unwrap();
+                                ipt.append("mangle", "OUTPUT", &format!("-j TTL --ttl-dec 1 -p udp --source-port {}", udp_flow.src_port)).unwrap();
                         }
                     } else {
                         panic!("Only TCP and UDP are implemented");
