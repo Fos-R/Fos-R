@@ -119,7 +119,11 @@ impl Stage3 {
                 }
 
                 // Increment forward ACK and backward SEQ
-                new_tcp_data.forward += packet_info.payload.get_payload_size() as u32;
+                if packet_info.s_flag {
+                    new_tcp_data.forward += 1;
+                } else {
+                    new_tcp_data.forward += packet_info.payload.get_payload_size() as u32;
+                }
             }
             PacketDirection::Backward => {
                 // Set the source and destination ports
@@ -132,7 +136,11 @@ impl Stage3 {
                     tcp_packet.set_acknowledgement(new_tcp_data.forward);
                 }
 
-                new_tcp_data.backward += packet_info.payload.get_payload_size() as u32;
+                if packet_info.s_flag {
+                    new_tcp_data.backward += 1;
+                } else {
+                    new_tcp_data.backward += packet_info.payload.get_payload_size() as u32;
+                }
             }
         }
 
