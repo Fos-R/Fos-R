@@ -232,7 +232,7 @@ impl<T: EdgeType> CrossProductTimedAutomaton<T> {
                 let data = header_creator(
                     payload,
                     NoiseType::None,
-                    Duration::from_micros(iat as u64),
+                    Duration::from_nanos(iat as u64),
                     data,
                 );
                 output.push(data);

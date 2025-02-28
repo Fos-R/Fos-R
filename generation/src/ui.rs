@@ -49,7 +49,7 @@ pub fn run(stats: Arc<Stats>, running: Arc<AtomicBool>, cpu_usage: bool) {
     };
 
     loop {
-        thread::sleep(Duration::new(1, 0));
+        thread::sleep(Duration::new(5, 0));
         {
             let pc = stats.packets_counter.lock().unwrap();
             let bc = stats.bytes_counter.lock().unwrap();
