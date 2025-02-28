@@ -9,12 +9,12 @@ use std::{
 
 use crate::*;
 use crossbeam_channel::Receiver;
+use iptables::IPTables;
 use pnet::transport::{
     ipv4_packet_iter, tcp_packet_iter, transport_channel, TransportChannelType, TransportReceiver,
     TransportSender,
 };
 use pnet_packet::{ip::IpNextHeaderProtocols, Packet};
-use iptables::IPTables;
 
 use std::sync::Mutex;
 use std::time::Duration;
@@ -64,8 +64,21 @@ fn close_session(sockets: &Arc<Mutex<Vec<SocketSessions>>>, fid: &FlowId) {
             sessions.flowids.remove(pos);
             if sessions.flowids.is_empty() && !sessions.keep_open {
                 let ipt = iptables::new(false).unwrap();
-                ipt.delete("mangle", "OUTPUT", &format!("-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}", fid.src_port)).unwrap();
-                ipt.delete("mangle", "OUTPUT", &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", fid.src_port)).unwrap();
+                ipt.delete(
+                    "mangle",
+                    "OUTPUT",
+                    &format!(
+                        "-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}",
+                        fid.src_port
+                    ),
+                )
+                .unwrap();
+                ipt.delete(
+                    "mangle",
+                    "OUTPUT",
+                    &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", fid.src_port),
+                )
+                .unwrap();
             }
 
             // TODO: si sockets vide et keep_open est false, retirer iptables
@@ -76,6 +89,18 @@ fn close_session(sockets: &Arc<Mutex<Vec<SocketSessions>>>, fid: &FlowId) {
 
     // drop the socket if it is not used anymore
     sockets.retain(|s| s.keep_open || !s.flowids.is_empty());
+}
+
+fn setup_iptables(protocol: &str, port: u16) {
+    let ipt = iptables::new(false).unwrap();
+    let drop_rule = format!(
+        "-j DROP --match ttl --ttl-eq 64 -p {} --source-port {}",
+        protocol, port
+    );
+    ipt.append("mangle", "OUTPUT", &drop_rule).unwrap();
+
+    let ttl_rule = format!("-j TTL --ttl-dec 1 -p {} --source-port {}", protocol, port);
+    ipt.append("mangle", "OUTPUT", &ttl_rule).unwrap();
 }
 
 impl Stage4 {
@@ -266,23 +291,26 @@ impl Stage4 {
                         }
                         if !found {
                             // The port is not currently open
-                            log::debug!("Binding socket to {}:{}", tcp_flow.src_ip, tcp_flow.src_port);
+                            log::debug!(
+                                "Binding socket to {}:{}",
+                                tcp_flow.src_ip,
+                                tcp_flow.src_port
+                            );
                             let fid = FlowId {
                                 src_ip: tcp_flow.src_ip,
                                 dst_ip: tcp_flow.dst_ip,
                                 src_port: tcp_flow.src_port,
                                 dst_port: tcp_flow.dst_port,
-                                    };
+                            };
                             sockets.push(SocketSessions {
                                 flowids: vec![fid],
                                 port: tcp_flow.src_port,
-                                keep_open: tcp_flow.src_port < 1024 });
+                                keep_open: tcp_flow.src_port < 1024,
+                            });
                             // TODO: name chain "fosr"?
-                                let ipt = iptables::new(false).unwrap();
-                                ipt.append("mangle", "OUTPUT", &format!("-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}", tcp_flow.src_port)).unwrap();
-                                ipt.append("mangle", "OUTPUT", &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", tcp_flow.src_port)).unwrap();
+                            setup_iptables("tcp", tcp_flow.src_port);
                         }
-                    } else if let Flow::UDP(udp_flow) = &flow.data.flow { 
+                    } else if let Flow::UDP(udp_flow) = &flow.data.flow {
                         let mut sockets = sockets.lock().unwrap();
                         let mut found = false;
                         for sessions in sockets.iter_mut() {
@@ -299,21 +327,24 @@ impl Stage4 {
                         }
                         if !found {
                             // The port is not currently open
-                            log::debug!("Binding socket to {}:{}", udp_flow.src_ip, udp_flow.src_port);
+                            log::debug!(
+                                "Binding socket to {}:{}",
+                                udp_flow.src_ip,
+                                udp_flow.src_port
+                            );
                             let fid = FlowId {
                                 src_ip: udp_flow.src_ip,
                                 dst_ip: udp_flow.dst_ip,
                                 src_port: udp_flow.src_port,
                                 dst_port: udp_flow.dst_port,
-                                    };
+                            };
                             sockets.push(SocketSessions {
                                 flowids: vec![fid],
                                 port: udp_flow.src_port,
-                                keep_open: udp_flow.src_port < 1024 });
+                                keep_open: udp_flow.src_port < 1024,
+                            });
                             // TODO: name chain "fosr"?
-                                let ipt = iptables::new(false).unwrap();
-                                ipt.append("mangle", "OUTPUT", &format!("-j DROP --match ttl --ttl-eq 64 -p udp --source-port {}", udp_flow.src_port)).unwrap();
-                                ipt.append("mangle", "OUTPUT", &format!("-j TTL --ttl-dec 1 -p udp --source-port {}", udp_flow.src_port)).unwrap();
+                            setup_iptables("udp", udp_flow.src_port);
                         }
                     } else {
                         panic!("Only TCP and UDP are implemented");
