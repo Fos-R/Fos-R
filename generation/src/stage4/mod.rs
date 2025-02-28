@@ -282,8 +282,41 @@ impl Stage4 {
                                 ipt.append("mangle", "OUTPUT", &format!("-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}", tcp_flow.src_port)).unwrap();
                                 ipt.append("mangle", "OUTPUT", &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", tcp_flow.src_port)).unwrap();
                         }
+                    } else if let Flow::UDP(udp_flow) = &flow.data.flow { 
+                        let mut sockets = sockets.lock().unwrap();
+                        let mut found = false;
+                        for sessions in sockets.iter_mut() {
+                            if sessions.port == udp_flow.src_port {
+                                sessions.flowids.push(FlowId {
+                                    src_ip: udp_flow.src_ip,
+                                    dst_ip: udp_flow.dst_ip,
+                                    src_port: udp_flow.src_port,
+                                    dst_port: udp_flow.dst_port,
+                                });
+                                found = true;
+                                break;
+                            }
+                        }
+                        if !found {
+                            // The port is not currently open
+                            log::debug!("Binding socket to {}:{}", udp_flow.src_ip, udp_flow.src_port);
+                            let fid = FlowId {
+                                src_ip: udp_flow.src_ip,
+                                dst_ip: udp_flow.dst_ip,
+                                src_port: udp_flow.src_port,
+                                dst_port: udp_flow.dst_port,
+                                    };
+                            sockets.push(SocketSessions {
+                                flowids: vec![fid],
+                                port: udp_flow.src_port,
+                                keep_open: udp_flow.src_port < 1024 });
+                            // TODO: name chain "fosr"?
+                                let ipt = iptables::new(false).unwrap();
+                                ipt.append("mangle", "OUTPUT", &format!("-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}", udp_flow.src_port)).unwrap();
+                                ipt.append("mangle", "OUTPUT", &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", udp_flow.src_port)).unwrap();
+                        }
                     } else {
-                        panic!("Only TCP is implemented");
+                        panic!("Only TCP and UDP are implemented");
                     }
 
                     current_flows.lock().unwrap().push(flow.data);
