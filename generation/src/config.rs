@@ -22,7 +22,7 @@ impl OS {
 #[derive(Deserialize, Debug)]
 struct Interface {
     os: Option<OS>,
-    mac: String,
+    mac: Option<String>,
     ip: String,
     provides: Option<Vec<u16>>,
     uses: Option<Vec<u16>>,
@@ -75,9 +75,14 @@ pub fn import_config(config: &str) -> Hosts {
                 .parse()
                 .expect("Cannot parse into an IPv4 address!");
             os.insert(ip_toml, iface.os.unwrap_or(OS::Linux));
+            // use a default mac if it is not defined
             mac_addr.insert(
                 ip_toml,
-                iface.mac.parse().expect("Cannot parse into a MAC address!"),
+                iface
+                    .mac
+                    .unwrap_or("00:00:00:00:00:00".to_string())
+                    .parse()
+                    .expect("Cannot parse into a MAC address!"),
             );
             let provides_toml = iface.provides.unwrap_or_default();
             for port in provides_toml {
