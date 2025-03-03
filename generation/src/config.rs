@@ -1,8 +1,8 @@
+use pnet::util::MacAddr;
 use rand_core::*;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
-use pnet::util::MacAddr;
 
 #[derive(Deserialize, Debug, Clone, Copy)]
 enum OS {
@@ -33,7 +33,7 @@ struct Interface {
 pub struct Hosts {
     hosts_pairs: HashMap<u16, Vec<(Ipv4Addr, Ipv4Addr)>>,
     os: HashMap<Ipv4Addr, OS>,
-    mac_addr: HashMap<Ipv4Addr, MacAddr>
+    mac_addr: HashMap<Ipv4Addr, MacAddr>,
 }
 
 impl Hosts {
@@ -75,8 +75,10 @@ pub fn import_config(config: &str) -> Hosts {
                 .parse()
                 .expect("Cannot parse into an IPv4 address!");
             os.insert(ip_toml, iface.os.unwrap_or(OS::Linux));
-            mac_addr.insert(ip_toml, iface.mac.parse()
-                .expect("Cannot parse into a MAC address!"));
+            mac_addr.insert(
+                ip_toml,
+                iface.mac.parse().expect("Cannot parse into a MAC address!"),
+            );
             let provides_toml = iface.provides.unwrap_or_default();
             for port in provides_toml {
                 let current_ips = provides.get_mut(&port);
@@ -114,5 +116,9 @@ pub fn import_config(config: &str) -> Hosts {
         }
     }
     log::info!("Environment configuration loaded");
-    Hosts { hosts_pairs, os, mac_addr }
+    Hosts {
+        hosts_pairs,
+        os,
+        mac_addr,
+    }
 }
