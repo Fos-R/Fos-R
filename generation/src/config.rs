@@ -2,6 +2,7 @@ use rand_core::*;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
+use pnet::util::MacAddr;
 
 #[derive(Deserialize, Debug, Clone, Copy)]
 enum OS {
@@ -21,15 +22,18 @@ impl OS {
 #[derive(Deserialize, Debug)]
 struct Interface {
     os: Option<OS>,
+    mac: String,
     ip: String,
     provides: Option<Vec<u16>>,
     uses: Option<Vec<u16>>,
 }
 
+// TODO: passer en copy directement ?
 #[derive(Debug, Clone)]
 pub struct Hosts {
     hosts_pairs: HashMap<u16, Vec<(Ipv4Addr, Ipv4Addr)>>,
     os: HashMap<Ipv4Addr, OS>,
+    mac_addr: HashMap<Ipv4Addr, MacAddr>
 }
 
 impl Hosts {
@@ -50,6 +54,10 @@ impl Hosts {
             .get(&dst_port)
             .map(|v| v[(rng.next_u32() as usize) % v.len()])
     }
+
+    pub fn get_mac(&self, ip: &Ipv4Addr) -> &MacAddr {
+        self.mac_addr.get(ip).unwrap()
+    }
 }
 
 pub fn import_config(config: &str) -> Hosts {
@@ -59,6 +67,7 @@ pub fn import_config(config: &str) -> Hosts {
     let mut provides: HashMap<u16, Vec<Ipv4Addr>> = HashMap::new();
     let mut uses: HashMap<u16, Vec<Ipv4Addr>> = HashMap::new();
     let mut os: HashMap<Ipv4Addr, OS> = HashMap::new();
+    let mut mac_addr: HashMap<Ipv4Addr, MacAddr> = HashMap::new();
     for mut host in hosts_toml {
         for iface in host.remove("interfaces").expect("Host without interface!") {
             let ip_toml = iface
@@ -66,6 +75,8 @@ pub fn import_config(config: &str) -> Hosts {
                 .parse()
                 .expect("Cannot parse into an IPv4 address!");
             os.insert(ip_toml, iface.os.unwrap_or(OS::Linux));
+            mac_addr.insert(ip_toml, iface.mac.parse()
+                .expect("Cannot parse into a MAC address!"));
             let provides_toml = iface.provides.unwrap_or_default();
             for port in provides_toml {
                 let current_ips = provides.get_mut(&port);
@@ -103,5 +114,5 @@ pub fn import_config(config: &str) -> Hosts {
         }
     }
     log::info!("Environment configuration loaded");
-    Hosts { hosts_pairs, os }
+    Hosts { hosts_pairs, os, mac_addr }
 }

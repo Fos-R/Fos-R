@@ -47,7 +47,7 @@ fn main() {
             .filter(IpNetwork::is_ipv4)
             .map(|i| match i {
                 IpNetwork::V4(data) => data.ip(),
-                _ => panic!("Impossible"),
+                _ => unreachable!(),
             })
     };
     let local_interfaces: Vec<Ipv4Addr> = datalink::interfaces()
@@ -96,7 +96,7 @@ fn main() {
             //     *local_interfaces.last().unwrap(),
             // ); // TODO: modify, only for testing
             // let s1 = stage1::ConfigBasedModifier::new(hosts, s1);
-            let s1 = flowchronicle::FCGenerator::new(patterns, hosts, false);
+            let s1 = flowchronicle::FCGenerator::new(patterns, hosts.clone(), false);
             let s1 = stage1::FilterForOnline::new(local_interfaces.clone(), s1);
             let automata_library = match &automata {
                 Some(automata) => {
@@ -106,7 +106,7 @@ fn main() {
             };
             let automata_library = Arc::new(automata_library);
             let s2 = tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(taint);
+            let s3 = stage3::Stage3::new(taint, hosts);
             run(
                 local_interfaces,
                 outfile,
@@ -163,9 +163,9 @@ fn main() {
             //     *local_interfaces.first().unwrap(),
             //     *local_interfaces.last().unwrap(),
             // ); // TODO: modify, only for testing
-            let s1 = flowchronicle::FCGenerator::new(patterns, hosts, false);
+            let s1 = flowchronicle::FCGenerator::new(patterns, hosts.clone(), false);
             let s2 = tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(false);
+            let s3 = stage3::Stage3::new(false, hosts);
 
             run(vec![], Some(outfile), s0, s1, 3, s2, 3, s3, 6, cpu_usage);
         }

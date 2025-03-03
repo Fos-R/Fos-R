@@ -4,6 +4,7 @@ use crate::icmp::*;
 use crate::tcp::*;
 use crate::udp::*;
 use crate::ui::*;
+use crate::config::Hosts;
 use crate::*;
 use crossbeam_channel::{Receiver, Sender};
 use pcap::{Capture, PacketHeader};
@@ -12,13 +13,15 @@ use pnet_packet::ip::IpNextHeaderProtocols;
 use pnet_packet::ipv4::{self, Ipv4Flags, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
 use pnet_packet::udp::{ipv4_checksum, MutableUdpPacket};
+use pnet::util::MacAddr;
 use rand_core::*;
 use rand_pcg::Pcg32;
 
 #[derive(Debug, Clone)]
 pub struct Stage3 {
     taint: bool,
-} // In the future, add network/system configuration here
+    config: Hosts,
+}
 
 struct TcpPacketData {
     forward: u32,    // foward SEQ and backward ACK
@@ -43,15 +46,18 @@ impl TcpPacketData {
 }
 
 impl Stage3 {
-    fn setup_ethernet_frame(&self, packet: &mut [u8]) -> Option<()> {
+    fn setup_ethernet_frame(&self, packet: &mut [u8], src_mac: &MacAddr, dst_mac: &MacAddr) -> Option<()> {
         let mut eth_packet = MutableEthernetPacket::new(packet)?;
         eth_packet.set_ethertype(EtherTypes::Ipv4);
+        eth_packet.set_source(src_mac.clone());
+        eth_packet.set_destination(dst_mac.clone());
 
         Some(())
     }
 
     fn setup_ip_packet<P: PacketInfo>(
         &self,
+        rng: &mut impl RngCore,
         packet: &mut [u8],
         flow: &FlowData,
         packet_info: &P,
@@ -64,6 +70,7 @@ impl Stage3 {
         ipv4_packet.set_header_length(5); // TODO: Set the correct header length and options if needed
         ipv4_packet.set_total_length(len as u16);
         ipv4_packet.set_next_level_protocol(IpNextHeaderProtocols::Tcp);
+        ipv4_packet.set_identification(rng.next_u32() as u16);
 
         // Fields that depend on the direction
         match packet_info.get_direction() {
@@ -273,8 +280,8 @@ impl Stage3 {
         }
     }
 
-    pub fn new(taint: bool) -> Self {
-        Stage3 { taint }
+    pub fn new(taint: bool, config: Hosts) -> Self {
+        Stage3 { taint, config }
     }
 
     /// Generate TCP packets from an intermediate representation
@@ -299,9 +306,14 @@ impl Stage3 {
 
             let mut packet = vec![0u8; packet_size];
 
-            self.setup_ethernet_frame(&mut packet[..])
+            let mut mac_src = self.config.get_mac(&flow.src_ip);
+            let mut mac_dst = self.config.get_mac(&flow.dst_ip);
+            if matches!(packet_info.get_direction(), PacketDirection::Backward) {
+                (mac_src, mac_dst) = (mac_dst, mac_src);
+            }
+            self.setup_ethernet_frame(&mut packet[..], mac_src, mac_dst)
                 .expect("Incorrect Ethernet frame");
-            self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info)
+            self.setup_ip_packet(&mut rng, &mut packet[ip_start..], flow, packet_info)
                 .expect("Incorrect IP packet");
             tcp_data = self
                 .setup_tcp_packet(
@@ -354,9 +366,9 @@ impl Stage3 {
 
             let mut packet = vec![0u8; packet_size];
 
-            self.setup_ethernet_frame(&mut packet[..])
+            self.setup_ethernet_frame(&mut packet[..], self.config.get_mac(&flow.src_ip), self.config.get_mac(&flow.dst_ip))
                 .expect("Incorrect Ethernet frame");
-            self.setup_ip_packet(&mut packet[ip_start..], flow, packet_info)
+            self.setup_ip_packet(&mut rng, &mut packet[ip_start..], flow, packet_info)
                 .expect("Incorrect IP packet");
             self.setup_udp_packet(&mut rng, &mut packet[udp_start..], flow, packet_info)
                 .expect("Incorrect TCP packet");
