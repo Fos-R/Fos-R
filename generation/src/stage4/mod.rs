@@ -48,18 +48,19 @@ pub struct Stage4 {
     // Flows
     current_flows: Arc<Mutex<Vec<Packets>>>,
     // TODO: à partager entre les différents protocoles ?
-    sockets: Arc<Mutex<Vec<SocketSessions>>>,
+    sessions_per_port: Arc<Mutex<Vec<PortSessions>>>,
 }
 
-struct SocketSessions {
+struct PortSessions {
     flowids: Vec<FlowId>,
     port: u16,
     keep_open: bool,
 }
 
-fn close_session(sockets: &Arc<Mutex<Vec<SocketSessions>>>, fid: &FlowId) {
-    let mut sockets = sockets.lock().unwrap();
-    for sessions in sockets.iter_mut() {
+fn close_session(sessions_per_port: &Arc<Mutex<Vec<PortSessions>>>, fid: &FlowId) {
+    log::debug!("Session is finished");
+    let mut sessions_per_port = sessions_per_port.lock().unwrap();
+    for sessions in sessions_per_port.iter_mut() {
         if let Some(pos) = sessions.flowids.iter().position(|f| f == fid) {
             sessions.flowids.remove(pos);
             if sessions.flowids.is_empty() && !sessions.keep_open {
@@ -68,14 +69,14 @@ fn close_session(sockets: &Arc<Mutex<Vec<SocketSessions>>>, fid: &FlowId) {
                 ipt.delete("mangle", "OUTPUT", &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", fid.src_port)).unwrap();
             }
 
-            // TODO: si sockets vide et keep_open est false, retirer iptables
+            // TODO: si sessions_per_port vide et keep_open est false, retirer iptables
         } else {
             log::error!("Flow ID not found");
         }
     }
 
     // drop the socket if it is not used anymore
-    sockets.retain(|s| s.keep_open || !s.flowids.is_empty());
+    sessions_per_port.retain(|s| s.keep_open || !s.flowids.is_empty());
 }
 
 impl Stage4 {
@@ -95,14 +96,14 @@ impl Stage4 {
             transport_channel(4096, channel_type).expect("Error when creating transport channel");
 
         let current_flows = Arc::new(Mutex::new(Vec::new()));
-        let sockets = Arc::new(Mutex::new(Vec::new()));
+        let sessions_per_port = Arc::new(Mutex::new(Vec::new()));
 
         Stage4 {
             proto,
             tx,
             rx,
             current_flows,
-            sockets,
+            sessions_per_port,
         }
     }
 
@@ -132,7 +133,10 @@ impl Stage4 {
                 }
             }
             let received_data = match &packet_to_send {
-                None => Some(rx_iter.next().expect("Network error")),
+                None => {
+                    // log::trace!("No next packet to send");
+                    Some(rx_iter.next().expect("Network error"))
+                },
                 Some((ts, _)) => {
                     let timeout =
                         ts.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap());
@@ -171,16 +175,16 @@ impl Stage4 {
                         .iter()
                         .position(|d| d == &PacketDirection::Backward)
                         .unwrap();
-                    assert_eq!(pos, 0);
+                    // assert_eq!(pos, 0);
                     flow.directions.remove(pos);
                     flow.packets.remove(pos);
                     flow.timestamps.remove(pos);
                     if flow.directions.is_empty() {
                         flows.remove(flow_pos);
-                        close_session(&self.sockets, &fid);
+                        close_session(&self.sessions_per_port, &fid);
                     }
-                } else {
-                    log::trace!("Packet received: ignored {:?}", fid);
+                // } else {
+                //     log::trace!("Packet received: ignored {:?}", fid);
                 }
                 // Go back to searching for the next packet to send because it may have changed
             } else {
@@ -198,7 +202,7 @@ impl Stage4 {
                     .iter()
                     .position(|d| d == &PacketDirection::Forward)
                     .unwrap();
-                assert_eq!(pos, 0); // it should be the first in the list
+                // assert_eq!(pos, 0); // it should be the first in the list
                 let packet = flow.packets.remove(pos);
                 flow.directions.remove(pos);
                 flow.timestamps.remove(pos);
@@ -208,6 +212,8 @@ impl Stage4 {
                 let eth_packet = pnet::packet::ethernet::EthernetPacket::new(&packet.data).unwrap();
                 let ipv4_packet =
                     pnet::packet::ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
+
+                println!("Send to {:?}", fid);
 
                 match self
                     .tx
@@ -221,7 +227,7 @@ impl Stage4 {
                 if flow.directions.is_empty() {
                     // remove the flow ID from the socket list
                     flows.remove(flow_pos);
-                    close_session(&self.sockets, &fid);
+                    close_session(&self.sessions_per_port, &fid);
                 }
             }
         }
@@ -233,7 +239,7 @@ impl Stage4 {
         log::info!("stage4 started");
         // Create a thread to receive incoming flows and add them to the current_flows
         let mut current_flows = self.current_flows.clone();
-        let mut sockets = self.sockets.clone();
+        let mut sessions_per_port = self.sessions_per_port.clone();
         let builder = thread::Builder::new().name("Stage4-socket".into());
         let join_handle = builder
             .spawn(move || {
@@ -250,9 +256,9 @@ impl Stage4 {
                     // packet
                     if let Flow::TCP(tcp_flow) = &flow.data.flow {
                         // TODO: check with self.proto
-                        let mut sockets = sockets.lock().unwrap();
+                        let mut sessions_per_port = sessions_per_port.lock().unwrap();
                         let mut found = false;
-                        for sessions in sockets.iter_mut() {
+                        for sessions in sessions_per_port.iter_mut() {
                             if sessions.port == tcp_flow.src_port {
                                 sessions.flowids.push(FlowId {
                                     src_ip: tcp_flow.src_ip,
@@ -266,14 +272,13 @@ impl Stage4 {
                         }
                         if !found {
                             // The port is not currently open
-                            log::debug!("Binding socket to {}:{}", tcp_flow.src_ip, tcp_flow.src_port);
                             let fid = FlowId {
                                 src_ip: tcp_flow.src_ip,
                                 dst_ip: tcp_flow.dst_ip,
                                 src_port: tcp_flow.src_port,
                                 dst_port: tcp_flow.dst_port,
                                     };
-                            sockets.push(SocketSessions {
+                            sessions_per_port.push(PortSessions {
                                 flowids: vec![fid],
                                 port: tcp_flow.src_port,
                                 keep_open: tcp_flow.src_port < 1024 });
