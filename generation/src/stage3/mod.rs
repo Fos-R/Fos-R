@@ -1,19 +1,19 @@
 #![allow(unused)]
 
+use crate::config::Hosts;
 use crate::icmp::*;
 use crate::tcp::*;
 use crate::udp::*;
 use crate::ui::*;
-use crate::config::Hosts;
 use crate::*;
 use crossbeam_channel::{Receiver, Sender};
 use pcap::{Capture, PacketHeader};
+use pnet::util::MacAddr;
 use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
 use pnet_packet::ip::IpNextHeaderProtocols;
 use pnet_packet::ipv4::{self, Ipv4Flags, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
 use pnet_packet::udp::{ipv4_checksum, MutableUdpPacket};
-use pnet::util::MacAddr;
 use rand_core::*;
 use rand_pcg::Pcg32;
 
@@ -46,11 +46,16 @@ impl TcpPacketData {
 }
 
 impl Stage3 {
-    fn setup_ethernet_frame(&self, packet: &mut [u8], src_mac: &MacAddr, dst_mac: &MacAddr) -> Option<()> {
+    fn setup_ethernet_frame(
+        &self,
+        packet: &mut [u8],
+        src_mac: &MacAddr,
+        dst_mac: &MacAddr,
+    ) -> Option<()> {
         let mut eth_packet = MutableEthernetPacket::new(packet)?;
         eth_packet.set_ethertype(EtherTypes::Ipv4);
-        eth_packet.set_source(src_mac.clone());
-        eth_packet.set_destination(dst_mac.clone());
+        eth_packet.set_source(*src_mac);
+        eth_packet.set_destination(*dst_mac);
 
         Some(())
     }
@@ -366,8 +371,12 @@ impl Stage3 {
 
             let mut packet = vec![0u8; packet_size];
 
-            self.setup_ethernet_frame(&mut packet[..], self.config.get_mac(&flow.src_ip), self.config.get_mac(&flow.dst_ip))
-                .expect("Incorrect Ethernet frame");
+            self.setup_ethernet_frame(
+                &mut packet[..],
+                self.config.get_mac(&flow.src_ip),
+                self.config.get_mac(&flow.dst_ip),
+            )
+            .expect("Incorrect Ethernet frame");
             self.setup_ip_packet(&mut rng, &mut packet[ip_start..], flow, packet_info)
                 .expect("Incorrect IP packet");
             self.setup_udp_packet(&mut rng, &mut packet[udp_start..], flow, packet_info)

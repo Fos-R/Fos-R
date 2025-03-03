@@ -9,12 +9,12 @@ use std::{
 
 use crate::*;
 use crossbeam_channel::Receiver;
+use iptables::IPTables;
 use pnet::transport::{
     ipv4_packet_iter, tcp_packet_iter, transport_channel, TransportChannelType, TransportReceiver,
     TransportSender,
 };
 use pnet_packet::{ip::IpNextHeaderProtocols, Packet};
-use iptables::IPTables;
 
 use std::sync::Mutex;
 use std::time::Duration;
@@ -65,8 +65,21 @@ fn close_session(sessions_per_port: &Arc<Mutex<Vec<PortSessions>>>, fid: &FlowId
             sessions.flowids.remove(pos);
             if sessions.flowids.is_empty() && !sessions.keep_open {
                 let ipt = iptables::new(false).unwrap();
-                ipt.delete("mangle", "OUTPUT", &format!("-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}", fid.src_port)).unwrap();
-                ipt.delete("mangle", "OUTPUT", &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", fid.src_port)).unwrap();
+                ipt.delete(
+                    "mangle",
+                    "OUTPUT",
+                    &format!(
+                        "-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}",
+                        fid.src_port
+                    ),
+                )
+                .unwrap();
+                ipt.delete(
+                    "mangle",
+                    "OUTPUT",
+                    &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", fid.src_port),
+                )
+                .unwrap();
             }
 
             // TODO: si sessions_per_port vide et keep_open est false, retirer iptables
@@ -136,7 +149,7 @@ impl Stage4 {
                 None => {
                     // log::trace!("No next packet to send");
                     Some(rx_iter.next().expect("Network error"))
-                },
+                }
                 Some((ts, _)) => {
                     let timeout =
                         ts.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap());
@@ -183,8 +196,8 @@ impl Stage4 {
                         flows.remove(flow_pos);
                         close_session(&self.sessions_per_port, &fid);
                     }
-                // } else {
-                //     log::trace!("Packet received: ignored {:?}", fid);
+                    // } else {
+                    //     log::trace!("Packet received: ignored {:?}", fid);
                 }
                 // Go back to searching for the next packet to send because it may have changed
             } else {
@@ -277,15 +290,32 @@ impl Stage4 {
                                 dst_ip: tcp_flow.dst_ip,
                                 src_port: tcp_flow.src_port,
                                 dst_port: tcp_flow.dst_port,
-                                    };
+                            };
                             sessions_per_port.push(PortSessions {
                                 flowids: vec![fid],
                                 port: tcp_flow.src_port,
-                                keep_open: tcp_flow.src_port < 1024 });
+                                keep_open: tcp_flow.src_port < 1024,
+                            });
                             // TODO: name chain "fosr"?
-                                let ipt = iptables::new(false).unwrap();
-                                ipt.append("mangle", "OUTPUT", &format!("-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}", tcp_flow.src_port)).unwrap();
-                                ipt.append("mangle", "OUTPUT", &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", tcp_flow.src_port)).unwrap();
+                            let ipt = iptables::new(false).unwrap();
+                            ipt.append(
+                                "mangle",
+                                "OUTPUT",
+                                &format!(
+                                    "-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}",
+                                    tcp_flow.src_port
+                                ),
+                            )
+                            .unwrap();
+                            ipt.append(
+                                "mangle",
+                                "OUTPUT",
+                                &format!(
+                                    "-j TTL --ttl-dec 1 -p tcp --source-port {}",
+                                    tcp_flow.src_port
+                                ),
+                            )
+                            .unwrap();
                         }
                     } else {
                         panic!("Only TCP is implemented");
