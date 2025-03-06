@@ -22,6 +22,7 @@ impl OS {
 #[derive(Deserialize, Debug)]
 struct Interface {
     os: Option<OS>,
+    name: Option<String>,
     mac: Option<String>,
     ip: String,
     provides: Option<Vec<u16>>,

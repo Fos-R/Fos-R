@@ -64,6 +64,16 @@ impl Flow {
         }
     }
 
+    pub fn get_flow_id(&self) -> FlowId {
+        let d = self.get_data();
+        FlowId {
+            src_ip: d.src_ip,
+            dst_ip: d.dst_ip,
+            src_port: d.src_port,
+            dst_port: d.dst_port,
+        }
+    }
+
     // pub fn get_proto(&self) -> Protocol {
     //     match &self {
     //         Flow::TCP(_) => Protocol::TCP,
@@ -225,3 +235,14 @@ impl Packets {
             (data.bwd_packets_count, data.fwd_packets_count);
     }
 }
+
+// TODO: copy?
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub struct FlowId {
+    pub src_ip: Ipv4Addr,
+    pub dst_ip: Ipv4Addr,
+    pub src_port: u16,
+    pub dst_port: u16,
+}
+
+
