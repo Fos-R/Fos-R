@@ -61,30 +61,33 @@ fn close_session(sessions_per_port: &Arc<Mutex<Vec<PortSessions>>>, fid: &FlowId
     log::debug!("Session is finished");
     let mut sessions_per_port = sessions_per_port.lock().unwrap();
     for sessions in sessions_per_port.iter_mut() {
-        if let Some(pos) = sessions.flowids.iter().position(|f| f == fid) {
-            sessions.flowids.remove(pos);
-            if sessions.flowids.is_empty() && !sessions.keep_open {
-                let ipt = iptables::new(false).unwrap();
-                ipt.delete(
-                    "mangle",
-                    "OUTPUT",
-                    &format!(
-                        "-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}",
-                        fid.src_port
-                    ),
-                )
-                .unwrap();
-                ipt.delete(
-                    "mangle",
-                    "OUTPUT",
-                    &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", fid.src_port),
-                )
-                .unwrap();
-            }
+        if sessions.port == fid.src_port {
+            if let Some(pos) = sessions.flowids.iter().position(|f| f == fid) {
+                sessions.flowids.remove(pos);
+                if sessions.flowids.is_empty() && !sessions.keep_open {
+                    log::debug!("Ip tables removed for {}", fid.src_port);
+                    let ipt = iptables::new(false).unwrap();
+                    ipt.delete(
+                        "mangle",
+                        "OUTPUT",
+                        &format!(
+                            "-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}",
+                            fid.src_port
+                        ),
+                    )
+                    .unwrap();
+                    ipt.delete(
+                        "mangle",
+                        "OUTPUT",
+                        &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", fid.src_port),
+                    )
+                    .unwrap();
+                }
 
-            // TODO: si sessions_per_port vide et keep_open est false, retirer iptables
-        } else {
-            log::error!("Flow ID not found");
+                // TODO: si sessions_per_port vide et keep_open est false, retirer iptables
+            } else {
+                log::error!("Flow ID not found");
+            }
         }
     }
 
@@ -179,7 +182,7 @@ impl Stage4 {
                 let mut flows = self.current_flows.lock().unwrap();
                 let flow_pos = flows.iter().position(|f| fid.is_compatible(&f.flow));
                 if let Some(flow_pos) = flow_pos {
-                    log::error!("Packet received: processed on port {}", fid.src_port);
+                    log::debug!("Packet received: processed on port {}", fid.src_port);
                     let mut flow = &mut flows[flow_pos];
                     // look for the first backward packet. TODO: check for that particular packet
                     log::trace!("{:?}", flow.directions);
@@ -192,6 +195,7 @@ impl Stage4 {
                     flow.directions.remove(pos);
                     flow.packets.remove(pos);
                     flow.timestamps.remove(pos);
+
                     if flow.directions.is_empty() {
                         flows.remove(flow_pos);
                         close_session(&self.sessions_per_port, &fid);
@@ -226,14 +230,14 @@ impl Stage4 {
                 let ipv4_packet =
                     pnet::packet::ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
 
-                println!("Send to {:?}", fid);
+                log::trace!("Send to {:?}", fid);
 
                 match self
                     .tx
                     .send_to(&ipv4_packet, std::net::IpAddr::V4(fid.dst_ip))
                 {
                     Ok(n) => assert_eq!(n, ipv4_packet.packet().len()), // Check if the whole packet was sent
-                    Err(e) => panic!("failed to send packet: {}", e),
+                    Err(e) => log::error!("failed to send packet: {}", e),
                 }
                 log::trace!("Packet sent from port {}", fid.src_port);
 
@@ -294,9 +298,10 @@ impl Stage4 {
                             sessions_per_port.push(PortSessions {
                                 flowids: vec![fid],
                                 port: tcp_flow.src_port,
-                                keep_open: tcp_flow.src_port < 1024,
+                                keep_open: tcp_flow.src_port < 1024, // keep "server" ports open
                             });
                             // TODO: name chain "fosr"?
+                            log::debug!("Ip tables created for {}", tcp_flow.src_port);
                             let ipt = iptables::new(false).unwrap();
                             ipt.append(
                                 "mangle",
