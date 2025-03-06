@@ -332,7 +332,7 @@ impl Stage3 {
 
             packets.push(Packet {
                 header: self.get_pcap_header(packet_size, packet_info.get_ts()),
-                data: packet.clone(),
+                data: packet,
             });
             directions.push(packet_info.get_direction());
             timestamps.push(packet_info.get_ts());
