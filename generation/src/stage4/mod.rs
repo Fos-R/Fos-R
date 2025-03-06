@@ -294,10 +294,7 @@ impl Stage4 {
                         ipt.append(
                             "mangle",
                             "OUTPUT",
-                            &format!(
-                                "-j TTL --ttl-dec 1 -p tcp --source-port {}",
-                                fid.src_port
-                            ),
+                            &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", fid.src_port),
                         )
                         .unwrap();
                     }
@@ -319,9 +316,5 @@ impl Stage4 {
 }
 
 fn local_port_available(port: u16) -> bool {
-    match TcpListener::bind(("127.0.0.1", port)) {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    TcpListener::bind(("127.0.0.1", port)).is_ok()
 }
-
