@@ -244,5 +244,3 @@ pub struct FlowId {
     pub src_port: u16,
     pub dst_port: u16,
 }
-
-
