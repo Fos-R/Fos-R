@@ -19,14 +19,6 @@ use pnet_packet::{ip::IpNextHeaderProtocols, Packet};
 use std::sync::Mutex;
 use std::time::Duration;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub struct FlowId {
-    pub src_ip: Ipv4Addr,
-    pub dst_ip: Ipv4Addr,
-    pub src_port: u16,
-    pub dst_port: u16,
-}
-
 impl FlowId {
     pub fn is_compatible(&self, f: &Flow) -> bool {
         let d = f.get_data();
@@ -137,14 +129,7 @@ impl Stage4 {
                         && (packet_to_send.is_none()
                             || packet_to_send.clone().unwrap().0 > f.timestamps[0])
                     {
-                        let d = f.flow.get_data();
-                        let fid = FlowId {
-                            src_ip: d.src_ip,
-                            dst_ip: d.dst_ip,
-                            src_port: d.src_port,
-                            dst_port: d.dst_port,
-                        };
-                        packet_to_send = Some((f.timestamps[0], fid));
+                        packet_to_send = Some((f.timestamps[0], f.flow.get_flow_id()));
                     }
                 }
             }
@@ -179,6 +164,7 @@ impl Stage4 {
                     dst_port: recv_tcp_packet.get_source(),
                     src_port: recv_tcp_packet.get_destination(),
                 };
+                // TODO: check if taint is present
                 let mut flows = self.current_flows.lock().unwrap();
                 let flow_pos = flows.iter().position(|f| fid.is_compatible(&f.flow));
                 if let Some(flow_pos) = flow_pos {
@@ -271,59 +257,49 @@ impl Stage4 {
 
                     // bind the socket as soon as we know we will deal with it, before receiving any
                     // packet
-                    if let Flow::TCP(tcp_flow) = &flow.data.flow {
-                        // TODO: check with self.proto
-                        let mut sessions_per_port = sessions_per_port.lock().unwrap();
-                        let mut found = false;
-                        for sessions in sessions_per_port.iter_mut() {
-                            if sessions.port == tcp_flow.src_port {
-                                sessions.flowids.push(FlowId {
-                                    src_ip: tcp_flow.src_ip,
-                                    dst_ip: tcp_flow.dst_ip,
-                                    src_port: tcp_flow.src_port,
-                                    dst_port: tcp_flow.dst_port,
-                                });
-                                found = true;
-                                break;
-                            }
+                    let mut sessions_per_port = sessions_per_port.lock().unwrap();
+                    let mut found = false;
+                    let fid = flow.data.flow.get_flow_id();
+                    for sessions in sessions_per_port.iter_mut() {
+                        if sessions.port == fid.src_port {
+                            sessions.flowids.push(fid.clone());
+                            found = true;
+                            break;
                         }
-                        if !found {
-                            // The port is not currently open
-                            let fid = FlowId {
-                                src_ip: tcp_flow.src_ip,
-                                dst_ip: tcp_flow.dst_ip,
-                                src_port: tcp_flow.src_port,
-                                dst_port: tcp_flow.dst_port,
-                            };
-                            sessions_per_port.push(PortSessions {
-                                flowids: vec![fid],
-                                port: tcp_flow.src_port,
-                                keep_open: tcp_flow.src_port < 1024, // keep "server" ports open
-                            });
-                            // TODO: name chain "fosr"?
-                            log::debug!("Ip tables created for {}", tcp_flow.src_port);
-                            let ipt = iptables::new(false).unwrap();
-                            ipt.append(
-                                "mangle",
-                                "OUTPUT",
-                                &format!(
-                                    "-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}",
-                                    tcp_flow.src_port
-                                ),
-                            )
-                            .unwrap();
-                            ipt.append(
-                                "mangle",
-                                "OUTPUT",
-                                &format!(
-                                    "-j TTL --ttl-dec 1 -p tcp --source-port {}",
-                                    tcp_flow.src_port
-                                ),
-                            )
-                            .unwrap();
-                        }
-                    } else {
-                        panic!("Only TCP is implemented");
+                    }
+                    // TODO use "local_port_available" to verify if the port is already used or not
+                    if !found {
+                        // TODO: vérifier si le port n’est pas déjà ouvert par une autre
+                        // application
+                        // The port is not currently open
+                        let fid = flow.data.flow.get_flow_id();
+                        sessions_per_port.push(PortSessions {
+                            flowids: vec![fid.clone()],
+                            port: fid.src_port,
+                            keep_open: fid.src_port < 1024, // keep "server" ports open
+                        });
+                        // TODO: name chain "fosr"?
+                        // TODO: modifier la chaîne pour prendre en compte d’UDP
+                        log::debug!("Ip tables created for {}", fid.src_port);
+                        let ipt = iptables::new(false).unwrap();
+                        ipt.append(
+                            "mangle",
+                            "OUTPUT",
+                            &format!(
+                                "-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}",
+                                fid.src_port
+                            ),
+                        )
+                        .unwrap();
+                        ipt.append(
+                            "mangle",
+                            "OUTPUT",
+                            &format!(
+                                "-j TTL --ttl-dec 1 -p tcp --source-port {}",
+                                fid.src_port
+                            ),
+                        )
+                        .unwrap();
                     }
 
                     current_flows.lock().unwrap().push(flow.data);
@@ -341,3 +317,11 @@ impl Stage4 {
         join_handle.join().unwrap();
     }
 }
+
+fn local_port_available(port: u16) -> bool {
+    match TcpListener::bind(("127.0.0.1", port)) {
+        Ok(_) => true,
+        Err(_) => false,
+    }
+}
+
