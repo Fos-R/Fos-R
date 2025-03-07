@@ -85,6 +85,7 @@ impl Flow {
 
 #[derive(Debug, Clone)]
 pub struct FlowData {
+    // In online mode, the local IP will always be the source
     pub src_ip: Ipv4Addr,
     pub dst_ip: Ipv4Addr,
     pub src_port: u16,
@@ -94,7 +95,6 @@ pub struct FlowData {
     pub fwd_packets_count: usize,
     pub bwd_packets_count: usize,
     pub timestamp: Duration,
-    // pub total_duration: Duration,
 }
 
 impl From<Flow> for FlowData {

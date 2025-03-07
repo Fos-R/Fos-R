@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use crate::config::Hosts;
 use crate::icmp::*;
 use crate::tcp::*;
@@ -13,7 +11,7 @@ use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
 use pnet_packet::ip::IpNextHeaderProtocols;
 use pnet_packet::ipv4::{self, Ipv4Flags, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
-use pnet_packet::udp::{ipv4_checksum, MutableUdpPacket};
+use pnet_packet::udp::MutableUdpPacket;
 use rand_core::*;
 use rand_pcg::Pcg32;
 
@@ -350,6 +348,7 @@ impl Stage3 {
     }
 
     /// Generate UDP packets from an intermediate representation
+    #[allow(unused)]
     pub fn generate_udp_packets(
         &self,
         input: SeededData<PacketsIR<UDPPacketInfo>>,
@@ -402,21 +401,22 @@ impl Stage3 {
     }
 
     /// Generate ICMP packets from an intermediate representation
+    #[allow(unused)]
     pub fn generate_icmp_packets(
         &self,
         input: SeededData<PacketsIR<ICMPPacketInfo>>,
     ) -> SeededData<Packets> {
-        let mut rng = Pcg32::seed_from_u64(input.seed);
+        // let mut rng = Pcg32::seed_from_u64(input.seed);
         todo!()
     }
 }
 
-fn insert_noise(data: &mut SeededData<Packets>) {
-    todo!()
-}
+// fn insert_noise(data: &mut SeededData<Packets>) {
+//     todo!()
+// }
 
 fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(), pcap::Error> {
-    let mut capture = Capture::dead(pcap::Linktype(1))?;
+    let capture = Capture::dead(pcap::Linktype(1))?;
     let mut savefile = if append {
         capture.savefile_append(outfile)?
     } else {
@@ -430,7 +430,7 @@ fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(),
             data: &packet.data,
         });
     }
-    savefile.flush();
+    savefile.flush().unwrap();
     Ok(())
 }
 
@@ -462,7 +462,7 @@ fn send_online(
 }
 
 fn send_pcap(flow_packets: SeededData<Packets>, tx_s3_to_collector: &Sender<Packets>) {
-    let mut noisy_flow = SeededData {
+    let noisy_flow = SeededData {
         seed: flow_packets.seed,
         data: flow_packets.data,
     };
@@ -485,7 +485,7 @@ pub fn run<T: PacketInfo>(
     // Prepare stage 3
     log::trace!("Start S3");
     for headers in rx_s3 {
-        let mut flow_packets = generator(headers);
+        let flow_packets = generator(headers);
         stats.increase(&flow_packets.data);
         // only copy the flows if we need to send it to online and pcap
         if online {

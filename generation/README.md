@@ -26,10 +26,14 @@ In this mode, Fos-R output a pcap file generated with the AI models.
 
 ## Honeynet
 
-In this mode, Fos-R generates and play network traffic between different machines in the same network.
-Fos-R needs to be executed on these machines and provided a configuration file.
+In this mode, Fos-R generates and play network traffic between different computers in the same network.
+Fos-R needs to be executed on each computer and provided a configuration file.
 
-The generation is split in four stages. Each stage has its own directory.
+## Replay-pcap
+
+_(Not available yet)_
+
+In this mode, Fos-R replays a pcap file with raw sockets.
 
 # Roadmap
 

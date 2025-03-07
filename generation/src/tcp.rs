@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use crate::structs::*;
 use std::time::Duration;
 

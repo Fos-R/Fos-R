@@ -1,21 +1,10 @@
-#![allow(unused)]
-
-use std::collections::HashMap;
-use std::net::{TcpListener, TcpStream};
-use std::{
-    cmp::Ordering,
-    collections::{binary_heap, BinaryHeap},
-};
-
 use crate::*;
+
 use crossbeam_channel::Receiver;
-use iptables::IPTables;
 use pnet::transport::{
-    ipv4_packet_iter, tcp_packet_iter, transport_channel, TransportChannelType, TransportReceiver,
-    TransportSender,
+    ipv4_packet_iter, transport_channel, TransportChannelType, TransportReceiver, TransportSender,
 };
 use pnet_packet::{ip::IpNextHeaderProtocols, Packet};
-
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -31,7 +20,7 @@ impl FlowId {
 
 pub struct Stage4 {
     // Params
-    proto: Protocol,
+    // proto: Protocol,
 
     // Raw Socket
     tx: TransportSender,
@@ -107,7 +96,7 @@ impl Stage4 {
         let sessions_per_port = Arc::new(Mutex::new(Vec::new()));
 
         Stage4 {
-            proto,
+            // proto,
             tx,
             rx,
             current_flows,
@@ -152,7 +141,7 @@ impl Stage4 {
             };
 
             // TODO: timeout sur les flux dont on n’a pas reçu de paquets depuis longtemps
-            if let Some((recv_packet, addr)) = received_data {
+            if let Some((recv_packet, _addr)) = received_data {
                 // We received a packet during our wait
                 let recv_tcp_packet = pnet::packet::tcp::TcpPacket::new(recv_packet.payload())
                     .expect("Failed to parse received packet");
@@ -169,7 +158,7 @@ impl Stage4 {
                 let flow_pos = flows.iter().position(|f| fid.is_compatible(&f.flow));
                 if let Some(flow_pos) = flow_pos {
                     log::debug!("Packet received: processed on port {}", fid.src_port);
-                    let mut flow = &mut flows[flow_pos];
+                    let flow = &mut flows[flow_pos];
                     // look for the first backward packet. TODO: check for that particular packet
                     log::trace!("{:?}", flow.directions);
                     let pos = flow
@@ -193,13 +182,13 @@ impl Stage4 {
             } else {
                 // We need to send a packet
                 let mut flows = self.current_flows.lock().unwrap();
-                let (ts, fid) = packet_to_send.unwrap(); // always possible by construction
-                                                         // TODO: enumerate plutôt
+                let (_, fid) = packet_to_send.unwrap(); // always possible by construction
+                                                        // TODO: enumerate plutôt
                 let flow_pos = flows
                     .iter()
                     .position(|f| fid.is_compatible(&f.flow))
                     .expect("Need to send a packet in an unknown session");
-                let mut flow = &mut flows[flow_pos];
+                let flow = &mut flows[flow_pos];
                 let pos = flow
                     .directions
                     .iter()
@@ -236,13 +225,13 @@ impl Stage4 {
         }
     }
 
-    pub fn start(&mut self, mut incoming_flows: Receiver<SeededData<Packets>>) {
+    pub fn start(&mut self, incoming_flows: Receiver<SeededData<Packets>>) {
         // TODO: vérifier s’il faut mettre un SeededData ici ou pas
 
         log::info!("stage4 started");
         // Create a thread to receive incoming flows and add them to the current_flows
-        let mut current_flows = self.current_flows.clone();
-        let mut sessions_per_port = self.sessions_per_port.clone();
+        let current_flows = self.current_flows.clone();
+        let sessions_per_port = self.sessions_per_port.clone();
         let builder = thread::Builder::new().name("Stage4-socket".into());
         let join_handle = builder
             .spawn(move || {
@@ -315,6 +304,6 @@ impl Stage4 {
     }
 }
 
-fn local_port_available(port: u16) -> bool {
-    TcpListener::bind(("127.0.0.1", port)).is_ok()
-}
+// fn local_port_available(port: u16) -> bool {
+//     TcpListener::bind(("127.0.0.1", port)).is_ok()
+// }

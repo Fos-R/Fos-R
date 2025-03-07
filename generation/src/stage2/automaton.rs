@@ -1,10 +1,7 @@
-#![allow(unused)]
-
 use crate::structs::*;
-use crate::tcp::*;
 use kd_tree::KdTree;
 use rand_core::*;
-use rand_distr::{Distribution, Normal, Poisson, Uniform, WeightedIndex};
+use rand_distr::{Distribution, Normal, Poisson, WeightedIndex};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -16,8 +13,6 @@ use std::time::Duration;
 struct CrossProductTimedNode<T: EdgeType> {
     in_edges: Vec<TimedEdge<T>>,
     dist: Option<WeightedIndex<u32>>,
-    fwd_pkt_count: usize,
-    bwd_pkt_count: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -27,6 +22,7 @@ struct TimedNode<T: EdgeType> {
 }
 
 #[derive(Debug, Clone)]
+#[allow(unused)]
 enum EdgeDistribution {
     Normal, // TODO: add cond_var to compute it only once
     Poisson,
@@ -84,7 +80,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
             state: usize,
             fwd: usize,
             bwd: usize,
-        };
+        }
 
         impl CrossProductNode {
             fn get_index(&self) -> usize {
@@ -141,7 +137,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                     openset.push(successor_node);
                     let mut new_edge = e.clone();
                     new_edge.dst_node = current_node_index;
-                    let mut value = predecessors.get_mut(&successor_node);
+                    let value = predecessors.get_mut(&successor_node);
                     if let Some(vec) = value {
                         vec.push(new_edge);
                     } else {
@@ -169,8 +165,6 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
             graph.push(CrossProductTimedNode {
                 in_edges,
                 dist,
-                fwd_pkt_count: node.fwd,
-                bwd_pkt_count: node.bwd,
             });
         }
         CrossProductTimedAutomaton {
@@ -250,6 +244,7 @@ impl<T: EdgeType> CrossProductTimedAutomaton<T> {
 }
 
 #[derive(Debug, Clone)]
+#[allow(unused)]
 pub struct TimedAutomaton<T: EdgeType> {
     graph: Vec<TimedNode<T>>,
     metadata: AutomatonMetaData,
@@ -259,6 +254,7 @@ pub struct TimedAutomaton<T: EdgeType> {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[allow(unused)]
 struct AutomatonMetaData {
     select_dst_ports: Vec<u16>,
     ignore_dst_ports: Vec<u16>,
@@ -268,6 +264,7 @@ struct AutomatonMetaData {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[allow(unused)]
 struct Noise {
     none: f32,
     deletion: f32,
@@ -280,6 +277,7 @@ struct Noise {
 // TODO: rendre ça plus propre avec des "From/Into"
 
 #[derive(Deserialize, Debug)]
+#[allow(unused)]
 pub struct JsonAutomaton {
     edges: Vec<JsonEdge>,
     noise: Noise,
