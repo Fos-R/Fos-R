@@ -10,7 +10,9 @@ FosR is structured in two phases:
 
 To run this repository, you will need:
 - python3
+- pip
 - rustc
+- libpcap
 
 _In future versions, we will propose learned models and compiled binaries._
 

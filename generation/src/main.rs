@@ -36,7 +36,6 @@ const CHANNEL_SIZE: usize = 500;
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args = cmd::Args::parse();
-    log::debug!("{:?}", &args);
 
     // Extract all IPv4 local interfaces (except loopback)
     let extract_addr = |iface: datalink::NetworkInterface| {
@@ -91,7 +90,10 @@ fn main() {
                     flowchronicle::PatternSet::from_file(Path::new(patterns).to_str().unwrap())
                         .expect("Cannot load patterns")
                 }
-                None => flowchronicle::PatternSet::default(),
+                None => {
+                    log::info!("Load default patterns");
+                    flowchronicle::PatternSet::default()
+                }
             };
             let patterns = Arc::new(patterns);
 
@@ -106,7 +108,10 @@ fn main() {
                 Some(automata) => {
                     tadam::AutomataLibrary::from_dir(Path::new(automata).to_str().unwrap())
                 }
-                None => tadam::AutomataLibrary::default(),
+                None => {
+                    log::info!("Load default automata");
+                    tadam::AutomataLibrary::default()
+                }
             };
             let automata_library = Arc::new(automata_library);
             let s2 = tadam::TadamGenerator::new(automata_library);
