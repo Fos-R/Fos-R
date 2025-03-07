@@ -228,7 +228,7 @@ impl Stage4 {
     pub fn start(&mut self, incoming_flows: Receiver<SeededData<Packets>>) {
         // TODO: vérifier s’il faut mettre un SeededData ici ou pas
 
-        log::info!("stage4 started");
+        log::debug!("stage4 started");
         // Create a thread to receive incoming flows and add them to the current_flows
         let current_flows = self.current_flows.clone();
         let sessions_per_port = self.sessions_per_port.clone();

@@ -297,7 +297,6 @@ impl Default for PatternSet {
         let set: PatternSet =
             serde_json::from_str(include_str!("../../breizhctf-patterns.json")).unwrap();
         // serde_json::from_str(include_str!("../../../models/medium/patterns.json")).unwrap();
-        log::info!("Default patterns loaded");
         set
     }
 }
