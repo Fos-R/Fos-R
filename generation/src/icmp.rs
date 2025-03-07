@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use crate::structs::*;
 use std::time::Duration;
 
@@ -50,6 +48,7 @@ pub fn parse_icmp_symbol(symbol: String, _t: PayloadType) -> ICMPEdgeTuple {
     }
 }
 
+#[allow(unused)]
 pub fn create_icmp_header(
     _payload: Payload,
     noise: NoiseType,

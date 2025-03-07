@@ -13,7 +13,6 @@ mod stage1;
 use stage1::flowchronicle;
 mod stage2;
 use stage2::tadam;
-mod replay;
 mod stage3;
 mod stage4;
 
@@ -77,6 +76,11 @@ fn main() {
             let hosts = config::import_config(config_str);
             log::debug!("Configuration: {:?}", hosts);
             assert!(!local_interfaces.is_empty());
+            for ip in local_interfaces.iter() {
+                if let Some(s) = hosts.get_name(ip) {
+                    log::info!("Computer role: {s}");
+                }
+            }
             log::info!("Model initialization");
             let s0 = stage0::UniformGenerator::new_for_honeypot(
                 SystemTime::now().duration_since(UNIX_EPOCH).unwrap(),

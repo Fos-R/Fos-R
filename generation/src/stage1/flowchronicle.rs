@@ -1,7 +1,4 @@
-#![allow(unused)]
-
 use crate::stage1::*;
-use crate::structs::*;
 use rand_distr::Uniform;
 use rand_distr::{Distribution, WeightedIndex};
 use rand_pcg::Pcg32;
@@ -54,8 +51,8 @@ impl PartiallyDefinedFlowData {
             Feature::DstPt(ref v) => self.dst_port = Some(v[index]),
             Feature::FwdPkt(ref v) => self.fwd_packets_count = Some(v.0[index].sample(rng)),
             Feature::BwdPkt(ref v) => self.bwd_packets_count = Some(v.0[index].sample(rng)),
-            Feature::FwdByt(ref v) => (), // ignore
-            Feature::BwdByt(ref v) => (), // ignore
+            Feature::FwdByt(_) => (), // ignore
+            Feature::BwdByt(_) => (), // ignore
             Feature::Duration(_) => (),
             //                self.total_duration = Some(Duration::from_millis(v.0[index].sample(rng) as u64))
             Feature::Proto(ref v) => self.proto = Some(v[0]),
@@ -100,6 +97,7 @@ impl From<Vec<(u64, u64)>> for Intervals {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(tag = "type", content = "domain")]
+#[allow(unused)]
 enum Feature {
     SrcIP(Ipv4Vector),
     DstIP(Ipv4Vector),
@@ -210,7 +208,7 @@ impl Pattern {
                 partially_defined_flows.get_mut(r_index).unwrap().timestamp = Some(current_ts);
                 // TODO tirage
                 current_ts += Duration::from_millis(500);
-                for (c_index, c) in p.iter().enumerate() {
+                for c in p.iter() {
                     match c {
                         CellType::ReuseSrcAsSrc { row } => {
                             partially_defined_flows.get_mut(r_index).unwrap().src_ip =
@@ -276,6 +274,7 @@ pub struct PatternSetJSON {
 
 #[derive(Deserialize, Debug)]
 #[serde(from = "PatternSetJSON")]
+#[allow(unused)]
 pub struct PatternSet {
     patterns: Vec<Pattern>, // the empty pattern is considered to be a pattern like the others
     pattern_distrib: WeightedIndex<u32>, // constructed from the weight
@@ -304,9 +303,9 @@ impl Default for PatternSet {
 }
 
 impl PatternSet {
-    pub fn merge(&mut self, other: PatternSet, weight: Option<f64>) {
-        todo!()
-    }
+    // pub fn merge(&mut self, other: PatternSet, weight: Option<f64>) {
+    //     todo!()
+    // }
 
     /// Import patterns from a file
     pub fn from_file(filename: &str) -> std::io::Result<Self> {
@@ -319,6 +318,7 @@ impl PatternSet {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[allow(unused)]
 struct PatternMetaData {
     input_file: String,
     creation_time: String,
@@ -326,6 +326,7 @@ struct PatternMetaData {
 
 /// Stage 1: generates flow descriptions
 #[derive(Clone)]
+#[allow(unused)]
 pub struct FCGenerator {
     set: Arc<PatternSet>,
     config: Hosts,

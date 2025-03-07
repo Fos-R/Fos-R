@@ -35,6 +35,7 @@ pub struct Hosts {
     hosts_pairs: HashMap<u16, Vec<(Ipv4Addr, Ipv4Addr)>>,
     os: HashMap<Ipv4Addr, OS>,
     mac_addr: HashMap<Ipv4Addr, MacAddr>,
+    name: HashMap<Ipv4Addr, String>,
 }
 
 impl Hosts {
@@ -59,6 +60,10 @@ impl Hosts {
     pub fn get_mac(&self, ip: &Ipv4Addr) -> &MacAddr {
         self.mac_addr.get(ip).unwrap()
     }
+
+    pub fn get_name(&self, ip: &Ipv4Addr) -> Option<&str> {
+        self.name.get(ip).map(|s| s.as_str())
+    }
 }
 
 pub fn import_config(config: &str) -> Hosts {
@@ -69,6 +74,7 @@ pub fn import_config(config: &str) -> Hosts {
     let mut uses: HashMap<u16, Vec<Ipv4Addr>> = HashMap::new();
     let mut os: HashMap<Ipv4Addr, OS> = HashMap::new();
     let mut mac_addr: HashMap<Ipv4Addr, MacAddr> = HashMap::new();
+    let mut name: HashMap<Ipv4Addr, String> = HashMap::new();
     for mut host in hosts_toml {
         for iface in host.remove("interfaces").expect("Host without interface!") {
             let ip_toml = iface
@@ -85,6 +91,9 @@ pub fn import_config(config: &str) -> Hosts {
                     .parse()
                     .expect("Cannot parse into a MAC address!"),
             );
+            if let Some(s) = iface.name {
+                name.insert(ip_toml, s);
+            }
             let provides_toml = iface.provides.unwrap_or_default();
             for port in provides_toml {
                 let current_ips = provides.get_mut(&port);
@@ -126,5 +135,6 @@ pub fn import_config(config: &str) -> Hosts {
         hosts_pairs,
         os,
         mac_addr,
+        name,
     }
 }

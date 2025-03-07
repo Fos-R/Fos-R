@@ -6,7 +6,7 @@ First available version of Fos-R. This version has been used for the BreizhCTFâ€
 
 ### Added
 
-- Support of IPv4 TCP packets
+- Support of IPv4 TCP packets only
 - Support for Unix (Linux really) only
 - Offline generation of pcap files (augmentation only)
 - Honeynet mode

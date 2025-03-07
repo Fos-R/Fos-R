@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use crate::structs::*;
 use std::time::Duration;
 
@@ -52,6 +50,7 @@ pub fn parse_udp_symbol(symbol: String, p: PayloadType) -> UDPEdgeTuple {
     }
 }
 
+#[allow(unused)]
 pub fn create_udp_header(
     payload: Payload,
     noise: NoiseType,
