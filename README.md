@@ -22,6 +22,30 @@ Two steps:
 
 The learning phase can take a few days!
 
+## Using the test environment
+
+Install Vagrant and a virtual machine provider for vagrant (e.g. Virtualbox or libvirt):
+```sh
+cd
+vagrant up
+```
+
+You can then access the virtual machines and start fosr with:
+```sh
+vagrant ssh vm1 # or vm2
+cd fosr
+sudo ./target/release/fosr honeynet -t -c vagrant.toml
+```
+
+And gather the communications in a second terminal:
+```sh
+vagrant ssh vm1
+cd fosr
+sudo tcpdump -i eth1 -w test.pcap
+```
+
+The `test.pcap` file would then be available on the host machine in the `generation` folder.
+
 # Science: how does it work?
 
 ## Learning phase
