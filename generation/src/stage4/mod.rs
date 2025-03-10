@@ -237,8 +237,6 @@ impl Stage4 {
             .spawn(move || {
                 // TODO: faire sa propre fonction
                 while let Ok(flow) = incoming_flows.recv() {
-                    log::trace!("Received a new flow: {:?}", flow.data.directions);
-
                     log::debug!(
                         "Currently {} ongoing flows",
                         current_flows.lock().unwrap().len() + 1
@@ -249,6 +247,14 @@ impl Stage4 {
                     let mut sessions_per_port = sessions_per_port.lock().unwrap();
                     let mut found = false;
                     let fid = flow.data.flow.get_flow_id();
+                    log::info!(
+                        "Next Fos-R flow: {}, {}, {}, {}, {}",
+                        fid.src_ip,
+                        fid.dst_ip,
+                        fid.src_port,
+                        fid.dst_port,
+                        flow.data.timestamps[0].as_millis()
+                    );
                     for sessions in sessions_per_port.iter_mut() {
                         if sessions.port == fid.src_port {
                             sessions.flowids.push(fid.clone());

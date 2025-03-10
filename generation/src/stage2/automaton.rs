@@ -162,10 +162,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                 .as_ref()
                 .map(|v| WeightedIndex::new(v.iter().map(|e| e.count)).unwrap());
             let in_edges = in_edges.unwrap_or_default();
-            graph.push(CrossProductTimedNode {
-                in_edges,
-                dist,
-            });
+            graph.push(CrossProductTimedNode { in_edges, dist });
         }
         CrossProductTimedAutomaton {
             graph,
