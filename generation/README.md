@@ -4,17 +4,17 @@ Fos-R is a network traffic generator based on AI models. It does not require GPU
 
 ## Setup
 
-You can install Fos-R with:
-
-    cargo install fosr
-
-You need to install the pcap library. On Ubuntu/Debian, you can do:
+First, you need to install the pcap library. On Ubuntu/Debian, you can do:
 
     apt install libpcap-dev
 
+You can then install Fos-R with:
+
+    cargo install fosr
+
 Then, you can check the install with:
 
-    fosr -V
+    fosr
 
 # Generation modes
 
