@@ -116,6 +116,7 @@ fn main() {
             let automata_library = Arc::new(automata_library);
             let s2 = tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(taint, hosts);
+            let s4 = stage4::Stage4::new(taint);
             run(
                 local_interfaces,
                 outfile,
@@ -127,7 +128,7 @@ fn main() {
                 s3,
                 1,
                 cpu_usage,
-                taint,
+                Some(s4),
             );
         }
         cmd::Command::CreatePcap {
@@ -177,7 +178,19 @@ fn main() {
             let s2 = tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(false, hosts);
 
-            run(vec![], Some(outfile), s0, s1, 3, s2, 3, s3, 6, cpu_usage, false);
+            run(
+                vec![],
+                Some(outfile),
+                s0,
+                s1,
+                3,
+                s2,
+                3,
+                s3,
+                6,
+                cpu_usage,
+                None,
+            );
         }
     };
 }
@@ -193,7 +206,7 @@ fn run(
     s3: stage3::Stage3,
     s3_count: u8,
     cpu_usage: bool,
-    taint: bool,
+    s4: Option<stage4::Stage4>,
 ) {
     let stats = Arc::new(ui::Stats::default());
     let running = Arc::new(AtomicBool::new(true));
@@ -379,24 +392,15 @@ fn run(
         // STAGE 4 (online mode only)
         // TODO: only one stage 4 for all protocols
 
-        if !local_interfaces.is_empty() {
-            for (proto, rx) in rx_s4 {
-                // let rx = rx.clone();
-                let builder = thread::Builder::new().name(format!("Stage4-{:?}", proto));
-                gen_threads.push(
-                    builder
-                        .spawn(move || {
-                            log::trace!("Start S4");
-                            let mut s4 = stage4::Stage4::new(proto, taint);
-                            s4.start(rx);
-                            // while let Ok(packets) = rx.recv() {
-                            //     s4.send(packets)
-                            // }
-                            log::trace!("S4 stops");
-                        })
-                        .unwrap(),
-                );
-            }
+        if let Some(mut s4) = s4 {
+            let builder = thread::Builder::new().name("Stage4".into());
+            gen_threads.push(
+                builder
+                    .spawn(move || {
+                        s4.start(rx_s4);
+                    })
+                    .unwrap(),
+            );
         }
     }
 

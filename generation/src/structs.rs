@@ -29,6 +29,15 @@ impl Protocol {
         [Protocol::TCP] //, Protocol::UDP, Protocol::ICMP]
     }
 
+    pub fn get_protocol_number(&self) -> u8 {
+        match &self {
+            Protocol::TCP => 6,
+            Protocol::UDP => 17,
+            Protocol::ICMP => 1,
+            Protocol::IGMP => 2,
+        }
+    }
+
     pub fn wrap(&self, d: FlowData) -> Flow {
         match &self {
             Protocol::TCP => Flow::TCP(d),
@@ -71,16 +80,17 @@ impl Flow {
             dst_ip: d.dst_ip,
             src_port: d.src_port,
             dst_port: d.dst_port,
+            proto: self.get_proto(),
         }
     }
 
-    // pub fn get_proto(&self) -> Protocol {
-    //     match &self {
-    //         Flow::TCP(_) => Protocol::TCP,
-    //         Flow::UDP(_) => Protocol::UDP,
-    //         Flow::ICMP(_) => Protocol::ICMP,
-    //     }
-    // }
+    fn get_proto(&self) -> Protocol {
+        match &self {
+            Flow::TCP(_) => Protocol::TCP,
+            Flow::UDP(_) => Protocol::UDP,
+            Flow::ICMP(_) => Protocol::ICMP,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -243,4 +253,5 @@ pub struct FlowId {
     pub dst_ip: Ipv4Addr,
     pub src_port: u16,
     pub dst_port: u16,
+    pub proto: Protocol,
 }
