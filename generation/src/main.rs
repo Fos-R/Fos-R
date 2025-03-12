@@ -127,6 +127,7 @@ fn main() {
                 s3,
                 1,
                 cpu_usage,
+                taint,
             );
         }
         cmd::Command::CreatePcap {
@@ -176,7 +177,7 @@ fn main() {
             let s2 = tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(false, hosts);
 
-            run(vec![], Some(outfile), s0, s1, 3, s2, 3, s3, 6, cpu_usage);
+            run(vec![], Some(outfile), s0, s1, 3, s2, 3, s3, 6, cpu_usage, false);
         }
     };
 }
@@ -192,6 +193,7 @@ fn run(
     s3: stage3::Stage3,
     s3_count: u8,
     cpu_usage: bool,
+    taint: bool,
 ) {
     let stats = Arc::new(ui::Stats::default());
     let running = Arc::new(AtomicBool::new(true));
@@ -375,6 +377,7 @@ fn run(
         }
 
         // STAGE 4 (online mode only)
+        // TODO: only one stage 4 for all protocols
 
         if !local_interfaces.is_empty() {
             for (proto, rx) in rx_s4 {
@@ -384,7 +387,7 @@ fn run(
                     builder
                         .spawn(move || {
                             log::trace!("Start S4");
-                            let mut s4 = stage4::Stage4::new(proto);
+                            let mut s4 = stage4::Stage4::new(proto, taint);
                             s4.start(rx);
                             // while let Ok(packets) = rx.recv() {
                             //     s4.send(packets)
