@@ -21,6 +21,7 @@ impl FlowId {
 pub struct Stage4 {
     // Params
     // proto: Protocol,
+    taint: bool,
 
     // Raw Socket
     tx: TransportSender,
@@ -28,56 +29,30 @@ pub struct Stage4 {
 
     // Flows
     current_flows: Arc<Mutex<Vec<Packets>>>,
-    // TODO: à partager entre les différents protocoles ?
-    sessions_per_port: Arc<Mutex<Vec<PortSessions>>>,
 }
 
-struct PortSessions {
-    flowids: Vec<FlowId>,
-    port: u16,
-    keep_open: bool,
-}
-
-fn close_session(sessions_per_port: &Arc<Mutex<Vec<PortSessions>>>, fid: &FlowId) {
-    log::debug!("Session is finished");
-    let mut sessions_per_port = sessions_per_port.lock().unwrap();
-    for sessions in sessions_per_port.iter_mut() {
-        if sessions.port == fid.src_port {
-            if let Some(pos) = sessions.flowids.iter().position(|f| f == fid) {
-                sessions.flowids.remove(pos);
-                if sessions.flowids.is_empty() && !sessions.keep_open {
-                    log::debug!("Ip tables removed for {}", fid.src_port);
-                    let ipt = iptables::new(false).unwrap();
-                    ipt.delete(
-                        "mangle",
-                        "OUTPUT",
-                        &format!(
-                            "-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}",
-                            fid.src_port
-                        ),
-                    )
-                    .unwrap();
-                    ipt.delete(
-                        "mangle",
-                        "OUTPUT",
-                        &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", fid.src_port),
-                    )
-                    .unwrap();
-                }
-
-                // TODO: si sessions_per_port vide et keep_open est false, retirer iptables
-            } else {
-                log::error!("Flow ID not found");
-            }
-        }
-    }
-
-    // drop the socket if it is not used anymore
-    sessions_per_port.retain(|s| s.keep_open || !s.flowids.is_empty());
+fn close_session(fid: &FlowId) {
+    log::debug!("Ip tables removed for {}", fid.src_port);
+    let ipt = iptables::new(false).unwrap();
+    ipt.delete(
+        "mangle",
+        "OUTPUT",
+        &format!(
+            "-j DROP --match ttl --ttl-eq 64 -p tcp --sport {} --dport {} -s {} -d {}",
+            fid.src_port, fid.dst_port, fid.src_ip, fid.dst_ip
+        ),
+    )
+    .unwrap();
+    ipt.delete(
+        "mangle",
+        "OUTPUT",
+        &format!("-j TTL --ttl-dec 1 -p tcp --sport {} --dport {} -s {} -d {}", fid.src_port, fid.dst_port, fid.src_ip, fid.dst_ip),
+    )
+    .unwrap();
 }
 
 impl Stage4 {
-    pub fn new(proto: Protocol) -> Self {
+    pub fn new(proto: Protocol, taint: bool) -> Self {
         // Create an l3 raw socket using libpnet
         // TODO: utiliser IpNextHeaderProtocol::new(u8) pour éviter le match
         let ip_next_header_protocol = match proto {
@@ -93,14 +68,13 @@ impl Stage4 {
             transport_channel(4096, channel_type).expect("Error when creating transport channel");
 
         let current_flows = Arc::new(Mutex::new(Vec::new()));
-        let sessions_per_port = Arc::new(Mutex::new(Vec::new()));
 
         Stage4 {
+            taint,
             // proto,
             tx,
             rx,
             current_flows,
-            sessions_per_port,
         }
     }
 
@@ -133,7 +107,7 @@ impl Stage4 {
                     if timeout.is_zero() {
                         None
                     } else {
-                        log::trace!("Waiting for {:?}", timeout);
+                        // log::trace!("Waiting for {:?}", timeout);
                         // seulement disponible sur Unix?
                         rx_iter.next_with_timeout(timeout).expect("Network error")
                     }
@@ -153,30 +127,30 @@ impl Stage4 {
                     dst_port: recv_tcp_packet.get_source(),
                     src_port: recv_tcp_packet.get_destination(),
                 };
-                // TODO: check if taint is present
-                let mut flows = self.current_flows.lock().unwrap();
-                let flow_pos = flows.iter().position(|f| fid.is_compatible(&f.flow));
-                if let Some(flow_pos) = flow_pos {
-                    log::debug!("Packet received: processed on port {}", fid.src_port);
-                    let flow = &mut flows[flow_pos];
-                    // look for the first backward packet. TODO: check for that particular packet
-                    log::trace!("{:?}", flow.directions);
-                    let pos = flow
-                        .directions
-                        .iter()
-                        .position(|d| d == &PacketDirection::Backward)
-                        .unwrap();
-                    // assert_eq!(pos, 0);
-                    flow.directions.remove(pos);
-                    flow.packets.remove(pos);
-                    flow.timestamps.remove(pos);
+                if !self.taint || recv_packet.get_flags() & 0b100 > 0 {
+                    let mut flows = self.current_flows.lock().unwrap();
+                    let flow_pos = flows.iter().position(|f| fid.is_compatible(&f.flow));
+                    if let Some(flow_pos) = flow_pos {
+                        log::debug!("Packet received: processed on port {}", fid.src_port);
+                        let flow = &mut flows[flow_pos];
+                        // look for the first backward packet. TODO: check for that particular packet
+                        let pos = flow
+                            .directions
+                            .iter()
+                            .position(|d| d == &PacketDirection::Backward)
+                            .unwrap();
+                        // assert_eq!(pos, 0);
+                        flow.directions.remove(pos);
+                        flow.packets.remove(pos);
+                        flow.timestamps.remove(pos);
 
-                    if flow.directions.is_empty() {
-                        flows.remove(flow_pos);
-                        close_session(&self.sessions_per_port, &fid);
+                        if flow.directions.is_empty() {
+                            flows.remove(flow_pos);
+                            close_session(&fid);
+                        }
+                    } else {
+                        log::trace!("Packet received: ignored {:?}", fid);
                     }
-                    // } else {
-                    //     log::trace!("Packet received: ignored {:?}", fid);
                 }
                 // Go back to searching for the next packet to send because it may have changed
             } else {
@@ -219,7 +193,7 @@ impl Stage4 {
                 if flow.directions.is_empty() {
                     // remove the flow ID from the socket list
                     flows.remove(flow_pos);
-                    close_session(&self.sessions_per_port, &fid);
+                    close_session(&fid);
                 }
             }
         }
@@ -231,7 +205,6 @@ impl Stage4 {
         log::debug!("stage4 started");
         // Create a thread to receive incoming flows and add them to the current_flows
         let current_flows = self.current_flows.clone();
-        let sessions_per_port = self.sessions_per_port.clone();
         let builder = thread::Builder::new().name("Stage4-socket".into());
         let join_handle = builder
             .spawn(move || {
@@ -244,8 +217,6 @@ impl Stage4 {
 
                     // bind the socket as soon as we know we will deal with it, before receiving any
                     // packet
-                    let mut sessions_per_port = sessions_per_port.lock().unwrap();
-                    let mut found = false;
                     let fid = flow.data.flow.get_flow_id();
                     log::info!(
                         "Next Fos-R flow: {}, {}, {}, {}, {}",
@@ -255,44 +226,25 @@ impl Stage4 {
                         fid.dst_port,
                         flow.data.timestamps[0].as_millis()
                     );
-                    for sessions in sessions_per_port.iter_mut() {
-                        if sessions.port == fid.src_port {
-                            sessions.flowids.push(fid.clone());
-                            found = true;
-                            break;
-                        }
-                    }
-                    // TODO use "local_port_available" to verify if the port is already used or not
-                    if !found {
-                        // TODO: vérifier si le port n’est pas déjà ouvert par une autre
-                        // application
-                        // The port is not currently open
-                        let fid = flow.data.flow.get_flow_id();
-                        sessions_per_port.push(PortSessions {
-                            flowids: vec![fid.clone()],
-                            port: fid.src_port,
-                            keep_open: fid.src_port < 1024, // keep "server" ports open
-                        });
-                        // TODO: name chain "fosr"?
-                        // TODO: modifier la chaîne pour prendre en compte d’UDP
-                        log::debug!("Ip tables created for {}", fid.src_port);
-                        let ipt = iptables::new(false).unwrap();
-                        ipt.append(
-                            "mangle",
-                            "OUTPUT",
-                            &format!(
-                                "-j DROP --match ttl --ttl-eq 64 -p tcp --source-port {}",
-                                fid.src_port
-                            ),
-                        )
-                        .unwrap();
-                        ipt.append(
-                            "mangle",
-                            "OUTPUT",
-                            &format!("-j TTL --ttl-dec 1 -p tcp --source-port {}", fid.src_port),
-                        )
-                        .unwrap();
-                    }
+                    // TODO: name chain "fosr"?
+                    // TODO: modifier la chaîne pour prendre en compte d’UDP
+                    log::debug!("Ip tables created for {}", fid.src_port);
+                    let ipt = iptables::new(false).unwrap();
+                    ipt.append(
+                        "mangle",
+                        "OUTPUT",
+                        &format!(
+                            "-j DROP --match ttl --ttl-eq 64 -p tcp --sport {} --dport {} -s {} -d {}",
+                            fid.src_port, fid.dst_port, fid.src_ip, fid.dst_ip
+                        ),
+                    )
+                    .unwrap();
+                    ipt.append(
+                        "mangle",
+                        "OUTPUT",
+                        &format!("-j TTL --ttl-dec 1 -p tcp --sport {} --dport {} -s {} -d {}", fid.src_port, fid.dst_port, fid.src_ip, fid.dst_ip),
+                    )
+                    .unwrap();
 
                     current_flows.lock().unwrap().push(flow.data);
                 }

@@ -3,7 +3,7 @@
         name = "barrel"
         ip = "10.25.100.10"
         provides = []
-        uses = [1883,465]
+        uses = [465]
 [[hosts]]
     [[hosts.interfaces]]
         name = "cabin1"
