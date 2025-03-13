@@ -179,9 +179,7 @@ fn main() {
 
             run(vec![], Some(outfile), s0, s1, 3, s2, 3, s3, 6, cpu_usage, false);
         }
-        cmd::Command::Replay {
-            file,
-        } => {
+        cmd::Command::Replay { file } => {
             let _ = replay::from_pcap(&file);
         }
     };
