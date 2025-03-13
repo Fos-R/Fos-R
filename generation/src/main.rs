@@ -205,8 +205,10 @@ fn main() {
             };
             let hosts = config::import_config(config_str);
             log::debug!("Configuration: {:?}", hosts);
-            let content = fs::read_to_string(file).expect("Cannot read the file");
-            let _ = replay::replay(&content);
+            let source = local_interfaces[0];
+            let dest = local_interfaces[1];
+            let replay = replay::Replay::new(source, dest, file);
+            replay.replay();
         }
     };
 }
