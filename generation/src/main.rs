@@ -194,7 +194,9 @@ fn main() {
             );
         }
         cmd::Command::Replay { file } => {
-            let _ = replay::from_pcap(&file);
+            // Read content of the file
+            let content = fs::read_to_string(file).expect("Cannot read the file");
+            let _ = replay::replay(&content);
         }
     };
 }
