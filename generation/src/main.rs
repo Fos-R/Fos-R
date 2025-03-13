@@ -59,6 +59,7 @@ fn main() {
         // cmd::Command::Replay { infile, .. } => replay::replay(&infile),
         cmd::Command::Honeynet {
             taint,
+            seed,
             automata,
             patterns,
             config_path,
@@ -82,6 +83,7 @@ fn main() {
             }
             log::info!("Model initialization");
             let s0 = stage0::UniformGenerator::new_for_honeypot(
+                seed,
                 SystemTime::now().duration_since(UNIX_EPOCH).unwrap(),
                 flow_per_second,
             );

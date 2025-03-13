@@ -78,6 +78,7 @@ fn open_session(fid: &FlowId) {
     .unwrap();
 }
 
+// TODO: handle packets should listen to packets Receiver periodically
 fn handle_packets(
     proto: Protocol,
     mut tx: TransportSender,

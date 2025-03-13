@@ -110,13 +110,16 @@ impl UniformGenerator {
         }
     }
 
-    pub fn new_for_honeypot(current_date: Duration, flow_per_second: u64) -> Self {
+    pub fn new_for_honeypot(seed: Option<u64>, current_date: Duration, flow_per_second: u64) -> Self {
         let flows_per_window = flow_per_second * WINDOW_WIDTH_IN_SECS;
         let window_count_since_unix_epoch =
             ((current_date + Duration::from_secs(WINDOW_WIDTH_IN_SECS)).as_secs_f64()
                 / (WINDOW_WIDTH_IN_SECS as f64))
                 .ceil() as u64;
-        let mut rng = Pcg32::new(0xcafef00dd15ea5e5, 0xa02bdbf7bb3c0a7); // default values
+        let mut rng = match seed {
+            Some(s) => Pcg32::seed_from_u64(s),
+            None => Pcg32::new(0xcafef00dd15ea5e5, 0xa02bdbf7bb3c0a7), // default values
+        };
         rng.advance(10 * window_count_since_unix_epoch * flows_per_window);
         // 10 = 8 by advancing + 2 for a next_u64 call
         let next_ts = Duration::from_secs(window_count_since_unix_epoch * WINDOW_WIDTH_IN_SECS);
