@@ -67,6 +67,7 @@ impl Flow {
     pub fn get_flow_id(&self) -> FlowId {
         let d = self.get_data();
         FlowId {
+            protocol: self.get_proto(),
             src_ip: d.src_ip,
             dst_ip: d.dst_ip,
             src_port: d.src_port,
@@ -74,13 +75,13 @@ impl Flow {
         }
     }
 
-    // pub fn get_proto(&self) -> Protocol {
-    //     match &self {
-    //         Flow::TCP(_) => Protocol::TCP,
-    //         Flow::UDP(_) => Protocol::UDP,
-    //         Flow::ICMP(_) => Protocol::ICMP,
-    //     }
-    // }
+    pub fn get_proto(&self) -> Protocol {
+        match &self {
+            Flow::TCP(_) => Protocol::TCP,
+            Flow::UDP(_) => Protocol::UDP,
+            Flow::ICMP(_) => Protocol::ICMP,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -239,8 +240,19 @@ impl Packets {
 // TODO: copy?
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct FlowId {
+    pub protocol: Protocol,
     pub src_ip: Ipv4Addr,
     pub dst_ip: Ipv4Addr,
     pub src_port: u16,
     pub dst_port: u16,
+}
+
+impl FlowId {
+    pub fn is_compatible(&self, f: &Flow) -> bool {
+        let d = f.get_data();
+        self.src_ip == d.src_ip
+            && self.dst_ip == d.dst_ip
+            && self.src_port == d.src_port
+            && self.dst_port == d.dst_port
+    }
 }
