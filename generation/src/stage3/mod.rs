@@ -1,10 +1,12 @@
 use crate::config::Hosts;
 use crate::icmp::*;
+use crate::structs::duration_to_timeval;
 use crate::tcp::*;
 use crate::udp::*;
 use crate::ui::*;
 use crate::*;
 use crossbeam_channel::{Receiver, Sender};
+use libc::timeval;
 use pcap::{Capture, PacketHeader};
 use pnet::util::MacAddr;
 use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
@@ -270,16 +272,9 @@ impl Stage3 {
 
     fn get_pcap_header(&self, packet_size: usize, ts: Duration) -> PacketHeader {
         PacketHeader {
-            ts: self.instant_to_timeval(ts),
+            ts: duration_to_timeval(ts),
             caplen: packet_size as u32,
             len: packet_size as u32,
-        }
-    }
-
-    fn instant_to_timeval(&self, duration: Duration) -> libc::timeval {
-        libc::timeval {
-            tv_sec: duration.as_secs() as _,
-            tv_usec: duration.subsec_micros() as _,
         }
     }
 
