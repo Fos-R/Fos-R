@@ -16,7 +16,7 @@ struct FlowId {
     proto: Protocol,
 }
 
-fn from_pcap(infile: &str) -> Vec<SeededData<Packets>> {
+pub fn from_pcap(infile: &str) -> Vec<SeededData<Packets>> {
     let mut capture = Capture::<Offline>::from_file(infile).unwrap();
     let flows: HashMap<FlowId, Vec<Packet>> = HashMap::new();
     while let Ok(packet) = capture.next_packet() {
