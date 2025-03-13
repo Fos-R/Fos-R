@@ -193,8 +193,18 @@ fn main() {
                 false,
             );
         }
-        cmd::Command::Replay { file } => {
+        cmd::Command::Replay { 
+            file,
+            config_path
+        } => {
             // Read content of the file
+            let config_str = if let Some(path) = config_path {
+                &fs::read_to_string(path).expect("Cannot access the configuration file.")
+            } else {
+                include_str!("../breizhctf.toml")
+            };
+            let hosts = config::import_config(config_str);
+            log::debug!("Configuration: {:?}", hosts);
             let content = fs::read_to_string(file).expect("Cannot read the file");
             let _ = replay::replay(&content);
         }
