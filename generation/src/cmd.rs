@@ -109,4 +109,13 @@ pub enum Command {
         )]
         config_path: Option<String>,
     },
+    Replay {
+        #[arg(
+            short,
+            long,
+            default_value="output.pcap",
+            help = "Path to the pcap file to be replayed"
+        )]
+        file: String,
+    },
 }
