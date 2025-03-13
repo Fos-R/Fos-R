@@ -123,10 +123,12 @@ impl Replay {
 }
 
 pub fn replay(infile: &str) {
+    let replay_stage = Replay::new();
+
     let mut threads = vec![];
-    let (tx, rx) = bounded::<SeededData<Packets>>(crate::CHANNEL_SIZE);
+    let (tx, _) = bounded::<SeededData<Packets>>(crate::CHANNEL_SIZE);
     let builder = thread::Builder::new().name("Replay".into());
-    let data = from_pcap(infile);
+    let data = replay_stage.from_pcap(infile);
     threads.push(
         builder
             .spawn(move || {
