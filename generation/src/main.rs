@@ -3,6 +3,7 @@ use crate::structs::*;
 mod cmd;
 mod config;
 mod ui;
+mod utils;
 
 mod icmp;
 mod tcp;
@@ -177,7 +178,19 @@ fn main() {
             let s2 = tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(false, hosts);
 
-            run(vec![], Some(outfile), s0, s1, 3, s2, 3, s3, 6, cpu_usage, false);
+            run(
+                vec![],
+                Some(outfile),
+                s0,
+                s1,
+                3,
+                s2,
+                3,
+                s3,
+                6,
+                cpu_usage,
+                false,
+            );
         }
         cmd::Command::Replay { file } => {
             let _ = replay::from_pcap(&file);

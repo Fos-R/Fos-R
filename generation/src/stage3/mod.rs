@@ -1,12 +1,11 @@
 use crate::config::Hosts;
 use crate::icmp::*;
-use crate::structs::duration_to_timeval;
-use crate::tcp::*;
+use crate::tcp::TCPPacketInfo;
 use crate::udp::*;
 use crate::ui::*;
+use crate::utils::duration_to_timeval;
 use crate::*;
 use crossbeam_channel::{Receiver, Sender};
-use libc::timeval;
 use pcap::{Capture, PacketHeader};
 use pnet::util::MacAddr;
 use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};

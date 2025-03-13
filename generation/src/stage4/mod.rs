@@ -8,19 +8,9 @@ use pnet_packet::{ip::IpNextHeaderProtocols, Packet};
 use std::sync::Mutex;
 use std::time::Duration;
 
-impl FlowId {
-    pub fn is_compatible(&self, f: &Flow) -> bool {
-        let d = f.get_data();
-        self.src_ip == d.src_ip
-            && self.dst_ip == d.dst_ip
-            && self.src_port == d.src_port
-            && self.dst_port == d.dst_port
-    }
-}
-
 pub struct Stage4 {
     // Params
-    // proto: Protocol,
+    proto: Protocol,
     taint: bool,
 
     // Raw Socket
@@ -46,7 +36,10 @@ fn close_session(fid: &FlowId) {
     ipt.delete(
         "mangle",
         "OUTPUT",
-        &format!("-j TTL --ttl-dec 1 -p tcp --sport {} --dport {} -s {} -d {}", fid.src_port, fid.dst_port, fid.src_ip, fid.dst_ip),
+        &format!(
+            "-j TTL --ttl-dec 1 -p tcp --sport {} --dport {} -s {} -d {}",
+            fid.src_port, fid.dst_port, fid.src_ip, fid.dst_ip
+        ),
     )
     .unwrap();
 }
@@ -71,7 +64,7 @@ impl Stage4 {
 
         Stage4 {
             taint,
-            // proto,
+            proto,
             tx,
             rx,
             current_flows,
@@ -122,6 +115,7 @@ impl Stage4 {
 
                 // since this is a backward packet, we need to reverse source and destination
                 let fid = FlowId {
+                    protocol: self.proto,
                     dst_ip: recv_packet.get_source(),
                     src_ip: recv_packet.get_destination(),
                     dst_port: recv_tcp_packet.get_source(),
