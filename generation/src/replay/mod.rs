@@ -16,19 +16,23 @@ struct FlowId {
     proto: Protocol,
 }
 
+fn get_flows(packet: Vec<Packet>) -> Vec<SeededData<Packets>> {
+    todo!();
+    vec![]
+}
+
 pub fn from_pcap(infile: &str) -> Vec<SeededData<Packets>> {
     let mut capture = Capture::<Offline>::from_file(infile).unwrap();
     let flows: HashMap<FlowId, Vec<Packet>> = HashMap::new();
+    let mut packets: Vec<Packet> = vec![];
     while let Ok(packet) = capture.next_packet() {
-        // println!("{:?}",packet);
-        let ip_packet = Ipv4Packet::new(packet.data).expect("Replay only support IPv4 packets");
-        println!("{:?}", ip_packet);
-        // match ip_packet.get_next_level_protocol() {
-
-        // };
-        // TODO: recreate flows
+        let packet_: Packet = Packet{
+            header: *packet.header,
+            data: packet.data.to_vec(),
+        };
+        packets.push(packet_);
     }
-    vec![]
+    get_flows(packets)
 }
 
 pub fn replay(infile: &str) {
