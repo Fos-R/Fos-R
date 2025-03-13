@@ -109,6 +109,7 @@ pub enum Command {
         )]
         config_path: Option<String>,
     },
+    /// Reads a pcap file and plays its network activity.
     Replay {
         #[arg(
             short,
