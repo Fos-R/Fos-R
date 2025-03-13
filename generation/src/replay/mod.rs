@@ -1,10 +1,7 @@
-#![allow(unused)]
-use crate::stage4;
-use crate::stage4::FlowId;
 use crate::structs::*;
+use crate::utils::timeval_to_duration;
 use crossbeam_channel::bounded;
 use pcap::{Capture, Offline};
-use pnet::packet::ipv4::Ipv4Packet;
 use pnet_packet::Packet as PnetPacket;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
@@ -22,36 +19,19 @@ pub struct Replay {
 }
 
 fn get_flows(packets: Vec<Packet>) -> Vec<SeededData<Packets>> {
-    let mut flows: Vec<SeededData<Packets>> = Vec::new();
-
-    let mut current_flow_id_opt: Option<FlowId> = None;
-    let mut current_flow_packets: Vec<Packet> = Vec::new();
+    let mut grouped_packets: HashMap<FlowId, Vec<Packet>> = HashMap::new();
 
     for packet in packets {
-        let flow_id = extract_flow_id(&packet);
+        let flow_id = FlowId::from_packet(&packet);
 
-        match current_flow_id_opt {
-            None => {
-                current_flow_id_opt = Some(flow_id);
-            }
-            Some(ref current_flow_id) => {
-                if *current_flow_id != flow_id {
-                    flows.push(to_full_flow(&current_flow_id, &current_flow_packets));
-                    current_flow_packets.clear();
-                    current_flow_id_opt = Some(flow_id);
-                }
-            }
-        }
-        current_flow_packets.push(packet);
+        let flow = grouped_packets.entry(flow_id).or_insert(Vec::new());
+        flow.push(packet);
     }
 
-    if let Some(current_flow_id) = &current_flow_id_opt {
-        if !current_flow_packets.is_empty() {
-            flows.push(to_full_flow(current_flow_id, &current_flow_packets));
-        }
-    }
-
-    flows
+    grouped_packets
+        .iter()
+        .map(|(flow_id, packets)| to_full_flow(flow_id, packets))
+        .collect()
 }
 
 fn to_full_flow(flow_id: &FlowId, packets: &[Packet]) -> SeededData<Packets> {
@@ -105,19 +85,6 @@ fn to_full_flow(flow_id: &FlowId, packets: &[Packet]) -> SeededData<Packets> {
     }
 }
 
-fn extract_flow_id(packet: &Packet) -> FlowId {
-    let eth_packet = pnet_packet::ethernet::EthernetPacket::new(&packet.data).unwrap();
-    let ip_packet = pnet_packet::ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
-    let tcp_packet = pnet_packet::tcp::TcpPacket::new(ip_packet.payload()).unwrap();
-
-    FlowId {
-        src_ip: ip_packet.get_source(),
-        dst_ip: ip_packet.get_destination(),
-        src_port: tcp_packet.get_source(),
-        dst_port: tcp_packet.get_destination(),
-    }
-}
-
 impl Replay {
     pub fn new() -> Self {
         let source_ip = Ipv4Addr::new(127, 0, 0, 1);
@@ -130,12 +97,11 @@ impl Replay {
         }
     }
 
-    pub fn from_pcap(infile: &str) -> Vec<SeededData<Packets>> {
+    pub fn from_pcap(&self, infile: &str) -> Vec<SeededData<Packets>> {
         let mut capture = Capture::<Offline>::from_file(infile).unwrap();
-        let flows: HashMap<FlowId, Vec<Packet>> = HashMap::new();
         let mut packets: Vec<Packet> = vec![];
         while let Ok(packet) = capture.next_packet() {
-            let packet_: Packet = Packet {
+            let mut packet_: Packet = Packet {
                 header: *packet.header,
                 data: packet.data.to_vec(),
             };
@@ -145,8 +111,12 @@ impl Replay {
                 packet_.data[IPV4_SRC_OFFSET..IPV4_SRC_OFFSET + 4].copy_from_slice(&src_octets);
                 packet_.data[IPV4_DST_OFFSET..IPV4_DST_OFFSET + 4].copy_from_slice(&dst_octets);
             } else {
-                println!("Packet too short, skipping IP rewrite: len = {}", packet_.data.len());
-            }        packets.push(packet_);
+                println!(
+                    "Packet too short, skipping IP rewrite: len = {}",
+                    packet_.data.len()
+                );
+            }
+            packets.push(packet_);
         }
         get_flows(packets)
     }
