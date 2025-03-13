@@ -117,5 +117,12 @@ pub enum Command {
             help = "Path to the pcap file to be replayed"
         )]
         file: String,
+        #[arg(
+            short,
+            long,
+            default_value=None,
+            help = "Path to the information system configuration file"
+        )]
+        config_path: Option<String>,
     },
 }
