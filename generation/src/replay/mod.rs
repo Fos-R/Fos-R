@@ -9,6 +9,17 @@ use pnet_packet::Packet as PnetPacket;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
 use std::thread;
+use std::time::Instant;
+
+const ETHERNET_HEADER_SIZE: usize = 14;
+const IPV4_SRC_OFFSET: usize = ETHERNET_HEADER_SIZE + 12;
+const IPV4_DST_OFFSET: usize = ETHERNET_HEADER_SIZE + 16;
+
+pub struct Replay {
+    source_ip: Ipv4Addr,
+    dest_ip: Ipv4Addr,
+    start_time: Instant,
+}
 
 fn get_flows(packets: Vec<Packet>) -> Vec<SeededData<Packets>> {
     let mut flows: Vec<SeededData<Packets>> = Vec::new();
@@ -107,18 +118,38 @@ fn extract_flow_id(packet: &Packet) -> FlowId {
     }
 }
 
-pub fn from_pcap(infile: &str) -> Vec<SeededData<Packets>> {
-    let mut capture = Capture::<Offline>::from_file(infile).unwrap();
-    let flows: HashMap<FlowId, Vec<Packet>> = HashMap::new();
-    let mut packets: Vec<Packet> = vec![];
-    while let Ok(packet) = capture.next_packet() {
-        let packet_: Packet = Packet {
-            header: *packet.header,
-            data: packet.data.to_vec(),
-        };
-        packets.push(packet_);
+impl Replay {
+    pub fn new() -> Self {
+        let source_ip = Ipv4Addr::new(127, 0, 0, 1);
+        let dest_ip = Ipv4Addr::new(127, 0, 0, 2);
+        let start_time = Instant::now();
+        Replay {
+            source_ip,
+            dest_ip,
+            start_time,
+        }
     }
-    get_flows(packets)
+
+    pub fn from_pcap(infile: &str) -> Vec<SeededData<Packets>> {
+        let mut capture = Capture::<Offline>::from_file(infile).unwrap();
+        let flows: HashMap<FlowId, Vec<Packet>> = HashMap::new();
+        let mut packets: Vec<Packet> = vec![];
+        while let Ok(packet) = capture.next_packet() {
+            let packet_: Packet = Packet {
+                header: *packet.header,
+                data: packet.data.to_vec(),
+            };
+            if packet_.data.len() >= IPV4_DST_OFFSET + 4 {
+                let src_octets = self.source_ip.octets();
+                let dst_octets = self.dest_ip.octets();
+                packet_.data[IPV4_SRC_OFFSET..IPV4_SRC_OFFSET + 4].copy_from_slice(&src_octets);
+                packet_.data[IPV4_DST_OFFSET..IPV4_DST_OFFSET + 4].copy_from_slice(&dst_octets);
+            } else {
+                println!("Packet too short, skipping IP rewrite: len = {}", packet_.data.len());
+            }        packets.push(packet_);
+        }
+        get_flows(packets)
+    }
 }
 
 pub fn replay(infile: &str) {
