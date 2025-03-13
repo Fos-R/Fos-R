@@ -37,12 +37,6 @@ In this mode, Fos-R replays a pcap file with raw sockets.
 
 # Roadmap
 
-## v0.1 - March 2025 - "MVP"
-
-- Create-pcap and honeynet modes
-- Linux only support
-- Basic default models
-
 ## v0.2 - Q2 2025 - "Usability"
 
 - Documentation and API

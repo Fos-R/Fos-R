@@ -36,6 +36,8 @@ pub enum Command {
             help = "Taint the packets to easily identify them"
         )]
         taint: bool,
+        #[arg(short, long, help = "Seed for random number generation")]
+        seed: Option<u64>,
         #[arg(short, long, default_value=None, help="Path to the patterns file")]
         patterns: Option<String>,
         #[arg(short, long, default_value=None, help="Path to automata directory")]
