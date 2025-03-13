@@ -9,6 +9,7 @@ mod icmp;
 mod tcp;
 mod udp;
 
+mod replay;
 mod stage0;
 mod stage1;
 use stage1::flowchronicle;
