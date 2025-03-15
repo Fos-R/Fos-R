@@ -28,6 +28,9 @@ pub struct Stage4 {
     current_flows: Arc<Mutex<Vec<Packets>>>,
 }
 
+const INTERVAL_TIMEOUT_CHECKS_IN_SECS: u64 = 60;
+const SESSION_TIMEOUT_IN_SECS: u64 = 30;
+
 // TODO: Linux-specific
 fn close_session(fid: &FlowId) {
     log::debug!("Ip tables removed for {}", fid.src_port);
@@ -88,7 +91,26 @@ fn handle_packets(
 ) {
     // Send and receive packets in this thread
     let mut rx_iter = ipv4_packet_iter(&mut rx);
+    let mut next_timeout_check = SystemTime::now().duration_since(UNIX_EPOCH).unwrap() + Duration::from_secs(INTERVAL_TIMEOUT_CHECKS_IN_SECS);
     loop {
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        if now > next_timeout_check {
+            // flows that should have ended for more than "SESSION_TIMEOUT_IN_SECS"
+            // seconds ago are pruned
+            let timeout = now - Duration::from_secs(SESSION_TIMEOUT_IN_SECS);
+            let mut flows = current_flows.lock().unwrap();
+            let len = flows.len();
+            for p in flows.iter() {
+                if p.timestamps.last().unwrap() > &timeout {
+                    close_session(&p.flow.get_flow_id());
+                }
+            }
+            flows.retain(|p| p.timestamps.last().unwrap() > &timeout);
+            next_timeout_check = SystemTime::now().duration_since(UNIX_EPOCH).unwrap() + Duration::from_secs(INTERVAL_TIMEOUT_CHECKS_IN_SECS);
+            if len - flows.len() > 0 {
+                log::debug!("Session timeout: {} sessions closed", len - flows.len());
+            }
+        }
         let mut packet_to_send: Option<(Duration, FlowId)> = None;
         {
             let flows = current_flows.lock().unwrap();
