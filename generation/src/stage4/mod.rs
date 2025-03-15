@@ -116,12 +116,12 @@ fn handle_packets(
             let flows = current_flows.lock().unwrap();
             for f in flows.iter() {
                 assert!(!f.packets.is_empty());
-                // TODO: remove the clone
-                if f.directions[0] == PacketDirection::Forward
-                    && (packet_to_send.is_none()
-                        || packet_to_send.clone().unwrap().0 > f.timestamps[0])
-                {
-                    packet_to_send = Some((f.timestamps[0], f.flow.get_flow_id()));
+                if f.directions[0] == PacketDirection::Forward {
+                    match &packet_to_send {
+                        None => packet_to_send = Some((f.timestamps[0], f.flow.get_flow_id())),
+                        Some(t) if t.0 > f.timestamps[0] => packet_to_send = Some((f.timestamps[0], f.flow.get_flow_id())),
+                        _ => (),
+                    }
                 }
             }
         }
@@ -234,12 +234,11 @@ impl Stage4 {
         }
     }
 
-    pub fn start(&mut self, incoming_flows: HashMap<Protocol, Receiver<SeededData<Packets>>>) {
+    pub fn start(&mut self, incoming_flows: HashMap<Protocol, Receiver<Packets>>) {
         log::trace!("Start S4");
-        // TODO: vérifier s’il faut mettre un SeededData ici ou pas
         let mut sel = Select::new();
         let mut join_handles = Vec::new();
-        let mut receivers = Vec::<Receiver<SeededData<Packets>>>::new();
+        let mut receivers = Vec::<Receiver<Packets>>::new();
         let taint = self.taint;
 
         for (proto, rx_s4) in incoming_flows.into_iter() {
@@ -279,18 +278,18 @@ impl Stage4 {
 
                 // setup firewall rules as soon as we know we will deal with it, before receiving any
                 // packet
-                let fid = flow.data.flow.get_flow_id();
+                let fid = flow.flow.get_flow_id();
                 log::info!(
                     "Next Fos-R flow: {}, {}, {}, {}, {}",
                     fid.src_ip,
                     fid.dst_ip,
                     fid.src_port,
                     fid.dst_port,
-                    flow.data.timestamps[0].as_millis()
+                    flow.timestamps[0].as_millis()
                 );
                 open_session(&fid);
 
-                self.current_flows.lock().unwrap().push(flow.data);
+                self.current_flows.lock().unwrap().push(flow);
             } else {
                 break;
             }

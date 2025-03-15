@@ -236,7 +236,7 @@ fn run(
         let mut tx_s3 = HashMap::new();
         let mut rx_s4 = HashMap::new();
         for proto in Protocol::iter() {
-            let (tx, rx) = bounded::<SeededData<Packets>>(CHANNEL_SIZE);
+            let (tx, rx) = bounded::<Packets>(CHANNEL_SIZE);
             rx_s4.insert(proto, rx);
             tx_s3.insert(proto, tx);
         }

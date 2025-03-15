@@ -291,7 +291,7 @@ impl Stage3 {
     pub fn generate_tcp_packets(
         &self,
         input: SeededData<PacketsIR<TCPPacketInfo>>,
-    ) -> SeededData<Packets> {
+    ) -> Packets {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let tcp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
@@ -336,14 +336,11 @@ impl Stage3 {
             timestamps.push(packet_info.get_ts());
         }
 
-        SeededData {
-            seed: rng.next_u64(),
-            data: Packets {
-                packets,
-                directions,
-                timestamps,
-                flow: input.data.flow,
-            },
+        Packets {
+            packets,
+            directions,
+            timestamps,
+            flow: input.data.flow,
         }
     }
 
@@ -352,7 +349,7 @@ impl Stage3 {
     pub fn generate_udp_packets(
         &self,
         input: SeededData<PacketsIR<UDPPacketInfo>>,
-    ) -> SeededData<Packets> {
+    ) -> Packets {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let udp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
@@ -389,14 +386,11 @@ impl Stage3 {
             timestamps.push(packet_info.get_ts());
         }
 
-        SeededData {
-            seed: rng.next_u64(),
-            data: Packets {
-                packets,
-                directions,
-                timestamps,
-                flow: input.data.flow,
-            },
+        Packets {
+            packets,
+            directions,
+            timestamps,
+            flow: input.data.flow,
         }
     }
 
@@ -405,7 +399,7 @@ impl Stage3 {
     pub fn generate_icmp_packets(
         &self,
         input: SeededData<PacketsIR<ICMPPacketInfo>>,
-    ) -> SeededData<Packets> {
+    ) -> Packets {
         // let mut rng = Pcg32::seed_from_u64(input.seed);
         todo!()
     }
@@ -436,11 +430,11 @@ fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(),
 
 fn send_online(
     local_interfaces: &[Ipv4Addr],
-    mut flow_packets: SeededData<Packets>,
-    tx_s3: &Sender<SeededData<Packets>>,
+    mut flow_packets: Packets,
+    tx_s3: &Sender<Packets>,
 ) {
     // check if exist
-    let f = flow_packets.data.flow.get_data();
+    let f = flow_packets.flow.get_data();
     let src_s4 = local_interfaces.contains(&f.src_ip);
     let dst_s4 = local_interfaces.contains(&f.dst_ip);
     if src_s4 && dst_s4 {
@@ -448,7 +442,7 @@ fn send_online(
         // only copy if we have to
         tx_s3.send(flow_packets.clone()).unwrap();
         // ensure stage 4 is always the source
-        flow_packets.data.reverse();
+        flow_packets.reverse();
         tx_s3.send(flow_packets).unwrap();
     } else if src_s4 {
         // log::info!("Source IP is local");
@@ -456,27 +450,23 @@ fn send_online(
     } else if dst_s4 {
         // log::info!("Destination IP is local");
         // ensure stage 4 is always the source
-        flow_packets.data.reverse();
+        flow_packets.reverse();
         tx_s3.send(flow_packets).unwrap();
     }
 }
 
-fn send_pcap(flow_packets: SeededData<Packets>, tx_s3_to_collector: &Sender<Packets>) {
-    let noisy_flow = SeededData {
-        seed: flow_packets.seed,
-        data: flow_packets.data,
-    };
+fn send_pcap(flow_packets: Packets, tx_s3_to_collector: &Sender<Packets>) {
     // if noise { // insert noise // TODO: find a better way to do it
     //     stage3::insert_noise(&mut noisy_flow);
     // }
-    tx_s3_to_collector.send(noisy_flow.data).unwrap();
+    tx_s3_to_collector.send(flow_packets).unwrap();
 }
 
 pub fn run<T: PacketInfo>(
-    generator: impl Fn(SeededData<PacketsIR<T>>) -> SeededData<Packets>,
+    generator: impl Fn(SeededData<PacketsIR<T>>) -> Packets,
     local_interfaces: Vec<Ipv4Addr>,
     rx_s3: Receiver<SeededData<PacketsIR<T>>>,
-    tx_s3: Sender<SeededData<Packets>>,  // TODO: Option
+    tx_s3: Sender<Packets>,  // TODO: Option
     tx_s3_to_collector: Sender<Packets>, // TODO: Option
     stats: Arc<Stats>,
     online: bool,
@@ -486,7 +476,7 @@ pub fn run<T: PacketInfo>(
     log::trace!("Start S3");
     for headers in rx_s3 {
         let flow_packets = generator(headers);
-        stats.increase(&flow_packets.data);
+        stats.increase(&flow_packets);
         // only copy the flows if we need to send it to online and pcap
         if online {
             if pcap_export {
