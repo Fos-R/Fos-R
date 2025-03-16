@@ -29,7 +29,6 @@ struct Interface {
     uses: Option<Vec<u16>>,
 }
 
-// TODO: passer en copy directement ?
 #[derive(Debug, Clone)]
 pub struct Hosts {
     hosts_pairs: HashMap<u16, Vec<(Ipv4Addr, Ipv4Addr)>>,

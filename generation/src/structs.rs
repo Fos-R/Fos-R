@@ -246,8 +246,7 @@ impl Packets {
     }
 }
 
-// TODO: copy?
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct FlowId {
     pub src_ip: Ipv4Addr,
     pub dst_ip: Ipv4Addr,

@@ -41,7 +41,6 @@ impl UnconstrainedAutomataLibrary {
             icmp_automata: vec![],
         };
 
-
         let paths = fs::read_dir(directory_name).expect("Cannot read directory");
         for p in paths {
             let p = p.expect("Cannot open path").path();
@@ -67,7 +66,6 @@ impl UnconstrainedAutomataLibrary {
         let string = fs::read_to_string(filename)?;
         self.import_from_str(&string)
     }
-
 
     pub fn import_from_str(&mut self, string: &str) -> std::io::Result<()> {
         let a: automaton::JsonAutomaton = serde_json::from_str(string)?;
@@ -101,7 +99,6 @@ impl UnconstrainedAutomataLibrary {
         Ok(())
     }
 }
-
 
 pub struct AutomataLibrary {
     // TODO: map port -> automata
@@ -271,9 +268,6 @@ impl Stage2 for TadamGenerator {
         todo!()
     }
 }
-
-
-
 
 #[derive(Clone)]
 pub struct UnconstrainedTadamGenerator {

@@ -25,4 +25,3 @@ toml = { version = "0.8.19", default-features = false, features = ["parse"] }
 kd-tree = "0.6.0"
 rand_core = "0.6.4"
 ctrlc = "3.4.5"
-iptables = "=0.5.2"
