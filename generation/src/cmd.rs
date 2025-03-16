@@ -81,12 +81,7 @@ pub enum Command {
         //     help = "Add noise in the output file"
         // )]
         // noise: bool,
-        #[arg(
-            short,
-            long,
-            default_value_t = 10,
-            help = "Minimum number of flows to generate."
-        )] // TODO: remove default value for release
+        #[arg(short, long, help = "Minimum number of flows to generate.")]
         flow_count: u64,
         #[arg(short='d', long, default_value=None, help="Unix time for the beginning of the pcap. By default, use current time.")]
         start_unix_time: Option<u64>,

@@ -288,10 +288,7 @@ impl Stage3 {
     }
 
     /// Generate TCP packets from an intermediate representation
-    pub fn generate_tcp_packets(
-        &self,
-        input: SeededData<PacketsIR<TCPPacketInfo>>,
-    ) -> Packets {
+    pub fn generate_tcp_packets(&self, input: SeededData<PacketsIR<TCPPacketInfo>>) -> Packets {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let tcp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
@@ -346,10 +343,7 @@ impl Stage3 {
 
     /// Generate UDP packets from an intermediate representation
     #[allow(unused)]
-    pub fn generate_udp_packets(
-        &self,
-        input: SeededData<PacketsIR<UDPPacketInfo>>,
-    ) -> Packets {
+    pub fn generate_udp_packets(&self, input: SeededData<PacketsIR<UDPPacketInfo>>) -> Packets {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let udp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
@@ -396,10 +390,7 @@ impl Stage3 {
 
     /// Generate ICMP packets from an intermediate representation
     #[allow(unused)]
-    pub fn generate_icmp_packets(
-        &self,
-        input: SeededData<PacketsIR<ICMPPacketInfo>>,
-    ) -> Packets {
+    pub fn generate_icmp_packets(&self, input: SeededData<PacketsIR<ICMPPacketInfo>>) -> Packets {
         // let mut rng = Pcg32::seed_from_u64(input.seed);
         todo!()
     }
@@ -428,11 +419,7 @@ fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(),
     Ok(())
 }
 
-fn send_online(
-    local_interfaces: &[Ipv4Addr],
-    mut flow_packets: Packets,
-    tx_s3: &Sender<Packets>,
-) {
+fn send_online(local_interfaces: &[Ipv4Addr], mut flow_packets: Packets, tx_s3: &Sender<Packets>) {
     // check if exist
     let f = flow_packets.flow.get_data();
     let src_s4 = local_interfaces.contains(&f.src_ip);
@@ -466,7 +453,7 @@ pub fn run<T: PacketInfo>(
     generator: impl Fn(SeededData<PacketsIR<T>>) -> Packets,
     local_interfaces: Vec<Ipv4Addr>,
     rx_s3: Receiver<SeededData<PacketsIR<T>>>,
-    tx_s3: Sender<Packets>,  // TODO: Option
+    tx_s3: Sender<Packets>,              // TODO: Option
     tx_s3_to_collector: Sender<Packets>, // TODO: Option
     stats: Arc<Stats>,
     online: bool,

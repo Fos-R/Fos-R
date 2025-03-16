@@ -270,7 +270,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
             assert!(!self.graph[current_state].out_edges.is_empty());
             let index = match &self.graph[current_state].dist {
                 None => 0, // only one outgoing edge
-                Some(d) => d.sample(rng)
+                Some(d) => d.sample(rng),
             };
             let e = &self.graph[current_state].out_edges[index];
             if let Some(data) = &e.data {
@@ -302,7 +302,6 @@ impl<T: EdgeType> TimedAutomaton<T> {
         }
         output
     }
-
 }
 
 #[derive(Deserialize, Debug, Clone)]

@@ -110,7 +110,11 @@ impl UniformGenerator {
         }
     }
 
-    pub fn new_for_honeypot(seed: Option<u64>, current_date: Duration, flow_per_second: u64) -> Self {
+    pub fn new_for_honeypot(
+        seed: Option<u64>,
+        current_date: Duration,
+        flow_per_second: u64,
+    ) -> Self {
         let flows_per_window = flow_per_second * WINDOW_WIDTH_IN_SECS;
         let window_count_since_unix_epoch =
             ((current_date + Duration::from_secs(WINDOW_WIDTH_IN_SECS)).as_secs_f64()

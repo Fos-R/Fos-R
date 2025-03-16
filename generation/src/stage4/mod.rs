@@ -7,6 +7,7 @@ use pnet::transport::{
 };
 use pnet_packet::ip::IpNextHeaderProtocol;
 use pnet_packet::Packet;
+use std::process::Command;
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -31,54 +32,122 @@ pub struct Stage4 {
 const INTERVAL_TIMEOUT_CHECKS_IN_SECS: u64 = 60;
 const SESSION_TIMEOUT_IN_SECS: u64 = 30;
 
-// TODO: Linux-specific
+#[cfg(target_os = "linux")]
 fn close_session(fid: &FlowId) {
-    log::debug!("Ip tables removed for {}", fid.src_port);
-    let ipt = iptables::new(false).unwrap();
-    ipt.delete(
-        "mangle",
-        "OUTPUT",
-        &format!(
-            "-j DROP --match ttl --ttl-eq 64 -p {:?} --sport {} --dport {} -s {} -d {}",
-            fid.proto, fid.src_port, fid.dst_port, fid.src_ip, fid.dst_ip
-        ),
-    )
-    .unwrap();
-    ipt.delete(
-        "mangle",
-        "OUTPUT",
-        &format!(
-            "-j TTL --ttl-dec 1 -p {:?} --sport {} --dport {} -s {} -d {}",
-            fid.proto, fid.src_port, fid.dst_port, fid.src_ip, fid.dst_ip
-        ),
-    )
-    .unwrap();
+    log::debug!("Ip tables removed for {:?}", fid);
+    let status = Command::new("iptables")
+        .args([
+            "-w",
+            "-t",
+            "mangle",
+            "-D",
+            "OUTPUT",
+            "-j",
+            "DROP",
+            "--match",
+            "ttl",
+            "--ttl-eq",
+            "64",
+            "-p",
+            &format!("{:?}", fid.proto),
+            "--sport",
+            &format!("{}", fid.src_port),
+            "--dport",
+            &format!("{}", fid.dst_port),
+            "-s",
+            &format!("{}", fid.src_ip),
+            "-d",
+            &format!("{}", fid.dst_ip),
+        ])
+        .status()
+        .expect("failed to execute process");
+    assert!(status.success());
+
+    let status = Command::new("iptables")
+        .args([
+            "-w",
+            "-t",
+            "mangle",
+            "-D",
+            "OUTPUT",
+            "-j",
+            "TTL",
+            "--ttl-dec",
+            "1",
+            "-p",
+            &format!("{:?}", fid.proto),
+            "--sport",
+            &format!("{}", fid.src_port),
+            "--dport",
+            &format!("{}", fid.dst_port),
+            "-s",
+            &format!("{}", fid.src_ip),
+            "-d",
+            &format!("{}", fid.dst_ip),
+        ])
+        .status()
+        .expect("failed to execute process");
+    assert!(status.success());
 }
 
-// TODO: Linux-specific
+#[cfg(target_os = "linux")]
 fn open_session(fid: &FlowId) {
     // TODO: name chain "fosr"?
     // TODO: modifier la chaîne pour prendre en compte d’UDP
     log::debug!("Ip tables created for {}", fid.src_port);
-    let ipt = iptables::new(false).unwrap();
-    ipt.append(
-        "mangle",
-        "OUTPUT",
-        &format!(
-            "-j DROP --match ttl --ttl-eq 64 -p {:?} --sport {} --dport {} -s {} -d {}",
-            fid.proto, fid.src_port, fid.dst_port, fid.src_ip, fid.dst_ip
-        ),
-    )
-    .unwrap();
-    ipt.append(
-        "mangle",
-        "OUTPUT",
-        &format!(
-            "-j TTL --ttl-dec 1 -p {:?} --sport {} --dport {} -s {} -d {}",
-            fid.proto, fid.src_port, fid.dst_port, fid.src_ip, fid.dst_ip
-        ),
-    )
-    .unwrap();
+    let status = Command::new("iptables")
+        .args([
+            "-w",
+            "-t",
+            "mangle",
+            "-A",
+            "OUTPUT",
+            "-j",
+            "DROP",
+            "--match",
+            "ttl",
+            "--ttl-eq",
+            "64",
+            "-p",
+            &format!("{:?}", fid.proto),
+            "--sport",
+            &format!("{}", fid.src_port),
+            "--dport",
+            &format!("{}", fid.dst_port),
+            "-s",
+            &format!("{}", fid.src_ip),
+            "-d",
+            &format!("{}", fid.dst_ip),
+        ])
+        .status()
+        .expect("failed to execute process");
+    assert!(status.success());
+
+    let status = Command::new("iptables")
+        .args([
+            "-w",
+            "-t",
+            "mangle",
+            "-A",
+            "OUTPUT",
+            "-j",
+            "TTL",
+            "--ttl-dec",
+            "1",
+            "-p",
+            &format!("{:?}", fid.proto),
+            "--sport",
+            &format!("{}", fid.src_port),
+            "--dport",
+            &format!("{}", fid.dst_port),
+            "-s",
+            &format!("{}", fid.src_ip),
+            "-d",
+            &format!("{}", fid.dst_ip),
+        ])
+        .status()
+        .expect("failed to execute process");
+    assert!(status.success());
 }
 
 // TODO: handle packets should listen to packets Receiver periodically
@@ -91,7 +160,8 @@ fn handle_packets(
 ) {
     // Send and receive packets in this thread
     let mut rx_iter = ipv4_packet_iter(&mut rx);
-    let mut next_timeout_check = SystemTime::now().duration_since(UNIX_EPOCH).unwrap() + Duration::from_secs(INTERVAL_TIMEOUT_CHECKS_IN_SECS);
+    let mut next_timeout_check = SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
+        + Duration::from_secs(INTERVAL_TIMEOUT_CHECKS_IN_SECS);
     loop {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
         if now > next_timeout_check {
@@ -106,7 +176,7 @@ fn handle_packets(
                 }
             }
             flows.retain(|p| p.timestamps.last().unwrap() > &timeout);
-            next_timeout_check = SystemTime::now().duration_since(UNIX_EPOCH).unwrap() + Duration::from_secs(INTERVAL_TIMEOUT_CHECKS_IN_SECS);
+            next_timeout_check = now + Duration::from_secs(INTERVAL_TIMEOUT_CHECKS_IN_SECS);
             if len - flows.len() > 0 {
                 log::debug!("Session timeout: {} sessions closed", len - flows.len());
             }
@@ -119,7 +189,9 @@ fn handle_packets(
                 if f.directions[0] == PacketDirection::Forward {
                     match &packet_to_send {
                         None => packet_to_send = Some((f.timestamps[0], f.flow.get_flow_id())),
-                        Some(t) if t.0 > f.timestamps[0] => packet_to_send = Some((f.timestamps[0], f.flow.get_flow_id())),
+                        Some(t) if t.0 > f.timestamps[0] => {
+                            packet_to_send = Some((f.timestamps[0], f.flow.get_flow_id()))
+                        }
                         _ => (),
                     }
                 }
@@ -133,8 +205,7 @@ fn handle_packets(
                     .expect("Network error")
             }
             Some((ts, _)) => {
-                let timeout =
-                    ts.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap());
+                let timeout = ts.saturating_sub(now);
                 if timeout.is_zero() {
                     None
                 } else {
@@ -145,7 +216,6 @@ fn handle_packets(
             }
         };
 
-        // TODO: timeout sur les flux dont on n’a pas reçu de paquets depuis longtemps
         if let Some((recv_packet, _addr)) = received_data {
             // We received a packet during our wait
             let recv_tcp_packet = pnet::packet::tcp::TcpPacket::new(recv_packet.payload())
@@ -185,10 +255,9 @@ fn handle_packets(
                 }
             }
             // Go back to searching for the next packet to send because it may have changed
-        } else if let Some((_,fid)) = packet_to_send {
+        } else if let Some((_, fid)) = packet_to_send {
             // We need to send a packet
             let mut flows = current_flows.lock().unwrap();
-            // TODO: enumerate plutôt
             let flow_pos = flows
                 .iter()
                 .position(|f| fid.is_compatible(&f.flow))
@@ -279,14 +348,14 @@ impl Stage4 {
                 // setup firewall rules as soon as we know we will deal with it, before receiving any
                 // packet
                 let fid = flow.flow.get_flow_id();
-                log::info!(
-                    "Next Fos-R flow: {}, {}, {}, {}, {}",
-                    fid.src_ip,
-                    fid.dst_ip,
-                    fid.src_port,
-                    fid.dst_port,
-                    flow.timestamps[0].as_millis()
-                );
+                // log::info!(
+                //     "Next Fos-R flow: {}, {}, {}, {}, {}",
+                //     fid.src_ip,
+                //     fid.dst_ip,
+                //     fid.src_port,
+                //     fid.dst_port,
+                //     flow.timestamps[0].as_millis()
+                // );
                 open_session(&fid);
 
                 self.current_flows.lock().unwrap().push(flow);

@@ -234,7 +234,6 @@ dependencies = [
  "crossbeam-channel",
  "ctrlc",
  "env_logger",
- "iptables",
  "kd-tree",
  "libc",
  "log",
@@ -304,17 +303,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "iptables"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43b627935a2f5d654613bea2bcd677cc760b03ecf224ced0f1970c0d174813b9"
-dependencies = [
- "lazy_static",
- "nix",
- "regex",
-]
-
-[[package]]
 name = "is_terminal_polyfill"
 version = "1.70.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -337,12 +325,6 @@ dependencies = [
  "paste",
  "typenum",
 ]
-
-[[package]]
-name = "lazy_static"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "libc"
