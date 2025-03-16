@@ -8,20 +8,28 @@ homepage = "https://pfgimenez.fr/fosr/"
 repository = "https://github.com/Fos-R/Fos-R"
 license = "GPL-3.0"
 
+[[bin]]
+name = "fosr"
+required-features = ["build-binary"]
+
 [dependencies]
-clap = { version = "4.5.22", features = ["derive"] }
+clap = { version = "4.5.22", features = ["derive"], optional = true }
 crossbeam-channel = "0.5.13"
 env_logger = { version = "0.11.6", default-features = false, features = ["auto-color", "humantime"] }
 log = { version = "0.4.22" }
+pnet = "0.35.0"
 pnet_packet = "0.35.0"
 pcap = "2.2.0"
 rand_distr = "0.4.3"
 rand_pcg = "0.3.1"
+rand_core = "0.6.4"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0"
-libc = "0.2.162"
-pnet = "0.35.0"
 toml = { version = "0.8.19", default-features = false, features = ["parse"] }
+libc = "0.2.162"
 kd-tree = "0.6.0"
-rand_core = "0.6.4"
 ctrlc = "3.4.5"
+[features]
+default = ["network"]
+network = []
+build-binary = ["clap"]

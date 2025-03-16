@@ -5,6 +5,7 @@
 ### Added
 
 - Honeynet can be seeded too
+- Crate includes a binary and a library
 
 ### Changed
 
