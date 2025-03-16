@@ -292,14 +292,17 @@ fn run(
 
         for (proto, tx) in tx_s3 {
             for _ in 0..s3_count {
-                let tx = tx.clone();
+                let tx = if local_interfaces.is_empty() {
+                    None
+                } else {
+                    Some(tx.clone())
+                };
                 let tx_s3_to_collector = tx_s3_to_collector.clone();
                 let s3 = s3.clone();
                 let stats = Arc::clone(&stats);
                 let local_interfaces = local_interfaces.clone();
 
                 let builder = thread::Builder::new().name(format!("Stage3-{:?}", proto));
-                let online = !local_interfaces.is_empty();
                 let pcap_export = outfile.is_some();
                 match proto {
                     Protocol::TCP => {
@@ -314,7 +317,6 @@ fn run(
                                         tx,
                                         tx_s3_to_collector,
                                         stats,
-                                        online,
                                         pcap_export,
                                     )
                                 })
@@ -333,7 +335,6 @@ fn run(
                                         tx,
                                         tx_s3_to_collector,
                                         stats,
-                                        online,
                                         pcap_export,
                                     )
                                 })
@@ -352,14 +353,13 @@ fn run(
                                         tx,
                                         tx_s3_to_collector,
                                         stats,
-                                        online,
                                         pcap_export,
                                     )
                                 })
                                 .unwrap(),
                         );
                     }
-                    Protocol::IGMP => todo!(),
+                    _ => todo!(),
                 }
             }
         }

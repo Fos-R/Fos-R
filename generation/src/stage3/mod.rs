@@ -458,10 +458,9 @@ pub fn run<T: PacketInfo>(
     generator: impl Fn(SeededData<PacketsIR<T>>) -> Packets,
     local_interfaces: Vec<Ipv4Addr>,
     rx_s3: Receiver<SeededData<PacketsIR<T>>>,
-    tx_s3: Sender<Packets>,              // TODO: Option
+    tx_s3: Option<Sender<Packets>>,
     tx_s3_to_collector: Sender<Packets>, // TODO: Option
     stats: Arc<Stats>,
-    online: bool,
     pcap_export: bool,
 ) {
     // Prepare stage 3
@@ -470,7 +469,7 @@ pub fn run<T: PacketInfo>(
         let flow_packets = generator(headers);
         stats.increase(&flow_packets);
         // only copy the flows if we need to send it to online and pcap
-        if online {
+        if let Some(ref tx_s3) = tx_s3 {
             if pcap_export {
                 // TODO: le mode online a la priorité, donc peut-être ne pas se laisser bloquer par
                 // l’export s’il prend trop de temps ?
