@@ -1,20 +1,11 @@
-mod structs;
-use crate::structs::*;
+use fosr::stage0;
+use fosr::stage1;
+use fosr::stage2;
+use fosr::stage3;
+use fosr::stage4;
+use fosr::structs::*;
+use fosr::*;
 mod cmd;
-mod config;
-mod ui;
-
-mod icmp;
-mod tcp;
-mod udp;
-
-mod stage0;
-mod stage1;
-use stage1::flowchronicle;
-mod stage2;
-use stage2::tadam;
-mod stage3;
-mod stage4;
 
 use std::collections::HashMap;
 use std::fs;
@@ -88,13 +79,13 @@ fn main() {
                 flow_per_second,
             );
             let patterns = match &patterns {
-                Some(patterns) => {
-                    flowchronicle::PatternSet::from_file(Path::new(patterns).to_str().unwrap())
-                        .expect("Cannot load patterns")
-                }
+                Some(patterns) => stage1::flowchronicle::PatternSet::from_file(
+                    Path::new(patterns).to_str().unwrap(),
+                )
+                .expect("Cannot load patterns"),
                 None => {
                     log::info!("Load default patterns");
-                    flowchronicle::PatternSet::default()
+                    stage1::flowchronicle::PatternSet::default()
                 }
             };
             let patterns = Arc::new(patterns);
@@ -104,19 +95,19 @@ fn main() {
             //     *local_interfaces.last().unwrap(),
             // ); // TODO: modify, only for testing
             // let s1 = stage1::ConfigBasedModifier::new(hosts, s1);
-            let s1 = flowchronicle::FCGenerator::new(patterns, hosts.clone(), false);
+            let s1 = stage1::flowchronicle::FCGenerator::new(patterns, hosts.clone(), false);
             let s1 = stage1::FilterForOnline::new(local_interfaces.clone(), s1);
             let automata_library = match &automata {
                 Some(automata) => {
-                    tadam::AutomataLibrary::from_dir(Path::new(automata).to_str().unwrap())
+                    stage2::tadam::AutomataLibrary::from_dir(Path::new(automata).to_str().unwrap())
                 }
                 None => {
                     log::info!("Load default automata");
-                    tadam::AutomataLibrary::default()
+                    stage2::tadam::AutomataLibrary::default()
                 }
             };
             let automata_library = Arc::new(automata_library);
-            let s2 = tadam::TadamGenerator::new(automata_library);
+            let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(taint, hosts);
             let s4 = stage4::Stage4::new(taint);
             run(
@@ -152,18 +143,18 @@ fn main() {
 
             let automata_library = match &automata {
                 Some(automata) => {
-                    tadam::AutomataLibrary::from_dir(Path::new(automata).to_str().unwrap())
+                    stage2::tadam::AutomataLibrary::from_dir(Path::new(automata).to_str().unwrap())
                 }
-                None => tadam::AutomataLibrary::default(),
+                None => stage2::tadam::AutomataLibrary::default(),
             };
             let automata_library = Arc::new(automata_library);
 
             let patterns = match &patterns {
-                Some(patterns) => {
-                    flowchronicle::PatternSet::from_file(Path::new(patterns).to_str().unwrap())
-                        .expect("Cannot load patterns")
-                }
-                None => flowchronicle::PatternSet::default(),
+                Some(patterns) => stage1::flowchronicle::PatternSet::from_file(
+                    Path::new(patterns).to_str().unwrap(),
+                )
+                .expect("Cannot load patterns"),
+                None => stage1::flowchronicle::PatternSet::default(),
             };
             let patterns = Arc::new(patterns);
 
@@ -176,8 +167,8 @@ fn main() {
             //     *local_interfaces.first().unwrap(),
             //     *local_interfaces.last().unwrap(),
             // ); // TODO: modify, only for testing
-            let s1 = flowchronicle::FCGenerator::new(patterns, hosts.clone(), false);
-            let s2 = tadam::TadamGenerator::new(automata_library);
+            let s1 = stage1::flowchronicle::FCGenerator::new(patterns, hosts.clone(), false);
+            let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(false, hosts);
 
             run(
