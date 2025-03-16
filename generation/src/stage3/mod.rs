@@ -1,9 +1,11 @@
 use crate::config::Hosts;
 use crate::icmp::*;
+use crate::stage3;
+use crate::structs::*;
 use crate::tcp::*;
 use crate::udp::*;
 use crate::ui::*;
-use crate::*;
+
 use crossbeam_channel::{Receiver, Sender};
 use pcap::{Capture, PacketHeader};
 use pnet::util::MacAddr;
@@ -14,6 +16,9 @@ use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
 use pnet_packet::udp::MutableUdpPacket;
 use rand_core::*;
 use rand_pcg::Pcg32;
+use std::net::Ipv4Addr;
+use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct Stage3 {
