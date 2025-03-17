@@ -4,6 +4,7 @@ use crossbeam_channel::Select;
 use pnet::transport::{
     ipv4_packet_iter, transport_channel, TransportChannelType, TransportReceiver, TransportSender,
 };
+use pnet_packet::MutablePacket;
 use pnet_packet::ip::IpNextHeaderProtocol;
 use pnet_packet::Packet;
 use std::collections::HashMap;
@@ -272,14 +273,19 @@ fn handle_packets(
                 .position(|d| d == &PacketDirection::Forward)
                 .unwrap();
             // assert_eq!(pos, 0); // it should be the first in the list
-            let packet = flow.packets.remove(pos);
+            let mut packet = flow.packets.remove(pos);
             flow.directions.remove(pos);
             flow.timestamps.remove(pos);
 
             // Get the expected time of arrival of the packet to know if we should wait before sending or receiving it
 
-            let eth_packet = pnet::packet::ethernet::EthernetPacket::new(&packet.data).unwrap();
-            let ipv4_packet = pnet::packet::ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
+            let mut eth_packet = pnet::packet::ethernet::MutableEthernetPacket::new(&mut packet.data).unwrap();
+            let mut ipv4_packet = pnet::packet::ipv4::MutableIpv4Packet::new(eth_packet.payload_mut()).unwrap();
+
+            if cfg!(target_os = "linux") {
+                // iptables hack
+                ipv4_packet.set_ttl(65);
+            }
 
             log::trace!("Send to {:?}", fid);
 

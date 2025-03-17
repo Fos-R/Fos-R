@@ -24,6 +24,7 @@ use std::time::Duration;
 pub struct Stage3 {
     taint: bool,
     config: Hosts,
+    zero: MacAddr,
 }
 
 struct TcpPacketData {
@@ -293,7 +294,7 @@ impl Stage3 {
     }
 
     pub fn new(taint: bool, config: Hosts) -> Self {
-        Stage3 { taint, config }
+        Stage3 { taint, config, zero: MacAddr::zero() }
     }
 
     /// Generate TCP packets from an intermediate representation
@@ -315,8 +316,8 @@ impl Stage3 {
 
             let mut packet = vec![0u8; packet_size];
 
-            let mut mac_src = self.config.get_mac(&flow.src_ip);
-            let mut mac_dst = self.config.get_mac(&flow.dst_ip);
+            let mut mac_src = self.config.get_mac(&flow.src_ip).unwrap_or(&self.zero);
+            let mut mac_dst = self.config.get_mac(&flow.dst_ip).unwrap_or(&self.zero);
             if matches!(packet_info.get_direction(), PacketDirection::Backward) {
                 (mac_src, mac_dst) = (mac_dst, mac_src);
             }
@@ -375,8 +376,8 @@ impl Stage3 {
 
             self.setup_ethernet_frame(
                 &mut packet[..],
-                self.config.get_mac(&flow.src_ip),
-                self.config.get_mac(&flow.dst_ip),
+                self.config.get_mac(&flow.src_ip).unwrap_or(&self.zero),
+                self.config.get_mac(&flow.dst_ip).unwrap_or(&self.zero),
             )
             .expect("Incorrect Ethernet frame");
             self.setup_ip_packet(
