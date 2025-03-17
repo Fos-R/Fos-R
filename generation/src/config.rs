@@ -83,8 +83,8 @@ pub fn import_config(config: &str) -> Hosts {
             os.insert(ip_toml, iface.os.unwrap_or(OS::Linux));
             // use a default mac if it is not defined
             let mac = iface
-                    .mac
-                    .map(|s| s.parse().expect("Cannot parse into a MAC address!"));
+                .mac
+                .map(|s| s.parse().expect("Cannot parse into a MAC address!"));
             if let Some(mac) = mac {
                 mac_addr.insert(ip_toml, mac);
             }
