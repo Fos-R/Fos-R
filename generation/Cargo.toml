@@ -29,7 +29,6 @@ toml = { version = "0.8.19", default-features = false, features = ["parse"] }
 libc = "0.2.162"
 kd-tree = "0.6.0"
 ctrlc = "3.4.5"
-mtu = "0.2.7"
 
 [features]
 default = ["network"]
