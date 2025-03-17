@@ -13,7 +13,7 @@ enum OS {
 impl OS {
     fn get_default_ttl(&self) -> u8 {
         match self {
-            OS::Linux => 65, // FIXME: 65 so it is detected by iptables rules
+            OS::Linux => 64,
             OS::Windows => 128,
         }
     }
@@ -56,8 +56,8 @@ impl Hosts {
             .map(|v| v[(rng.next_u32() as usize) % v.len()])
     }
 
-    pub fn get_mac(&self, ip: &Ipv4Addr) -> &MacAddr {
-        self.mac_addr.get(ip).unwrap()
+    pub fn get_mac(&self, ip: &Ipv4Addr) -> Option<&MacAddr> {
+        self.mac_addr.get(ip)
     }
 
     pub fn get_name(&self, ip: &Ipv4Addr) -> Option<&str> {
@@ -82,14 +82,12 @@ pub fn import_config(config: &str) -> Hosts {
                 .expect("Cannot parse into an IPv4 address!");
             os.insert(ip_toml, iface.os.unwrap_or(OS::Linux));
             // use a default mac if it is not defined
-            mac_addr.insert(
-                ip_toml,
-                iface
+            let mac = iface
                     .mac
-                    .unwrap_or("00:00:00:00:00:00".to_string())
-                    .parse()
-                    .expect("Cannot parse into a MAC address!"),
-            );
+                    .map(|s| s.parse().expect("Cannot parse into a MAC address!"));
+            if let Some(mac) = mac {
+                mac_addr.insert(ip_toml, mac);
+            }
             if let Some(s) = iface.name {
                 name.insert(ip_toml, s);
             }
