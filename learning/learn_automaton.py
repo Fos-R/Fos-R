@@ -100,6 +100,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     protocol = args.proto
 
+    os.environ["OMP_NUM_THREADS"] = "1"
+
     if args.automaton_name:
         if args.output is None:
             args.output = args.automaton_name+".json"

@@ -10,7 +10,7 @@ use crossbeam_channel::{Receiver, Sender};
 use pcap::{Capture, PacketHeader};
 use pnet::util::MacAddr;
 use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
-use pnet_packet::ip::IpNextHeaderProtocols;
+use pnet_packet::ip::IpNextHeaderProtocol;
 use pnet_packet::ipv4::{self, Ipv4Flags, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
 use pnet_packet::udp::MutableUdpPacket;
@@ -67,7 +67,7 @@ impl Stage3 {
         &self,
         rng: &mut impl RngCore,
         packet: &mut [u8],
-        flow: &FlowData,
+        flow: &Flow,
         packet_info: &P,
     ) -> Option<()> {
         let len = packet.len();
@@ -77,8 +77,11 @@ impl Stage3 {
         ipv4_packet.set_version(4);
         ipv4_packet.set_header_length(5); // TODO: Set the correct header length and options if needed
         ipv4_packet.set_total_length(len as u16);
-        ipv4_packet.set_next_level_protocol(IpNextHeaderProtocols::Tcp);
+        ipv4_packet.set_next_level_protocol(IpNextHeaderProtocol::new(
+            flow.get_proto().get_protocol_number(),
+        ));
         ipv4_packet.set_identification(rng.next_u32() as u16);
+        let flow = flow.get_data();
 
         // Fields that depend on the direction
         match packet_info.get_direction() {
@@ -252,12 +255,13 @@ impl Stage3 {
                 let mut payload = vec![0_u8; *size];
                 rng.fill_bytes(&mut payload);
                 udp_packet.set_payload(payload.as_slice());
+                udp_packet.set_length((*size as u16) + 8);
             }
             Payload::Replay(payload) => {
+                udp_packet.set_length((payload.len() as u16) + 8);
                 udp_packet.set_payload(payload);
             }
         }
-
         // Compute the checksum
         udp_packet.set_checksum(pnet_packet::udp::ipv4_checksum(
             &udp_packet.to_immutable(),
@@ -318,8 +322,13 @@ impl Stage3 {
             }
             self.setup_ethernet_frame(&mut packet[..], mac_src, mac_dst)
                 .expect("Incorrect Ethernet frame");
-            self.setup_ip_packet(&mut rng, &mut packet[ip_start..], flow, packet_info)
-                .expect("Incorrect IP packet");
+            self.setup_ip_packet(
+                &mut rng,
+                &mut packet[ip_start..],
+                &input.data.flow,
+                packet_info,
+            )
+            .expect("Incorrect IP packet");
             tcp_data = self
                 .setup_tcp_packet(
                     &mut rng,
@@ -347,13 +356,11 @@ impl Stage3 {
     }
 
     /// Generate UDP packets from an intermediate representation
-    #[allow(unused)]
     pub fn generate_udp_packets(&self, input: SeededData<PacketsIR<UDPPacketInfo>>) -> Packets {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let udp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
         let flow = &input.data.flow.get_data();
-        let mut tcp_data = TcpPacketData::new(&mut rng);
         let mut packets = Vec::new();
         let mut directions = Vec::new();
         let mut timestamps = Vec::with_capacity(input.data.packets_info.len());
@@ -372,10 +379,15 @@ impl Stage3 {
                 self.config.get_mac(&flow.dst_ip),
             )
             .expect("Incorrect Ethernet frame");
-            self.setup_ip_packet(&mut rng, &mut packet[ip_start..], flow, packet_info)
-                .expect("Incorrect IP packet");
+            self.setup_ip_packet(
+                &mut rng,
+                &mut packet[ip_start..],
+                &input.data.flow,
+                packet_info,
+            )
+            .expect("Incorrect IP packet");
             self.setup_udp_packet(&mut rng, &mut packet[udp_start..], flow, packet_info)
-                .expect("Incorrect TCP packet");
+                .expect("Incorrect UDP packet");
 
             packets.push(Packet {
                 header: self.get_pcap_header(packet_size, packet_info.get_ts()),
@@ -475,7 +487,7 @@ pub fn run<T: PacketInfo>(
                 // l’export s’il prend trop de temps ?
                 send_pcap(flow_packets.clone(), &tx_s3_to_collector)
             }
-            send_online(&local_interfaces, flow_packets, &tx_s3);
+            send_online(&local_interfaces, flow_packets, tx_s3);
         } else if pcap_export {
             send_pcap(flow_packets, &tx_s3_to_collector)
         }

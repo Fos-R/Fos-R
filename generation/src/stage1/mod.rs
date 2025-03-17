@@ -83,36 +83,3 @@ impl<T: Stage1> Stage1 for ConfigBasedModifier<T> {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct ConstantFlowGenerator {
-    src_ip: Ipv4Addr,
-    dst_ip: Ipv4Addr,
-}
-
-impl ConstantFlowGenerator {
-    pub fn new(src_ip: Ipv4Addr, dst_ip: Ipv4Addr) -> Self {
-        ConstantFlowGenerator { src_ip, dst_ip }
-    }
-}
-
-impl Stage1 for ConstantFlowGenerator {
-    fn generate_flows(&self, ts: SeededData<Duration>) -> impl Iterator<Item = SeededData<Flow>> {
-        let flow = Flow::TCP(FlowData {
-            src_ip: self.src_ip,
-            dst_ip: self.dst_ip,
-            src_port: 34200,
-            dst_port: 21,
-            ttl_client: 23,
-            ttl_server: 68,
-            fwd_packets_count: 15,
-            bwd_packets_count: 10,
-            timestamp: ts.data,
-            // total_duration: Duration::from_millis(2300),
-        });
-        vec![SeededData {
-            seed: ts.seed,
-            data: flow,
-        }]
-        .into_iter()
-    }
-}

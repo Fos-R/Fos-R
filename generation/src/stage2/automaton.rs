@@ -4,6 +4,7 @@ use rand_core::*;
 use rand_distr::{Distribution, Normal, Poisson, WeightedIndex};
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter, Result};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -30,7 +31,7 @@ enum EdgeDistribution {
 }
 
 #[derive(Debug, Clone)]
-struct TimedEdge<T: EdgeType> {
+pub struct TimedEdge<T: EdgeType> {
     // TODO: plutôt que "Option<T>" pour data, utiliser un enum
     // "EpsilonEdge"/"NonEpsilonEdge" pour tout ce qui étiquette une
     // transition (symbole et valeur)
@@ -173,75 +174,142 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
     }
 }
 
+pub trait Automaton<T: EdgeType> {
+    fn get_initial_state(
+        &self,
+        fwd_packets_count: Option<usize>,
+        bwd_packets_count: Option<usize>,
+    ) -> usize;
+
+    fn is_final(&self, n: usize) -> bool;
+
+    fn get_next_edge(&self, rng: &mut impl RngCore, current_state: usize) -> &TimedEdge<T>;
+
+    fn finalize_timestamps<U: PacketInfo>(&self, vector: &mut Vec<U>, ts: Duration);
+}
+
+impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
+    fn is_final(&self, n: usize) -> bool {
+        n == self.initial_state
+    }
+
+    fn finalize_timestamps<U: PacketInfo>(&self, vector: &mut Vec<U>, ts: Duration) {
+        vector.reverse();
+        let mut current_ts = ts;
+        for p in vector.iter_mut() {
+            current_ts += p.get_ts();
+            p.set_ts(current_ts);
+        }
+    }
+
+    fn get_initial_state(
+        &self,
+        fwd_packets_count: Option<usize>,
+        bwd_packets_count: Option<usize>,
+    ) -> usize {
+        self.accepting_states
+            .nearest(
+                &([
+                    fwd_packets_count.unwrap() as i32,
+                    bwd_packets_count.unwrap() as i32,
+                ]),
+            )
+            .unwrap()
+            .item
+            .1
+    }
+
+    fn get_next_edge(&self, rng: &mut impl RngCore, current_state: usize) -> &TimedEdge<T> {
+        debug_assert!(!self.graph[current_state].in_edges.is_empty());
+        let index = match &self.graph[current_state].dist {
+            None => 0, // only one outgoing edge
+            Some(d) => d.sample(rng),
+        };
+        &self.graph[current_state].in_edges[index]
+    }
+}
+
+impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
+    fn is_final(&self, n: usize) -> bool {
+        n == self.accepting_state
+    }
+
+    fn finalize_timestamps<U: PacketInfo>(&self, vector: &mut Vec<U>, ts: Duration) {
+        let mut current_ts = ts;
+        for p in vector.iter_mut() {
+            current_ts += p.get_ts();
+            p.set_ts(current_ts);
+        }
+    }
+
+    fn get_initial_state(&self, _f: Option<usize>, _b: Option<usize>) -> usize {
+        self.initial_state
+    }
+
+    fn get_next_edge(&self, rng: &mut impl RngCore, current_state: usize) -> &TimedEdge<T> {
+        debug_assert!(!self.graph[current_state].out_edges.is_empty());
+        let index = match &self.graph[current_state].dist {
+            None => 0, // only one outgoing edge
+            Some(d) => d.sample(rng),
+        };
+        &self.graph[current_state].out_edges[index]
+    }
+}
+
+pub fn sample<T: EdgeType, U: PacketInfo>(
+    rng: &mut impl RngCore,
+    automaton: &impl Automaton<T>,
+    fd: &FlowData,
+    header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
+) -> Vec<U> {
+    let mut output = Vec::new();
+    // Vec::with_capacity(fd.fwd_packets_count.unwrap() + fd.bwd_packets_count.unwrap() + 20); // approximate final size + some margin
+    let mut current_state = automaton.get_initial_state(fd.fwd_packets_count, fd.bwd_packets_count);
+
+    // TODO: sample with noise
+    while !automaton.is_final(current_state) {
+        let e = automaton.get_next_edge(rng, current_state);
+        if let Some(data) = &e.data {
+            // if $-transition, don’t create a header
+            let (payload, payload_size) = match data.get_payload_type() {
+                PayloadType::Empty => (Payload::Empty, 0),
+                PayloadType::Random(sizes) => {
+                    let size = sizes[(rng.next_u32() as usize) % sizes.len()];
+                    (Payload::Random(size), size)
+                }
+                PayloadType::Text(tss) => {
+                    let ts = &tss[(rng.next_u32() as usize) % tss.len()];
+                    (Payload::Replay(ts), ts.len())
+                }
+                PayloadType::Replay(tss) => {
+                    let ts = &tss[(rng.next_u32() as usize) % tss.len()];
+                    (Payload::Replay(ts), ts.len())
+                }
+            };
+            let cond_mu = e.mu[0] + e.cov[0][1] / e.cov[1][1] * (payload_size as f32 - e.mu[1]);
+            let cond_var = (0.001_f32).max(e.cov[0][0] - e.cov[0][1] * e.cov[0][1] / e.cov[1][1]);
+            let iat = e.p.sample(rng, cond_mu, cond_var);
+            let data = header_creator(
+                payload,
+                NoiseType::None,
+                Duration::from_nanos(iat as u64),
+                data,
+            );
+            output.push(data);
+        }
+        current_state = e.dst_node;
+    }
+    automaton.finalize_timestamps(&mut output, fd.timestamp);
+    output
+}
+
 impl<T: EdgeType> CrossProductTimedAutomaton<T> {
     pub fn is_compatible_with(&self, port: u16) -> bool {
         self.metadata.select_dst_ports.contains(&port)
     }
-
-    pub fn sample<U: PacketInfo>(
-        &self,
-        rng: &mut impl RngCore,
-        fd: &FlowData,
-        header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
-    ) -> Vec<U> {
-        let mut output = Vec::with_capacity(fd.fwd_packets_count + fd.bwd_packets_count + 20); // approximate final size + some margin
-        let mut current_state = self
-            .accepting_states
-            .nearest(&([fd.fwd_packets_count as i32, fd.bwd_packets_count as i32]))
-            .unwrap()
-            .item
-            .1;
-        // TODO: sample with noise
-        while current_state != self.initial_state {
-            debug_assert!(!self.graph[current_state].in_edges.is_empty());
-            let index = match &self.graph[current_state].dist {
-                None => 0, // only one outgoing edge
-                Some(d) => d.sample(rng),
-            };
-            let e = &self.graph[current_state].in_edges[index];
-            if let Some(data) = &e.data {
-                // if $-transition, don’t create a header
-                let (payload, payload_size) = match data.get_payload_type() {
-                    PayloadType::Empty => (Payload::Empty, 0),
-                    PayloadType::Random(sizes) => {
-                        let size = sizes[(rng.next_u32() as usize) % sizes.len()];
-                        (Payload::Random(size), size)
-                    }
-                    PayloadType::Text(tss) => {
-                        let ts = &tss[(rng.next_u32() as usize) % tss.len()];
-                        (Payload::Replay(ts), ts.len())
-                    }
-                    PayloadType::Replay(tss) => {
-                        let ts = &tss[(rng.next_u32() as usize) % tss.len()];
-                        (Payload::Replay(ts), ts.len())
-                    }
-                };
-                let cond_mu = e.mu[0] + e.cov[0][1] / e.cov[1][1] * (payload_size as f32 - e.mu[1]);
-                let cond_var =
-                    (0.001_f32).max(e.cov[0][0] - e.cov[0][1] * e.cov[0][1] / e.cov[1][1]);
-                let iat = e.p.sample(rng, cond_mu, cond_var);
-                let data = header_creator(
-                    payload,
-                    NoiseType::None,
-                    Duration::from_nanos(iat as u64),
-                    data,
-                );
-                output.push(data);
-            }
-            current_state = e.dst_node;
-        }
-        output.reverse();
-        let mut current_ts = fd.timestamp;
-        for p in output.iter_mut() {
-            current_ts += p.get_ts();
-            p.set_ts(current_ts);
-        }
-        output
-    }
 }
 
 #[derive(Debug, Clone)]
-#[allow(unused)]
 pub struct TimedAutomaton<T: EdgeType> {
     graph: Vec<TimedNode<T>>,
     metadata: AutomatonMetaData,
@@ -250,57 +318,23 @@ pub struct TimedAutomaton<T: EdgeType> {
     accepting_state: usize,
 }
 
+impl<T: EdgeType> Display for TimedAutomaton<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(
+            f,
+            "automaton \"{}\" for ports {:?} learned on {} from {}",
+            self.metadata.automaton_name,
+            self.metadata.select_dst_ports,
+            self.metadata.input_file,
+            self.metadata.creation_time
+        )
+    }
+}
+
+// TODO: fusionner avec la version "crossproduct"
 impl<T: EdgeType> TimedAutomaton<T> {
     pub fn is_compatible_with(&self, port: u16) -> bool {
         self.metadata.select_dst_ports.contains(&port)
-    }
-
-    pub fn sample<U>(
-        &self,
-        rng: &mut impl RngCore,
-        fd: &FlowData,
-        header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
-    ) -> Vec<U> {
-        let initial_ts = fd.timestamp;
-        let mut output = vec![];
-        let mut current_state = self.initial_state;
-        let mut current_ts = initial_ts;
-        // TODO: sample with noise
-        while current_state != self.accepting_state {
-            assert!(!self.graph[current_state].out_edges.is_empty());
-            let index = match &self.graph[current_state].dist {
-                None => 0, // only one outgoing edge
-                Some(d) => d.sample(rng),
-            };
-            let e = &self.graph[current_state].out_edges[index];
-            if let Some(data) = &e.data {
-                // if $-transition, don’t create a header
-                let (payload, payload_size) = match data.get_payload_type() {
-                    PayloadType::Empty => (Payload::Empty, 0),
-                    PayloadType::Random(sizes) => {
-                        let size = sizes[(rng.next_u32() as usize) % sizes.len()];
-                        (Payload::Random(size), size)
-                    }
-                    PayloadType::Text(tss) => {
-                        let ts = &tss[(rng.next_u32() as usize) % tss.len()];
-                        (Payload::Replay(ts), ts.len())
-                    }
-                    PayloadType::Replay(tss) => {
-                        let ts = &tss[(rng.next_u32() as usize) % tss.len()];
-                        (Payload::Replay(ts), ts.len())
-                    }
-                };
-                let cond_mu = e.mu[0] + e.cov[0][1] / e.cov[1][1] * (payload_size as f32 - e.mu[1]);
-                let cond_var =
-                    (0.001_f32).max(e.cov[0][0] - e.cov[0][1] * e.cov[0][1] / e.cov[1][1]);
-                let iat = e.p.sample(rng, cond_mu, cond_var);
-                current_ts += Duration::from_nanos(iat as u64);
-                let data = header_creator(payload, NoiseType::None, current_ts, data);
-                output.push(data);
-            }
-            current_state = e.dst_node;
-        }
-        output
     }
 }
 
