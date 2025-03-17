@@ -59,10 +59,9 @@ pub enum Command {
         #[arg(
             short,
             long,
-            default_value=None,
             help = "Path to the information system configuration file"
         )]
-        config_path: Option<String>,
+        config_path: String,
     },
     /// Perform data augmentation on a pcap file. You should use your own models that have been
     /// fitted on that pcap file.
@@ -74,6 +73,8 @@ pub enum Command {
             help = "Output pcap file for synthetic network packets"
         )]
         outfile: String,
+        #[arg(long, default_value_t = false, help = "Use as few threads as possible")]
+        minimum_threads: bool,
         // #[arg(
         //     short,
         //     long,
@@ -81,9 +82,9 @@ pub enum Command {
         //     help = "Add noise in the output file"
         // )]
         // noise: bool,
-        #[arg(short, long, help = "Minimum number of flows to generate.")]
+        #[arg(short, long, help = "Minimum number of flows to generate")]
         flow_count: u64,
-        #[arg(short='d', long, default_value=None, help="Unix time for the beginning of the pcap. By default, use current time.")]
+        #[arg(short='d', long, default_value=None, help="Unix time for the beginning of the pcap. By default, use current time")]
         start_unix_time: Option<u64>,
         #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,

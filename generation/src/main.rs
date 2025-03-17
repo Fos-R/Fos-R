@@ -59,7 +59,8 @@ fn main() {
             flow_per_second,
             ..
         } => {
-            let config_str = &fs::read_to_string(config_path).expect("Cannot access the configuration file.");
+            let config_str =
+                &fs::read_to_string(config_path).expect("Cannot access the configuration file.");
             let hosts = config::import_config(config_str);
             log::debug!("Configuration: {:?}", hosts);
             assert!(!local_interfaces.is_empty());
@@ -128,13 +129,11 @@ fn main() {
             flow_count,
             cpu_usage,
             config_path,
+            minimum_threads,
             ..
         } => {
-            let config_str = if let Some(path) = config_path {
-                &fs::read_to_string(path).expect("Cannot access the configuration file.")
-            } else {
-                include_str!("../breizhctf.toml")
-            };
+            let config_str =
+                &fs::read_to_string(config_path).expect("Cannot access the configuration file.");
             let hosts = config::import_config(config_str);
 
             let automata_library = match &automata {
@@ -167,19 +166,35 @@ fn main() {
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(false, hosts);
 
-            run(
-                vec![],
-                Some(outfile),
-                s0,
-                s1,
-                3,
-                s2,
-                3,
-                s3,
-                6,
-                cpu_usage,
-                None,
-            );
+            if minimum_threads {
+                run(
+                    vec![],
+                    Some(outfile),
+                    s0,
+                    s1,
+                    1,
+                    s2,
+                    1,
+                    s3,
+                    1,
+                    cpu_usage,
+                    None,
+                );
+            } else {
+                run(
+                    vec![],
+                    Some(outfile),
+                    s0,
+                    s1,
+                    3,
+                    s2,
+                    3,
+                    s3,
+                    6,
+                    cpu_usage,
+                    None,
+                );
+            }
         }
     };
 }
