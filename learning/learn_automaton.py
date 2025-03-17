@@ -69,7 +69,7 @@ def parse_UDP(input_string):
         Contains: direction, iat, payload size, payload type
     """
     if "$" in input_string: return "$", [0,0]
-    match = re.match(r'([><])/(-?\d+.\d+)/(\d+)/(.+)', input_string)
+    match = re.match(r'([><])/(-?\d+\.?\d*)/(\d+)/(.+)', input_string)
     if match:
         return match.group(1) + "_" + match.group(4), [int(float(match.group(2).replace(',', '.')) * 1e6), int(match.group(3))]
     assert False, "Parsing error on "+input_string
@@ -122,12 +122,14 @@ if __name__ == '__main__':
     if len(df) == 0:
         print("Input file is empty")
         exit()
+    # Ensure destination port is an integer
+    df['dst_port'] = pd.to_numeric(df['dst_port'], downcast='integer')
 
     if len(select_dst_ports) > 0:
         df = df[df["dst_port"].isin(select_dst_ports)]
     elif len(ignore_dst_ports) > 0:
         df = df[~df["dst_port"].isin(ignore_dst_ports)]
-
+    print(df)
     if len(df) == 0:
         if len(select_dst_ports) > 0:
             print("No stream satisfies these conditions (selected ports: "+str(select_dst_ports)+")")
@@ -239,9 +241,9 @@ if __name__ == '__main__':
     d["metadata"] = metadata
     try:
         out_file2 = open(args.output, "w")
-        json.dump(d, out_file2)
-        out_file = open(args.output.rsplit(".",1)[0]+"_human_readable.json", "w")
-        json.dump(d, out_file, indent=4)
+        json.dump(d, out_file2, indent=4)
+        # out_file = open(args.output.rsplit(".",1)[0]+"_human_readable.json", "w")
+        # json.dump(d, out_file, indent=4)
         print("JSON file successfully created:",args.output)
     except Exception as e:
         print("Error during json save:",e)
