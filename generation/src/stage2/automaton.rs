@@ -328,7 +328,6 @@ struct Noise {
 // TODO: rendre ça plus propre avec des "From/Into"
 
 #[derive(Deserialize, Debug)]
-#[allow(unused)]
 pub struct JsonAutomaton {
     edges: Vec<JsonEdge>,
     noise: Noise,
