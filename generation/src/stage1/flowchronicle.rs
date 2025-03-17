@@ -18,8 +18,8 @@ struct PartiallyDefinedFlowData {
     dst_port: Option<u16>,
     ttl_client: Option<u8>,
     ttl_server: Option<u8>,
-    fwd_packets_count: Option<u64>,
-    bwd_packets_count: Option<u64>,
+    fwd_packets_count: Option<usize>,
+    bwd_packets_count: Option<usize>,
     timestamp: Option<Duration>,
     // total_duration: Option<Duration>,
     proto: Option<Protocol>,
@@ -34,8 +34,8 @@ impl From<PartiallyDefinedFlowData> for Flow {
             dst_port: p.dst_port.unwrap(),
             ttl_client: p.ttl_client.unwrap(),
             ttl_server: p.ttl_server.unwrap(),
-            fwd_packets_count: p.fwd_packets_count.unwrap() as usize,
-            bwd_packets_count: p.bwd_packets_count.unwrap() as usize,
+            fwd_packets_count: p.fwd_packets_count,
+            bwd_packets_count: p.bwd_packets_count,
             timestamp: p.timestamp.unwrap(),
             // total_duration: p.total_duration.unwrap(),
         };
@@ -49,8 +49,12 @@ impl PartiallyDefinedFlowData {
             Feature::SrcIP(ref v) => self.src_ip = Some(v.0[index]),
             Feature::DstIP(ref v) => self.dst_ip = Some(v.0[index]),
             Feature::DstPt(ref v) => self.dst_port = Some(v[index]),
-            Feature::FwdPkt(ref v) => self.fwd_packets_count = Some(v.0[index].sample(rng)),
-            Feature::BwdPkt(ref v) => self.bwd_packets_count = Some(v.0[index].sample(rng)),
+            Feature::FwdPkt(ref v) => {
+                self.fwd_packets_count = Some(v.0[index].sample(rng) as usize)
+            }
+            Feature::BwdPkt(ref v) => {
+                self.bwd_packets_count = Some(v.0[index].sample(rng) as usize)
+            }
             Feature::FwdByt(_) => (), // ignore
             Feature::BwdByt(_) => (), // ignore
             Feature::Duration(_) => (),

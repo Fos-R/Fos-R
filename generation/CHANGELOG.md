@@ -4,8 +4,9 @@
 
 ### Added
 
-- Honeynet can be seeded too
 - Crate includes a binary and a library
+- Support of IPv4 UDP packets
+- Default models: automata for protocols DNS and NTP
 
 ### Changed
 
@@ -22,4 +23,4 @@ First available version of Fos-R. This version has been used for the BreizhCTFâ€
 - Offline generation of pcap files (augmentation only)
 - Honeynet mode
 - Default model: hand-written FlowChronicle model for BreizhCTFâ€™25
-- Default model: automata for protocols HTTP, HTTPS, SSH, SMTP and MQTT
+- Default models: automata for protocols HTTP, HTTPS, SSH, SMTP and MQTT

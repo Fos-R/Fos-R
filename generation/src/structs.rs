@@ -23,9 +23,9 @@ pub enum Protocol {
 }
 
 impl Protocol {
-    pub fn iter() -> [Protocol; 1] {
+    pub fn iter() -> [Protocol; 2] {
         // TODO: add the other protocols when they are implemented
-        [Protocol::TCP] //, Protocol::UDP, Protocol::ICMP]
+        [Protocol::TCP, Protocol::UDP] //, Protocol::ICMP]
     }
 
     pub fn get_protocol_number(&self) -> u8 {
@@ -81,7 +81,7 @@ impl Flow {
         }
     }
 
-    fn get_proto(&self) -> Protocol {
+    pub fn get_proto(&self) -> Protocol {
         match &self {
             Flow::TCP(_) => Protocol::TCP,
             Flow::UDP(_) => Protocol::UDP,
@@ -99,8 +99,8 @@ pub struct FlowData {
     pub dst_port: u16,
     pub ttl_client: u8,
     pub ttl_server: u8,
-    pub fwd_packets_count: usize,
-    pub bwd_packets_count: usize,
+    pub fwd_packets_count: Option<usize>,
+    pub bwd_packets_count: Option<usize>,
     pub timestamp: Duration,
 }
 

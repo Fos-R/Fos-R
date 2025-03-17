@@ -29,14 +29,14 @@ for file in $1/*; do
         -e udp.time_delta -e udp.dstport -e udp.length -e udp.checksum -e udp.payload \
         -e icmp.type -e icmp.code -e data.len -e data | { while read l; do
         if [ "$((fwd_packets+bwd_packets))" -eq 250 ]; then
-            echo "Dropping flow: too many packets! ($file)"
+            echo "Skipping flow: too many packets ($file)"
             error=1
             break
         fi
         array=($l)
         proto=${array[1]}
         if [ "${array[5]}" -gt 0 ]; then
-            echo "Fragmented packet, skipping flow ($file)"
+            echo "Skipping flow: fragmented packet ($file)"
             error=1
             break
         fi
