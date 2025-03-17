@@ -299,8 +299,7 @@ impl From<PatternSetJSON> for PatternSet {
 impl Default for PatternSet {
     fn default() -> Self {
         let set: PatternSet =
-            serde_json::from_str(include_str!("../../breizhctf-patterns.json")).unwrap();
-        // serde_json::from_str(include_str!("../../../models/medium/patterns.json")).unwrap();
+        serde_json::from_str(&String::from_utf8(include_bytes_zstd::include_bytes_zstd!("breizhctf-patterns.json", 19)).unwrap()).unwrap();
         set
     }
 }

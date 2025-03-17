@@ -7,6 +7,7 @@
 - Crate includes a binary and a library
 - Support of IPv4 UDP packets
 - Default models: automata for protocols DNS and NTP
+- Significantly reduced binary size by compressing default models
 
 ### Changed
 
