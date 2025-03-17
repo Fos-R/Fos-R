@@ -82,4 +82,3 @@ impl<T: Stage1> Stage1 for ConfigBasedModifier<T> {
         self.s1.generate_flows(ts).map(move |f| self.modify_flow(f))
     }
 }
-

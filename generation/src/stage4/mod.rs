@@ -4,8 +4,8 @@ use crossbeam_channel::Select;
 use pnet::transport::{
     ipv4_packet_iter, transport_channel, TransportChannelType, TransportReceiver, TransportSender,
 };
-use pnet_packet::MutablePacket;
 use pnet_packet::ip::IpNextHeaderProtocol;
+use pnet_packet::MutablePacket;
 use pnet_packet::Packet;
 use std::collections::HashMap;
 use std::process::Command;
@@ -279,8 +279,10 @@ fn handle_packets(
 
             // Get the expected time of arrival of the packet to know if we should wait before sending or receiving it
 
-            let mut eth_packet = pnet::packet::ethernet::MutableEthernetPacket::new(&mut packet.data).unwrap();
-            let mut ipv4_packet = pnet::packet::ipv4::MutableIpv4Packet::new(eth_packet.payload_mut()).unwrap();
+            let mut eth_packet =
+                pnet::packet::ethernet::MutableEthernetPacket::new(&mut packet.data).unwrap();
+            let mut ipv4_packet =
+                pnet::packet::ipv4::MutableIpv4Packet::new(eth_packet.payload_mut()).unwrap();
 
             if cfg!(target_os = "linux") {
                 // iptables hack

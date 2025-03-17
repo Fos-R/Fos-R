@@ -294,7 +294,11 @@ impl Stage3 {
     }
 
     pub fn new(taint: bool, config: Hosts) -> Self {
-        Stage3 { taint, config, zero: MacAddr::zero() }
+        Stage3 {
+            taint,
+            config,
+            zero: MacAddr::zero(),
+        }
     }
 
     /// Generate TCP packets from an intermediate representation
