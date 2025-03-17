@@ -14,16 +14,6 @@ use std::thread;
 use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-impl FlowId {
-    pub fn is_compatible(&self, f: &Flow) -> bool {
-        let d = f.get_data();
-        self.src_ip == d.src_ip
-            && self.dst_ip == d.dst_ip
-            && self.src_port == d.src_port
-            && self.dst_port == d.dst_port
-    }
-}
-
 pub struct Stage4 {
     // Params
     taint: bool,
@@ -35,122 +25,132 @@ pub struct Stage4 {
 const INTERVAL_TIMEOUT_CHECKS_IN_SECS: u64 = 60;
 const SESSION_TIMEOUT_IN_SECS: u64 = 30;
 
-#[cfg(target_os = "linux")]
-fn close_session(fid: &FlowId) {
-    log::debug!("Ip tables removed for {:?}", fid);
-    let status = Command::new("iptables")
-        .args([
-            "-w",
-            "-t",
-            "mangle",
-            "-D",
-            "OUTPUT",
-            "-j",
-            "DROP",
-            "--match",
-            "ttl",
-            "--ttl-eq",
-            "64",
-            "-p",
-            &format!("{:?}", fid.proto),
-            "--sport",
-            &format!("{}", fid.src_port),
-            "--dport",
-            &format!("{}", fid.dst_port),
-            "-s",
-            &format!("{}", fid.src_ip),
-            "-d",
-            &format!("{}", fid.dst_ip),
-        ])
-        .status()
-        .expect("failed to execute process");
-    assert!(status.success());
+impl FlowId {
+    pub fn is_compatible(&self, f: &Flow) -> bool {
+        let d = f.get_data();
+        self.src_ip == d.src_ip
+            && self.dst_ip == d.dst_ip
+            && self.src_port == d.src_port
+            && self.dst_port == d.dst_port
+    }
 
-    let status = Command::new("iptables")
-        .args([
-            "-w",
-            "-t",
-            "mangle",
-            "-D",
-            "OUTPUT",
-            "-j",
-            "TTL",
-            "--ttl-dec",
-            "1",
-            "-p",
-            &format!("{:?}", fid.proto),
-            "--sport",
-            &format!("{}", fid.src_port),
-            "--dport",
-            &format!("{}", fid.dst_port),
-            "-s",
-            &format!("{}", fid.src_ip),
-            "-d",
-            &format!("{}", fid.dst_ip),
-        ])
-        .status()
-        .expect("failed to execute process");
-    assert!(status.success());
-}
+    #[cfg(target_os = "linux")]
+    fn close_session(&self) {
+        log::debug!("Ip tables removed for {:?}", self);
+        let status = Command::new("iptables")
+            .args([
+                "-w",
+                "-t",
+                "mangle",
+                "-D",
+                "OUTPUT",
+                "-j",
+                "DROP",
+                "--match",
+                "ttl",
+                "--ttl-eq",
+                "64",
+                "-p",
+                &format!("{:?}", self.proto),
+                "--sport",
+                &format!("{}", self.src_port),
+                "--dport",
+                &format!("{}", self.dst_port),
+                "-s",
+                &format!("{}", self.src_ip),
+                "-d",
+                &format!("{}", self.dst_ip),
+            ])
+            .status()
+            .expect("failed to execute process");
+        assert!(status.success());
 
-#[cfg(target_os = "linux")]
-fn open_session(fid: &FlowId) {
-    // TODO: name chain "fosr"?
-    // TODO: modifier la chaîne pour prendre en compte d’UDP
-    log::debug!("Ip tables created for {}", fid.src_port);
-    let status = Command::new("iptables")
-        .args([
-            "-w",
-            "-t",
-            "mangle",
-            "-A",
-            "OUTPUT",
-            "-j",
-            "DROP",
-            "--match",
-            "ttl",
-            "--ttl-eq",
-            "64",
-            "-p",
-            &format!("{:?}", fid.proto),
-            "--sport",
-            &format!("{}", fid.src_port),
-            "--dport",
-            &format!("{}", fid.dst_port),
-            "-s",
-            &format!("{}", fid.src_ip),
-            "-d",
-            &format!("{}", fid.dst_ip),
-        ])
-        .status()
-        .expect("failed to execute process");
-    assert!(status.success());
+        let status = Command::new("iptables")
+            .args([
+                "-w",
+                "-t",
+                "mangle",
+                "-D",
+                "OUTPUT",
+                "-j",
+                "TTL",
+                "--ttl-dec",
+                "1",
+                "-p",
+                &format!("{:?}", self.proto),
+                "--sport",
+                &format!("{}", self.src_port),
+                "--dport",
+                &format!("{}", self.dst_port),
+                "-s",
+                &format!("{}", self.src_ip),
+                "-d",
+                &format!("{}", self.dst_ip),
+            ])
+            .status()
+            .expect("failed to execute process");
+        assert!(status.success());
+    }
 
-    let status = Command::new("iptables")
-        .args([
-            "-w",
-            "-t",
-            "mangle",
-            "-A",
-            "OUTPUT",
-            "-j",
-            "TTL",
-            "--ttl-dec",
-            "1",
-            "-p",
-            &format!("{:?}", fid.proto),
-            "--sport",
-            &format!("{}", fid.src_port),
-            "--dport",
-            &format!("{}", fid.dst_port),
-            "-s",
-            &format!("{}", fid.src_ip),
-            "-d",
-            &format!("{}", fid.dst_ip),
-        ])
-        .status()
-        .expect("failed to execute process");
-    assert!(status.success());
+    #[cfg(target_os = "linux")]
+    fn open_session(&self) {
+        // TODO: name chain "fosr"?
+        // TODO: modifier la chaîne pour prendre en compte d’UDP
+        log::debug!("Ip tables created for {}", self.src_port);
+        let status = Command::new("iptables")
+            .args([
+                "-w",
+                "-t",
+                "mangle",
+                "-A",
+                "OUTPUT",
+                "-j",
+                "DROP",
+                "--match",
+                "ttl",
+                "--ttl-eq",
+                "64",
+                "-p",
+                &format!("{:?}", self.proto),
+                "--sport",
+                &format!("{}", self.src_port),
+                "--dport",
+                &format!("{}", self.dst_port),
+                "-s",
+                &format!("{}", self.src_ip),
+                "-d",
+                &format!("{}", self.dst_ip),
+            ])
+            .status()
+            .expect("failed to execute process");
+        assert!(status.success());
+
+        let status = Command::new("iptables")
+            .args([
+                "-w",
+                "-t",
+                "mangle",
+                "-A",
+                "OUTPUT",
+                "-j",
+                "TTL",
+                "--ttl-dec",
+                "1",
+                "-p",
+                &format!("{:?}", self.proto),
+                "--sport",
+                &format!("{}", self.src_port),
+                "--dport",
+                &format!("{}", self.dst_port),
+                "-s",
+                &format!("{}", self.src_ip),
+                "-d",
+                &format!("{}", self.dst_ip),
+            ])
+            .status()
+            .expect("failed to execute process");
+        assert!(status.success());
+    }
 }
 
 // TODO: handle packets should listen to packets Receiver periodically
@@ -175,7 +175,7 @@ fn handle_packets(
             let len = flows.len();
             for p in flows.iter() {
                 if p.timestamps.last().unwrap() > &timeout {
-                    close_session(&p.flow.get_flow_id());
+                    p.flow.get_flow_id().close_session();
                 }
             }
             flows.retain(|p| p.timestamps.last().unwrap() > &timeout);
@@ -251,7 +251,7 @@ fn handle_packets(
 
                     if flow.directions.is_empty() {
                         flows.remove(flow_pos);
-                        close_session(&fid);
+                        fid.close_session();
                     }
                 } else {
                     log::trace!("Packet received: ignored {:?}", fid);
@@ -292,7 +292,7 @@ fn handle_packets(
             if flow.directions.is_empty() {
                 // remove the flow ID from the socket list
                 flows.remove(flow_pos);
-                close_session(&fid);
+                fid.close_session();
             }
         } // else: no packet received, none to send
     }
@@ -359,7 +359,7 @@ impl Stage4 {
                 //     fid.dst_port,
                 //     flow.timestamps[0].as_millis()
                 // );
-                open_session(&fid);
+                fid.open_session();
 
                 self.current_flows.lock().unwrap().push(flow);
             } else {

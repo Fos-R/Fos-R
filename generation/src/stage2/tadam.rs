@@ -94,7 +94,6 @@ impl UnconstrainedAutomataLibrary {
                     ),
                 );
             }
-            Protocol::IGMP => todo!(),
         }
         Ok(())
     }
@@ -191,7 +190,6 @@ impl AutomataLibrary {
                     .into(),
                 );
             }
-            Protocol::IGMP => todo!(),
         }
         Ok(())
     }

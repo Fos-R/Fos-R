@@ -2,9 +2,13 @@ pub mod config;
 pub mod structs;
 pub mod ui;
 
-pub mod icmp;
-pub mod tcp;
-pub mod udp;
+mod icmp;
+mod tcp;
+mod udp;
+
+pub use icmp::ICMPPacketInfo;
+pub use tcp::TCPPacketInfo;
+pub use udp::UDPPacketInfo;
 
 pub mod stage0;
 pub mod stage1;

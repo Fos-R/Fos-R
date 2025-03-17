@@ -59,11 +59,7 @@ fn main() {
             flow_per_second,
             ..
         } => {
-            let config_str = if let Some(path) = config_path {
-                &fs::read_to_string(path).expect("Cannot access the configuration file.")
-            } else {
-                include_str!("../breizhctf.toml")
-            };
+            let config_str = &fs::read_to_string(config_path).expect("Cannot access the configuration file.");
             let hosts = config::import_config(config_str);
             log::debug!("Configuration: {:?}", hosts);
             assert!(!local_interfaces.is_empty());
@@ -213,11 +209,11 @@ fn run(
         let (tx_s0, rx_s1) = bounded::<SeededData<Duration>>(CHANNEL_SIZE);
         let (tx_s1, rx_s2) = bounded::<SeededData<Flow>>(CHANNEL_SIZE);
         let (tx_s2_tcp, rx_s3_tcp) =
-            bounded::<SeededData<PacketsIR<tcp::TCPPacketInfo>>>(CHANNEL_SIZE);
+            bounded::<SeededData<PacketsIR<TCPPacketInfo>>>(CHANNEL_SIZE);
         let (tx_s2_udp, rx_s3_udp) =
-            bounded::<SeededData<PacketsIR<udp::UDPPacketInfo>>>(CHANNEL_SIZE);
+            bounded::<SeededData<PacketsIR<UDPPacketInfo>>>(CHANNEL_SIZE);
         let (tx_s2_icmp, rx_s3_icmp) =
-            bounded::<SeededData<PacketsIR<icmp::ICMPPacketInfo>>>(CHANNEL_SIZE);
+            bounded::<SeededData<PacketsIR<ICMPPacketInfo>>>(CHANNEL_SIZE);
         let tx_s2 = stage2::S2Sender {
             tcp: tx_s2_tcp,
             udp: tx_s2_udp,
@@ -359,7 +355,6 @@ fn run(
                                 .unwrap(),
                         );
                     }
-                    _ => todo!(),
                 }
             }
         }

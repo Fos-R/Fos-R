@@ -55,7 +55,6 @@ pub struct ConfigBasedModifier<T: Stage1> {
 }
 
 impl<T: Stage1> ConfigBasedModifier<T> {
-    #[allow(unused)]
     pub fn new(conf: Hosts, s1: T) -> Self {
         ConfigBasedModifier { conf, s1 }
     }
@@ -91,7 +90,6 @@ pub struct ConstantFlowGenerator {
 }
 
 impl ConstantFlowGenerator {
-    #[allow(unused)]
     pub fn new(src_ip: Ipv4Addr, dst_ip: Ipv4Addr) -> Self {
         ConstantFlowGenerator { src_ip, dst_ip }
     }
