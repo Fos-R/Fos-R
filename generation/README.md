@@ -1,4 +1,4 @@
-# Fos-R
+![](https://raw.githubusercontent.com/Fos-R/Fos-R/refs/heads/main/resources/logo.png)
 
 Fos-R is a network traffic generator based on AI models. It does not require GPU and can generate in the order of Gbps of network traffic with a laptop.
 
