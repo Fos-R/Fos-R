@@ -42,7 +42,7 @@ def add_payload_type(payload_type, row):
                     s = bytes.fromhex(p).decode('utf-8')
                     s = s.translate({10: "", 13: ""}) # remove CR and LF
                     if s.isprintable() or payload_type == "text":
-                        headers[i]+="/Text:"+s.split()[0]
+                        headers[i]+="/Text:"+s.split()[0][:10].replace("$","")
                         # print(s, s.split()[0])
                         replay = False
                         nb_text += 1
@@ -153,6 +153,9 @@ if __name__ == '__main__':
             exit()
     else:
         df = df[df["protocol"] == protocol]
+
+    if args.subsample and len(df) > 2*args.subsample:
+        df = df.sample(n=2*args.subsample)
 
     df["time_sequence"] = df.apply(partial(add_payload_type,args.payload_type), axis=1)
 
