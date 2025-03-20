@@ -22,7 +22,8 @@ fn get_flows(packets: Vec<Packet>) -> Vec<SeededData<Packets>> {
     let mut grouped_packets: HashMap<FlowId, Vec<Packet>> = HashMap::new();
 
     for packet in packets {
-        let flow_id = FlowId::from_packet(&packet);
+        let mut flow_id = FlowId::from_packet(&packet);
+        flow_id.normalize();
 
         let flow = grouped_packets.entry(flow_id).or_insert(Vec::new());
         flow.push(packet);

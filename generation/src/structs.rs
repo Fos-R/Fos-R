@@ -301,4 +301,11 @@ impl FlowId {
             dst_port,
         }
     }
+
+    pub fn normalize(&mut self) {
+        if self.src_ip > self.dst_ip || (self.src_ip == self.dst_ip && self.src_port > self.dst_port) {
+            std::mem::swap(&mut self.src_ip, &mut self.dst_ip);
+            std::mem::swap(&mut self.src_port, &mut self.dst_port);
+        }
+    }
 }
