@@ -193,9 +193,10 @@ fn main() {
                 false,
             );
         }
-        cmd::Command::Replay { 
+        cmd::Command::Replay {
             file,
-            config_path
+            config_path,
+            taint,
         } => {
             // Read content of the file
             let config_str = if let Some(path) = config_path {
@@ -205,10 +206,49 @@ fn main() {
             };
             let hosts = config::import_config(config_str);
             log::debug!("Configuration: {:?}", hosts);
+
             let source = local_interfaces[0];
             let dest = local_interfaces[1];
-            let replay = replay::Replay::new(source, dest, file);
-            replay.replay();
+
+            log::debug!("Initialize stages");
+            let mut flow_router_tx = HashMap::new();
+            let mut stage_4_rx = HashMap::new();
+
+            for proto in Protocol::iter() {
+                let (tx, rx) = bounded::<SeededData<Packets>>(crate::CHANNEL_SIZE);
+                flow_router_tx.insert(proto, tx);
+                stage_4_rx.insert(proto, rx);
+            }
+
+            let stage_replay = replay::Replay::new(source, dest, file);
+            let flows = stage_replay.extract_flows();
+
+            // Flow router
+            let thread_builder = thread::Builder::new().name("replay_flow_router".to_string());
+            let flow_router = thread_builder
+                .spawn(move || {
+                    for flow in flows {
+                        let proto = flow.data.flow.get_proto();
+                        let tx = flow_router_tx.get(&proto).expect("Unknown protocol");
+                        tx.send(flow)
+                            .expect("Could not send flow to stage 4 in replay");
+                    }
+                })
+                .unwrap();
+
+            // Stage 4
+            let mut stage_4_threads = vec![];
+            for (proto, rx) in stage_4_rx {
+                let thread_builder =
+                    thread::Builder::new().name(format!("replay_stage4_{}", proto));
+                let mut stage_4 = stage4::Stage4::new(proto, taint);
+                stage_4_threads.push(thread_builder.spawn(move || stage_4.start(rx)).unwrap());
+            }
+
+            flow_router.join().unwrap();
+            for thread in stage_4_threads {
+                thread.join().unwrap();
+            }
         }
     };
 }
