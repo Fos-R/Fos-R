@@ -1,11 +1,9 @@
 use crate::structs::*;
 use crate::utils::timeval_to_duration;
-use crossbeam_channel::bounded;
 use pcap::{Capture, Offline};
 use pnet_packet::Packet as PnetPacket;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
-use std::thread;
 use std::time::Instant;
 
 const ETHERNET_HEADER_SIZE: usize = 14;
@@ -15,8 +13,9 @@ const IPV4_DST_OFFSET: usize = ETHERNET_HEADER_SIZE + 16;
 pub struct Replay {
     source_ip: Ipv4Addr,
     dest_ip: Ipv4Addr,
-    start_time: Instant,
     file: String,
+
+    start_time: Instant,
 }
 
 fn get_flows(packets: Vec<Packet>) -> Vec<SeededData<Packets>> {
@@ -97,8 +96,8 @@ impl Replay {
         }
     }
 
-    pub fn from_pcap(&self, file: String) -> Vec<SeededData<Packets>> {
-        let mut capture = Capture::<Offline>::from_file(file).unwrap();
+    pub fn extract_flows(&self) -> Vec<SeededData<Packets>> {
+        let mut capture = Capture::<Offline>::from_file(&self.file).unwrap();
         let mut packets: Vec<Packet> = vec![];
         while let Ok(packet) = capture.next_packet() {
             let mut packet_: Packet = Packet {
@@ -119,39 +118,5 @@ impl Replay {
             packets.push(packet_);
         }
         get_flows(packets)
-    }
-
-    pub fn replay(&self) {
-        let mut threads = vec![];
-        let (tx, _) = bounded::<SeededData<Packets>>(crate::CHANNEL_SIZE);
-        let builder = thread::Builder::new().name("Replay".into());
-        let data = self.from_pcap(self.file.clone());
-        threads.push(
-            builder
-                .spawn(move || {
-                    for flow in data.into_iter() {
-                        tx.send(flow).unwrap();
-                    }
-                    log::trace!("S4 stops");
-                })
-                .unwrap(),
-        );
-        // let proto = Protocol::TCP;
-        // let builder = thread::Builder::new().name(format!("Stage4-{:?}", proto));
-        // threads.push(
-        //     builder
-        //         .spawn(move || {
-        //             log::trace!("Start S4");
-        //             let s4 = stage4::Stage4::new(Ipv4Addr::new(127, 0, 0, 1), proto);
-        //             while let Ok(packets) = rx.recv() {
-        //                 s4.send(packets)
-        //             }
-        //             log::trace!("S4 stops");
-        //         })
-        //         .unwrap(),
-        // );
-        for thread in threads {
-            thread.join().unwrap();
-        }
     }
 }

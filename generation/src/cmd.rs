@@ -114,7 +114,7 @@ pub enum Command {
         #[arg(
             short,
             long,
-            default_value="output.pcap",
+            default_value = "output.pcap",
             help = "Path to the pcap file to be replayed"
         )]
         file: String,
@@ -125,5 +125,12 @@ pub enum Command {
             help = "Path to the information system configuration file"
         )]
         config_path: Option<String>,
+        #[arg(
+            short,
+            long,
+            default_value_t = false,
+            help = "Taint the packets to easily identify them"
+        )]
+        taint: bool,
     },
 }
