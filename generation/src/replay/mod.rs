@@ -104,19 +104,35 @@ impl Replay {
                 header: *packet.header,
                 data: packet.data.to_vec(),
             };
-            if packet_.data.len() >= IPV4_DST_OFFSET + 4 {
-                let src_octets = self.source_ip.octets();
-                let dst_octets = self.dest_ip.octets();
-                packet_.data[IPV4_SRC_OFFSET..IPV4_SRC_OFFSET + 4].copy_from_slice(&src_octets);
-                packet_.data[IPV4_DST_OFFSET..IPV4_DST_OFFSET + 4].copy_from_slice(&dst_octets);
-            } else {
-                println!(
-                    "Packet too short, skipping IP rewrite: len = {}",
-                    packet_.data.len()
-                );
-            }
+            // if packet_.data.len() >= IPV4_DST_OFFSET + 4 {
+            //     let src_octets = self.source_ip.octets();
+            //     let dst_octets = self.dest_ip.octets();
+            //     packet_.data[IPV4_SRC_OFFSET..IPV4_SRC_OFFSET + 4].copy_from_slice(&src_octets);
+            //     packet_.data[IPV4_DST_OFFSET..IPV4_DST_OFFSET + 4].copy_from_slice(&dst_octets);
+            // } else {
+            //     println!(
+            //         "Packet too short, skipping IP rewrite: len = {}",
+            //         packet_.data.len()
+            //     );
+            // }
             packets.push(packet_);
         }
         get_flows(packets)
+    }
+}
+
+mod tests {
+    use super::*;
+    use std::net::Ipv4Addr;
+    use crate::stage3;
+
+    #[test]
+    fn create_pcap(){
+        let stage_replay = Replay::new(Ipv4Addr::new(0, 0, 0, 0), Ipv4Addr::new(0, 0, 0, 0), "original.pcap".to_string());
+        let flows = stage_replay.extract_flows();
+        for (i, seeded_data) in flows.iter().enumerate() {
+            let flow_packets = seeded_data.data.packets.clone();
+            stage3::pcap_export(flow_packets, format!("flow{}.pcap", i).as_str(), false);
+        }
     }
 }
