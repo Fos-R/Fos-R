@@ -14,7 +14,7 @@ pub struct Replay {
     source_ip: Ipv4Addr,
     dest_ip: Ipv4Addr,
     file: String,
-    rewrite: Option<String>,
+
     start_time: Instant,
 }
 
@@ -86,14 +86,13 @@ fn to_full_flow(flow_id: &FlowId, packets: &[Packet]) -> SeededData<Packets> {
 }
 
 impl Replay {
-    pub fn new(source_ip: Ipv4Addr, dest_ip: Ipv4Addr, file: String, rewrite: Option<String>) -> Self {
+    pub fn new(source_ip: Ipv4Addr, dest_ip: Ipv4Addr, file: String) -> Self {
         let start_time = Instant::now();
         Replay {
             source_ip,
             dest_ip,
             start_time,
             file,
-            rewrite,
         }
     }
 

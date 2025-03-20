@@ -132,13 +132,5 @@ pub enum Command {
             help = "Taint the packets to easily identify them"
         )]
         taint: bool,
-        #[arg(
-            short,
-            long,
-            default_value = None,
-            help = "Rewrites to a new pcap"
-        )]
-        rewrite: Option<String>,
-
     },
 }

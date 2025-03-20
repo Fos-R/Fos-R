@@ -197,7 +197,6 @@ fn main() {
             file,
             config_path,
             taint,
-            rewrite,
         } => {
             // Read content of the file
             let config_str = if let Some(path) = config_path {
@@ -221,7 +220,7 @@ fn main() {
                 stage_4_rx.insert(proto, rx);
             }
 
-            let stage_replay = replay::Replay::new(source, dest, file, rewrite);
+            let stage_replay = replay::Replay::new(source, dest, file);
             let flows = stage_replay.extract_flows();
 
             // Flow router
