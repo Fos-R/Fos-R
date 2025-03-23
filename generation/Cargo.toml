@@ -1,6 +1,6 @@
 [package]
 name = "fosr"
-version = "0.1.0"
+version = "0.1.1-dev"
 authors = ["Pierre-François Gimenez","Florentin Labelle","Evan Morin"]
 edition = "2021"
 description = "Fos-R (Forger Of Security Records) is a synthetic network traffic generator."
@@ -10,10 +10,9 @@ license = "GPL-3.0"
 
 [[bin]]
 name = "fosr"
-required-features = ["build-binary"]
 
 [dependencies]
-clap = { version = "4.5.22", features = ["derive"], optional = true }
+clap = { version = "4.5.22", features = ["derive"] }
 crossbeam-channel = "0.5.13"
 env_logger = { version = "0.11.6", default-features = false, features = ["auto-color", "humantime"] }
 log = { version = "0.4.22" }
@@ -29,9 +28,10 @@ toml = { version = "0.8.19", default-features = false, features = ["parse"] }
 libc = "0.2.162"
 kd-tree = "0.6.0"
 ctrlc = "3.4.5"
+
+[build-dependencies]
 include-bytes-zstd = "0.1.0"
 
 [features]
-default = ["network"]
-network = []
-build-binary = ["clap"]
+default = ["net_injection"]
+net_injection = []

@@ -14,5 +14,5 @@ pub mod stage0;
 pub mod stage1;
 pub mod stage2;
 pub mod stage3;
-#[cfg(feature = "network")]
+#[cfg(feature = "net_injection")]
 pub mod stage4;
