@@ -18,6 +18,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub struct Stage4 {
     // Params
     taint: bool,
+    fast: bool,
 
     // Flows
     current_flows: Arc<Mutex<Vec<Packets>>>,
@@ -153,6 +154,7 @@ fn handle_packets(
     mut rx: TransportReceiver,
     current_flows: Arc<Mutex<Vec<Packets>>>,
     taint: bool,
+    fast: bool,
 ) {
     // Send and receive packets in this thread
     let mut rx_iter = ipv4_packet_iter(&mut rx);
@@ -201,7 +203,11 @@ fn handle_packets(
                     .expect("Network error")
             }
             Some((ts, _)) => {
-                let timeout = ts.saturating_sub(now);
+                let timeout = if fast {
+                    Duration::from_secs(0)
+                } else {
+                    ts.saturating_sub(now)
+                };
                 if timeout.is_zero() {
                     None
                 } else {
@@ -299,9 +305,10 @@ fn handle_packets(
 }
 
 impl Stage4 {
-    pub fn new(taint: bool) -> Self {
+    pub fn new(taint: bool, fast: bool) -> Self {
         Stage4 {
             taint,
+            fast,
             current_flows: Arc::new(Mutex::new(Vec::new())),
         }
     }
@@ -312,6 +319,7 @@ impl Stage4 {
         let mut join_handles = Vec::new();
         let mut receivers = Vec::<Receiver<Packets>>::new();
         let taint = self.taint;
+        let fast = self.fast;
 
         for (proto, rx_s4) in incoming_flows.into_iter() {
             let channel_type = TransportChannelType::Layer3(IpNextHeaderProtocol::new(
@@ -326,7 +334,7 @@ impl Stage4 {
             join_handles.push(
                 builder
                     .spawn(move || {
-                        handle_packets(proto, rx, tx, current_flows, taint);
+                        handle_packets(proto, rx, tx, current_flows, taint, fast);
                     })
                     .unwrap(),
             );
