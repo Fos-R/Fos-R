@@ -130,7 +130,6 @@ pub enum Command {
         )]
         taint: bool,
         #[arg(
-            short,
             long,
             default_value_t = false,
             help = "Ignores timestamps and send packets without waiting"
