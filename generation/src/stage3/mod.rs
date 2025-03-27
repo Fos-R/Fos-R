@@ -441,7 +441,11 @@ pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result
     Ok(())
 }
 
-fn send_online(local_interfaces: &[Ipv4Addr], mut flow_packets: Packets, tx_s3: &Sender<Packets>) {
+pub fn send_online(
+    local_interfaces: &[Ipv4Addr],
+    mut flow_packets: Packets,
+    tx_s3: &Sender<Packets>,
+) {
     // check if exist
     let f = flow_packets.flow.get_data();
     let src_s4 = local_interfaces.contains(&f.src_ip);

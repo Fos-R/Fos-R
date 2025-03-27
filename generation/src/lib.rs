@@ -1,5 +1,3 @@
-pub(crate) mod utils;
-
 pub mod config;
 pub mod structs;
 pub mod ui;
