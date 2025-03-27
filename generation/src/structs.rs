@@ -1,4 +1,6 @@
 use pcap::PacketHeader;
+use pnet_packet::ip::IpNextHeaderProtocols;
+use pnet_packet::{ethernet, ipv4, tcp, udp, Packet as _};
 use serde::Deserialize;
 use std::cmp::Ordering;
 use std::fmt::Debug;
@@ -196,6 +198,14 @@ pub struct Packet {
     pub data: Vec<u8>,
 }
 
+impl Packet {
+    pub fn get_mutable_ip_packet(&mut self) -> Option<pnet_packet::ipv4::MutableIpv4Packet> {
+        let eth_offset = pnet_packet::ethernet::EthernetPacket::minimum_packet_size();
+        let ip_packet = pnet_packet::ipv4::MutableIpv4Packet::new(&mut self.data[eth_offset..])?;
+        Some(ip_packet)
+    }
+}
+
 impl Ord for Packet {
     fn cmp(&self, other: &Self) -> Ordering {
         self.header
@@ -250,4 +260,56 @@ pub struct FlowId {
     pub src_port: u16,
     pub dst_port: u16,
     pub proto: Protocol,
+}
+
+impl FlowId {
+    pub fn is_compatible(&self, f: &Flow) -> bool {
+        let d = f.get_data();
+        self.src_ip == d.src_ip
+            && self.dst_ip == d.dst_ip
+            && self.src_port == d.src_port
+            && self.dst_port == d.dst_port
+    }
+
+    pub fn from_packet(p: &Packet) -> Self {
+        let eth_packet = ethernet::EthernetPacket::new(&p.data).unwrap();
+        let ip_packet = ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
+
+        let (proto, src_port, dst_port) = match ip_packet.get_next_level_protocol() {
+            IpNextHeaderProtocols::Tcp => {
+                let tcp_packet = tcp::TcpPacket::new(ip_packet.payload()).unwrap();
+                (
+                    Protocol::TCP,
+                    tcp_packet.get_source(),
+                    tcp_packet.get_destination(),
+                )
+            }
+            IpNextHeaderProtocols::Udp => {
+                let udp_packet = udp::UdpPacket::new(ip_packet.payload()).unwrap();
+                (
+                    Protocol::UDP,
+                    udp_packet.get_source(),
+                    udp_packet.get_destination(),
+                )
+            }
+            _ => panic!("Unsupported protocol"),
+        };
+
+        FlowId {
+            src_ip: ip_packet.get_source(),
+            dst_ip: ip_packet.get_destination(),
+            src_port,
+            dst_port,
+            proto,
+        }
+    }
+
+    pub fn normalize(&mut self) {
+        if self.src_ip > self.dst_ip
+            || (self.src_ip == self.dst_ip && self.src_port > self.dst_port)
+        {
+            std::mem::swap(&mut self.src_ip, &mut self.dst_ip);
+            std::mem::swap(&mut self.src_port, &mut self.dst_port);
+        }
+    }
 }

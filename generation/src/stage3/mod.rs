@@ -422,7 +422,7 @@ impl Stage3 {
 //     todo!()
 // }
 
-fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(), pcap::Error> {
+pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(), pcap::Error> {
     let capture = Capture::dead(pcap::Linktype(1))?;
     let mut savefile = if append {
         capture.savefile_append(outfile)?
