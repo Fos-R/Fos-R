@@ -3,6 +3,7 @@ use pcap::{Capture, Offline};
 use pnet_packet::Packet as PnetPacket;
 use std::collections::{HashMap, HashSet};
 use std::net::Ipv4Addr;
+use std::time::Instant;
 
 fn timeval_to_duration(timeval: libc::timeval) -> std::time::Duration {
     std::time::Duration::new(timeval.tv_sec as u64, (timeval.tv_usec * 1000) as u32)
@@ -13,12 +14,15 @@ pub mod config;
 pub struct Replay {
     ip_replacement_map: HashMap<Ipv4Addr, Ipv4Addr>,
     file: String,
+    start_time: Instant,
 }
 
 impl Replay {
     pub fn new(ip_replacement_map: HashMap<Ipv4Addr, Ipv4Addr>, file: String) -> Self {
+        let start_time = Instant::now();
         Replay {
             ip_replacement_map,
+            start_time,
             file,
         }
     }
@@ -116,11 +120,15 @@ impl Replay {
             .filter(|&&d| d == PacketDirection::Backward)
             .count();
 
-        let timestamps = packets
+        let timestamps: Vec<_> = packets
             .iter()
             .map(|p| p.header.ts)
             .map(timeval_to_duration)
             .collect();
+
+        let first_timestamp = timestamps[0];
+        let first_instant = self.start_time - first_timestamp;
+        let time_shift = self.start_time.duration_since(first_instant);
 
         Packets {
             packets: packets.into(),
@@ -135,7 +143,7 @@ impl Replay {
                 ttl_server: 64,
                 fwd_packets_count: Some(fwd_packets_count),
                 bwd_packets_count: Some(bwd_packets_count),
-                timestamp: timeval_to_duration(packets[0].header.ts),
+                timestamp: timeval_to_duration(packets[0].header.ts) - time_shift,
             }),
         }
     }
