@@ -1,9 +1,12 @@
 use crate::structs::*;
-use crate::utils::timeval_to_duration;
 use pcap::{Capture, Offline};
 use pnet_packet::Packet as PnetPacket;
 use std::collections::{HashMap, HashSet};
 use std::net::Ipv4Addr;
+
+fn timeval_to_duration(timeval: libc::timeval) -> std::time::Duration {
+    std::time::Duration::new(timeval.tv_sec as u64, (timeval.tv_usec * 1000) as u32)
+}
 
 pub mod config;
 
@@ -20,13 +23,13 @@ impl Replay {
         }
     }
 
-    pub fn parse_flows(&self) -> Vec<SeededData<Packets>> {
+    pub fn parse_flows(&self) -> Vec<Packets> {
         let packets = self.read_file();
         let flows = self.split_flows(packets);
 
         flows
             .iter()
-            .map(|(flow_id, packets)| self.to_seeded_packets(flow_id, packets))
+            .map(|(flow_id, packets)| self.to_packets(flow_id, packets))
             .collect()
     }
 
@@ -89,7 +92,7 @@ impl Replay {
         grouped_packets
     }
 
-    fn to_seeded_packets(&self, flow_id: &FlowId, packets: &[Packet]) -> SeededData<Packets> {
+    fn to_packets(&self, flow_id: &FlowId, packets: &[Packet]) -> Packets {
         let directions: Vec<PacketDirection> = packets
             .iter()
             .map(|p| {
@@ -119,24 +122,21 @@ impl Replay {
             .map(timeval_to_duration)
             .collect();
 
-        SeededData {
-            data: Packets {
-                packets: packets.into(),
-                directions,
-                timestamps,
-                flow: Flow::TCP(FlowData {
-                    src_ip: flow_id.src_ip,
-                    dst_ip: flow_id.dst_ip,
-                    src_port: flow_id.src_port,
-                    dst_port: flow_id.dst_port,
-                    ttl_client: 64,
-                    ttl_server: 64,
-                    fwd_packets_count: Some(fwd_packets_count),
-                    bwd_packets_count: Some(bwd_packets_count),
-                    timestamp: timeval_to_duration(packets[0].header.ts),
-                }),
-            },
-            seed: 42,
+        Packets {
+            packets: packets.into(),
+            directions,
+            timestamps,
+            flow: Flow::TCP(FlowData {
+                src_ip: flow_id.src_ip,
+                dst_ip: flow_id.dst_ip,
+                src_port: flow_id.src_port,
+                dst_port: flow_id.dst_port,
+                ttl_client: 64,
+                ttl_server: 64,
+                fwd_packets_count: Some(fwd_packets_count),
+                bwd_packets_count: Some(bwd_packets_count),
+                timestamp: timeval_to_duration(packets[0].header.ts),
+            }),
         }
     }
 }
@@ -152,7 +152,7 @@ mod tests {
         let stage_replay = Replay::new(HashMap::new(), "original.pcap".to_string());
         let flows = stage_replay.parse_flows();
         for (i, seeded_data) in flows.iter().enumerate() {
-            let flow_packets = seeded_data.data.packets.clone();
+            let flow_packets = seeded_data.packets.clone();
             stage3::pcap_export(flow_packets, format!("flow{}.pcap", i).as_str(), false).unwrap();
         }
     }

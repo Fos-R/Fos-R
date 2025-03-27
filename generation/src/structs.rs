@@ -3,7 +3,7 @@ use pnet_packet::ip::IpNextHeaderProtocols;
 use pnet_packet::{ethernet, ipv4, tcp, udp, Packet as _};
 use serde::Deserialize;
 use std::cmp::Ordering;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::net::Ipv4Addr;
 use std::time::Duration;
 
@@ -22,6 +22,16 @@ pub enum Protocol {
     TCP,
     UDP,
     ICMP,
+}
+
+impl Display for Protocol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Protocol::TCP => write!(f, "TCP"),
+            Protocol::UDP => write!(f, "UDP"),
+            Protocol::ICMP => write!(f, "ICMP"),
+        }
+    }
 }
 
 impl Protocol {
