@@ -428,7 +428,7 @@ pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result
     Ok(())
 }
 
-fn send_online(
+pub fn send_online(
     local_interfaces: &[Ipv4Addr],
     mut flow_packets: SeededData<Packets>,
     tx_s3: &Sender<SeededData<Packets>>,
