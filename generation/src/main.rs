@@ -202,13 +202,8 @@ fn main() {
             let config_str = if let Some(path) = config_path {
                 &fs::read_to_string(path).expect("Cannot access the configuration file.")
             } else {
-                include_str!("../breizhctf.toml")
+                include_str!("../replay.toml")
             };
-            let hosts = config::import_config(config_str);
-            log::debug!("Configuration: {:?}", hosts);
-
-            let source = local_interfaces[0];
-            let dest = local_interfaces[1];
 
             log::debug!("Initialize stages");
             let mut flow_router_tx = HashMap::new();
@@ -220,8 +215,9 @@ fn main() {
                 stage_4_rx.insert(proto, rx);
             }
 
-            let stage_replay = replay::Replay::new(source, dest, file);
-            let flows = stage_replay.extract_flows();
+            let ip_replacement_map = replay::config::parse_config(config_str);
+            let stage_replay = replay::Replay::new(ip_replacement_map, file);
+            let flows = stage_replay.parse_flows();
 
             // Flow router
             let thread_builder = thread::Builder::new().name("replay_flow_router".to_string());

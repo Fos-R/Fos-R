@@ -203,6 +203,14 @@ pub struct Packet {
     pub data: Vec<u8>,
 }
 
+impl Packet {
+    pub fn get_mutable_ip_packet(&mut self) -> Option<pnet_packet::ipv4::MutableIpv4Packet> {
+        let eth_offset = pnet_packet::ethernet::EthernetPacket::minimum_packet_size();
+        let ip_packet = pnet_packet::ipv4::MutableIpv4Packet::new(&mut self.data[eth_offset..])?;
+        Some(ip_packet)
+    }
+}
+
 impl Ord for Packet {
     fn cmp(&self, other: &Self) -> Ordering {
         self.header
@@ -303,7 +311,9 @@ impl FlowId {
     }
 
     pub fn normalize(&mut self) {
-        if self.src_ip > self.dst_ip || (self.src_ip == self.dst_ip && self.src_port > self.dst_port) {
+        if self.src_ip > self.dst_ip
+            || (self.src_ip == self.dst_ip && self.src_port > self.dst_port)
+        {
             std::mem::swap(&mut self.src_ip, &mut self.dst_ip);
             std::mem::swap(&mut self.src_port, &mut self.dst_port);
         }
