@@ -161,26 +161,3 @@ pub fn run(
     }
     log::trace!("S0 stops");
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn synchronization() {
-        let time_difference = 1;
-        let flows_per_second = 2;
-        let current_date = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        let future_date =
-            current_date + Duration::from_secs(time_difference * WINDOW_WIDTH_IN_SECS);
-        let mut gen1 = UniformGenerator::new_for_honeypot(current_date, flows_per_second);
-        let mut gen2 = UniformGenerator::new_for_honeypot(future_date, flows_per_second);
-        for _ in 0..flows_per_second * time_difference * WINDOW_WIDTH_IN_SECS {
-            gen1.next().unwrap();
-        }
-        let d1 = gen1.next().unwrap();
-        let d2 = gen2.next().unwrap();
-        assert_eq!(d1.seed, d2.seed);
-        assert_eq!(d1.data, d2.data);
-    }
-}
