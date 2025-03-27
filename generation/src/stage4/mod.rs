@@ -27,14 +27,6 @@ const INTERVAL_TIMEOUT_CHECKS_IN_SECS: u64 = 60;
 const SESSION_TIMEOUT_IN_SECS: u64 = 30;
 
 impl FlowId {
-    pub fn is_compatible(&self, f: &Flow) -> bool {
-        let d = f.get_data();
-        self.src_ip == d.src_ip
-            && self.dst_ip == d.dst_ip
-            && self.src_port == d.src_port
-            && self.dst_port == d.dst_port
-    }
-
     #[cfg(target_os = "linux")]
     fn close_session(&self) {
         log::debug!("Ip tables removed for {:?}", self);
