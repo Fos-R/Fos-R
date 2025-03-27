@@ -129,5 +129,12 @@ pub enum Command {
             help = "Taint the packets to easily identify them"
         )]
         taint: bool,
+        #[arg(
+            short,
+            long,
+            default_value_t = false,
+            help = "Ignores timestamps and send packets without waiting"
+        )]
+        fast: bool,
     },
 }

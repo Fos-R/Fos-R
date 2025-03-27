@@ -106,7 +106,7 @@ fn main() {
             let automata_library = Arc::new(automata_library);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(taint, hosts);
-            let s4 = stage4::Stage4::new(taint);
+            let s4 = stage4::Stage4::new(taint, false);
             run(
                 local_interfaces,
                 outfile,
@@ -200,6 +200,7 @@ fn main() {
             file,
             config_path,
             taint,
+            fast,
         } => {
             // Read content of the file
             let config_str = if let Some(path) = config_path {
@@ -236,7 +237,7 @@ fn main() {
                 .unwrap();
 
             // Stage 4
-            let mut stage_4 = stage4::Stage4::new(taint);
+            let mut stage_4 = stage4::Stage4::new(taint, fast);
             let thread_builder = thread::Builder::new().name("replay_stage4".to_owned());
             let stage_4_thread = thread_builder
                 .spawn(move || {
