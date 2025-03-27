@@ -225,9 +225,9 @@ fn main() {
                 .spawn(move || {
                     for flow in flows {
                         let proto = flow.data.flow.get_proto();
+
                         let tx = flow_router_tx.get(&proto).expect("Unknown protocol");
-                        tx.send(flow)
-                            .expect("Could not send flow to stage 4 in replay");
+                        stage3::send_online(&local_interfaces, flow, tx);
                     }
                 })
                 .unwrap();
