@@ -8,7 +8,6 @@ use pnet_packet::ip::IpNextHeaderProtocol;
 use pnet_packet::MutablePacket;
 use pnet_packet::Packet;
 use std::collections::HashMap;
-use std::panic;
 use std::process::Command;
 use std::sync::Arc;
 use std::sync::Mutex;
