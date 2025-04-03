@@ -227,12 +227,16 @@ fn main() {
             let thread_builder = thread::Builder::new().name("replay_flow_router".to_string());
             let flow_router = thread_builder
                 .spawn(move || {
+                    let mut sent_flows = 0;
                     for flow in flows {
                         let proto = flow.flow.get_proto();
 
                         let tx = flow_router_tx.get(&proto).expect("Unknown protocol");
                         stage3::send_online(&local_interfaces, flow, tx);
+                        sent_flows += 1;
                     }
+
+                    log::info!("Sent {} flows to be replayed", sent_flows);
                 })
                 .unwrap();
 

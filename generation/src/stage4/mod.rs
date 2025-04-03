@@ -8,6 +8,7 @@ use pnet_packet::ip::IpNextHeaderProtocol;
 use pnet_packet::MutablePacket;
 use pnet_packet::Packet;
 use std::collections::HashMap;
+use std::panic;
 use std::process::Command;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -144,6 +145,8 @@ impl FlowId {
             .status()
             .expect("failed to execute process");
         assert!(status.success());
+
+        log::debug!("Ip tables created for {}", self.src_port);
     }
 }
 
@@ -291,7 +294,11 @@ fn handle_packets(
 
             match tx.send_to(&ipv4_packet, std::net::IpAddr::V4(fid.dst_ip)) {
                 Ok(n) => assert_eq!(n, ipv4_packet.packet().len()), // Check if the whole packet was sent
-                Err(e) => log::error!("failed to send packet: {}", e),
+                Err(e) => log::error!(
+                    "failed to send packet: {}, length: {}",
+                    e,
+                    ipv4_packet.packet().len()
+                ),
             }
             log::trace!("Packet sent from port {}", fid.src_port);
 
@@ -347,33 +354,45 @@ impl Stage4 {
         }
 
         // Handle packets
+        log::debug!("Start S4 packet handling");
+        let mut removed = 0;
         loop {
-            let oper = sel.select();
-            let index = oper.index();
-            if let Ok(flow) = oper.recv(&receivers[index]) {
-                log::debug!(
-                    "Currently {} ongoing flows",
-                    self.current_flows.lock().unwrap().len() + 1
-                );
+            let index = sel.ready();
+            match receivers[index].try_recv() {
+                Ok(flow) => {
+                    log::debug!(
+                        "Currently {} ongoing flows",
+                        self.current_flows.lock().unwrap().len() + 1
+                    );
 
-                // setup firewall rules as soon as we know we will deal with it, before receiving any
-                // packet
-                let fid = flow.flow.get_flow_id();
-                // log::info!(
-                //     "Next Fos-R flow: {}, {}, {}, {}, {}",
-                //     fid.src_ip,
-                //     fid.dst_ip,
-                //     fid.src_port,
-                //     fid.dst_port,
-                //     flow.timestamps[0].as_millis()
-                // );
-                fid.open_session();
+                    // setup firewall rules as soon as we know we will deal with it, before receiving any
+                    // packet
+                    let fid = flow.flow.get_flow_id();
+                    log::debug!(
+                        "Next Fos-R flow: {}, {}, {}, {}, {}",
+                        fid.src_ip,
+                        fid.dst_ip,
+                        fid.src_port,
+                        fid.dst_port,
+                        flow.timestamps[0].as_millis()
+                    );
+                    fid.open_session();
 
-                self.current_flows.lock().unwrap().push(flow);
-            } else {
-                break;
+                    self.current_flows.lock().unwrap().push(flow);
+                }
+                Err(e) => {
+                    if e.is_disconnected() {
+                        removed += 1;
+                        sel.remove(index);
+
+                        if removed == receivers.len() {
+                            break;
+                        }
+                    }
+                }
             }
         }
+        log::trace!("S4 stopping, handling remaining flows");
         for handle in join_handles.into_iter() {
             handle.join().unwrap();
         }
