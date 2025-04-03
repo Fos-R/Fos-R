@@ -99,11 +99,7 @@ impl Stage3 {
         }
 
         // Set the flags
-        let ip_flags = if self.taint {
-            0b100 + Ipv4Flags::DontFragment
-        } else {
-            Ipv4Flags::DontFragment
-        };
+        let ip_flags = if self.taint { 0b100 } else { 0 };
         ipv4_packet.set_flags(ip_flags); // TODO: Set fragmentation based on the window size ??
 
         // Compute the checksum
