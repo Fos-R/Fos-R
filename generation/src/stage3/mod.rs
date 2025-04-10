@@ -20,6 +20,8 @@ use std::net::Ipv4Addr;
 use std::sync::Arc;
 use std::time::Duration;
 
+/// Represents stage 3 of the packet generator.
+/// It contains configuration data and state necessary for generating packets.
 #[derive(Debug, Clone)]
 pub struct Stage3 {
     taint: bool,
@@ -37,6 +39,7 @@ struct TcpPacketData {
 }
 
 impl TcpPacketData {
+    /// Creates new TCP packet data with randomized initial sequence numbers.
     fn new(rng: &mut impl RngCore) -> Self {
         TcpPacketData {
             forward: rng.next_u32(),
@@ -50,6 +53,8 @@ impl TcpPacketData {
 }
 
 impl Stage3 {
+    /// Configures the Ethernet frame by setting the source, destination MAC addresses,
+    /// and setting the EtherType to IPv4.
     fn setup_ethernet_frame(
         &self,
         packet: &mut [u8],
@@ -64,6 +69,10 @@ impl Stage3 {
         Some(())
     }
 
+    /// Sets up the IPv4 packet inside a given buffer.
+    /// It assigns generic fields (version, header_length, total_length, protocol, identification)
+    /// and adjusts source, destination, and TTL based on the packet direction;
+    /// then calculates and sets the IPv4 header checksum.
     fn setup_ip_packet<P: PacketInfo>(
         &self,
         rng: &mut impl RngCore,
@@ -108,6 +117,13 @@ impl Stage3 {
         Some(())
     }
 
+    /// Configures the TCP packet within a given buffer.
+    ///
+    /// It sets the source/destination ports, sequence/ACK numbers, TCP flags, window size,
+    /// and simulates congestion behavior (including CWR flag if needed). Finally,
+    /// it computes and sets the TCP checksum.
+    ///
+    /// Returns an updated TcpPacketData structure for further packet generation.
     fn setup_tcp_packet(
         &self,
         rng: &mut impl RngCore,
@@ -225,6 +241,10 @@ impl Stage3 {
         Some(new_tcp_data) // Return the new tcp_data and an empty tuple
     }
 
+    /// Configures the UDP packet within a given buffer.
+    ///
+    /// It sets source/destination ports, assigns the payload (either random or replayed),
+    /// adjusts the UDP length field, and computes/checks the UDP checksum.
     fn setup_udp_packet(
         &self,
         rng: &mut Pcg32,
@@ -274,6 +294,9 @@ impl Stage3 {
         Some(())
     }
 
+    /// Returns a pcap PacketHeader for a given packet size and timestamp.
+    ///
+    /// The timestamp is converted to a timeval structure.
     fn get_pcap_header(&self, packet_size: usize, ts: Duration) -> PacketHeader {
         PacketHeader {
             ts: self.instant_to_timeval(ts),
@@ -281,7 +304,7 @@ impl Stage3 {
             len: packet_size as u32,
         }
     }
-
+    
     fn instant_to_timeval(&self, duration: Duration) -> libc::timeval {
         libc::timeval {
             tv_sec: duration.as_secs() as _,
@@ -297,7 +320,15 @@ impl Stage3 {
         }
     }
 
-    /// Generate TCP packets from an intermediate representation
+    /// Generates a sequence of TCP packets from an intermediate representation.
+    ///
+    /// For each packet info entry, it:
+    ///   - Calculates the packet size.
+    ///   - Configures the Ethernet, IPv4, and TCP layers.
+    ///   - Updates TCP sequence numbers using TcpPacketData.
+    ///   - Captures the packet timestamp and header.
+    ///
+    /// Returns a Packets struct encapsulating the packet data, directions, timestamps, and flow.
     pub fn generate_tcp_packets(&self, input: SeededData<PacketsIR<TCPPacketInfo>>) -> Packets {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
@@ -356,7 +387,14 @@ impl Stage3 {
         }
     }
 
-    /// Generate UDP packets from an intermediate representation
+    /// Generates a sequence of UDP packets from an intermediate representation.
+    ///
+    /// For each packet info entry, it:
+    ///   - Calculates the packet size.
+    ///   - Configures the Ethernet, IPv4, and UDP layers.
+    ///   - Captures the packet timestamp and header.
+    ///
+    /// Returns a Packets struct encapsulating the packet data, directions, timestamps, and flow.
     pub fn generate_udp_packets(&self, input: SeededData<PacketsIR<UDPPacketInfo>>) -> Packets {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
@@ -418,6 +456,11 @@ impl Stage3 {
 //     todo!()
 // }
 
+/// Exports a vector of packets to a pcap file.
+///
+/// The packets are sorted by their header (timestamp), and then written
+/// sequentially to the specified file. If append is true, the packets are
+/// appended to an existing pcap file; otherwise, a new file is created.
 pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(), pcap::Error> {
     let capture = Capture::dead(pcap::Linktype(1))?;
     let mut savefile = if append {
@@ -437,6 +480,12 @@ pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result
     Ok(())
 }
 
+/// Sends packets online based on the local interfaces.
+///
+/// Depending on whether the source, destination, or both IPs exist on local
+/// interfaces, the function sends the packet flow to stage 4 (tx_s3) in one or
+/// two forms. If both IPs are local, a clone is sent, and then the flow is
+/// reversed before sending to ensure stage 4 is always the source.
 pub fn send_online(
     local_interfaces: &[Ipv4Addr],
     mut flow_packets: Packets,
@@ -464,6 +513,10 @@ pub fn send_online(
     }
 }
 
+/// Sends a packet flow to the pcap collector channel.
+///
+/// This function forwards the provided packet flow to the collector, where it
+/// may be further processed (for example, noise insertion) before export.
 fn send_pcap(flow_packets: Packets, tx_s3_to_collector: &Sender<Packets>) {
     // if noise { // insert noise // TODO: find a better way to do it
     //     stage3::insert_noise(&mut noisy_flow);
@@ -471,6 +524,11 @@ fn send_pcap(flow_packets: Packets, tx_s3_to_collector: &Sender<Packets>) {
     tx_s3_to_collector.send(flow_packets).unwrap();
 }
 
+/// Runs stage 3 of the pipeline, processing incoming seeded packet representations.
+///
+/// This function receives intermediate packet data from rx_s3, generates complete
+/// packets using the provided generator function, and then sends the generated flows
+/// to appropriate channels based on the configuration (online transmission and/or pcap export).
 pub fn run<T: PacketInfo>(
     generator: impl Fn(SeededData<PacketsIR<T>>) -> Packets,
     local_interfaces: Vec<Ipv4Addr>,
@@ -500,6 +558,11 @@ pub fn run<T: PacketInfo>(
     log::trace!("S3 stops");
 }
 
+/// Runs the pcap collector thread.
+///
+/// This function continually receives packet flows from the provided channel,
+/// aggregates them into a record vector, and sends the record vector to the next stage
+/// once it reaches a defined capacity (or when the channel is closed).
 pub fn run_collector(rx_collector: Receiver<Packets>, tx_collector: Sender<Vec<Packet>>) {
     log::trace!("Start pcap collector thread");
     let mut again = true;
@@ -517,6 +580,11 @@ pub fn run_collector(rx_collector: Receiver<Packets>, tx_collector: Sender<Vec<P
     }
 }
 
+/// Runs the pcap export thread.
+///
+/// This function waits for aggregated packet data from the export channel
+/// and writes the packets to a pcap file. The first received record creates
+/// a new pcap file, and subsequent records are appended.
 pub fn run_export(rx_pcap: Receiver<Vec<Packet>>, outfile: &str) {
     log::trace!("Start pcap export thread");
     if let Ok(packets_record) = rx_pcap.recv() {

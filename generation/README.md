@@ -26,16 +26,69 @@ Several generation modes are available.
 
 In this mode, Fos-R output a pcap file generated with the AI models.
 
+Usage: `fosr create-pcap [OPTIONS] --flow-count <FLOW_COUNT> --config-path <CONFIG_PATH>`
+
+Options:
+  -o, --outfile <OUTFILE>
+          Output pcap file for synthetic network packets [default: output.pcap]
+      --minimum-threads
+          Use as few threads as possible
+  -f, --flow-count <FLOW_COUNT>
+          Minimum number of flows to generate
+  -d, --start-unix-time <START_UNIX_TIME>
+          Unix time for the beginning of the pcap. By default, use current time
+  -s, --seed <SEED>
+          Seed for random number generation
+  -p, --patterns <PATTERNS>
+          Path to the patterns file
+  -a, --automata <AUTOMATA>
+          Path to automata directory
+  -u, --cpu-usage
+          Show CPU usage per thread
+  -c, --config-path <CONFIG_PATH>
+          Path to the information system configuration file
+  -h, --help
+          Print help
+
 ## Honeynet
 
 In this mode, Fos-R generates and play network traffic between different computers in the same network.
 Fos-R needs to be executed on each computer and provided a configuration file.
+
+Usage: `fosr honeynet [OPTIONS] --config-path <CONFIG_PATH>`
+
+Options:
+  -o, --outfile <OUTFILE>
+          Output pcap file of generated packets
+  -t, --taint
+          Taint the packets to easily identify them
+  -s, --seed <SEED>
+          Seed for random number generation
+  -p, --patterns <PATTERNS>
+          Path to the patterns file
+  -a, --automata <AUTOMATA>
+          Path to automata directory
+  -u, --cpu-usage
+          Show CPU usage per thread
+  -f, --flow-per-second <FLOW_PER_SECOND>
+          Overall number of flows to generate per second [default: 10]
+  -c, --config-path <CONFIG_PATH>
+          Path to the information system configuration file
 
 ## Replay-pcap
 
 _(Not available yet)_
 
 In this mode, Fos-R replays a pcap file with raw sockets.
+
+Usage: `fosr replay [OPTIONS]`
+
+Options:
+  -f, --file <FILE>                Path to the pcap file to be replayed [default: output.pcap]
+  -c, --config-path <CONFIG_PATH>  Path to the information system configuration file
+  -t, --taint                      Taint the packets to easily identify them
+      --fast                       Ignores timestamps and send packets without waiting
+  -h, --help                       Print help
 
 # Roadmap
 
