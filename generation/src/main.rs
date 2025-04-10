@@ -24,6 +24,15 @@ use pnet::{datalink, ipnetwork::IpNetwork};
 
 const CHANNEL_SIZE: usize = 500;
 
+/// The entry point of the application.
+///
+/// This function performs the following steps:
+/// 1. Initializes logging and parses command-line arguments.
+/// 2. Extracts all non-loopback IPv4 local interface addresses.
+/// 3. Depending on the parsed subcommand, it loads configuration, pattern files,
+///    automata libraries, and initializes several stages of the generator pipeline.
+/// 4. Invokes the `run` function with appropriate parameters to start the generation
+///    process either in honeynet mode or in pcap creation mode.
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args = cmd::Args::parse();
@@ -255,6 +264,44 @@ fn main() {
     };
 }
 
+/// Runs the generation pipeline by launching each of the stages as separate threads.
+///
+/// The pipeline consists of multiple stages:
+/// - Stage 0: Generates timing data using a uniform generator.
+/// - Stage 1: Transforms stage 0 output into flow data based on flow patterns.
+/// - Stage 2: Transforms flows into protocol-specific packet information using automata.
+/// - Stage 3: Generates packets from flow data and forwards them to a collector (if applicable),
+///            and optionally to stage 4 in online mode.
+/// - Stage 4: (Optional) Further processes packets in online mode.
+///
+/// Additionally, the function sets up a thread for monitoring statistics and handling
+/// control signals (Ctrl+C) to stop the generation threads.
+///
+/// # Parameters
+///
+/// - `local_interfaces`: A vector of local IPv4 interfaces. If empty, some stages may disable
+///   certain functionality (e.g., network-specific processing).
+/// - `outfile`: The optional output file path for exporting PCAP packets.
+/// - `s0`: An implementation of the Stage 0 trait that produces the initial seed data.
+/// - `s1`: An implementation of the Stage 1 trait that converts seed data to flow data.
+/// - `s1_count`: The number of Stage 1 threads to launch.
+/// - `s2`: An implementation of the Stage 2 trait that converts flows into protocol data.
+/// - `s2_count`: The number of Stage 2 threads to launch.
+/// - `s3`: The Stage3 instance that generates packets (for TCP, UDP, ICMP).
+/// - `s3_count`: The number of Stage 3 threads per protocol.
+/// - `cpu_usage`: A flag indicating if CPU usage statistics should be displayed in the monitoring UI.
+/// - `s4`: An optional Stage4 instance for additional online processing.
+///
+/// # Behavior
+///
+/// This function creates and links multiple bounded channels between the stages:
+/// - Between Stage 0 and Stage 1.
+/// - Between Stage 1 and Stage 2.
+/// - Between Stage 2 and Stage 3 (for each protocol).
+/// - Between Stage 3 and the PCAP collector/exporter (if an output file is provided).
+///
+/// It then spawns threads for each stage along with a monitoring thread, waits for all generation
+/// threads to finish, signals the UI thread to stop, and finally waits for the UI thread to exit.
 fn run(
     local_interfaces: Vec<Ipv4Addr>,
     outfile: Option<String>,

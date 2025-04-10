@@ -28,6 +28,22 @@ const INTERVAL_TIMEOUT_CHECKS_IN_SECS: u64 = 60;
 const SESSION_TIMEOUT_IN_SECS: u64 = 30;
 
 impl FlowId {
+    /// Check whether a given flow is compatible with the current FlowId.
+    /// Compatibility is based on matching source IP, destination IP, source port, and destination port.
+    ///
+    /// # Parameters
+    ///
+    /// - `f`: A reference to a Flow to compare.
+    pub fn is_compatible(&self, f: &Flow) -> bool {
+        let d = f.get_data();
+        self.src_ip == d.src_ip
+            && self.dst_ip == d.dst_ip
+            && self.src_port == d.src_port
+            && self.dst_port == d.dst_port
+    }
+
+    /// Closes the current session via iptables rules in Linux.
+    /// This function removes firewall rules created for the session.
     #[cfg(target_os = "linux")]
     fn close_session(&self) {
         log::debug!("Ip tables removed for {:?}", self);
@@ -86,6 +102,8 @@ impl FlowId {
         assert!(status.success());
     }
 
+    /// Opens a session by creating iptables rules on Linux.
+    /// Establishes firewall rules to monitor and control outgoing packets for this session.
     #[cfg(target_os = "linux")]
     fn open_session(&self) {
         // TODO: name chain "fosr"?
@@ -149,7 +167,21 @@ impl FlowId {
     }
 }
 
-// TODO: handle packets should listen to packets Receiver periodically
+/// Handles sending and receiving packets for a given protocol.
+///
+/// This function continuously:
+/// - Checks for session timeouts and prunes expired flows.
+/// - Determines the next packet to send based on flow timestamps.
+/// - Waits to receive an incoming packet with an appropriate timeout,
+///   or sends the next packet if its scheduled time has arrived.
+///
+/// # Parameters
+///
+/// - `proto`: The protocol associated with these packets.
+/// - `tx`: Transport sender channel used to send packets.
+/// - `rx`: Transport receiver channel used to receive packets.
+/// - `current_flows`: Shared list of active flows.
+/// - `taint`: Flag indicating whether taint-checking is active.
 fn handle_packets(
     proto: Protocol,
     mut tx: TransportSender,
@@ -311,6 +343,11 @@ fn handle_packets(
 }
 
 impl Stage4 {
+    /// Creates a new Stage4 instance.
+    ///
+    /// # Parameters
+    ///
+    /// - `taint`: Boolean flag to enable or disable taint-based packet filtering.
     pub fn new(taint: bool, fast: bool) -> Self {
         Stage4 {
             taint,
@@ -319,6 +356,16 @@ impl Stage4 {
         }
     }
 
+
+    /// Starts processing flows for Stage4.
+    ///
+    /// This method sets up transport channels for each protocol, spawns threads to handle packet
+    /// sending/receiving, and listens on the provided receivers for incoming flows. Once a new flow is
+    /// detected, corresponding iptables firewall rules are set up.
+    ///
+    /// # Parameters
+    ///
+    /// - `incoming_flows`: A HashMap mapping each Protocol to its incoming packets channel.
     pub fn start(&mut self, incoming_flows: HashMap<Protocol, Receiver<Packets>>) {
         log::trace!("Start S4");
         let mut sel = Select::new();
