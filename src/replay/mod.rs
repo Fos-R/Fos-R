@@ -50,7 +50,6 @@ impl Replay {
 
     fn split_flows(&self, packets: Vec<Packet>) -> HashMap<FlowId, Vec<Packet>> {
         let mut grouped_packets: HashMap<FlowId, Vec<Packet>> = HashMap::new();
-        // let mut non_remapped_ips: HashSet<Ipv4Addr> = HashSet::new();
 
         for mut packet in packets {
             let mut flow_id = FlowId::from_packet(&packet);
@@ -59,17 +58,11 @@ impl Replay {
             let src_ip = self
                 .ip_replacement_map
                 .get(&flow_id.src_ip)
-                .unwrap_or_else(|| {
-                    // non_remapped_ips.insert(flow_id.src_ip);
-                    &flow_id.src_ip
-                });
+                .unwrap_or(&flow_id.src_ip);
             let dst_ip = self
                 .ip_replacement_map
                 .get(&flow_id.dst_ip)
-                .unwrap_or_else(|| {
-                    // non_remapped_ips.insert(flow_id.dst_ip);
-                    &flow_id.dst_ip
-                });
+                .unwrap_or(&flow_id.dst_ip);
 
             flow_id.src_ip = *src_ip;
             flow_id.dst_ip = *dst_ip;
@@ -83,14 +76,9 @@ impl Replay {
                 println!("Malformed packet, skipping IP rewrite")
             }
 
-            let flow = grouped_packets.entry(flow_id).or_insert(Vec::new());
+            let flow = grouped_packets.entry(flow_id).or_default();
             flow.push(packet);
         }
-
-        // log::warn!(
-        //     "The following IPs were not remapped in the replay: {:#?}",
-        //     non_remapped_ips
-        // );
 
         grouped_packets
     }

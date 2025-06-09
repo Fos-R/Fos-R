@@ -271,7 +271,7 @@ fn main() {
 /// - Stage 1: Transforms stage 0 output into flow data based on flow patterns.
 /// - Stage 2: Transforms flows into protocol-specific packet information using automata.
 /// - Stage 3: Generates packets from flow data and forwards them to a collector (if applicable),
-///            and optionally to stage 4 in online mode.
+///   and optionally to stage 4 in online mode.
 /// - Stage 4: (Optional) Further processes packets in online mode.
 ///
 /// Additionally, the function sets up a thread for monitoring statistics and handling
