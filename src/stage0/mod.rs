@@ -5,9 +5,9 @@ use rand_core::*;
 use rand_distr::Distribution;
 use rand_distr::Uniform;
 use rand_pcg::Pcg32;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 

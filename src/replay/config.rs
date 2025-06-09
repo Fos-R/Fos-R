@@ -14,7 +14,7 @@ pub fn parse_config(config_str: &str) -> HashMap<Ipv4Addr, Ipv4Addr> {
     let table: HashMap<String, Vec<HashMap<String, String>>> =
         toml::from_str(config_str).expect(msg);
 
-    let ip_replacements = table
+    table
         .get("ip_replacements")
         .expect(msg)
         .iter()
@@ -23,7 +23,5 @@ pub fn parse_config(config_str: &str) -> HashMap<Ipv4Addr, Ipv4Addr> {
             let new = entry.get("new").expect(msg).parse().expect(msg);
             (old, new)
         })
-        .collect::<HashMap<Ipv4Addr, Ipv4Addr>>();
-
-    ip_replacements
+        .collect::<HashMap<Ipv4Addr, Ipv4Addr>>()
 }
