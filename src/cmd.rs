@@ -11,6 +11,7 @@ pub struct Args {
 pub enum Command {
     /// Generate and play network activity between hosts. Computers defined in the config file can
     /// easily join or exit the activity.
+    #[cfg(feature = "net_injection")]
     Inject {
         #[arg(short, long, default_value=None, help="Output pcap file of generated packets")]
         outfile: Option<String>,
@@ -93,6 +94,7 @@ pub enum Command {
     },
     /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
     /// hosts, etc.) are ignored.
+    #[cfg(feature = "replay")]
     Replay {
         #[arg(short, long, help = "Path to the pcap file to be replayed")]
         file: String,

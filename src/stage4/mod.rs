@@ -218,6 +218,7 @@ fn handle_packets(
         let received_data = match &packet_to_send {
             None => {
                 // log::trace!("No next packet to send");
+                // TODO: trouver une alternative à "next_with_timeout" pour Windows
                 rx_iter
                     .next_with_timeout(Duration::from_secs(1))
                     .expect("Network error")
