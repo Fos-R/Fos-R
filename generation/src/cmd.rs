@@ -136,28 +136,4 @@ pub enum Command {
         )]
         fast: bool,
     },
-    /// Reads a pcap file and plays its network activity.
-    Replay {
-        #[arg(
-            short,
-            long,
-            default_value = "output.pcap",
-            help = "Path to the pcap file to be replayed"
-        )]
-        file: String,
-        #[arg(
-            short,
-            long,
-            default_value=None,
-            help = "Path to the information system configuration file"
-        )]
-        config_path: Option<String>,
-        #[arg(
-            short,
-            long,
-            default_value_t = false,
-            help = "Taint the packets to easily identify them"
-        )]
-        taint: bool,
-    },
 }

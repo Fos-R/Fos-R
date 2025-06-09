@@ -2,8 +2,6 @@ use crate::structs::*;
 use pcap::{Capture, Offline};
 use pnet_packet::{ipv4, Packet as PnetPacket};
 use crate::utils::timeval_to_duration;
-use pcap::{Capture, Offline};
-use pnet_packet::Packet as PnetPacket;
 use std::collections::{HashMap, HashSet};
 use std::net::Ipv4Addr;
 use std::time::Instant;
