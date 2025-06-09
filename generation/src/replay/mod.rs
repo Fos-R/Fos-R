@@ -1,13 +1,12 @@
 use crate::structs::*;
 use pcap::{Capture, Offline};
 use pnet_packet::{ipv4, Packet as PnetPacket};
+use crate::utils::timeval_to_duration;
+use pcap::{Capture, Offline};
+use pnet_packet::Packet as PnetPacket;
 use std::collections::{HashMap, HashSet};
 use std::net::Ipv4Addr;
 use std::time::Instant;
-
-fn timeval_to_duration(timeval: libc::timeval) -> std::time::Duration {
-    std::time::Duration::new(timeval.tv_sec as u64, (timeval.tv_usec * 1000) as u32)
-}
 
 pub mod config;
 
@@ -80,7 +79,6 @@ impl Replay {
             if let Some(mut ip_packet) = ip_packet {
                 ip_packet.set_source(flow_id.src_ip);
                 ip_packet.set_destination(flow_id.dst_ip);
-
                 ip_packet.set_checksum(ipv4::checksum(&ip_packet.to_immutable()));
             } else {
                 println!("Malformed packet, skipping IP rewrite")

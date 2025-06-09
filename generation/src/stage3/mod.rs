@@ -6,6 +6,11 @@ use crate::tcp::*;
 use crate::udp::*;
 use crate::ui::*;
 
+use crate::tcp::TCPPacketInfo;
+use crate::udp::*;
+use crate::ui::*;
+use crate::utils::duration_to_timeval;
+use crate::*;
 use crossbeam_channel::{Receiver, Sender};
 use pcap::{Capture, PacketHeader};
 use pnet::util::MacAddr;
@@ -299,12 +304,12 @@ impl Stage3 {
     /// The timestamp is converted to a timeval structure.
     fn get_pcap_header(&self, packet_size: usize, ts: Duration) -> PacketHeader {
         PacketHeader {
-            ts: self.instant_to_timeval(ts),
+            ts: duration_to_timeval(ts),
             caplen: packet_size as u32,
             len: packet_size as u32,
         }
     }
-    
+
     fn instant_to_timeval(&self, duration: Duration) -> libc::timeval {
         libc::timeval {
             tv_sec: duration.as_secs() as _,

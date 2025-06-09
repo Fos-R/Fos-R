@@ -34,6 +34,17 @@ impl Display for Protocol {
     }
 }
 
+impl Display for Protocol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Protocol::TCP => write!(f, "TCP"),
+            Protocol::UDP => write!(f, "UDP"),
+            Protocol::ICMP => write!(f, "ICMP"),
+            Protocol::IGMP => write!(f, "IGMP"),
+        }
+    }
+}
+
 impl Protocol {
     pub fn iter() -> [Protocol; 2] {
         // TODO: add the other protocols when they are implemented
@@ -85,6 +96,7 @@ impl Flow {
     pub fn get_flow_id(&self) -> FlowId {
         let d = self.get_data();
         FlowId {
+            protocol: self.get_proto(),
             src_ip: d.src_ip,
             dst_ip: d.dst_ip,
             src_port: d.src_port,
@@ -265,6 +277,7 @@ impl Packets {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct FlowId {
+    pub protocol: Protocol,
     pub src_ip: Ipv4Addr,
     pub dst_ip: Ipv4Addr,
     pub src_port: u16,
@@ -311,6 +324,58 @@ impl FlowId {
             src_port,
             dst_port,
             proto,
+        }
+    }
+
+    pub fn normalize(&mut self) {
+        if self.src_ip > self.dst_ip
+            || (self.src_ip == self.dst_ip && self.src_port > self.dst_port)
+        {
+            std::mem::swap(&mut self.src_ip, &mut self.dst_ip);
+            std::mem::swap(&mut self.src_port, &mut self.dst_port);
+        }
+    }
+}
+
+impl FlowId {
+    pub fn is_compatible(&self, f: &Flow) -> bool {
+        let d = f.get_data();
+        self.src_ip == d.src_ip
+            && self.dst_ip == d.dst_ip
+            && self.src_port == d.src_port
+            && self.dst_port == d.dst_port
+    }
+
+    pub fn from_packet(p: &Packet) -> Self {
+        let eth_packet = ethernet::EthernetPacket::new(&p.data).unwrap();
+        let ip_packet = ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
+
+        let (protocol, src_port, dst_port) = match ip_packet.get_next_level_protocol() {
+            IpNextHeaderProtocols::Tcp => {
+                let tcp_packet = tcp::TcpPacket::new(ip_packet.payload()).unwrap();
+                (
+                    Protocol::TCP,
+                    tcp_packet.get_source(),
+                    tcp_packet.get_destination(),
+                )
+            }
+            IpNextHeaderProtocols::Udp => {
+                let udp_packet = udp::UdpPacket::new(ip_packet.payload()).unwrap();
+                (
+                    Protocol::UDP,
+                    udp_packet.get_source(),
+                    udp_packet.get_destination(),
+                )
+            }
+            _ => panic!("Unsupported protocol"),
+        };
+
+        FlowId {
+            protocol,
+            src_ip: ip_packet.get_source(),
+            dst_ip: ip_packet.get_destination(),
+            src_port,
+            dst_port,
         }
     }
 
