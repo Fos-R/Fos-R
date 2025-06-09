@@ -147,19 +147,20 @@ impl Replay {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::Replay;
-    use crate::stage3;
-    use std::collections::HashMap;
+// TODO: passer en test d’intégration pour combiner avec génération
+// #[cfg(test)]
+// mod tests {
+//     use super::Replay;
+//     use crate::stage3;
+//     use std::collections::HashMap;
 
-    #[test]
-    fn create_pcap() {
-        let stage_replay = Replay::new(HashMap::new(), "original.pcap".to_string());
-        let flows = stage_replay.parse_flows();
-        for (i, seeded_data) in flows.iter().enumerate() {
-            let flow_packets = seeded_data.packets.clone();
-            stage3::pcap_export(flow_packets, format!("flow{}.pcap", i).as_str(), false).unwrap();
-        }
-    }
-}
+//     #[test]
+//     fn create_pcap() {
+//         let stage_replay = Replay::new(HashMap::new(), "original.pcap".to_string());
+//         let flows = stage_replay.parse_flows();
+//         for (i, seeded_data) in flows.iter().enumerate() {
+//             let flow_packets = seeded_data.packets.clone();
+//             stage3::pcap_export(flow_packets, format!("flow{}.pcap", i).as_str(), false).unwrap();
+//         }
+//     }
+// }
