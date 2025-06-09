@@ -94,11 +94,7 @@ pub enum Command {
     /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
     /// hosts, etc.) are ignored.
     Replay {
-        #[arg(
-            short,
-            long,
-            help = "Path to the pcap file to be replayed"
-        )]
+        #[arg(short, long, help = "Path to the pcap file to be replayed")]
         file: String,
         #[arg(
             short,

@@ -2,7 +2,7 @@
 name = "fosr"
 version = "0.1.1-dev"
 authors = ["Pierre-François Gimenez","Florentin Labelle","Evan Morin"]
-edition = "2021"
+edition = "2024"
 description = "Fos-R (Forger Of Security Records) is a synthetic network traffic generator."
 homepage = "https://pfgimenez.fr/fosr/"
 repository = "https://github.com/Fos-R/Fos-R"

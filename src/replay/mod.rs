@@ -1,10 +1,10 @@
 use crate::structs::*;
-use pnet_packet::{ipv4, Packet as PnetPacket};
+use pcap_file::pcap::PcapReader;
+use pnet_packet::{Packet as PnetPacket, ipv4};
 use std::collections::HashMap;
+use std::fs::File;
 use std::net::Ipv4Addr;
 use std::time::Instant;
-use std::fs::File;
-use pcap_file::pcap::PcapReader;
 
 pub mod config;
 
@@ -107,10 +107,7 @@ impl Replay {
             .filter(|&&d| d == PacketDirection::Backward)
             .count();
 
-        let timestamps: Vec<_> = packets
-            .iter()
-            .map(|p| p.timestamp)
-            .collect();
+        let timestamps: Vec<_> = packets.iter().map(|p| p.timestamp).collect();
 
         let first_timestamp = timestamps[0];
         let first_instant = self.start_time - first_timestamp;

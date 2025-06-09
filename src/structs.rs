@@ -1,5 +1,5 @@
 use pnet_packet::ip::IpNextHeaderProtocols;
-use pnet_packet::{ethernet, ipv4, tcp, udp, Packet as _};
+use pnet_packet::{Packet as _, ethernet, ipv4, tcp, udp};
 use serde::Deserialize;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display};

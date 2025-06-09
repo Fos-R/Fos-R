@@ -12,9 +12,9 @@ use std::fs;
 use std::net::Ipv4Addr;
 use std::path::Path;
 use std::process;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -221,9 +221,11 @@ fn main() {
                 flow_router_tx.insert(proto, tx);
                 stage_4_rx.insert(proto, rx);
             }
-            let ip_replacement_map : HashMap<Ipv4Addr, Ipv4Addr> = if let Some(path) = config_path {
+            let ip_replacement_map: HashMap<Ipv4Addr, Ipv4Addr> = if let Some(path) = config_path {
                 // read from config file
-                replay::config::parse_config(&fs::read_to_string(path).expect("Cannot access the configuration file."))
+                replay::config::parse_config(
+                    &fs::read_to_string(path).expect("Cannot access the configuration file."),
+                )
             } else {
                 // no IP replacement
                 HashMap::new()

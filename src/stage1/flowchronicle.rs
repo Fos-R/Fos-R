@@ -46,20 +46,16 @@ impl From<PartiallyDefinedFlowData> for Flow {
 impl PartiallyDefinedFlowData {
     fn set_value(&mut self, rng: &mut impl RngCore, f: &Feature, index: usize) {
         match f {
-            Feature::SrcIP(ref v) => self.src_ip = Some(v.0[index]),
-            Feature::DstIP(ref v) => self.dst_ip = Some(v.0[index]),
-            Feature::DstPt(ref v) => self.dst_port = Some(v[index]),
-            Feature::FwdPkt(ref v) => {
-                self.fwd_packets_count = Some(v.0[index].sample(rng) as usize)
-            }
-            Feature::BwdPkt(ref v) => {
-                self.bwd_packets_count = Some(v.0[index].sample(rng) as usize)
-            }
+            Feature::SrcIP(v) => self.src_ip = Some(v.0[index]),
+            Feature::DstIP(v) => self.dst_ip = Some(v.0[index]),
+            Feature::DstPt(v) => self.dst_port = Some(v[index]),
+            Feature::FwdPkt(v) => self.fwd_packets_count = Some(v.0[index].sample(rng) as usize),
+            Feature::BwdPkt(v) => self.bwd_packets_count = Some(v.0[index].sample(rng) as usize),
             Feature::FwdByt(_) => (), // ignore
             Feature::BwdByt(_) => (), // ignore
             Feature::Duration(_) => (),
             //                self.total_duration = Some(Duration::from_millis(v.0[index].sample(rng) as u64))
-            Feature::Proto(ref v) => self.proto = Some(v[0]),
+            Feature::Proto(v) => self.proto = Some(v[0]),
             Feature::Flags(_) => (),
         }
     }
@@ -193,12 +189,7 @@ struct Pattern {
 
 impl Pattern {
     /// Sample flows
-    fn sample(
-        &self,
-        rng: &mut impl RngCore,
-        config: &Hosts,
-        ts: Duration,
-    ) -> impl Iterator<Item = Flow> {
+    fn sample(&self, rng: &mut impl RngCore, config: &Hosts, ts: Duration) -> Vec<Flow> {
         loop {
             // First, sample all the free cells
             let mut partially_defined_flows = self.sample_free_cells(rng, self.partial_flows.len());
@@ -264,7 +255,10 @@ impl Pattern {
                 thread::sleep(Duration::from_millis(1));
                 continue;
             }
-            return partially_defined_flows.into_iter().map(|p| p.into());
+            return partially_defined_flows
+                .into_iter()
+                .map(|p| p.into())
+                .collect();
         }
     }
 }
@@ -365,11 +359,10 @@ impl Stage1 for FCGenerator {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
         let index = self.set.pattern_distrib.sample(&mut rng);
         let pattern = &self.set.patterns[index];
-        pattern
-            .sample(&mut rng, &self.config, ts.data)
-            .map(move |f| SeededData {
-                seed: rng.next_u64(),
-                data: f,
-            })
+        let p = pattern.sample(&mut rng, &self.config, ts.data);
+        p.into_iter().map(move |f| SeededData {
+            seed: rng.next_u64(),
+            data: f,
+        })
     }
 }

@@ -2,11 +2,11 @@ use crate::structs::*;
 use crossbeam_channel::Receiver;
 use crossbeam_channel::Select;
 use pnet::transport::{
-    ipv4_packet_iter, transport_channel, TransportChannelType, TransportReceiver, TransportSender,
+    TransportChannelType, TransportReceiver, TransportSender, ipv4_packet_iter, transport_channel,
 };
-use pnet_packet::ip::IpNextHeaderProtocol;
 use pnet_packet::MutablePacket;
 use pnet_packet::Packet;
+use pnet_packet::ip::IpNextHeaderProtocol;
 use std::collections::HashMap;
 use std::process::Command;
 use std::sync::Arc;
@@ -342,7 +342,6 @@ impl Stage4 {
         }
     }
 
-
     /// Starts processing flows for Stage4.
     ///
     /// This method sets up transport channels for each protocol, spawns threads to handle packet
@@ -352,7 +351,7 @@ impl Stage4 {
     /// # Parameters
     ///
     /// - `incoming_flows`: A HashMap mapping each Protocol to its incoming packets channel.
-pub fn start(&mut self, incoming_flows: HashMap<Protocol, Receiver<Packets>>) {
+    pub fn start(&mut self, incoming_flows: HashMap<Protocol, Receiver<Packets>>) {
         log::trace!("Start S4");
         let mut sel = Select::new();
         let mut join_handles = Vec::new();

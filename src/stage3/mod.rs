@@ -7,9 +7,9 @@ use crate::tcp::TCPPacketInfo;
 use crate::udp::*;
 use crate::ui::*;
 use crossbeam_channel::{Receiver, Sender};
-use pcap_file::pcap::PcapWriter;
 use pcap_file::PcapError;
 use pcap_file::pcap::PcapPacket;
+use pcap_file::pcap::PcapWriter;
 use pnet::util::MacAddr;
 use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
 use pnet_packet::ip::IpNextHeaderProtocol;
@@ -18,9 +18,9 @@ use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
 use pnet_packet::udp::MutableUdpPacket;
 use rand_core::*;
 use rand_pcg::Pcg32;
+use std::fs::OpenOptions;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
-use std::fs::OpenOptions;
 
 /// Represents stage 3 of the packet generator.
 /// It contains configuration data and state necessary for generating packets.
@@ -447,11 +447,11 @@ impl Stage3 {
 /// appended to an existing pcap file; otherwise, a new file is created.
 pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(), PcapError> {
     let file_out = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .append(append)
-            .open(outfile)
-            .expect("Error opening or creating file");
+        .write(true)
+        .create(true)
+        .append(append)
+        .open(outfile)
+        .expect("Error opening or creating file");
     let mut pcap_writer = PcapWriter::new(file_out).expect("Error writing file");
 
     // let mut savefile = if append {
@@ -463,7 +463,13 @@ pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result
     data.sort();
     // TODO: find a way to not write packets one by one...
     for packet in data {
-        pcap_writer.write_packet(&PcapPacket { timestamp: packet.timestamp, orig_len: packet.data.len() as u32, data: packet.data.into()}).unwrap();
+        pcap_writer
+            .write_packet(&PcapPacket {
+                timestamp: packet.timestamp,
+                orig_len: packet.data.len() as u32,
+                data: packet.data.into(),
+            })
+            .unwrap();
     }
     Ok(())
 }
