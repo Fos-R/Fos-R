@@ -450,7 +450,7 @@ pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result
             .write(true)
             .create(true)
             .append(append)
-            .open(&outfile)
+            .open(outfile)
             .expect("Error opening or creating file");
     let mut pcap_writer = PcapWriter::new(file_out).expect("Error writing file");
 
