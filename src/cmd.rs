@@ -26,7 +26,7 @@ pub enum Command {
     // },
     /// Generate and play network activity between hosts. Computers defined in the config file can
     /// easily join or exit the activity.
-    Honeynet {
+    Inject {
         #[arg(short, long, default_value=None, help="Output pcap file of generated packets")]
         outfile: Option<String>,
         #[arg(

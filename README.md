@@ -50,12 +50,12 @@ Options:
   -h, --help
           Print help
 
-## Honeynet
+## Network injection
 
 In this mode, Fos-R generates and play network traffic between different computers in the same network.
 Fos-R needs to be executed on each computer and provided a configuration file.
 
-Usage: `fosr honeynet [OPTIONS] --config-path <CONFIG_PATH>`
+Usage: `fosr inject [OPTIONS] --config-path <CONFIG_PATH>`
 
 Options:
   -o, --outfile <OUTFILE>
