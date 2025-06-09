@@ -212,12 +212,6 @@ fn main() {
             fast,
         } => {
             // Read content of the file
-            let config_str = if let Some(path) = config_path {
-                &fs::read_to_string(path).expect("Cannot access the configuration file.")
-            } else {
-                include_str!("../replay.toml")
-            };
-
             log::debug!("Initialize stages");
             let mut flow_router_tx = HashMap::new();
             let mut stage_4_rx = HashMap::new();
@@ -227,8 +221,14 @@ fn main() {
                 flow_router_tx.insert(proto, tx);
                 stage_4_rx.insert(proto, rx);
             }
+            let ip_replacement_map : HashMap<Ipv4Addr, Ipv4Addr> = if let Some(path) = config_path {
+                // read from config file
+                replay::config::parse_config(&fs::read_to_string(path).expect("Cannot access the configuration file."))
+            } else {
+                // no IP replacement
+                HashMap::new()
+            };
 
-            let ip_replacement_map = replay::config::parse_config(config_str);
             let stage_replay = replay::Replay::new(ip_replacement_map, file);
             let flows = stage_replay.parse_flows();
 

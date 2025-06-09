@@ -2,7 +2,7 @@ use crate::structs::*;
 use pcap::{Capture, Offline};
 use pnet_packet::{ipv4, Packet as PnetPacket};
 use crate::utils::timeval_to_duration;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::net::Ipv4Addr;
 use std::time::Instant;
 
@@ -49,7 +49,7 @@ impl Replay {
 
     fn split_flows(&self, packets: Vec<Packet>) -> HashMap<FlowId, Vec<Packet>> {
         let mut grouped_packets: HashMap<FlowId, Vec<Packet>> = HashMap::new();
-        let mut non_remapped_ips: HashSet<Ipv4Addr> = HashSet::new();
+        // let mut non_remapped_ips: HashSet<Ipv4Addr> = HashSet::new();
 
         for mut packet in packets {
             let mut flow_id = FlowId::from_packet(&packet);
@@ -59,14 +59,14 @@ impl Replay {
                 .ip_replacement_map
                 .get(&flow_id.src_ip)
                 .unwrap_or_else(|| {
-                    non_remapped_ips.insert(flow_id.src_ip);
+                    // non_remapped_ips.insert(flow_id.src_ip);
                     &flow_id.src_ip
                 });
             let dst_ip = self
                 .ip_replacement_map
                 .get(&flow_id.dst_ip)
                 .unwrap_or_else(|| {
-                    non_remapped_ips.insert(flow_id.dst_ip);
+                    // non_remapped_ips.insert(flow_id.dst_ip);
                     &flow_id.dst_ip
                 });
 
@@ -86,10 +86,10 @@ impl Replay {
             flow.push(packet);
         }
 
-        log::warn!(
-            "The following IPs were not remapped in the replay: {:#?}",
-            non_remapped_ips
-        );
+        // log::warn!(
+        //     "The following IPs were not remapped in the replay: {:#?}",
+        //     non_remapped_ips
+        // );
 
         grouped_packets
     }
