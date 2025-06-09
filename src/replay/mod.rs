@@ -1,10 +1,10 @@
 use crate::structs::*;
-use pcap::{Capture, Offline};
 use pnet_packet::{ipv4, Packet as PnetPacket};
-use crate::utils::timeval_to_duration;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
 use std::time::Instant;
+use std::fs::File;
+use pcap_file::pcap::PcapReader;
 
 pub mod config;
 
@@ -35,14 +35,15 @@ impl Replay {
     }
 
     fn read_file(&self) -> Vec<Packet> {
-        let mut capture = Capture::<Offline>::from_file(&self.file).unwrap();
+        let file_in = File::open(&self.file).expect("Error opening file");
+        let mut pcap_reader = PcapReader::new(file_in).unwrap();
         let mut packets: Vec<Packet> = vec![];
-        while let Ok(packet) = capture.next_packet() {
-            let packet_: Packet = Packet {
-                header: *packet.header,
+        while let Some(packet) = pcap_reader.next_packet() {
+            let packet = packet.unwrap();
+            packets.push(Packet {
+                timestamp: packet.timestamp,
                 data: packet.data.to_vec(),
-            };
-            packets.push(packet_);
+            });
         }
         packets
     }
@@ -120,8 +121,7 @@ impl Replay {
 
         let timestamps: Vec<_> = packets
             .iter()
-            .map(|p| p.header.ts)
-            .map(timeval_to_duration)
+            .map(|p| p.timestamp)
             .collect();
 
         let first_timestamp = timestamps[0];
@@ -141,7 +141,7 @@ impl Replay {
                 ttl_server: 64,
                 fwd_packets_count: Some(fwd_packets_count),
                 bwd_packets_count: Some(bwd_packets_count),
-                timestamp: timeval_to_duration(packets[0].header.ts) - time_shift,
+                timestamp: packets[0].timestamp - time_shift,
             }),
         }
     }

@@ -1,4 +1,3 @@
-use pcap::PacketHeader;
 use pnet_packet::ip::IpNextHeaderProtocols;
 use pnet_packet::{ethernet, ipv4, tcp, udp, Packet as _};
 use serde::Deserialize;
@@ -201,10 +200,9 @@ pub struct PacketsIR<T: PacketInfo> {
 }
 
 // Stage 3 structures
-
 #[derive(Debug, Clone)]
 pub struct Packet {
-    pub header: PacketHeader,
+    pub timestamp: Duration,
     pub data: Vec<u8>,
 }
 
@@ -218,11 +216,7 @@ impl Packet {
 
 impl Ord for Packet {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.header
-            .ts
-            .tv_sec
-            .cmp(&other.header.ts.tv_sec)
-            .then(self.header.ts.tv_usec.cmp(&other.header.ts.tv_usec))
+        self.timestamp.cmp(&other.timestamp)
     }
 }
 
@@ -234,8 +228,7 @@ impl PartialOrd for Packet {
 
 impl PartialEq for Packet {
     fn eq(&self, other: &Self) -> bool {
-        self.header.ts.tv_usec == other.header.ts.tv_usec
-            && self.header.ts.tv_sec == other.header.ts.tv_sec
+        self.timestamp == other.timestamp
     }
 }
 

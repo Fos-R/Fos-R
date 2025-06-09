@@ -6,9 +6,10 @@ use crate::structs::*;
 use crate::tcp::TCPPacketInfo;
 use crate::udp::*;
 use crate::ui::*;
-use crate::utils::duration_to_timeval;
 use crossbeam_channel::{Receiver, Sender};
-use pcap::{Capture, PacketHeader};
+use pcap_file::pcap::PcapWriter;
+use pcap_file::PcapError;
+use pcap_file::pcap::PcapPacket;
 use pnet::util::MacAddr;
 use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
 use pnet_packet::ip::IpNextHeaderProtocol;
@@ -19,7 +20,7 @@ use rand_core::*;
 use rand_pcg::Pcg32;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
-use std::time::Duration;
+use std::fs::OpenOptions;
 
 /// Represents stage 3 of the packet generator.
 /// It contains configuration data and state necessary for generating packets.
@@ -295,24 +296,6 @@ impl Stage3 {
         Some(())
     }
 
-    /// Returns a pcap PacketHeader for a given packet size and timestamp.
-    ///
-    /// The timestamp is converted to a timeval structure.
-    fn get_pcap_header(&self, packet_size: usize, ts: Duration) -> PacketHeader {
-        PacketHeader {
-            ts: duration_to_timeval(ts),
-            caplen: packet_size as u32,
-            len: packet_size as u32,
-        }
-    }
-
-    fn instant_to_timeval(&self, duration: Duration) -> libc::timeval {
-        libc::timeval {
-            tv_sec: duration.as_secs() as _,
-            tv_usec: duration.subsec_micros() as _,
-        }
-    }
-
     pub fn new(taint: bool, config: Hosts) -> Self {
         Stage3 {
             taint,
@@ -373,7 +356,7 @@ impl Stage3 {
                 .expect("Incorrect TCP packet");
 
             packets.push(Packet {
-                header: self.get_pcap_header(packet_size, packet_info.get_ts()),
+                timestamp: packet_info.get_ts(),
                 data: packet,
             });
             directions.push(packet_info.get_direction());
@@ -430,7 +413,7 @@ impl Stage3 {
                 .expect("Incorrect UDP packet");
 
             packets.push(Packet {
-                header: self.get_pcap_header(packet_size, packet_info.get_ts()),
+                timestamp: packet_info.get_ts(),
                 data: packet.clone(),
             });
             directions.push(packet_info.get_direction());
@@ -462,22 +445,26 @@ impl Stage3 {
 /// The packets are sorted by their header (timestamp), and then written
 /// sequentially to the specified file. If append is true, the packets are
 /// appended to an existing pcap file; otherwise, a new file is created.
-pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(), pcap::Error> {
-    let capture = Capture::dead(pcap::Linktype(1))?;
-    let mut savefile = if append {
-        capture.savefile_append(outfile)?
-    } else {
-        capture.savefile(outfile)?
-    };
+pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(), PcapError> {
+    let file_out = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .append(append)
+            .open(&outfile)
+            .expect("Error opening or creating file");
+    let mut pcap_writer = PcapWriter::new(file_out).expect("Error writing file");
+
+    // let mut savefile = if append {
+    //     capture.savefile_append(outfile)?
+    // } else {
+    //     capture.savefile(outfile)?
+    // };
+
     data.sort();
     // TODO: find a way to not write packets one by one...
     for packet in data {
-        savefile.write(&pcap::Packet {
-            header: &packet.header,
-            data: &packet.data,
-        });
+        pcap_writer.write_packet(&PcapPacket { timestamp: packet.timestamp, orig_len: packet.data.len() as u32, data: packet.data.into()}).unwrap();
     }
-    savefile.flush().unwrap();
     Ok(())
 }
 

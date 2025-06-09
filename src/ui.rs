@@ -30,7 +30,7 @@ impl Stats {
         let mut pc = self.packets_counter.lock().unwrap();
         *pc += p.packets.len() as u64;
         let mut bc = self.bytes_counter.lock().unwrap();
-        *bc += p.packets.iter().map(|p| p.header.len).sum::<u32>() as u64;
+        *bc += p.packets.iter().map(|p| p.data.len()).sum::<usize>() as u64;
     }
 }
 
