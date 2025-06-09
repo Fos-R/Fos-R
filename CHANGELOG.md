@@ -4,14 +4,17 @@
 
 ### Added
 
+- Replay mode
 - Crate includes a binary and a library
 - Support of IPv4 UDP packets
 - Default models: automata for protocols DNS and NTP
 - Significantly reduced binary size by compressing default models
+- Better documentation
 
 ### Changed
 
 - IPTables rules are more specific to avoid interacting with normal communications
+- Remove libpcap dependency
 
 ## v0.1.0
 

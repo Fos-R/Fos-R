@@ -2,7 +2,6 @@ pub mod config;
 pub mod structs;
 pub mod ui;
 
-mod utils;
 mod icmp;
 mod tcp;
 mod udp;
