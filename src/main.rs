@@ -32,7 +32,7 @@ const CHANNEL_SIZE: usize = 500;
 /// 3. Depending on the parsed subcommand, it loads configuration, pattern files,
 ///    automata libraries, and initializes several stages of the generator pipeline.
 /// 4. Invokes the `run` function with appropriate parameters to start the generation
-///    process either in honeynet mode or in pcap creation mode.
+///    process either in injection mode or in pcap creation mode.
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args = cmd::Args::parse();
@@ -57,7 +57,7 @@ fn main() {
 
     match args.command {
         // cmd::Command::Replay { infile, .. } => replay::replay(&infile),
-        cmd::Command::Honeynet {
+        cmd::Command::Inject {
             taint,
             seed,
             automata,
