@@ -26,6 +26,7 @@ Several generation modes are available.
 
 In this mode, Fos-R output a pcap file generated with the AI models.
 
+```
 Usage: `fosr create-pcap [OPTIONS] --flow-count <FLOW_COUNT> --config-path <CONFIG_PATH>`
 
 Options:
@@ -49,12 +50,14 @@ Options:
           Path to the information system configuration file
   -h, --help
           Print help
+```
 
 ## Network injection
 
 In this mode, Fos-R generates and play network traffic between different computers in the same network.
 Fos-R needs to be executed on each computer and provided a configuration file.
 
+```
 Usage: `fosr inject [OPTIONS] --config-path <CONFIG_PATH>`
 
 Options:
@@ -74,13 +77,13 @@ Options:
           Overall number of flows to generate per second [default: 10]
   -c, --config-path <CONFIG_PATH>
           Path to the information system configuration file
+```
 
 ## Replay-pcap
 
-_(Not available yet)_
-
 In this mode, Fos-R replays a pcap file with raw sockets.
 
+```
 Usage: `fosr replay [OPTIONS]`
 
 Options:
@@ -89,6 +92,7 @@ Options:
   -t, --taint                      Taint the packets to easily identify them
       --fast                       Ignores timestamps and send packets without waiting
   -h, --help                       Print help
+```
 
 # Roadmap
 
