@@ -107,7 +107,11 @@ Options:
 
 - Generation quality
 - High quality default models
+
+## v0.5 - Q1 2026 - "Transferability"
+
 - Concept drift mode
+- Transfer learning
 
 # Technical description
 
