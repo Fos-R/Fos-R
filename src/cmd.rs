@@ -9,21 +9,6 @@ pub struct Args {
 
 #[derive(Debug, Subcommand, Clone)]
 pub enum Command {
-    // /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
-    // /// hosts, etc.) are ignored.
-    // Replay {
-    //     #[arg(short, long, help = "Input pcap file to replay")]
-    //     infile: String,
-    //     #[arg(short='d', long, default_value=None, help="Time to start the replay of the pcap file. Default: starts now.")]
-    //     start_time: Option<String>,
-    //     #[arg(
-    //         short,
-    //         long,
-    //         default_value_t = false,
-    //         help = "Taint the packets to easily identify them"
-    //     )]
-    //     taint: bool,
-    // },
     /// Generate and play network activity between hosts. Computers defined in the config file can
     /// easily join or exit the activity.
     Inject {
@@ -106,12 +91,12 @@ pub enum Command {
         )]
         config_path: String,
     },
-    /// Reads a pcap file and plays its network activity.
+    /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
+    /// hosts, etc.) are ignored.
     Replay {
         #[arg(
             short,
             long,
-            default_value = "output.pcap",
             help = "Path to the pcap file to be replayed"
         )]
         file: String,
