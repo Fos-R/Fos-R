@@ -2,6 +2,7 @@ use fosr::stage0;
 use fosr::stage1;
 use fosr::stage2;
 use fosr::stage3;
+#[cfg(feature = "net_injection")]
 use fosr::stage4;
 use fosr::structs::*;
 use fosr::*;
@@ -56,7 +57,7 @@ fn main() {
     log::debug!("IPv4 interfaces: {:?}", &local_interfaces);
 
     match args.command {
-        // cmd::Command::Replay { infile, .. } => replay::replay(&infile),
+        #[cfg(feature = "net_injection")]
         cmd::Command::Inject {
             taint,
             seed,
@@ -205,6 +206,7 @@ fn main() {
                 );
             }
         }
+        #[cfg(feature = "replay")]
         cmd::Command::Replay {
             file,
             config_path,
@@ -498,6 +500,7 @@ fn run(
         // STAGE 4 (online mode only)
         // TODO: only one stage 4 for all protocols
 
+        #[cfg(any(feature = "replay", feature = "net_injection"))]
         if let Some(mut s4) = s4 {
             let builder = thread::Builder::new().name("Stage4".into());
             gen_threads.push(

@@ -31,5 +31,6 @@ include-bytes-zstd = "0.1.0"
 pcap-file = "2.0.0"
 
 [features]
-default = ["net_injection"]
+default = ["net_injection", "replay"]
 net_injection = []
+replay = []
