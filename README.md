@@ -1,57 +1,138 @@
-# Forger Of Security Records
+![](https://raw.githubusercontent.com/Fos-R/Fos-R/refs/heads/main/resources/logo.png)
 
-FosR is a software to generate synthetic network activity using AI. It relies on training data to learn user and software behavior so it can generate realistic and diverse data.
+Fos-R is a network traffic generator based on AI models. It does not require GPU and can generate in the order of Gbps of network traffic with a laptop.
 
-FosR is structured in two phases:
-- the learning phase (in Python), that should be run once and requires input pcap data ;
-- the generation phase (in Rust), that can generate data from the models learned in the first phase.
+## Setup
 
-## Requirements
+First, you need to install the pcap library. On Ubuntu/Debian, you can do:
 
-To run this repository, you will need:
-- python3
-- pip
-- rustc
-- libpcap
+    # apt install libpcap-dev
 
-_In future versions, we will propose learned models and compiled binaries._
+You can then install Fos-R with:
 
-## How to use
+    $ cargo install fosr
 
-Two steps:
-- copy your pcap in the `data` folder
-- call the script `./extract_learn_generate.sh data/your_file.pcap`
+Then, you can check the install with:
 
-The learning phase can take a few days!
+    $ fosr
 
-## Using the test environment
+If you want Fos-R to use the network on Linux, you must execute it as root.
 
-Install Vagrant and a virtual machine provider for vagrant (e.g. Virtualbox or libvirt):
-```sh
-cd
-vagrant up
-```
+# Generation modes
 
-You can then access the virtual machines and start fosr with:
-```sh
-vagrant ssh vm1 # or vm2
-cd fosr
-sudo ./target/release/fosr honeynet -t -c vagrant.toml
-```
+Several generation modes are available.
 
-And gather the communications in a second terminal:
-```sh
-vagrant ssh vm1
-cd fosr
-sudo tcpdump -i eth1 -w test.pcap
-```
+## Create-pcap
 
-The `test.pcap` file would then be available on the host machine in the `generation` folder.
+In this mode, Fos-R output a pcap file generated with the AI models.
 
-# Science: how does it work?
+Usage: `fosr create-pcap [OPTIONS] --flow-count <FLOW_COUNT> --config-path <CONFIG_PATH>`
 
-## Learning phase
+Options:
+  -o, --outfile <OUTFILE>
+          Output pcap file for synthetic network packets [default: output.pcap]
+      --minimum-threads
+          Use as few threads as possible
+  -f, --flow-count <FLOW_COUNT>
+          Minimum number of flows to generate
+  -d, --start-unix-time <START_UNIX_TIME>
+          Unix time for the beginning of the pcap. By default, use current time
+  -s, --seed <SEED>
+          Seed for random number generation
+  -p, --patterns <PATTERNS>
+          Path to the patterns file
+  -a, --automata <AUTOMATA>
+          Path to automata directory
+  -u, --cpu-usage
+          Show CPU usage per thread
+  -c, --config-path <CONFIG_PATH>
+          Path to the information system configuration file
+  -h, --help
+          Print help
 
+## Honeynet
 
+In this mode, Fos-R generates and play network traffic between different computers in the same network.
+Fos-R needs to be executed on each computer and provided a configuration file.
 
-## Generation phase
+Usage: `fosr honeynet [OPTIONS] --config-path <CONFIG_PATH>`
+
+Options:
+  -o, --outfile <OUTFILE>
+          Output pcap file of generated packets
+  -t, --taint
+          Taint the packets to easily identify them
+  -s, --seed <SEED>
+          Seed for random number generation
+  -p, --patterns <PATTERNS>
+          Path to the patterns file
+  -a, --automata <AUTOMATA>
+          Path to automata directory
+  -u, --cpu-usage
+          Show CPU usage per thread
+  -f, --flow-per-second <FLOW_PER_SECOND>
+          Overall number of flows to generate per second [default: 10]
+  -c, --config-path <CONFIG_PATH>
+          Path to the information system configuration file
+
+## Replay-pcap
+
+_(Not available yet)_
+
+In this mode, Fos-R replays a pcap file with raw sockets.
+
+Usage: `fosr replay [OPTIONS]`
+
+Options:
+  -f, --file <FILE>                Path to the pcap file to be replayed [default: output.pcap]
+  -c, --config-path <CONFIG_PATH>  Path to the information system configuration file
+  -t, --taint                      Taint the packets to easily identify them
+      --fast                       Ignores timestamps and send packets without waiting
+  -h, --help                       Print help
+
+# Roadmap
+
+## v0.2 - Q2 2025 - "Usability"
+
+- Documentation and API
+- User interface
+- Performance and binary size
+
+## v0.3 - Q3 2025 - "Portability"
+
+- Windows version
+- WASM version (pcap creation only)
+
+## v0.4 - Q4 2025 - "Quality"
+
+- Generation quality
+- High quality default models
+
+## v0.5 - Q1 2026 - "Transferability"
+
+- Concept drift mode
+- Transfer learning
+
+# Technical description
+
+The generation is organized in four stages.
+
+## Stage 0: timestamp generation
+
+This steps selects the starting point of the next flow to generate.
+
+## Stage 1: netflow generation
+
+This step in based on the FlowChronicle tool. Using as input the set of learned patterns,it generates new netflow records by first sampling patterns and then sampling non-fixed values inside these patterns.
+
+## Stage 2: intermediate representation generation
+
+This step is based on the TADAM tool. Using the flows generated by stage 1, it creates a list of PacketsIR<T>, where T is a transport protocol. Each PacketsIR<T> corresponds to a flow between two IP addresses. This structure contains the original flow (generated by stage 1) with the metadata of the flow. There is also a vector packets_info that contains some information about the packet header: packet direction (forward or backward), payload size and type, timestamp, and TCP flags when the transport protocol is TCP.
+
+## Stage 3: packet generation
+
+Stage 3 creates a list of complete packets by completing the information given by the output of stage 2.
+
+## Stage 4 (optional): send and receive packets on the network
+
+Stage 4 relies on raw sockets to send and receive the packets generated by stage 3.
