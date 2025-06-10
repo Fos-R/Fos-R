@@ -1,15 +1,16 @@
-stages:
-  - test
-  - build
-  - publish
-
 tests:
+  tags:
+    - ci.inria.fr
+    - small
   stage: test
   image: rust
   script:
     - cargo test
 
 build:amd64:
+  tags:
+    - ci.inria.fr
+    - small
   stage: build
   image: rust
   script:
@@ -19,6 +20,9 @@ build:amd64:
       - target/release/fosr
 
 rustdoc:
+  tags:
+    - ci.inria.fr
+    - small
   stage: build
   image: rust
   script:
@@ -27,12 +31,18 @@ rustdoc:
     paths:
       - target/doc
 
+# TODO: stage for generation & evaluation, and deploying generated pcap
+
 pages:
-  stage: publish
   image: alpine
-  dependencies:
-    - build:amd64
-    - rustdoc
+  tags:
+    - ci.inria.fr
+    - small
+  stage: deploy
+  pages:
+    publish: public
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
     - mkdir -p public
     - mv target/doc public/doc
@@ -40,6 +50,4 @@ pages:
   artifacts:
     paths:
       - public
-  only:
-    - master
 
