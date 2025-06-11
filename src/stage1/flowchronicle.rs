@@ -294,7 +294,7 @@ impl Default for PatternSet {
     #[cfg(debug_assertions)]
     fn default() -> Self {
         let set: PatternSet =
-            serde_json::from_str(include_str!("../../breizhctf-patterns.json")).unwrap();
+            serde_json::from_str(include_str!("../../default_models/patterns.json")).unwrap();
         set
     }
 
@@ -302,7 +302,7 @@ impl Default for PatternSet {
     fn default() -> Self {
         let set: PatternSet = serde_json::from_str(
             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "breizhctf-patterns.json",
+                "default_models/patterns.json",
                 19
             ))
             .unwrap(),
