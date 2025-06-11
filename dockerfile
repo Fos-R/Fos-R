@@ -1,3 +1,0 @@
-FROM rust:buster
-RUN apt update
-RUN apt install -y libpcap-dev #libsystemd-dev 
