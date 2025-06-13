@@ -1,5 +1,9 @@
 ![](https://raw.githubusercontent.com/Fos-R/Fos-R/refs/heads/main/resources/logo.png)
 
+
+[![pipeline status](https://gitlab.inria.fr/pirat-public/Fos-R/badges/main/pipeline.svg)](https://gitlab.inria.fr/pirat-public/Fos-R/-/commits/main) 
+[![Latest Release](https://gitlab.inria.fr/pirat-public/Fos-R/-/badges/release.svg)](https://gitlab.inria.fr/pirat-public/Fos-R/-/releases)
+
 Fos-R is a network traffic generator based on AI models. It does not require GPU and can generate in the order of Gbps of network traffic with a laptop.
 
 ## Setup

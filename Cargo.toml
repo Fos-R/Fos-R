@@ -11,6 +11,10 @@ license = "GPL-3.0"
 [[bin]]
 name = "fosr"
 
+[profile.release]
+strip = true
+lto = true
+
 [dependencies]
 clap = { version = "4.5.22", features = ["derive"] }
 crossbeam-channel = "0.5.13"
