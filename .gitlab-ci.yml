@@ -1,12 +1,3 @@
-tests:
-  tags:
-    - ci.inria.fr
-    - small
-  stage: test
-  image: rust
-  script:
-    - cargo test
-
 build:amd64:
   tags:
     - ci.inria.fr
@@ -14,10 +5,12 @@ build:amd64:
   stage: build
   image: rust
   script:
+    - cargo build
     - cargo build --release
   artifacts:
     paths:
-      - target/release/fosr
+      - target/debug
+      - target/release
 
 rustdoc:
   tags:
@@ -26,10 +19,19 @@ rustdoc:
   stage: build
   image: rust
   script:
-    - cargo doc
+    - cargo doc --no-deps
   artifacts:
     paths:
       - target/doc
+
+tests:
+  tags:
+    - ci.inria.fr
+    - small
+  stage: test
+  image: rust
+  script:
+    - cargo test
 
 # TODO: stage for generation & evaluation, and deploying generated pcap
 
