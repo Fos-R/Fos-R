@@ -231,7 +231,6 @@ dependencies = [
  "env_logger",
  "include-bytes-zstd",
  "kd-tree",
- "libc",
  "log",
  "pcap-file",
  "pnet",

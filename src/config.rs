@@ -74,6 +74,27 @@ impl Hosts {
     }
 }
 
+impl Default for Hosts {
+    #[cfg(debug_assertions)]
+    fn default() -> Self {
+        import_config(serde_json::from_str(include_str!("../default_models/profil.toml")).unwrap())
+    }
+
+    #[cfg(not(debug_assertions))]
+    fn default() -> Self {
+        import_config(
+            serde_json::from_str(
+                &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                    "default_models/profil.toml",
+                    19
+                ))
+                .unwrap(),
+            )
+            .unwrap(),
+        )
+    }
+}
+
 /// Imports and parses the configuration from a TOML string to produce a Hosts instance.
 ///
 /// This function parses a TOML configuration file that defines hosts and their interfaces,

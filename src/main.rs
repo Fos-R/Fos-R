@@ -25,6 +25,42 @@ use pnet::{datalink, ipnetwork::IpNetwork};
 
 const CHANNEL_SIZE: usize = 500;
 
+struct Profil {
+    automata: stage2::tadam::AutomataLibrary,
+    patterns: stage1::flowchronicle::PatternSet,
+    config: config::Hosts,
+}
+
+impl Profil {
+    fn load(profil: Option<&str>) -> Self {
+        if let Some(path) = profil {
+            Profil {
+                automata: stage2::tadam::AutomataLibrary::from_dir(
+                    Path::new(path)
+                        .join("automata")
+                        .to_str()
+                        .expect("No \"automata\" directory found!"),
+                ),
+                config: config::import_config(
+                    &fs::read_to_string(Path::new(path).join("profil.toml"))
+                        .expect("Cannot access the configuration file."),
+                ),
+                patterns: stage1::flowchronicle::PatternSet::from_file(
+                    Path::new(path).join("patterns").to_str().unwrap(),
+                )
+                .expect("Cannot load patterns"),
+            }
+        } else {
+            log::info!("Load default profil");
+            Profil {
+                automata: stage2::tadam::AutomataLibrary::default(),
+                config: config::Hosts::default(),
+                patterns: stage1::flowchronicle::PatternSet::default(),
+            }
+        }
+    }
+}
+
 /// The entry point of the application.
 ///
 /// This function performs the following steps:
@@ -61,21 +97,17 @@ fn main() {
         cmd::Command::Inject {
             taint,
             seed,
-            automata,
-            patterns,
-            config_path,
+            profil,
             cpu_usage,
             outfile,
             flow_per_second,
             ..
         } => {
-            let config_str =
-                &fs::read_to_string(config_path).expect("Cannot access the configuration file.");
-            let hosts = config::import_config(config_str);
-            log::debug!("Configuration: {:?}", hosts);
+            let profil = Profil::load(profil.as_deref());
+            log::debug!("Configuration: {:?}", profil.config);
             assert!(!local_interfaces.is_empty());
             for ip in local_interfaces.iter() {
-                if let Some(s) = hosts.get_name(ip) {
+                if let Some(s) = profil.config.get_name(ip) {
                     log::info!("Computer role: {s}");
                 }
             }
@@ -85,37 +117,20 @@ fn main() {
                 SystemTime::now().duration_since(UNIX_EPOCH).unwrap(),
                 flow_per_second,
             );
-            let patterns = match &patterns {
-                Some(patterns) => stage1::flowchronicle::PatternSet::from_file(
-                    Path::new(patterns).to_str().unwrap(),
-                )
-                .expect("Cannot load patterns"),
-                None => {
-                    log::info!("Load default patterns");
-                    stage1::flowchronicle::PatternSet::default()
-                }
-            };
-            let patterns = Arc::new(patterns);
+
+            let automata_library = Arc::new(profil.automata);
+            let patterns = Arc::new(profil.patterns);
 
             // let s1 = stage1::ConstantFlowGenerator::new(
             //     *local_interfaces.first().unwrap(),
             //     *local_interfaces.last().unwrap(),
             // ); // TODO: modify, only for testing
-            // let s1 = stage1::ConfigBasedModifier::new(hosts, s1);
-            let s1 = stage1::flowchronicle::FCGenerator::new(patterns, hosts.clone(), false);
+            // let s1 = stage1::ConfigBasedModifier::new(profil.config, s1);
+            let s1 =
+                stage1::flowchronicle::FCGenerator::new(patterns, profil.config.clone(), false);
             let s1 = stage1::FilterForOnline::new(local_interfaces.clone(), s1);
-            let automata_library = match &automata {
-                Some(automata) => {
-                    stage2::tadam::AutomataLibrary::from_dir(Path::new(automata).to_str().unwrap())
-                }
-                None => {
-                    log::info!("Load default automata");
-                    stage2::tadam::AutomataLibrary::default()
-                }
-            };
-            let automata_library = Arc::new(automata_library);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(taint, hosts);
+            let s3 = stage3::Stage3::new(taint, profil.config);
             let s4 = stage4::Stage4::new(taint, false);
             run(
                 local_interfaces,
@@ -133,35 +148,16 @@ fn main() {
         }
         cmd::Command::CreatePcap {
             seed,
-            automata,
-            patterns,
+            profil,
             outfile,
             flow_count,
             cpu_usage,
-            config_path,
             minimum_threads,
             ..
         } => {
-            let config_str =
-                &fs::read_to_string(config_path).expect("Cannot access the configuration file.");
-            let hosts = config::import_config(config_str);
-
-            let automata_library = match &automata {
-                Some(automata) => {
-                    stage2::tadam::AutomataLibrary::from_dir(Path::new(automata).to_str().unwrap())
-                }
-                None => stage2::tadam::AutomataLibrary::default(),
-            };
-            let automata_library = Arc::new(automata_library);
-
-            let patterns = match &patterns {
-                Some(patterns) => stage1::flowchronicle::PatternSet::from_file(
-                    Path::new(patterns).to_str().unwrap(),
-                )
-                .expect("Cannot load patterns"),
-                None => stage1::flowchronicle::PatternSet::default(),
-            };
-            let patterns = Arc::new(patterns);
+            let profil = Profil::load(profil.as_deref());
+            let automata_library = Arc::new(profil.automata);
+            let patterns = Arc::new(profil.patterns);
 
             if let Some(s) = seed {
                 log::info!("Generating with seed {}", s);
@@ -172,9 +168,10 @@ fn main() {
             //     *local_interfaces.first().unwrap(),
             //     *local_interfaces.last().unwrap(),
             // ); // TODO: modify, only for testing
-            let s1 = stage1::flowchronicle::FCGenerator::new(patterns, hosts.clone(), false);
+            let s1 =
+                stage1::flowchronicle::FCGenerator::new(patterns, profil.config.clone(), false);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(false, hosts);
+            let s3 = stage3::Stage3::new(false, profil.config);
 
             if minimum_threads {
                 run(
