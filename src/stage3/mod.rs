@@ -1,13 +1,11 @@
 use crate::config::Hosts;
 use crate::icmp::*;
-use crate::stage3;
 use crate::structs::*;
 
 use crate::tcp::TCPPacketInfo;
 use crate::udp::*;
 use crate::ui::*;
 use crossbeam_channel::{Receiver, Sender};
-use pcap_file::PcapError;
 use pcap_file::pcap::PcapPacket;
 use pcap_file::pcap::PcapWriter;
 use pnet::util::MacAddr;
@@ -440,40 +438,6 @@ impl Stage3 {
 //     todo!()
 // }
 
-/// Exports a vector of packets to a pcap file.
-///
-/// The packets are sorted by their header (timestamp), and then written
-/// sequentially to the specified file. If append is true, the packets are
-/// appended to an existing pcap file; otherwise, a new file is created.
-pub fn pcap_export(mut data: Vec<Packet>, outfile: &str, append: bool) -> Result<(), PcapError> {
-    let file_out = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .append(append)
-        .open(outfile)
-        .expect("Error opening or creating file");
-    let mut pcap_writer = PcapWriter::new(file_out).expect("Error writing file");
-
-    // let mut savefile = if append {
-    //     capture.savefile_append(outfile)?
-    // } else {
-    //     capture.savefile(outfile)?
-    // };
-
-    data.sort();
-    // TODO: find a way to not write packets one by one...
-    for packet in data {
-        pcap_writer
-            .write_packet(&PcapPacket {
-                timestamp: packet.timestamp,
-                orig_len: packet.data.len() as u32,
-                data: packet.data.into(),
-            })
-            .unwrap();
-    }
-    Ok(())
-}
-
 /// Sends packets online based on the local interfaces.
 ///
 /// Depending on whether the source, destination, or both IPs exist on local
@@ -534,6 +498,7 @@ pub fn run<T: PacketInfo>(
 ) {
     // Prepare stage 3
     log::trace!("Start S3");
+
     for headers in rx_s3 {
         let flow_packets = generator(headers);
         stats.increase(&flow_packets);
@@ -576,17 +541,30 @@ pub fn run_collector(rx_collector: Receiver<Packets>, tx_collector: Sender<Vec<P
 
 /// Runs the pcap export thread.
 ///
-/// This function waits for aggregated packet data from the export channel
-/// and writes the packets to a pcap file. The first received record creates
-/// a new pcap file, and subsequent records are appended.
+/// The packets are sorted by their header (timestamp), and then written
+/// sequentially to the specified file. If append is true, the packets are
+/// appended to an existing pcap file; otherwise, a new file is created.
 pub fn run_export(rx_pcap: Receiver<Vec<Packet>>, outfile: &str) {
     log::trace!("Start pcap export thread");
-    if let Ok(packets_record) = rx_pcap.recv() {
+    let file_out = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(outfile)
+        .expect("Error opening or creating file");
+    let mut pcap_writer = PcapWriter::new(file_out).expect("Error writing file");
+    for mut packets_record in rx_pcap {
         log::trace!("Saving into {}", outfile);
-        stage3::pcap_export(packets_record, outfile, false).expect("Error during pcap export!");
-        for packets_record in rx_pcap {
-            log::trace!("Saving into {}", outfile);
-            pcap_export(packets_record, outfile, true).expect("Error during pcap export!");
+        packets_record.sort();
+        // TODO: find a way to not write packets one by one...
+        for packet in packets_record {
+            pcap_writer
+                .write_packet(&PcapPacket::new_owned(
+                    packet.timestamp,
+                    packet.data.len() as u32,
+                    packet.data,
+                ))
+                .unwrap();
         }
     }
 }
