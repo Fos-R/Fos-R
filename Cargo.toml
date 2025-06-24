@@ -5,8 +5,9 @@ authors = ["Pierre-François Gimenez","Florentin Labelle","Evan Morin"]
 edition = "2024"
 description = "Fos-R (Forger Of Security Records) is a synthetic network traffic generator."
 homepage = "https://pfgimenez.fr/fosr/"
-repository = "https://github.com/Fos-R/Fos-R"
+repository = "https://gitlab.inria.fr/pirat-public/Fos-R"
 license = "GPL-3.0"
+rust-version = "1.85.1"
 
 [[bin]]
 name = "fosr"
@@ -28,7 +29,6 @@ rand_core = "0.6.4"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0"
 toml = { version = "0.8.19", default-features = false, features = ["parse"] }
-libc = "0.2.162"
 kd-tree = "0.6.0"
 ctrlc = "3.4.5"
 include-bytes-zstd = "0.1.0"

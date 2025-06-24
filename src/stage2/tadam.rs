@@ -29,17 +29,17 @@ impl Default for AutomataLibrary {
             udp_automata: vec![],
             icmp_automata: vec![],
         };
-        lib.import_from_str(include_str!("../../default_models/mqtt.json"))
+        lib.import_from_str(include_str!("../../default_models/automata/mqtt.json"))
             .unwrap();
-        lib.import_from_str(include_str!("../../default_models/smtp.json"))
+        lib.import_from_str(include_str!("../../default_models/automata/smtp.json"))
             .unwrap();
-        lib.import_from_str(include_str!("../../default_models/ssh.json"))
+        lib.import_from_str(include_str!("../../default_models/automata/ssh.json"))
             .unwrap();
-        lib.import_from_str(include_str!("../../default_models/https.json"))
+        lib.import_from_str(include_str!("../../default_models/automata/https.json"))
             .unwrap();
-        lib.import_from_str(include_str!("../../default_models/dns.json"))
+        lib.import_from_str(include_str!("../../default_models/automata/dns.json"))
             .unwrap();
-        lib.import_from_str(include_str!("../../default_models/ntp.json"))
+        lib.import_from_str(include_str!("../../default_models/automata/ntp.json"))
             .unwrap();
         lib
     }
@@ -57,7 +57,7 @@ impl Default for AutomataLibrary {
         };
         lib.import_from_str(
             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "default_models/mqtt.json",
+                "default_models/automata/mqtt.json",
                 19
             ))
             .unwrap(),
@@ -65,7 +65,7 @@ impl Default for AutomataLibrary {
         .unwrap();
         lib.import_from_str(
             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "default_models/smtp.json",
+                "default_models/automata/smtp.json",
                 19
             ))
             .unwrap(),
@@ -73,7 +73,7 @@ impl Default for AutomataLibrary {
         .unwrap();
         lib.import_from_str(
             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "default_models/https.json",
+                "default_models/automata/https.json",
                 19
             ))
             .unwrap(),
@@ -81,7 +81,7 @@ impl Default for AutomataLibrary {
         .unwrap();
         lib.import_from_str(
             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "default_models/ssh.json",
+                "default_models/automata/ssh.json",
                 19
             ))
             .unwrap(),
@@ -89,7 +89,7 @@ impl Default for AutomataLibrary {
         .unwrap();
         lib.import_from_str(
             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "default_models/dns.json",
+                "default_models/automata/dns.json",
                 19
             ))
             .unwrap(),
@@ -97,7 +97,7 @@ impl Default for AutomataLibrary {
         .unwrap();
         lib.import_from_str(
             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "default_models/ntp.json",
+                "default_models/automata/ntp.json",
                 19
             ))
             .unwrap(),

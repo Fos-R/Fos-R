@@ -24,10 +24,6 @@ pub enum Command {
         taint: bool,
         #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,
-        #[arg(short, long, default_value=None, help="Path to the patterns file")]
-        patterns: Option<String>,
-        #[arg(short, long, default_value=None, help="Path to automata directory")]
-        automata: Option<String>,
         #[arg(
             short = 'u',
             long,
@@ -45,9 +41,10 @@ pub enum Command {
         #[arg(
             short,
             long,
-            help = "Path to the information system configuration file"
+            default_value=None,
+            help = "Path to the profil with the models and the configuration"
         )]
-        config_path: String,
+        profil: Option<String>,
     },
     /// Perform data augmentation on a pcap file. You should use your own models that have been
     /// fitted on that pcap file.
@@ -74,10 +71,6 @@ pub enum Command {
         start_unix_time: Option<u64>,
         #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,
-        #[arg(short, long, default_value=None, help="Path to the patterns file")]
-        patterns: Option<String>,
-        #[arg(short, long, default_value=None, help="Path to automata directory")]
-        automata: Option<String>,
         #[arg(
             short = 'u',
             long,
@@ -88,9 +81,10 @@ pub enum Command {
         #[arg(
             short,
             long,
-            help = "Path to the information system configuration file"
+            default_value=None,
+            help = "Path to the profil with the models and the configuration"
         )]
-        config_path: String,
+        profil: Option<String>,
     },
     /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
     /// hosts, etc.) are ignored.
