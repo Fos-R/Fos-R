@@ -1,5 +1,5 @@
-/generation/target
+/target
 /data
-/models
 .vagrant/
 *.pcap
+learning/tadam_*

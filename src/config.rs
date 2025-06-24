@@ -77,19 +77,16 @@ impl Hosts {
 impl Default for Hosts {
     #[cfg(debug_assertions)]
     fn default() -> Self {
-        import_config(serde_json::from_str(include_str!("../default_models/profil.toml")).unwrap())
+        import_config(include_str!("../default_models/profil.toml"))
     }
 
     #[cfg(not(debug_assertions))]
     fn default() -> Self {
         import_config(
-            serde_json::from_str(
-                &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                    "default_models/profil.toml",
-                    19
-                ))
-                .unwrap(),
-            )
+            &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                "default_models/profil.toml",
+                19
+            ))
             .unwrap(),
         )
     }
