@@ -1,4 +1,5 @@
 use crate::structs::*;
+use crate::ui::Stats;
 
 use crossbeam_channel::Sender;
 use rand_core::*;
@@ -6,8 +7,6 @@ use rand_distr::Distribution;
 use rand_distr::Uniform;
 use rand_pcg::Pcg32;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -26,7 +25,6 @@ pub struct UniformGenerator {
     next_ts: Duration, // the start of the S0 generation window = the end of the sending window
     flows_per_window: u64,
     remaining: u64,
-    max_flow_count: Option<u64>,
     total_flow_count: u64,
     time_distrib: Uniform<u64>,
     rng: Pcg32,
@@ -61,30 +59,20 @@ impl Iterator for UniformGenerator {
         }
         self.remaining -= 1;
         self.total_flow_count += 1;
-        let mut stop = false;
-        if let Some(max) = self.max_flow_count {
-            if self.total_flow_count > max {
-                stop = true;
-            }
-        }
-        if stop {
-            None
-        } else {
-            // since we cannot know how many rng calls sample will make, better use an auxiliary rng
-            self.aux_rng.clone_from(&self.rng);
-            // advance before sampling so we don’t reuse the values used by time_distrib
-            // 8 should be plenty
-            self.rng.advance(8);
-            Some(SeededData {
-                seed: self.rng.next_u64(),
-                data: Duration::from_millis(self.time_distrib.sample(&mut self.aux_rng.clone())),
-            })
-        }
+        // since we cannot know how many rng calls sample will make, better use an auxiliary rng
+        self.aux_rng.clone_from(&self.rng);
+        // advance before sampling so we don’t reuse the values used by time_distrib
+        // 8 should be plenty
+        self.rng.advance(8);
+        Some(SeededData {
+            seed: self.rng.next_u64(),
+            data: Duration::from_millis(self.time_distrib.sample(&mut self.aux_rng.clone())),
+        })
     }
 }
 
 impl UniformGenerator {
-    pub fn new(seed: Option<u64>, online: bool, flow_per_second: u64, max_flow_count: u64) -> Self {
+    pub fn new(seed: Option<u64>, online: bool, flow_per_second: u64) -> Self {
         let flows_per_window = flow_per_second * WINDOW_WIDTH_IN_SECS;
         let next_ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
             + Duration::from_secs(WINDOW_WIDTH_IN_SECS);
@@ -100,7 +88,6 @@ impl UniformGenerator {
         UniformGenerator {
             online,
             next_ts,
-            max_flow_count: Some(max_flow_count),
             total_flow_count: 0,
             remaining: flows_per_window,
             flows_per_window,
@@ -135,7 +122,6 @@ impl UniformGenerator {
         UniformGenerator {
             online: true,
             next_ts,
-            max_flow_count: None,
             total_flow_count: 0,
             remaining: flows_per_window,
             flows_per_window,
@@ -149,15 +135,16 @@ impl UniformGenerator {
 pub fn run(
     generator: impl Stage0,
     tx_s0: Sender<SeededData<Duration>>,
-    s0_running: Arc<AtomicBool>,
-) {
+    stats: Arc<Stats>,
+) -> Result<(), Box<dyn std::error::Error>> {
     log::trace!("Start S0");
     for ts in generator {
-        if !s0_running.load(Ordering::Relaxed) {
+        if stats.should_stop() {
             break;
         }
         log::trace!("S0 generates {:?}", ts);
-        tx_s0.send(ts).unwrap();
+        tx_s0.send(ts)?;
     }
     log::trace!("S0 stops");
+    Ok(())
 }

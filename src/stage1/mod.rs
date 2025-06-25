@@ -1,9 +1,11 @@
 use crate::config::Hosts;
 use crate::structs::*;
+use crate::ui::Stats;
 use crossbeam_channel::{Receiver, Sender};
 use rand_core::*;
 use rand_pcg::Pcg32;
 use std::net::Ipv4Addr;
+use std::sync::Arc;
 use std::time::Duration;
 
 pub mod flowchronicle;
@@ -17,14 +19,19 @@ pub fn run(
     generator: impl Stage1,
     rx_s1: Receiver<SeededData<Duration>>,
     tx_s1: Sender<SeededData<Flow>>,
-) {
+    stats: Arc<Stats>,
+) -> Result<(), Box<dyn std::error::Error>> {
     log::trace!("Start S1");
     for ts in rx_s1 {
-        generator
-            .generate_flows(ts)
-            .for_each(|f| tx_s1.send(f).unwrap());
+        if stats.should_stop() {
+            break;
+        }
+        for f in generator.generate_flows(ts) {
+            tx_s1.send(f)?;
+        }
     }
     log::trace!("S1 stops");
+    Ok(())
 }
 
 #[derive(Debug, Clone)]

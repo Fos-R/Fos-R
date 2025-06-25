@@ -65,8 +65,8 @@ pub enum Command {
         //     help = "Add noise in the output file"
         // )]
         // noise: bool,
-        #[arg(short, long, help = "Minimum number of flows to generate")]
-        flow_count: u64,
+        #[arg(short = 'n', long, help = "Minimum number of packets to generate")]
+        packets_count: u64,
         #[arg(short='d', long, default_value=None, help="Unix time for the beginning of the pcap. By default, use current time")]
         start_unix_time: Option<u64>,
         #[arg(short, long, help = "Seed for random number generation")]
@@ -92,13 +92,13 @@ pub enum Command {
     Replay {
         #[arg(short, long, help = "Path to the pcap file to be replayed")]
         file: String,
-        #[arg(
-            short,
-            long,
-            default_value=None,
-            help = "Path to the information system configuration file"
-        )]
-        config_path: Option<String>,
+        // #[arg(
+        //     short,
+        //     long,
+        //     default_value=None,
+        //     help = "Path to the information system configuration file"
+        // )]
+        // config_path: Option<String>,
         #[arg(
             short,
             long,

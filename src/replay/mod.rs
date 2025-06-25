@@ -6,26 +6,52 @@ use std::fs::File;
 use std::net::Ipv4Addr;
 use std::time::Instant;
 
-pub mod config;
+// /// Parse the following TOML file
+// /// [[ip_replacements]]
+// /// old = "192.168.0.1"
+// /// new = "192.168.56.101"
+// /// [[ip_replacements]]
+// /// old = "192.168.0.2"
+// /// new = "192.168.56.102"
+// ///
+// /// into a HashMap<Ipv4Addr, Ipv4Addr>
+// pub fn parse_config(config_str: &str) -> HashMap<Ipv4Addr, Ipv4Addr> {
+//     let msg = "Ill-formed configuration file";
+//     let table: HashMap<String, Vec<HashMap<String, String>>> =
+//         toml::from_str(config_str).expect(msg);
+
+//     table
+//         .get("ip_replacements")
+//         .expect(msg)
+//         .iter()
+//         .map(|entry| {
+//             let old = entry.get("old").expect(msg).parse().expect(msg);
+//             let new = entry.get("new").expect(msg).parse().expect(msg);
+//             (old, new)
+//         })
+//         .collect::<HashMap<Ipv4Addr, Ipv4Addr>>()
+// }
 
 pub struct Replay {
-    ip_replacement_map: HashMap<Ipv4Addr, Ipv4Addr>,
-    file: String,
+    // ip_replacement_map: HashMap<Ipv4Addr, Ipv4Addr>,
     start_time: Instant,
 }
 
+impl Default for Replay {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Replay {
-    pub fn new(ip_replacement_map: HashMap<Ipv4Addr, Ipv4Addr>, file: String) -> Self {
-        let start_time = Instant::now();
+    pub fn new() -> Self {
         Replay {
-            ip_replacement_map,
-            start_time,
-            file,
+            start_time: Instant::now(),
         }
     }
 
-    pub fn parse_flows(&self) -> Vec<Packets> {
-        let packets = self.read_file();
+    pub fn parse_flows(&self, file: &str) -> Vec<Packets> {
+        let packets = self.read_file(file);
         let flows = self.split_flows(packets);
 
         flows
@@ -34,8 +60,8 @@ impl Replay {
             .collect()
     }
 
-    fn read_file(&self) -> Vec<Packet> {
-        let file_in = File::open(&self.file).expect("Error opening file");
+    fn read_file(&self, file: &str) -> Vec<Packet> {
+        let file_in = File::open(file).expect("Error opening file");
         let mut pcap_reader = PcapReader::new(file_in).unwrap();
         let mut packets: Vec<Packet> = vec![];
         while let Some(packet) = pcap_reader.next_packet() {
@@ -55,17 +81,14 @@ impl Replay {
             let mut flow_id = FlowId::from_packet(&packet);
             flow_id.normalize();
 
-            let src_ip = self
-                .ip_replacement_map
-                .get(&flow_id.src_ip)
-                .unwrap_or(&flow_id.src_ip);
-            let dst_ip = self
-                .ip_replacement_map
-                .get(&flow_id.dst_ip)
-                .unwrap_or(&flow_id.dst_ip);
-
-            flow_id.src_ip = *src_ip;
-            flow_id.dst_ip = *dst_ip;
+            // flow_id.src_ip = *self
+            //     .ip_replacement_map
+            //     .get(&flow_id.src_ip)
+            //     .unwrap_or(&flow_id.src_ip);
+            // flow_id.dst_ip = *self
+            //     .ip_replacement_map
+            //     .get(&flow_id.dst_ip)
+            //     .unwrap_or(&flow_id.dst_ip);
 
             let ip_packet = packet.get_mutable_ip_packet();
             if let Some(mut ip_packet) = ip_packet {

@@ -14,8 +14,6 @@ use std::net::Ipv4Addr;
 use std::path::Path;
 use std::process;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -136,13 +134,11 @@ fn main() {
                 local_interfaces,
                 outfile,
                 s0,
-                s1,
-                3,
-                s2,
-                1,
-                s3,
-                1,
+                (s1, 3),
+                (s2, 1),
+                (s3, 1),
                 cpu_usage,
+                Arc::new(ui::Stats::default()),
                 Some(s4),
             );
         }
@@ -150,7 +146,7 @@ fn main() {
             seed,
             profil,
             outfile,
-            flow_count,
+            packets_count,
             cpu_usage,
             minimum_threads,
             ..
@@ -163,7 +159,7 @@ fn main() {
                 log::info!("Generating with seed {}", s);
             }
             log::info!("Model initialization");
-            let s0 = stage0::UniformGenerator::new(seed, false, 2, flow_count);
+            let s0 = stage0::UniformGenerator::new(seed, false, 2);
             // let s1 = stage1::ConstantFlowGenerator::new(
             //     *local_interfaces.first().unwrap(),
             //     *local_interfaces.last().unwrap(),
@@ -178,13 +174,11 @@ fn main() {
                     vec![],
                     Some(outfile),
                     s0,
-                    s1,
-                    1,
-                    s2,
-                    1,
-                    s3,
-                    1,
+                    (s1, 1),
+                    (s2, 1),
+                    (s3, 1),
                     cpu_usage,
+                    Arc::new(ui::Stats::new(packets_count)),
                     None,
                 );
             } else {
@@ -192,13 +186,11 @@ fn main() {
                     vec![],
                     Some(outfile),
                     s0,
-                    s1,
-                    3,
-                    s2,
-                    3,
-                    s3,
-                    6,
+                    (s1, 3),
+                    (s2, 3),
+                    (s3, 6),
                     cpu_usage,
+                    Arc::new(ui::Stats::new(packets_count)),
                     None,
                 );
             }
@@ -206,7 +198,7 @@ fn main() {
         #[cfg(feature = "replay")]
         cmd::Command::Replay {
             file,
-            config_path,
+            // config_path,
             taint,
             fast,
         } => {
@@ -220,18 +212,18 @@ fn main() {
                 flow_router_tx.insert(proto, tx);
                 stage_4_rx.insert(proto, rx);
             }
-            let ip_replacement_map: HashMap<Ipv4Addr, Ipv4Addr> = if let Some(path) = config_path {
-                // read from config file
-                replay::config::parse_config(
-                    &fs::read_to_string(path).expect("Cannot access the configuration file."),
-                )
-            } else {
-                // no IP replacement
-                HashMap::new()
-            };
+            // let ip_replacement_map: HashMap<Ipv4Addr, Ipv4Addr> = if let Some(path) = config_path {
+            //     // read from config file
+            //     replay::parse_config(
+            //         &fs::read_to_string(path).expect("Cannot access the configuration file."),
+            //     )
+            // } else {
+            //     // no IP replacement
+            //     HashMap::new()
+            // };
 
-            let stage_replay = replay::Replay::new(ip_replacement_map, file);
-            let flows = stage_replay.parse_flows();
+            let stage_replay = replay::Replay::new();
+            let flows = stage_replay.parse_flows(&file);
 
             // Flow router
             let thread_builder = thread::Builder::new().name("replay_flow_router".to_string());
@@ -285,11 +277,8 @@ fn main() {
 /// - `outfile`: The optional output file path for exporting PCAP packets.
 /// - `s0`: An implementation of the Stage 0 trait that produces the initial seed data.
 /// - `s1`: An implementation of the Stage 1 trait that converts seed data to flow data.
-/// - `s1_count`: The number of Stage 1 threads to launch.
 /// - `s2`: An implementation of the Stage 2 trait that converts flows into protocol data.
-/// - `s2_count`: The number of Stage 2 threads to launch.
 /// - `s3`: The Stage3 instance that generates packets (for TCP, UDP, ICMP).
-/// - `s3_count`: The number of Stage 3 threads per protocol.
 /// - `cpu_usage`: A flag indicating if CPU usage statistics should be displayed in the monitoring UI.
 /// - `s4`: An optional Stage4 instance for additional online processing.
 ///
@@ -307,20 +296,20 @@ fn run(
     local_interfaces: Vec<Ipv4Addr>,
     outfile: Option<String>,
     s0: impl stage0::Stage0,
-    s1: impl stage1::Stage1,
-    s1_count: u8,
-    s2: impl stage2::Stage2,
-    s2_count: u8,
-    s3: stage3::Stage3,
-    s3_count: u8,
+    s1: (impl stage1::Stage1, u8),
+    s2: (impl stage2::Stage2, u8),
+    s3: (stage3::Stage3, u8),
     cpu_usage: bool,
+    stats: Arc<ui::Stats>,
     s4: Option<stage4::Stage4>,
 ) {
-    let stats = Arc::new(ui::Stats::default());
-    let running = Arc::new(AtomicBool::new(true));
+    let (s1, s1_count) = s1;
+    let (s2, s2_count) = s2;
+    let (s3, s3_count) = s3;
 
     let mut threads = vec![];
     let mut gen_threads = vec![];
+    let mut export_threads = vec![];
 
     // block to automatically drop channels before the joins
     {
@@ -345,18 +334,15 @@ fn run(
             tx_s3.insert(proto, tx);
         }
         // TODO: only create if offline
-        let (tx_s3_to_collector, rx_collector) = bounded::<Packets>(CHANNEL_SIZE);
-        // TODO: mettre un channel_size = 1 ici ?
-        let (tx_collector, rx_pcap) = bounded::<Vec<Packet>>(CHANNEL_SIZE);
+        let (tx_s3_to_pcap, rx_pcap) = bounded::<Packets>(100_000_000);
 
         // STAGE 0
         // Handle ctrl+C
-        let s0_running = Arc::new(AtomicBool::new(true));
-        let r = s0_running.clone();
+        let stats_ctrlc = Arc::clone(&stats);
         ctrlc::set_handler(move || {
-            if r.load(Ordering::Relaxed) {
+            if !stats_ctrlc.should_stop() {
                 log::warn!("Ending the generation, please wait a few seconds");
-                r.store(false, Ordering::Relaxed);
+                stats_ctrlc.stop_early();
             } else {
                 log::warn!("Ending immediately");
                 process::abort();
@@ -365,9 +351,12 @@ fn run(
         .expect("Error setting Ctrl-C handler");
 
         let builder = thread::Builder::new().name("Stage0".into());
+        let stats_s0 = Arc::clone(&stats);
         gen_threads.push(
             builder
-                .spawn(move || stage0::run(s0, tx_s0, s0_running))
+                .spawn(move || {
+                    let _ = stage0::run(s0, tx_s0, stats_s0);
+                })
                 .unwrap(),
         );
 
@@ -377,11 +366,12 @@ fn run(
             let rx_s1 = rx_s1.clone();
             let tx_s1 = tx_s1.clone();
             let s1 = s1.clone();
+            let stats = Arc::clone(&stats);
             let builder = thread::Builder::new().name("Stage1".into());
             gen_threads.push(
                 builder
                     .spawn(move || {
-                        stage1::run(s1, rx_s1, tx_s1);
+                        let _ = stage1::run(s1, rx_s1, tx_s1, stats);
                     })
                     .unwrap(),
             );
@@ -393,10 +383,13 @@ fn run(
             let rx_s2 = rx_s2.clone();
             let tx_s2 = tx_s2.clone();
             let s2 = s2.clone();
+            let stats = Arc::clone(&stats);
             let builder = thread::Builder::new().name("Stage2".into());
             gen_threads.push(
                 builder
-                    .spawn(move || stage2::run(s2, rx_s2, tx_s2))
+                    .spawn(move || {
+                        let _ = stage2::run(s2, rx_s2, tx_s2, stats);
+                    })
                     .unwrap(),
             );
         }
@@ -410,7 +403,7 @@ fn run(
                 } else {
                     Some(tx.clone())
                 };
-                let tx_s3_to_collector = tx_s3_to_collector.clone();
+                let tx_s3_to_pcap = tx_s3_to_pcap.clone();
                 let s3 = s3.clone();
                 let stats = Arc::clone(&stats);
                 let local_interfaces = local_interfaces.clone();
@@ -423,15 +416,15 @@ fn run(
                         gen_threads.push(
                             builder
                                 .spawn(move || {
-                                    stage3::run(
+                                    let _ = stage3::run(
                                         |f| s3.generate_tcp_packets(f),
                                         local_interfaces,
                                         rx_s3_tcp,
                                         tx,
-                                        tx_s3_to_collector,
+                                        tx_s3_to_pcap,
                                         stats,
                                         pcap_export,
-                                    )
+                                    );
                                 })
                                 .unwrap(),
                         );
@@ -441,15 +434,15 @@ fn run(
                         gen_threads.push(
                             builder
                                 .spawn(move || {
-                                    stage3::run(
+                                    let _ = stage3::run(
                                         |f| s3.generate_udp_packets(f),
                                         local_interfaces,
                                         rx_s3_udp,
                                         tx,
-                                        tx_s3_to_collector,
+                                        tx_s3_to_pcap,
                                         stats,
                                         pcap_export,
-                                    )
+                                    );
                                 })
                                 .unwrap(),
                         );
@@ -459,15 +452,15 @@ fn run(
                         gen_threads.push(
                             builder
                                 .spawn(move || {
-                                    stage3::run(
+                                    let _ = stage3::run(
                                         |f| s3.generate_icmp_packets(f),
                                         local_interfaces,
                                         rx_s3_icmp,
                                         tx,
-                                        tx_s3_to_collector,
+                                        tx_s3_to_pcap,
                                         stats,
                                         pcap_export,
-                                    )
+                                    );
                                 })
                                 .unwrap(),
                         );
@@ -479,17 +472,11 @@ fn run(
         // PCAP EXPORT
 
         if let Some(actual_outfile) = outfile {
-            let builder = thread::Builder::new().name("Pcap-collector".into());
-            gen_threads.push(
-                builder
-                    .spawn(move || stage3::run_collector(rx_collector, tx_collector))
-                    .unwrap(),
-            );
-
+            let stats = Arc::clone(&stats);
             let builder = thread::Builder::new().name("Pcap-export".into());
-            gen_threads.push(
+            export_threads.push(
                 builder
-                    .spawn(move || stage3::run_export(rx_pcap, &actual_outfile))
+                    .spawn(move || { let _ = stage3::run_export(rx_pcap, &actual_outfile, stats);})
                     .unwrap(),
             );
         }
@@ -512,21 +499,22 @@ fn run(
 
     {
         let stats = Arc::clone(&stats);
-        let running = Arc::clone(&running);
         let builder = thread::Builder::new().name("Monitoring".into());
-        threads.push(
-            builder
-                .spawn(move || ui::run(stats, running, cpu_usage))
-                .unwrap(),
-        );
+        threads.push(builder.spawn(move || ui::run(stats, cpu_usage)).unwrap());
     }
 
     // Wait for the generation threads to end
     for thread in gen_threads {
         thread.join().unwrap();
     }
-    // Tell the other threads to stop
-    running.store(false, Ordering::Relaxed);
+
+    if !export_threads.is_empty() {
+        // log::info!("Generation complete: exporting");
+        for thread in export_threads {
+            thread.join().unwrap();
+        }
+    }
+
     // Wait for the other threads to stop
     for thread in threads {
         thread.join().unwrap();
