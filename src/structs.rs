@@ -281,8 +281,8 @@ impl Recycle<Packets> for PacketsRecycler {
                 ttl_server: 0,
                 fwd_packets_count: None,
                 bwd_packets_count: None,
-                timestamp: Duration::new(0,0),
-            })
+                timestamp: Duration::new(0, 0),
+            }),
         }
     }
     fn recycle(&self, element: &mut Packets) {

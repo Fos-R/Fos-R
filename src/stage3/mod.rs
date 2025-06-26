@@ -131,9 +131,8 @@ impl Stage3 {
         flow: &FlowData,
         packet_info: &TCPPacketInfo,
         tcp_data: TcpPacketData, // Change to take ownership of tcp_data
-        payload_array: &mut [u8; 65536]
-        ) -> Option<TcpPacketData> {
-
+        payload_array: &mut [u8; 65536],
+    ) -> Option<TcpPacketData> {
         // Return TcpPacketData and an empty tuple
         let mut tcp_packet = MutableTcpPacket::new(packet)?;
 
@@ -312,9 +311,12 @@ impl Stage3 {
     ///   - Captures the packet timestamp and header.
     ///
     /// Returns a Packets struct encapsulating the packet data, directions, timestamps, and flow.
-    pub fn generate_tcp_packets(&self, input: SeededData<PacketsIR<TCPPacketInfo>>, packets: &mut Packets,
-        payload_array: &mut [u8; 65536]
-        ) {
+    pub fn generate_tcp_packets(
+        &self,
+        input: SeededData<PacketsIR<TCPPacketInfo>>,
+        packets: &mut Packets,
+        payload_array: &mut [u8; 65536],
+    ) {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let tcp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
@@ -327,7 +329,7 @@ impl Stage3 {
                 + MutableTcpPacket::minimum_packet_size()
                 + packet_info.payload.get_payload_size();
 
-            let mut packet = vec![0u8; packet_size];
+            let mut packet = vec![0u8; packet_size]; // pool ?
 
             let mut mac_src = self.config.get_mac(&flow.src_ip).unwrap_or(&self.zero);
             let mut mac_dst = self.config.get_mac(&flow.dst_ip).unwrap_or(&self.zero);
@@ -350,7 +352,7 @@ impl Stage3 {
                     flow,
                     packet_info,
                     tcp_data,
-                    payload_array
+                    payload_array,
                 )
                 .expect("Incorrect TCP packet");
 
@@ -371,9 +373,12 @@ impl Stage3 {
     ///   - Captures the packet timestamp and header.
     ///
     /// Returns a Packets struct encapsulating the packet data, directions, timestamps, and flow.
-    pub fn generate_udp_packets(&self, input: SeededData<PacketsIR<UDPPacketInfo>>, packets: &mut Packets,
-        payload_array: &mut [u8; 65536]
-        ) {
+    pub fn generate_udp_packets(
+        &self,
+        input: SeededData<PacketsIR<UDPPacketInfo>>,
+        packets: &mut Packets,
+        payload_array: &mut [u8; 65536],
+    ) {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let udp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
@@ -400,8 +405,14 @@ impl Stage3 {
                 packet_info,
             )
             .expect("Incorrect IP packet");
-            self.setup_udp_packet(&mut rng, &mut packet[udp_start..], flow, packet_info, payload_array)
-                .expect("Incorrect UDP packet");
+            self.setup_udp_packet(
+                &mut rng,
+                &mut packet[udp_start..],
+                flow,
+                packet_info,
+                payload_array,
+            )
+            .expect("Incorrect UDP packet");
 
             packets.packets.push(Packet {
                 timestamp: packet_info.get_ts(),
@@ -415,9 +426,12 @@ impl Stage3 {
 
     /// Generate ICMP packets from an intermediate representation
     #[allow(unused)]
-    pub fn generate_icmp_packets(&self, input: SeededData<PacketsIR<ICMPPacketInfo>>, packets: &mut Packets,
-        payload_array: &mut [u8; 65536]
-        ) {
+    pub fn generate_icmp_packets(
+        &self,
+        input: SeededData<PacketsIR<ICMPPacketInfo>>,
+        packets: &mut Packets,
+        payload_array: &mut [u8; 65536],
+    ) {
         // let mut rng = Pcg32::seed_from_u64(input.seed);
         todo!()
     }
@@ -482,7 +496,7 @@ pub fn run<T: PacketInfo>(
     local_interfaces: Vec<Ipv4Addr>,
     rx_s3: Receiver<SeededData<PacketsIR<T>>>,
     tx_s3: Option<Sender<Packets>>,
-    tx_s3_to_pcap: thingbuf::mpsc::blocking::Sender<Packets,PacketsRecycler>, // TODO: Option
+    tx_s3_to_pcap: thingbuf::mpsc::blocking::Sender<Packets, PacketsRecycler>, // TODO: Option
     stats: Arc<Stats>,
     pcap_export: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -490,13 +504,13 @@ pub fn run<T: PacketInfo>(
     log::trace!("Start S3");
 
     let mut payload_array: [u8; 65536] = [0; 65536]; // to avoid allocating Vec for payloads
-                                                     // everytime. 65536 is the maximum payload
-                                                     // size.
+    // everytime. 65536 is the maximum payload
+    // size.
     for headers in rx_s3 {
         let mut flow_packets = tx_s3_to_pcap.send_ref()?;
         // flow_packets.clear();
 
-        generator(headers, &mut *flow_packets, &mut payload_array);
+        generator(headers, &mut flow_packets, &mut payload_array);
         stats.increase(&flow_packets);
         // TODO: ça marche même s’il n’y a rien pour écrire derrière dans le pcap ?
 
@@ -524,9 +538,11 @@ pub fn run<T: PacketInfo>(
 /// The packets are sorted by their header (timestamp), and then written
 /// sequentially to the specified file. If append is true, the packets are
 /// appended to an existing pcap file; otherwise, a new file is created.
-pub fn run_export(rx_pcap: thingbuf::mpsc::blocking::Receiver<Packets,PacketsRecycler>, outfile: &str,
-    stats: Arc<Stats>
-    ) {
+pub fn run_export(
+    rx_pcap: thingbuf::mpsc::blocking::Receiver<Packets, PacketsRecycler>,
+    outfile: &str,
+    stats: Arc<Stats>,
+) {
     log::trace!("Start pcap export thread");
     let file_out = OpenOptions::new()
         .write(true)
