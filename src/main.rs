@@ -417,7 +417,7 @@ fn run(
                             builder
                                 .spawn(move || {
                                     let _ = stage3::run(
-                                        |f,p| s3.generate_tcp_packets(f,p),
+                                        |f,p,a| s3.generate_tcp_packets(f,p,a),
                                         local_interfaces,
                                         rx_s3_tcp,
                                         tx,
@@ -435,7 +435,7 @@ fn run(
                             builder
                                 .spawn(move || {
                                     let _ = stage3::run(
-                                        |f,p| s3.generate_udp_packets(f,p),
+                                        |f,p,a| s3.generate_udp_packets(f,p,a),
                                         local_interfaces,
                                         rx_s3_udp,
                                         tx,
@@ -453,7 +453,7 @@ fn run(
                             builder
                                 .spawn(move || {
                                     let _ = stage3::run(
-                                        |f,p| s3.generate_icmp_packets(f,p),
+                                        |f,p,a| s3.generate_icmp_packets(f,p,a),
                                         local_interfaces,
                                         rx_s3_icmp,
                                         tx,

@@ -269,9 +269,9 @@ impl Recycle<Packets> for PacketsRecycler {
     // Required methods
     fn new_element(&self) -> Packets {
         Packets {
-            packets: Vec::with_capacity(300),
-            directions: Vec::with_capacity(300),
-            timestamps: Vec::with_capacity(300),
+            packets: Vec::with_capacity(150),
+            directions: Vec::with_capacity(150),
+            timestamps: Vec::with_capacity(150),
             flow: Flow::TCP(FlowData {
                 src_ip: Ipv4Addr::new(0, 0, 0, 0),
                 dst_ip: Ipv4Addr::new(0, 0, 0, 0),
