@@ -345,7 +345,7 @@ fn run(
                 stats_ctrlc.stop_early();
             } else {
                 log::warn!("Ending immediately");
-                process::abort();
+                process::exit(1);
             }
         })
         .expect("Error setting Ctrl-C handler");

@@ -50,7 +50,7 @@ impl Stats {
         self.packets_counter
             .fetch_add(p.packets.len() as u64, Ordering::Relaxed);
         self.bytes_counter
-            .fetch_add(p.packets.len() as u64, Ordering::Relaxed);
+            .fetch_add(p.packets.iter().map(|p| p.data.len()).sum::<usize>() as u64, Ordering::Relaxed);
     }
 
     pub fn increase_pcap(&self) {
@@ -97,11 +97,12 @@ pub fn run(stats: Arc<Stats>, cpu_usage: bool) {
             pb_generation.set_style(ProgressStyle::with_template("{spinner:.green} Generation [{throughput}] [{wide_bar}] ({eta})")
                 .unwrap()
                 .with_key("throughput", move |state: &ProgressState, w: &mut dyn Write| {
+                    if !state.elapsed().is_zero() {
                     let bc = stats.bytes_counter.load(Ordering::Relaxed);
-                    let throughput = (8. * (bc as f64)
-                        / (state.elapsed().as_secs() as f64)) as u64;
-                        write!(w, "{}/s", HumanBytes(throughput).to_string()).unwrap();
-                    }));
+                    let throughput = (bc as f64)
+                        / state.elapsed().as_secs_f64();
+                    write!(w, "{}/s", HumanBytes(throughput as u64).to_string()).unwrap();
+                    }}));
         }
 
         let pb_pcap = m.add(ProgressBar::new(target));
