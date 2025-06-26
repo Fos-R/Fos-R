@@ -5,6 +5,7 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
 use std::net::Ipv4Addr;
 use std::time::Duration;
+use thingbuf::Recycle;
 
 // A general wrapper to pass a seed along with actual data
 #[derive(Debug, Clone)]
@@ -262,8 +263,11 @@ impl Packets {
     }
 }
 
-impl Default for Packets {
-    fn default() -> Self {
+pub struct PacketsRecycler {}
+
+impl Recycle<Packets> for PacketsRecycler {
+    // Required methods
+    fn new_element(&self) -> Packets {
         Packets {
             packets: Vec::with_capacity(300),
             directions: Vec::with_capacity(300),
@@ -281,7 +285,9 @@ impl Default for Packets {
             })
         }
     }
-
+    fn recycle(&self, element: &mut Packets) {
+        element.clear();
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
