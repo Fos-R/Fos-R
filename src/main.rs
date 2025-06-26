@@ -195,65 +195,65 @@ fn main() {
                 );
             }
         }
-        #[cfg(feature = "replay")]
-        cmd::Command::Replay {
-            file,
-            // config_path,
-            taint,
-            fast,
-        } => {
-            // Read content of the file
-            log::debug!("Initialize stages");
-            let mut flow_router_tx = HashMap::new();
-            let mut stage_4_rx = HashMap::new();
+        // #[cfg(feature = "replay")]
+        // cmd::Command::Replay {
+        //     file,
+        //     // config_path,
+        //     taint,
+        //     fast,
+        // } => {
+        //     // Read content of the file
+        //     log::debug!("Initialize stages");
+        //     let mut flow_router_tx = HashMap::new();
+        //     let mut stage_4_rx = HashMap::new();
 
-            for proto in Protocol::iter() {
-                let (tx, rx) = bounded::<Packets>(crate::CHANNEL_SIZE);
-                flow_router_tx.insert(proto, tx);
-                stage_4_rx.insert(proto, rx);
-            }
-            // let ip_replacement_map: HashMap<Ipv4Addr, Ipv4Addr> = if let Some(path) = config_path {
-            //     // read from config file
-            //     replay::parse_config(
-            //         &fs::read_to_string(path).expect("Cannot access the configuration file."),
-            //     )
-            // } else {
-            //     // no IP replacement
-            //     HashMap::new()
-            // };
+        //     for proto in Protocol::iter() {
+        //         let (tx, rx) = bounded::<Packets>(crate::CHANNEL_SIZE);
+        //         flow_router_tx.insert(proto, tx);
+        //         stage_4_rx.insert(proto, rx);
+        //     }
+        //     // let ip_replacement_map: HashMap<Ipv4Addr, Ipv4Addr> = if let Some(path) = config_path {
+        //     //     // read from config file
+        //     //     replay::parse_config(
+        //     //         &fs::read_to_string(path).expect("Cannot access the configuration file."),
+        //     //     )
+        //     // } else {
+        //     //     // no IP replacement
+        //     //     HashMap::new()
+        //     // };
 
-            let stage_replay = replay::Replay::new();
-            let flows = stage_replay.parse_flows(&file);
+        //     let stage_replay = replay::Replay::new();
+        //     let flows = stage_replay.parse_flows(&file);
 
-            // Flow router
-            let thread_builder = thread::Builder::new().name("replay_flow_router".to_string());
-            let flow_router = thread_builder
-                .spawn(move || {
-                    let mut sent_flows = 0;
-                    for flow in flows {
-                        let proto = flow.flow.get_proto();
+        //     // Flow router
+        //     let thread_builder = thread::Builder::new().name("replay_flow_router".to_string());
+        //     let flow_router = thread_builder
+        //         .spawn(move || {
+        //             let mut sent_flows = 0;
+        //             for flow in flows {
+        //                 let proto = flow.flow.get_proto();
 
-                        let tx = flow_router_tx.get(&proto).expect("Unknown protocol");
-                        stage3::send_online(&local_interfaces, flow, tx);
-                        sent_flows += 1;
-                    }
+        //                 let tx = flow_router_tx.get(&proto).expect("Unknown protocol");
+        //                 stage3::send_online(&local_interfaces, flow, tx);
+        //                 sent_flows += 1;
+        //             }
 
-                    log::info!("Sent {} flows to be replayed", sent_flows);
-                })
-                .unwrap();
+        //             log::info!("Sent {} flows to be replayed", sent_flows);
+        //         })
+        //         .unwrap();
 
-            // Stage 4
-            let mut stage_4 = stage4::Stage4::new(taint, fast);
-            let thread_builder = thread::Builder::new().name("replay_stage4".to_owned());
-            let stage_4_thread = thread_builder
-                .spawn(move || {
-                    stage_4.start(stage_4_rx);
-                })
-                .unwrap();
+        //     // Stage 4
+        //     let mut stage_4 = stage4::Stage4::new(taint, fast);
+        //     let thread_builder = thread::Builder::new().name("replay_stage4".to_owned());
+        //     let stage_4_thread = thread_builder
+        //         .spawn(move || {
+        //             stage_4.start(stage_4_rx);
+        //         })
+        //         .unwrap();
 
-            flow_router.join().unwrap();
-            stage_4_thread.join().unwrap();
-        }
+        //     flow_router.join().unwrap();
+        //     stage_4_thread.join().unwrap();
+        // }
     };
 }
 
