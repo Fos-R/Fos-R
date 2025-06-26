@@ -311,15 +311,12 @@ impl Stage3 {
     ///   - Captures the packet timestamp and header.
     ///
     /// Returns a Packets struct encapsulating the packet data, directions, timestamps, and flow.
-    pub fn generate_tcp_packets(&self, input: SeededData<PacketsIR<TCPPacketInfo>>) -> Packets {
+    pub fn generate_tcp_packets(&self, input: SeededData<PacketsIR<TCPPacketInfo>>, packets: &mut Packets) {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let tcp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
         let flow = &input.data.flow.get_data();
         let mut tcp_data = TcpPacketData::new(&mut rng);
-        let mut packets = Vec::with_capacity(input.data.packets_info.len());
-        let mut directions = Vec::with_capacity(input.data.packets_info.len());
-        let mut timestamps = Vec::with_capacity(input.data.packets_info.len());
 
         for packet_info in &input.data.packets_info {
             let packet_size = MutableEthernetPacket::minimum_packet_size()
@@ -353,19 +350,12 @@ impl Stage3 {
                 )
                 .expect("Incorrect TCP packet");
 
-            packets.push(Packet {
+            packets.packets.push(Packet {
                 timestamp: packet_info.get_ts(),
                 data: packet,
             });
-            directions.push(packet_info.get_direction());
-            timestamps.push(packet_info.get_ts());
-        }
-
-        Packets {
-            packets,
-            directions,
-            timestamps,
-            flow: input.data.flow,
+            packets.directions.push(packet_info.get_direction());
+            packets.timestamps.push(packet_info.get_ts());
         }
     }
 
@@ -377,14 +367,11 @@ impl Stage3 {
     ///   - Captures the packet timestamp and header.
     ///
     /// Returns a Packets struct encapsulating the packet data, directions, timestamps, and flow.
-    pub fn generate_udp_packets(&self, input: SeededData<PacketsIR<UDPPacketInfo>>) -> Packets {
+    pub fn generate_udp_packets(&self, input: SeededData<PacketsIR<UDPPacketInfo>>, packets: &mut Packets) {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
         let udp_start = ip_start + MutableIpv4Packet::minimum_packet_size();
         let flow = &input.data.flow.get_data();
-        let mut packets = Vec::new();
-        let mut directions = Vec::new();
-        let mut timestamps = Vec::with_capacity(input.data.packets_info.len());
 
         for packet_info in &input.data.packets_info {
             let packet_size = MutableEthernetPacket::minimum_packet_size()
@@ -410,25 +397,19 @@ impl Stage3 {
             self.setup_udp_packet(&mut rng, &mut packet[udp_start..], flow, packet_info)
                 .expect("Incorrect UDP packet");
 
-            packets.push(Packet {
+            packets.packets.push(Packet {
                 timestamp: packet_info.get_ts(),
-                data: packet.clone(),
+                data: packet,
             });
-            directions.push(packet_info.get_direction());
-            timestamps.push(packet_info.get_ts());
+            packets.directions.push(packet_info.get_direction());
+            packets.timestamps.push(packet_info.get_ts());
         }
-
-        Packets {
-            packets,
-            directions,
-            timestamps,
-            flow: input.data.flow,
-        }
+        packets.flow = input.data.flow;
     }
 
     /// Generate ICMP packets from an intermediate representation
     #[allow(unused)]
-    pub fn generate_icmp_packets(&self, input: SeededData<PacketsIR<ICMPPacketInfo>>) -> Packets {
+    pub fn generate_icmp_packets(&self, input: SeededData<PacketsIR<ICMPPacketInfo>>, packets: &mut Packets) {
         // let mut rng = Pcg32::seed_from_u64(input.seed);
         todo!()
     }
@@ -471,15 +452,16 @@ pub fn send_online(
     }
 }
 
-/// Sends a packet flow to the pcap collector channel.
+/// Sends a packet flow to the pcap pcap channel.
 ///
-/// This function forwards the provided packet flow to the collector, where it
+/// This function forwards the provided packet flow to the pcap, where it
 /// may be further processed (for example, noise insertion) before export.
-fn send_pcap(flow_packets: Packets, tx_s3_to_collector: &Sender<Packets>) {
+fn send_pcap(flow_packets: thingbuf::mpsc::blocking::SendRef<Packets>) {
     // if noise { // insert noise // TODO: find a better way to do it
     //     stage3::insert_noise(&mut noisy_flow);
     // }
-    tx_s3_to_collector.send(flow_packets).unwrap();
+    drop(flow_packets); // actually send (the drop in itself is useful but easier to read)
+    // tx_s3_to_pcap.send(flow_packets).unwrap();
 }
 
 /// Runs stage 3 of the pipeline, processing incoming seeded packet representations.
@@ -488,11 +470,11 @@ fn send_pcap(flow_packets: Packets, tx_s3_to_collector: &Sender<Packets>) {
 /// packets using the provided generator function, and then sends the generated flows
 /// to appropriate channels based on the configuration (online transmission and/or pcap export).
 pub fn run<T: PacketInfo>(
-    generator: impl Fn(SeededData<PacketsIR<T>>) -> Packets,
+    generator: impl Fn(SeededData<PacketsIR<T>>, &mut Packets),
     local_interfaces: Vec<Ipv4Addr>,
     rx_s3: Receiver<SeededData<PacketsIR<T>>>,
     tx_s3: Option<Sender<Packets>>,
-    tx_s3_to_collector: Sender<Packets>, // TODO: Option
+    tx_s3_to_pcap: thingbuf::mpsc::blocking::Sender<Packets>, // TODO: Option
     stats: Arc<Stats>,
     pcap_export: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -500,19 +482,23 @@ pub fn run<T: PacketInfo>(
     log::trace!("Start S3");
 
     for headers in rx_s3 {
-        let flow_packets = generator(headers);
+        let mut flow_packets = tx_s3_to_pcap.send_ref()?;
+        flow_packets.clear();
+
+        generator(headers, &mut *flow_packets);
         stats.increase(&flow_packets);
+        // TODO: ça marche même s’il n’y a rien pour écrire derrière dans le pcap ?
 
         // only copy the flows if we need to send it to online and pcap
         if let Some(ref tx_s3) = tx_s3 {
+            send_online(&local_interfaces, flow_packets.clone(), tx_s3);
             if pcap_export {
                 // TODO: le mode online a la priorité, donc peut-être ne pas se laisser bloquer par
                 // l’export s’il prend trop de temps ?
-                send_pcap(flow_packets.clone(), &tx_s3_to_collector)
+                send_pcap(flow_packets)
             }
-            send_online(&local_interfaces, flow_packets, tx_s3);
         } else if pcap_export {
-            send_pcap(flow_packets, &tx_s3_to_collector)
+            send_pcap(flow_packets)
         }
         if stats.should_stop() {
             break;
@@ -527,7 +513,7 @@ pub fn run<T: PacketInfo>(
 /// The packets are sorted by their header (timestamp), and then written
 /// sequentially to the specified file. If append is true, the packets are
 /// appended to an existing pcap file; otherwise, a new file is created.
-pub fn run_export(rx_pcap: Receiver<Packets>, outfile: &str,
+pub fn run_export(rx_pcap: thingbuf::mpsc::blocking::Receiver<Packets>, outfile: &str,
     stats: Arc<Stats>
     ) {
     log::trace!("Start pcap export thread");
@@ -539,14 +525,14 @@ pub fn run_export(rx_pcap: Receiver<Packets>, outfile: &str,
         .expect("Error opening or creating file");
     let mut pcap_writer = PcapWriter::new(file_out).expect("Error writing file");
     log::trace!("Saving into {}", outfile);
-    for packets in rx_pcap {
-        for packet in packets.packets {
+    while let Some(packets) = rx_pcap.recv_ref() {
+        for packet in packets.packets.iter() {
             stats.increase_pcap();
             pcap_writer
-                .write_packet(&PcapPacket::new_owned(
+                .write_packet(&PcapPacket::new(
                     packet.timestamp,
                     packet.data.len() as u32,
-                    packet.data,
+                    &packet.data,
                 ))
                 .unwrap();
         }
