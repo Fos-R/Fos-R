@@ -336,7 +336,7 @@ fn run(
         let (tx_s3_to_pcap, rx_pcap) = thingbuf::mpsc::blocking::with_recycle::<
             Packets,
             PacketsRecycler,
-        >(1_000_000, PacketsRecycler {});
+        >(CHANNEL_SIZE, PacketsRecycler {});
 
         // STAGE 0
         // Handle ctrl+C
@@ -473,17 +473,15 @@ fn run(
 
         // PCAP EXPORT
 
-        if let Some(actual_outfile) = outfile {
-            let stats = Arc::clone(&stats);
-            let builder = thread::Builder::new().name("Pcap-export".into());
-            export_threads.push(
-                builder
-                    .spawn(move || {
-                        stage3::run_export(rx_pcap, &actual_outfile, stats);
-                    })
-                    .unwrap(),
-            );
-        }
+        let stats = Arc::clone(&stats);
+        let builder = thread::Builder::new().name("Pcap-export".into());
+        export_threads.push(
+            builder
+                .spawn(move || {
+                    stage3::run_export(rx_pcap, outfile, stats);
+                })
+                .unwrap(),
+        );
 
         // STAGE 4 (online mode only)
         // TODO: only one stage 4 for all protocols

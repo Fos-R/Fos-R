@@ -512,18 +512,13 @@ pub fn run<T: PacketInfo>(
 
         generator(headers, &mut flow_packets, &mut payload_array);
         stats.increase(&flow_packets);
-        // TODO: ça marche même s’il n’y a rien pour écrire derrière dans le pcap ?
 
         // only copy the flows if we need to send it to online and pcap
         if let Some(ref tx_s3) = tx_s3 {
             send_online(&local_interfaces, flow_packets.clone(), tx_s3);
-            if pcap_export {
-                // TODO: le mode online a la priorité, donc peut-être ne pas se laisser bloquer par
-                // l’export s’il prend trop de temps ?
-                send_pcap(flow_packets)
-            }
-        } else if pcap_export {
-            send_pcap(flow_packets)
+        }
+        if pcap_export {
+            send_pcap(flow_packets);
         }
         if stats.should_stop() {
             break;
@@ -540,28 +535,33 @@ pub fn run<T: PacketInfo>(
 /// appended to an existing pcap file; otherwise, a new file is created.
 pub fn run_export(
     rx_pcap: thingbuf::mpsc::blocking::Receiver<Packets, PacketsRecycler>,
-    outfile: &str,
+    outfile: Option<String>,
     stats: Arc<Stats>,
 ) {
-    log::trace!("Start pcap export thread");
-    let file_out = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(outfile)
-        .expect("Error opening or creating file");
-    let mut pcap_writer = PcapWriter::new(file_out).expect("Error writing file");
-    log::trace!("Saving into {}", outfile);
-    while let Some(packets) = rx_pcap.recv_ref() {
-        for packet in packets.packets.iter() {
-            stats.increase_pcap();
-            pcap_writer
-                .write_packet(&PcapPacket::new(
-                    packet.timestamp,
-                    packet.data.len() as u32,
-                    &packet.data,
-                ))
-                .unwrap();
+    if let Some(outfile) = outfile {
+        log::trace!("Start pcap export thread");
+        let file_out = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(&outfile)
+            .expect("Error opening or creating file");
+        let mut pcap_writer = PcapWriter::new(file_out).expect("Error writing file");
+        log::trace!("Saving into {}", &outfile);
+        while let Some(packets) = rx_pcap.recv_ref() {
+            for packet in packets.packets.iter() {
+                stats.increase_pcap();
+                pcap_writer
+                    .write_packet(&PcapPacket::new(
+                        packet.timestamp,
+                        packet.data.len() as u32,
+                        &packet.data,
+                    ))
+                    .unwrap();
+            }
         }
+    } else {
+        // It is necessary to empty the channel, otherwise the generation will be stopped
+        while rx_pcap.recv_ref().is_some() {}
     }
 }
