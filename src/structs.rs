@@ -243,6 +243,12 @@ pub struct Packets {
 }
 
 impl Packets {
+    pub fn clear(&mut self) {
+        self.packets.clear();
+        self.directions.clear();
+        self.timestamps.clear();
+    }
+
     pub fn reverse(&mut self) {
         for d in self.directions.iter_mut() {
             *d = d.into_reverse();
@@ -254,6 +260,28 @@ impl Packets {
         (data.fwd_packets_count, data.bwd_packets_count) =
             (data.bwd_packets_count, data.fwd_packets_count);
     }
+}
+
+impl Default for Packets {
+    fn default() -> Self {
+        Packets {
+            packets: Vec::with_capacity(300),
+            directions: Vec::with_capacity(300),
+            timestamps: Vec::with_capacity(300),
+            flow: Flow::TCP(FlowData {
+                src_ip: Ipv4Addr::new(0, 0, 0, 0),
+                dst_ip: Ipv4Addr::new(0, 0, 0, 0),
+                src_port: 0,
+                dst_port: 0,
+                ttl_client: 0,
+                ttl_server: 0,
+                fwd_packets_count: None,
+                bwd_packets_count: None,
+                timestamp: Duration::new(0,0),
+            })
+        }
+    }
+
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]

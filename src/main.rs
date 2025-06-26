@@ -334,7 +334,7 @@ fn run(
             tx_s3.insert(proto, tx);
         }
         // TODO: only create if offline
-        let (tx_s3_to_pcap, rx_pcap) = bounded::<Packets>(100_000_000);
+        let (tx_s3_to_pcap, rx_pcap) = thingbuf::mpsc::blocking::channel::<Packets>(1_000_000);
 
         // STAGE 0
         // Handle ctrl+C
@@ -417,7 +417,7 @@ fn run(
                             builder
                                 .spawn(move || {
                                     let _ = stage3::run(
-                                        |f| s3.generate_tcp_packets(f),
+                                        |f,p| s3.generate_tcp_packets(f,p),
                                         local_interfaces,
                                         rx_s3_tcp,
                                         tx,
@@ -435,7 +435,7 @@ fn run(
                             builder
                                 .spawn(move || {
                                     let _ = stage3::run(
-                                        |f| s3.generate_udp_packets(f),
+                                        |f,p| s3.generate_udp_packets(f,p),
                                         local_interfaces,
                                         rx_s3_udp,
                                         tx,
@@ -453,7 +453,7 @@ fn run(
                             builder
                                 .spawn(move || {
                                     let _ = stage3::run(
-                                        |f| s3.generate_icmp_packets(f),
+                                        |f,p| s3.generate_icmp_packets(f,p),
                                         local_interfaces,
                                         rx_s3_icmp,
                                         tx,
