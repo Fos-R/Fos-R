@@ -1,7 +1,6 @@
 use crate::structs::*;
 
 use indicatif::HumanBytes;
-use indicatif::MultiProgress;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use std::fmt::Write;
 use std::process::Command;
@@ -88,13 +87,10 @@ pub fn run(stats: Arc<Stats>, cpu_usage: bool) {
     };
 
     if let Some(target) = stats.packets_target {
-        let m = MultiProgress::new();
-
-        let pb_generation = m.add(ProgressBar::new(target));
-        // let pb_generation = ProgressBar::new(target);
+        let pb = ProgressBar::new(target);
         {
             let stats = Arc::clone(&stats);
-            pb_generation.set_style(
+            pb.set_style(
                 ProgressStyle::with_template(
                     "{spinner:.green} Generation [{throughput}] [{wide_bar}] ({eta})",
                 )
@@ -112,39 +108,17 @@ pub fn run(stats: Arc<Stats>, cpu_usage: bool) {
             );
         }
 
-        let pb_pcap = m.add(ProgressBar::new(target));
-        pb_pcap.set_style(
-            ProgressStyle::with_template("{spinner:.green} PCAP export [{wide_bar}] ({eta})")
-                .unwrap()
-                .with_key("eta", |state: &ProgressState, w: &mut dyn Write| {
-                    write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap()
-                }),
-        );
-
         let mut gen_done = false;
-        let mut pcap_done = false;
 
-        while !gen_done || !pcap_done {
-            if !gen_done {
-                let c = stats.packets_counter.load(Ordering::Relaxed);
-                pb_generation.set_position(c);
-                if c >= target {
-                    gen_done = true;
-                    pb_generation.finish_with_message("Generation done");
-                }
-            }
-            if !pcap_done {
-                let c = stats.pcap_counter.load(Ordering::Relaxed);
-                pb_pcap.set_position(c);
-                if c >= target {
-                    pcap_done = true;
-                    pb_pcap.finish_with_message("Export done");
-                }
+        while !gen_done {
+            let c = stats.packets_counter.load(Ordering::Relaxed);
+            pb.set_position(c);
+            if c >= target {
+                gen_done = true;
+                pb.finish_with_message("Generation done");
             }
             thread::sleep(Duration::from_millis(10));
         }
-
-        m.clear().unwrap();
     } else {
         while !stats.should_stop() {
             thread::sleep(Duration::new(5, 0));

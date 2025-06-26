@@ -313,6 +313,7 @@ impl<T: EdgeType> CrossProductTimedAutomaton<T> {
 pub struct TimedAutomaton<T: EdgeType> {
     graph: Vec<TimedNode<T>>,
     metadata: AutomatonMetaData,
+    #[allow(unused)]
     noise: Noise,
     initial_state: usize,
     accepting_state: usize,

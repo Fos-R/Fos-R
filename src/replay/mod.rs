@@ -3,7 +3,6 @@ use pcap_file::pcap::PcapReader;
 use pnet_packet::{Packet as PnetPacket, ipv4};
 use std::collections::HashMap;
 use std::fs::File;
-use std::net::Ipv4Addr;
 use std::time::Instant;
 
 // /// Parse the following TOML file
