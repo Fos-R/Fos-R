@@ -474,7 +474,7 @@ pub fn run<T: PacketInfo>(
     local_interfaces: Vec<Ipv4Addr>,
     rx_s3: Receiver<SeededData<PacketsIR<T>>>,
     tx_s3: Option<Sender<Packets>>,
-    tx_s3_to_pcap: thingbuf::mpsc::blocking::Sender<Packets>, // TODO: Option
+    tx_s3_to_pcap: thingbuf::mpsc::blocking::Sender<Packets,PacketsRecycler>, // TODO: Option
     stats: Arc<Stats>,
     pcap_export: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -483,7 +483,7 @@ pub fn run<T: PacketInfo>(
 
     for headers in rx_s3 {
         let mut flow_packets = tx_s3_to_pcap.send_ref()?;
-        flow_packets.clear();
+        // flow_packets.clear();
 
         generator(headers, &mut *flow_packets);
         stats.increase(&flow_packets);
@@ -513,7 +513,7 @@ pub fn run<T: PacketInfo>(
 /// The packets are sorted by their header (timestamp), and then written
 /// sequentially to the specified file. If append is true, the packets are
 /// appended to an existing pcap file; otherwise, a new file is created.
-pub fn run_export(rx_pcap: thingbuf::mpsc::blocking::Receiver<Packets>, outfile: &str,
+pub fn run_export(rx_pcap: thingbuf::mpsc::blocking::Receiver<Packets,PacketsRecycler>, outfile: &str,
     stats: Arc<Stats>
     ) {
     log::trace!("Start pcap export thread");

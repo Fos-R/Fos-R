@@ -334,7 +334,7 @@ fn run(
             tx_s3.insert(proto, tx);
         }
         // TODO: only create if offline
-        let (tx_s3_to_pcap, rx_pcap) = thingbuf::mpsc::blocking::channel::<Packets>(1_000_000);
+        let (tx_s3_to_pcap, rx_pcap) = thingbuf::mpsc::blocking::with_recycle::<Packets, PacketsRecycler>(1_000_000, PacketsRecycler {});
 
         // STAGE 0
         // Handle ctrl+C
