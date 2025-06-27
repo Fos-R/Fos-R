@@ -156,7 +156,7 @@ fn main() {
             let patterns = Arc::new(profil.patterns);
 
             if let Some(s) = seed {
-                log::info!("Generating with seed {}", s);
+                log::info!("Generating with seed {s}");
             }
             log::info!("Model initialization");
             let s0 = stage0::UniformGenerator::new(seed, false, 2);
@@ -332,7 +332,6 @@ fn run(
             rx_s4.insert(proto, rx);
             tx_s3.insert(proto, tx);
         }
-        // TODO: only create if offline
         let (tx_s3_to_pcap, rx_pcap) = thingbuf::mpsc::blocking::with_recycle::<
             Packets,
             PacketsRecycler,
@@ -410,7 +409,7 @@ fn run(
                 let stats = Arc::clone(&stats);
                 let local_interfaces = local_interfaces.clone();
 
-                let builder = thread::Builder::new().name(format!("Stage3-{:?}", proto));
+                let builder = thread::Builder::new().name(format!("Stage3-{proto:?}"));
                 let pcap_export = outfile.is_some();
                 match proto {
                     Protocol::TCP => {

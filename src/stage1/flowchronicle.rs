@@ -323,7 +323,7 @@ impl PatternSet {
         log::info!("Loading patterns…");
         let f = File::open(filename)?;
         let set: PatternSet = serde_json::from_reader(f)?;
-        log::info!("Patterns loaded from {:?}", filename);
+        log::info!("Patterns loaded from {filename:?}");
         Ok(set)
     }
 }

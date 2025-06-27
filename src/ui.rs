@@ -131,7 +131,7 @@ pub fn run(stats: Arc<Stats>, cpu_usage: bool) {
                 if throughput < 1. {
                     log::info!("{pc} created packets ({:.2} kbps)", throughput * 1000.);
                 } else if throughput < 1000. {
-                    log::info!("{pc} created packets ({:.2} Mbps)", throughput);
+                    log::info!("{pc} created packets ({throughput:.2} Mbps)");
                 } else {
                     log::info!("{pc} created packets ({:.2} Gbps)", throughput / 1000.);
                 }

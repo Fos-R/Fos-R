@@ -137,7 +137,7 @@ impl AutomataLibrary {
                 }
             }
         }
-        log::info!("{} automata have been loaded", nb);
+        log::info!("{nb} automata have been loaded");
         lib
     }
 
@@ -154,7 +154,7 @@ impl AutomataLibrary {
                     a,
                     parse_tcp_symbol,
                 );
-                log::debug!("Import TCP {}", a);
+                log::debug!("Import TCP {a}");
                 self.tcp_automata.push(a.clone());
                 self.cons_tcp_automata.push(a.into());
             }
@@ -163,7 +163,7 @@ impl AutomataLibrary {
                     a,
                     parse_udp_symbol,
                 );
-                log::debug!("Import UDP {}", a);
+                log::debug!("Import UDP {a}");
                 self.udp_automata.push(a.clone());
                 self.cons_udp_automata.push(a.into());
             }
@@ -172,7 +172,7 @@ impl AutomataLibrary {
                     a,
                     parse_icmp_symbol,
                 );
-                log::debug!("Import ICMP {}", a);
+                log::debug!("Import ICMP {a}");
                 self.icmp_automata.push(a.clone());
                 self.cons_icmp_automata.push(a.into());
             }
