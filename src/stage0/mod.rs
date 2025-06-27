@@ -142,7 +142,7 @@ pub fn run(
         if stats.should_stop() {
             break;
         }
-        log::trace!("S0 generates {:?}", ts);
+        log::trace!("S0 generates {ts:?}");
         tx_s0.send(ts)?;
     }
     log::trace!("S0 stops");

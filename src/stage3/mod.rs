@@ -17,9 +17,9 @@ use pnet_packet::udp::MutableUdpPacket;
 use rand_core::*;
 use rand_pcg::Pcg32;
 use std::fs::OpenOptions;
+use std::io::BufWriter;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
-use std::io::BufWriter;
 
 /// Represents stage 3 of the packet generator.
 /// It contains configuration data and state necessary for generating packets.
@@ -547,7 +547,8 @@ pub fn run_export(
             .truncate(true)
             .open(&outfile)
             .expect("Error opening or creating file");
-        let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
+        let mut pcap_writer =
+            PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
         log::trace!("Saving into {}", &outfile);
         while let Some(packets) = rx_pcap.recv_ref() {
             for packet in packets.packets.iter() {

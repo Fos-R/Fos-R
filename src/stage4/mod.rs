@@ -32,7 +32,7 @@ impl FlowId {
     /// This function removes firewall rules created for the session.
     #[cfg(target_os = "linux")]
     fn close_session(&self) {
-        log::debug!("Ip tables removed for {:?}", self);
+        log::debug!("Ip tables removed for {self:?}");
         let status = Command::new("iptables")
             .args([
                 "-w",
@@ -274,7 +274,7 @@ fn handle_packets(
                         fid.close_session();
                     }
                 } else {
-                    log::trace!("Packet received: ignored {:?}", fid);
+                    log::trace!("Packet received: ignored {fid:?}");
                 }
             }
             // Go back to searching for the next packet to send because it may have changed
@@ -308,7 +308,7 @@ fn handle_packets(
                 ipv4_packet.set_ttl(65);
             }
 
-            log::trace!("Send to {:?}", fid);
+            log::trace!("Send to {fid:?}");
 
             match tx.send_to(&ipv4_packet, std::net::IpAddr::V4(fid.dst_ip)) {
                 Ok(n) => assert_eq!(n, ipv4_packet.packet().len()), // Check if the whole packet was sent
@@ -367,7 +367,7 @@ impl Stage4 {
             let (rx, tx) = transport_channel(4096, channel_type)
                 .expect("Error when creating transport channel");
 
-            let builder = thread::Builder::new().name(format!("Stage4-{:?}", proto));
+            let builder = thread::Builder::new().name(format!("Stage4-{proto:?}"));
             let current_flows = self.current_flows.clone();
 
             join_handles.push(
