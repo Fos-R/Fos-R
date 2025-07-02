@@ -21,7 +21,7 @@ use clap::Parser;
 use crossbeam_channel::bounded;
 use pnet::{datalink, ipnetwork::IpNetwork};
 
-const CHANNEL_SIZE: usize = 500;
+const CHANNEL_SIZE: usize = 50;
 
 struct Profil {
     automata: stage2::tadam::AutomataLibrary,
