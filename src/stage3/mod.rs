@@ -20,6 +20,7 @@ use std::fs::OpenOptions;
 use std::io::BufWriter;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
+use std::num::Wrapping;
 
 /// Represents stage 3 of the packet generator.
 /// It contains configuration data and state necessary for generating packets.
@@ -31,8 +32,8 @@ pub struct Stage3 {
 }
 
 struct TcpPacketData {
-    forward: u32,    // foward SEQ and backward ACK
-    backward: u32,   // forward ACK and backward SEQ
+    forward: Wrapping<u32>,    // forward SEQ and backward ACK
+    backward: Wrapping<u32>,   // forward ACK and backward SEQ
     cwnd: usize,     // Congestion window size
     rwnd: usize,     // Receiver window size
     ssthresh: usize, // Slow start threshold
@@ -43,8 +44,8 @@ impl TcpPacketData {
     /// Creates new TCP packet data with randomized initial sequence numbers.
     fn new(rng: &mut impl RngCore) -> Self {
         TcpPacketData {
-            forward: rng.next_u32(),
-            backward: rng.next_u32(),
+            forward: Wrapping(rng.next_u32()),
+            backward: Wrapping(rng.next_u32()),
             cwnd: 65535,     // Initial congestion window size (in bytes)
             rwnd: 65535,     // Receiver's advertised window size
             ssthresh: 65535, // Slow start threshold
@@ -146,9 +147,9 @@ impl Stage3 {
                 tcp_packet.set_destination(flow.dst_port);
 
                 // Set sequence and acknowledgement numbers
-                tcp_packet.set_sequence(new_tcp_data.forward);
+                tcp_packet.set_sequence(new_tcp_data.forward.0);
                 if packet_info.a_flag {
-                    tcp_packet.set_acknowledgement(new_tcp_data.backward);
+                    tcp_packet.set_acknowledgement(new_tcp_data.backward.0);
                 }
 
                 // Increment forward ACK and backward SEQ
@@ -164,9 +165,9 @@ impl Stage3 {
                 tcp_packet.set_destination(flow.src_port);
 
                 // Set sequence and acknowledgement numbers
-                tcp_packet.set_sequence(new_tcp_data.backward);
+                tcp_packet.set_sequence(new_tcp_data.backward.0);
                 if packet_info.a_flag {
-                    tcp_packet.set_acknowledgement(new_tcp_data.forward);
+                    tcp_packet.set_acknowledgement(new_tcp_data.forward.0);
                 }
 
                 if packet_info.s_flag {
