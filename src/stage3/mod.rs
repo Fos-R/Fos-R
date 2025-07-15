@@ -19,8 +19,8 @@ use rand_pcg::Pcg32;
 use std::fs::OpenOptions;
 use std::io::BufWriter;
 use std::net::Ipv4Addr;
-use std::sync::Arc;
 use std::num::Wrapping;
+use std::sync::Arc;
 
 /// Represents stage 3 of the packet generator.
 /// It contains configuration data and state necessary for generating packets.
@@ -32,12 +32,12 @@ pub struct Stage3 {
 }
 
 struct TcpPacketData {
-    forward: Wrapping<u32>,    // forward SEQ and backward ACK
-    backward: Wrapping<u32>,   // forward ACK and backward SEQ
-    cwnd: usize,     // Congestion window size
-    rwnd: usize,     // Receiver window size
-    ssthresh: usize, // Slow start threshold
-    mss: usize,      // Maximum Segment Size
+    forward: Wrapping<u32>,  // forward SEQ and backward ACK
+    backward: Wrapping<u32>, // forward ACK and backward SEQ
+    cwnd: usize,             // Congestion window size
+    rwnd: usize,             // Receiver window size
+    ssthresh: usize,         // Slow start threshold
+    mss: usize,              // Maximum Segment Size
 }
 
 impl TcpPacketData {

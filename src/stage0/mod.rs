@@ -20,6 +20,8 @@ pub trait Stage0:
 {
 }
 
+/// The generator generates timestamp uniformily without any seasonability (day/night cycle, etc.)
+/// In online mode, it trickles the generation
 #[derive(Debug, Clone)]
 pub struct UniformGenerator {
     next_ts: Duration, // the start of the S0 generation window = the end of the sending window
@@ -72,10 +74,9 @@ impl Iterator for UniformGenerator {
 }
 
 impl UniformGenerator {
-    pub fn new(seed: Option<u64>, online: bool, flow_per_second: u64) -> Self {
+    pub fn new(seed: Option<u64>, online: bool, flow_per_second: u64, initial_ts: Duration) -> Self {
         let flows_per_window = flow_per_second * WINDOW_WIDTH_IN_SECS;
-        let next_ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
-            + Duration::from_secs(WINDOW_WIDTH_IN_SECS);
+        let next_ts = initial_ts;
         let time_distrib = Uniform::new(
             next_ts.as_millis() as u64,
             next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS,

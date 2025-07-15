@@ -149,7 +149,8 @@ fn main() {
             packets_count,
             cpu_usage,
             minimum_threads,
-            ..
+            reorder_pcap,
+            start_unix_time,
         } => {
             let profil = Profil::load(profil.as_deref());
             let automata_library = Arc::new(profil.automata);
@@ -159,7 +160,13 @@ fn main() {
                 log::info!("Generating with seed {s}");
             }
             log::info!("Model initialization");
-            let s0 = stage0::UniformGenerator::new(seed, false, 2);
+            let initial_ts = if let Some(start_time) = start_unix_time {
+                    Duration::from_secs(start_time)
+                } else {
+                    SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
+                };
+
+            let s0 = stage0::UniformGenerator::new(seed, false, 2, initial_ts);
             // let s1 = stage1::ConstantFlowGenerator::new(
             //     *local_interfaces.first().unwrap(),
             //     *local_interfaces.last().unwrap(),
