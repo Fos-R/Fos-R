@@ -138,6 +138,7 @@ fn main() {
                 (s2, 1),
                 (s3, 1),
                 cpu_usage,
+                false,
                 Arc::new(ui::Stats::default()),
                 Some(s4),
             );
@@ -149,7 +150,7 @@ fn main() {
             packets_count,
             cpu_usage,
             minimum_threads,
-            reorder_pcap,
+            order_pcap,
             start_unix_time,
         } => {
             let profil = Profil::load(profil.as_deref());
@@ -161,10 +162,10 @@ fn main() {
             }
             log::info!("Model initialization");
             let initial_ts = if let Some(start_time) = start_unix_time {
-                    Duration::from_secs(start_time)
-                } else {
-                    SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
-                };
+                Duration::from_secs(start_time)
+            } else {
+                SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
+            };
 
             let s0 = stage0::UniformGenerator::new(seed, false, 2, initial_ts);
             // let s1 = stage1::ConstantFlowGenerator::new(
@@ -185,6 +186,7 @@ fn main() {
                     (s2, 1),
                     (s3, 1),
                     cpu_usage,
+                    order_pcap,
                     Arc::new(ui::Stats::new(packets_count)),
                     None,
                 );
@@ -197,6 +199,7 @@ fn main() {
                     (s2, 3),
                     (s3, 6),
                     cpu_usage,
+                    order_pcap,
                     Arc::new(ui::Stats::new(packets_count)),
                     None,
                 );
@@ -306,6 +309,7 @@ fn run(
     s2: (impl stage2::Stage2, u8),
     s3: (stage3::Stage3, u8),
     cpu_usage: bool,
+    order_pcap: bool,
     stats: Arc<ui::Stats>,
     s4: Option<stage4::Stage4>,
 ) {
@@ -484,7 +488,7 @@ fn run(
         export_threads.push(
             builder
                 .spawn(move || {
-                    stage3::run_export(rx_pcap, outfile, stats);
+                    stage3::run_export(rx_pcap, outfile, stats, order_pcap);
                 })
                 .unwrap(),
         );

@@ -539,6 +539,7 @@ pub fn run_export(
     rx_pcap: thingbuf::mpsc::blocking::Receiver<Packets, PacketsRecycler>,
     outfile: Option<String>,
     stats: Arc<Stats>,
+    order_pcap: bool,
 ) {
     if let Some(outfile) = outfile {
         log::trace!("Start pcap export thread");
@@ -551,9 +552,20 @@ pub fn run_export(
         let mut pcap_writer =
             PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
         log::trace!("Saving into {}", &outfile);
-        while let Some(packets) = rx_pcap.recv_ref() {
-            for packet in packets.packets.iter() {
-                stats.increase_pcap();
+
+        if order_pcap {
+            let mut all_packets: Vec<Packet> = vec![];
+            while let Some(packets) = rx_pcap.recv_ref() {
+                for packet in packets.packets.iter() {
+                    all_packets.push(packet.clone());
+                    stats.increase_pcap();
+                }
+            }
+
+            log::trace!("Sorting the packets");
+            all_packets.sort();
+
+            for packet in all_packets.iter() {
                 pcap_writer
                     .write_packet(&PcapPacket::new(
                         packet.timestamp,
@@ -561,6 +573,20 @@ pub fn run_export(
                         &packet.data,
                     ))
                     .unwrap();
+            }
+        } else {
+            // write them as they come
+            while let Some(packets) = rx_pcap.recv_ref() {
+                for packet in packets.packets.iter() {
+                    stats.increase_pcap();
+                    pcap_writer
+                        .write_packet(&PcapPacket::new(
+                            packet.timestamp,
+                            packet.data.len() as u32,
+                            &packet.data,
+                        ))
+                        .unwrap();
+                }
             }
         }
     } else {

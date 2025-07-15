@@ -69,8 +69,12 @@ pub enum Command {
         packets_count: u64,
         #[arg(short = 'd', long, default_value = None, help = "Unix time (in secs) for the beginning of the pcap. By default, use current time")]
         start_unix_time: Option<u64>,
-        #[arg(short, long, default_value_t = false, help = "Reorder temporally the generated pcap. Must fit the entire dataset in RAM.")]
-        reorder_pcap: bool,
+        #[arg(
+            long,
+            default_value_t = false,
+            help = "Reorder temporally the generated pcap. Must fit the entire dataset in RAM."
+        )]
+        order_pcap: bool,
         #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,
         #[arg(
