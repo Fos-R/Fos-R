@@ -74,7 +74,12 @@ impl Iterator for UniformGenerator {
 }
 
 impl UniformGenerator {
-    pub fn new(seed: Option<u64>, online: bool, flow_per_second: u64, initial_ts: Duration) -> Self {
+    pub fn new(
+        seed: Option<u64>,
+        online: bool,
+        flow_per_second: u64,
+        initial_ts: Duration,
+    ) -> Self {
         let flows_per_window = flow_per_second * WINDOW_WIDTH_IN_SECS;
         let next_ts = initial_ts;
         let time_distrib = Uniform::new(
