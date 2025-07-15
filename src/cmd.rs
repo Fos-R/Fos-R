@@ -13,7 +13,7 @@ pub enum Command {
     /// easily join or exit the activity.
     #[cfg(feature = "net_injection")]
     Inject {
-        #[arg(short, long, default_value=None, help="Output pcap file of generated packets")]
+        #[arg(short, long, default_value = None, help = "Output pcap file of generated packets")]
         outfile: Option<String>,
         #[arg(
             short,
@@ -41,7 +41,7 @@ pub enum Command {
         #[arg(
             short,
             long,
-            default_value=None,
+            default_value = None,
             help = "Path to the profil with the models and the configuration"
         )]
         profil: Option<String>,
@@ -67,8 +67,10 @@ pub enum Command {
         // noise: bool,
         #[arg(short = 'n', long, help = "Minimum number of packets to generate")]
         packets_count: u64,
-        #[arg(short='d', long, default_value=None, help="Unix time for the beginning of the pcap. By default, use current time")]
+        #[arg(short = 'd', long, default_value = None, help = "Unix time (in secs) for the beginning of the pcap. By default, use current time")]
         start_unix_time: Option<u64>,
+        #[arg(short, long, default_value_t = false, help = "Reorder temporally the generated pcap. Must fit the entire dataset in RAM.")]
+        reorder_pcap: bool,
         #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,
         #[arg(
@@ -81,7 +83,7 @@ pub enum Command {
         #[arg(
             short,
             long,
-            default_value=None,
+            default_value = None,
             help = "Path to the profil with the models and the configuration"
         )]
         profil: Option<String>,
@@ -95,7 +97,7 @@ pub enum Command {
     //     // #[arg(
     //     //     short,
     //     //     long,
-    //     //     default_value=None,
+    //     //     default_value = None,
     //     //     help = "Path to the information system configuration file"
     //     // )]
     //     // config_path: Option<String>,
