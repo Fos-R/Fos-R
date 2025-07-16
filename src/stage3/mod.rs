@@ -563,7 +563,7 @@ pub fn run_export(
             }
 
             log::trace!("Sorting the packets");
-            all_packets.sort();
+            all_packets.sort_unstable();
 
             for packet in all_packets.iter() {
                 pcap_writer
