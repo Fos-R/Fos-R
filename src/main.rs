@@ -152,7 +152,7 @@ fn main() {
             cpu_usage,
             minimum_threads,
             order_pcap,
-            start_unix_time,
+            start_time,
             duration,
         } => {
             let profil = Profil::load(profil.as_deref());
@@ -163,19 +163,26 @@ fn main() {
                     let d = humantime::parse_duration(&d).expect("Duration could not be parsed.");
                     log::info!("Generating a pcap of {d:?}");
                     (Target::Duration(d), Some(d))
-                },
+                }
                 (Some(p), None) => {
                     log::info!("Generation at least {p} packets");
                     (Target::PacketCount(p), None)
-                },
+                }
                 _ => unreachable!(),
             };
             if let Some(s) = seed {
                 log::info!("Generating with seed {s}");
             }
             log::info!("Model initialization");
-            let initial_ts = if let Some(start_time) = start_unix_time {
-                Duration::from_secs(start_time)
+            let initial_ts: Duration = if let Some(start_time) = start_time {
+                // try to parse a date
+                if let Ok(d) = humantime::parse_rfc3339_weak(&start_time) {
+                    d.duration_since(UNIX_EPOCH).unwrap()
+                } else if let Ok(n) = start_time.parse::<u64>() {
+                    Duration::from_secs(n)
+                } else {
+                    panic!("Could not parse start time");
+                }
             } else {
                 SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
             };
