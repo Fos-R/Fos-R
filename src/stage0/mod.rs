@@ -174,7 +174,7 @@ pub fn run(
         if stats.should_stop() {
             break;
         }
-        stats.set_current_duration(ts.data.as_secs() - initial_ts.as_secs());
+        stats.set_current_duration(ts.data.as_secs() - initial_ts.as_secs() + WINDOW_WIDTH_IN_SECS); // this hack (adding WINDOW_WIDTH_IN_SECS) is just a way to be sure to reach the duration target for the progress bar
         log::trace!("S0 generates {ts:?}");
         tx_s0.send(ts)?;
     }
