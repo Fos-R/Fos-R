@@ -3,6 +3,7 @@ use crate::structs::*;
 use indicatif::HumanBytes;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use std::fmt::Write;
+use std::io::IsTerminal;
 use std::process::Command;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -31,14 +32,25 @@ impl Default for Stats {
     }
 }
 
+pub enum Target {
+    PacketCount(u64),
+    Duration(Duration),
+    None,
+}
+
 // For the moment, handles generation statistics only, but it will also take care of the UI
 
 impl Stats {
-    pub fn new(packets_target: u64) -> Self {
+    pub fn new(target: Target) -> Self {
+        let packets_target = if let Target::PacketCount(p) = target {
+            Some (p)
+        } else {
+            None
+        };
         Stats {
             start_time: Instant::now(),
             packets_counter: AtomicU64::new(0),
-            packets_target: Some(packets_target),
+            packets_target,
             bytes_counter: AtomicU64::new(0),
             pcap_counter: AtomicU64::new(0),
             early_stop: AtomicBool::new(false),
@@ -86,7 +98,9 @@ pub fn run(stats: Arc<Stats>, cpu_usage: bool) {
         None
     };
 
-    if let Some(target) = stats.packets_target {
+    if let Some(target) = stats.packets_target
+        && std::io::stdin().is_terminal()
+    {
         let pb = ProgressBar::new(target);
         {
             let stats = Arc::clone(&stats);
