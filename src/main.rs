@@ -349,7 +349,6 @@ fn run(
             PacketsRecycler,
         >(CHANNEL_SIZE, PacketsRecycler {});
 
-        // STAGE 0
         // Handle ctrl+C
         let stats_ctrlc = Arc::clone(&stats);
         ctrlc::set_handler(move || {
@@ -363,6 +362,7 @@ fn run(
         })
         .expect("Error setting Ctrl-C handler");
 
+        // STAGE 0
         let builder = thread::Builder::new().name("Stage0".into());
         let stats_s0 = Arc::clone(&stats);
         gen_threads.push(
@@ -484,12 +484,11 @@ fn run(
 
         // PCAP EXPORT
 
-        let stats = Arc::clone(&stats);
         let builder = thread::Builder::new().name("Pcap-export".into());
         export_threads.push(
             builder
                 .spawn(move || {
-                    stage3::run_export(rx_pcap, outfile, stats, order_pcap);
+                    stage3::run_export(rx_pcap, outfile, order_pcap);
                 })
                 .unwrap(),
         );
@@ -527,6 +526,9 @@ fn run(
             thread.join().unwrap();
         }
     }
+
+    // stop all remaining threads
+    stats.stop_early();
 
     // Wait for the other threads to stop
     for thread in threads {

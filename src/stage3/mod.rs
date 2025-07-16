@@ -538,7 +538,6 @@ pub fn run<T: PacketInfo>(
 pub fn run_export(
     rx_pcap: thingbuf::mpsc::blocking::Receiver<Packets, PacketsRecycler>,
     outfile: Option<String>,
-    stats: Arc<Stats>,
     order_pcap: bool,
 ) {
     if let Some(outfile) = outfile {
@@ -558,7 +557,6 @@ pub fn run_export(
             while let Some(packets) = rx_pcap.recv_ref() {
                 for packet in packets.packets.iter() {
                     all_packets.push(packet.clone());
-                    stats.increase_pcap();
                 }
             }
 
@@ -578,7 +576,6 @@ pub fn run_export(
             // write them as they come
             while let Some(packets) = rx_pcap.recv_ref() {
                 for packet in packets.packets.iter() {
-                    stats.increase_pcap();
                     pcap_writer
                         .write_packet(&PcapPacket::new(
                             packet.timestamp,

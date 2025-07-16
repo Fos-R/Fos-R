@@ -18,6 +18,7 @@ const WINDOW_WIDTH_IN_SECS: u64 = 5;
 pub trait Stage0:
     Iterator<Item = SeededData<Duration>> + Clone + std::marker::Send + 'static
 {
+    fn get_initial_ts(&self) -> Duration;
 }
 
 /// The generator generates timestamp uniformily without any seasonability (day/night cycle, etc.)
@@ -25,6 +26,7 @@ pub trait Stage0:
 #[derive(Debug, Clone)]
 pub struct UniformGenerator {
     next_ts: Duration, // the start of the S0 generation window = the end of the sending window
+    initial_ts: Duration,
     flows_per_window: u64,
     remaining_flows: u64,
     total_flow_count: u64,
@@ -35,7 +37,11 @@ pub struct UniformGenerator {
     remaining_windows: Option<u64>,
 }
 
-impl Stage0 for UniformGenerator {}
+impl Stage0 for UniformGenerator {
+    fn get_initial_ts(&self) -> Duration {
+        self.initial_ts
+    }
+}
 
 impl Iterator for UniformGenerator {
     type Item = SeededData<Duration>;
@@ -100,17 +106,14 @@ impl UniformGenerator {
             Some(s) => Pcg32::seed_from_u64(s),
             None => Pcg32::from_os_rng(),
         };
-        let remaining_windows = if let Some(d) = total_duration {
-            Some(
-                d.div_duration_f32(Duration::from_secs(WINDOW_WIDTH_IN_SECS))
-                    .ceil() as u64,
-            )
-        } else {
-            None
-        };
+        let remaining_windows = total_duration.map(|d| {
+            d.div_duration_f32(Duration::from_secs(WINDOW_WIDTH_IN_SECS))
+                .ceil() as u64
+        });
         let aux_rng = rng.clone();
         UniformGenerator {
             online,
+            initial_ts,
             next_ts,
             total_flow_count: 0,
             remaining_flows: flows_per_window,
@@ -147,6 +150,7 @@ impl UniformGenerator {
         let aux_rng = rng.clone();
         UniformGenerator {
             online: true,
+            initial_ts: next_ts,
             next_ts,
             total_flow_count: 0,
             remaining_flows: flows_per_window,
@@ -165,10 +169,12 @@ pub fn run(
     stats: Arc<Stats>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     log::trace!("Start S0");
+    let initial_ts = generator.get_initial_ts();
     for ts in generator {
         if stats.should_stop() {
             break;
         }
+        stats.set_current_duration(ts.data.as_secs() - initial_ts.as_secs());
         log::trace!("S0 generates {ts:?}");
         tx_s0.send(ts)?;
     }
