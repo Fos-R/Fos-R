@@ -120,11 +120,6 @@ fn main() {
             let automata_library = Arc::new(profil.automata);
             let patterns = Arc::new(profil.patterns);
 
-            // let s1 = stage1::ConstantFlowGenerator::new(
-            //     *local_interfaces.first().unwrap(),
-            //     *local_interfaces.last().unwrap(),
-            // ); // TODO: modify, only for testing
-            // let s1 = stage1::ConfigBasedModifier::new(profil.config, s1);
             let s1 =
                 stage1::flowchronicle::FCGenerator::new(patterns, profil.config.clone(), false);
             let s1 = stage1::FilterForOnline::new(local_interfaces.clone(), s1);
