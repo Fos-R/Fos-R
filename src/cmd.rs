@@ -70,8 +70,8 @@ pub enum Command {
         #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\". Generation is deterministic.")]
         duration: Option<String>, // TODO: packet_count et duration sont mutuellement exclusif mais
         // l’un des deux doit être fourni
-        #[arg(short = 't', long, default_value = None, help = "Unix time (in secs) for the beginning of the pcap. By default, use current time")]
-        start_unix_time: Option<u64>,
+        #[arg(short = 't', long, default_value = None, help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use current time")]
+        start_time: Option<String>,
         #[arg(
             long,
             default_value_t = false,

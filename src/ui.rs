@@ -43,7 +43,7 @@ pub enum Target {
 impl Stats {
     pub fn new(target: Target) -> Self {
         let packets_target = if let Target::PacketCount(p) = target {
-            Some (p)
+            Some(p)
         } else {
             None
         };
