@@ -48,6 +48,11 @@ pub enum Command {
     },
     /// Perform data augmentation on a pcap file. You should use your own models that have been
     /// fitted on that pcap file.
+    #[clap(group(
+    clap::ArgGroup::new("target")
+        .required(true)
+        .args(&["duration", "packets_count"]),
+    ))]
     CreatePcap {
         #[arg(
             short,
@@ -68,8 +73,7 @@ pub enum Command {
         #[arg(short = 'n', long, default_value = None, help = "Minimum number of packets to generate. Generation is not deterministic.")]
         packets_count: Option<u64>,
         #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\". Generation is deterministic.")]
-        duration: Option<String>, // TODO: packet_count et duration sont mutuellement exclusif mais
-        // l’un des deux doit être fourni
+        duration: Option<String>,
         #[arg(short = 't', long, default_value = None, help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use current time")]
         start_time: Option<String>,
         #[arg(
