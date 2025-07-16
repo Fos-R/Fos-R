@@ -353,7 +353,7 @@ fn run(
         let stats_ctrlc = Arc::clone(&stats);
         ctrlc::set_handler(move || {
             if !stats_ctrlc.should_stop() {
-                log::warn!("Ending the generation, please wait a few seconds");
+                log::warn!("Exporting the generated data, please wait a few seconds");
                 stats_ctrlc.stop_early();
             } else {
                 log::warn!("Ending immediately");

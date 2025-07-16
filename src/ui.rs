@@ -86,6 +86,19 @@ impl Stats {
     }
 }
 
+fn update_progress_bar(stats: Arc<Stats>, position: &AtomicU64, target: u64) {
+            loop {
+                let c = position.load(Ordering::Relaxed);
+                stats.progress_bar.set_position(c);
+                if c >= target || stats.should_stop() {
+                    stats.progress_bar.finish();
+                    break;
+                }
+                thread::sleep(Duration::from_millis(10));
+            }
+
+}
+
 pub fn run(stats: Arc<Stats>, cpu_usage: bool) {
     let child = if cpu_usage {
         Some(
@@ -100,52 +113,29 @@ pub fn run(stats: Arc<Stats>, cpu_usage: bool) {
         None
     };
 
-    if let Some(target) = stats.packets_target {
-        {
-            let stats2 = Arc::clone(&stats);
-            stats.progress_bar.set_style(
-                ProgressStyle::with_template(
-                    "{spinner:.green} Generation [{throughput}] [{wide_bar}] ({eta})",
-                )
-                .unwrap()
-                .with_key(
-                    "throughput",
-                    move |state: &ProgressState, w: &mut dyn Write| {
-                        if !state.elapsed().is_zero() {
-                            let bc = stats2.bytes_counter.load(Ordering::Relaxed);
-                            let throughput = (bc as f64) / state.elapsed().as_secs_f64();
-                            write!(w, "{}/s", HumanBytes(throughput as u64)).unwrap();
-                        }
-                    },
-                ),
-            );
-        }
+    if stats.packets_target.is_some() || stats.duration_target.is_some() {
+        let stats2 = Arc::clone(&stats);
+        stats.progress_bar.set_style(
+            ProgressStyle::with_template(
+                "{spinner:.green} Generation [{throughput}] [{wide_bar}] ({eta})",
+            )
+            .unwrap()
+            .with_key(
+                "throughput",
+                move |state: &ProgressState, w: &mut dyn Write| {
+                    if !state.elapsed().is_zero() {
+                        let bc = stats2.bytes_counter.load(Ordering::Relaxed);
+                        let throughput = (bc as f64) / state.elapsed().as_secs_f64();
+                        write!(w, "{}/s", HumanBytes(throughput as u64)).unwrap();
+                    }
+                },
+            ),
+        );
 
-        loop {
-            let c = stats.packets_counter.load(Ordering::Relaxed);
-            stats.progress_bar.set_position(c);
-            if c >= target || stats.should_stop() {
-                break;
-            }
-            thread::sleep(Duration::from_millis(10));
-        }
-    } else if let Some(target) = stats.duration_target {
-        {
-            stats.progress_bar.set_style(
-                ProgressStyle::with_template(
-                    "{spinner:.green} Generation [{percent}%] [{wide_bar}] ({eta})",
-                )
-                .unwrap(),
-            );
-        }
-
-        loop {
-            let d = stats.current_duration.load(Ordering::Relaxed);
-            stats.progress_bar.set_position(d);
-            if d >= target || stats.should_stop() {
-                break;
-            }
-            thread::sleep(Duration::from_millis(10));
+        if let Some(target) = stats.packets_target {
+            update_progress_bar(stats.clone(), &stats.packets_counter, target);
+        } else if let Some(target) = stats.duration_target {
+            update_progress_bar(stats.clone(), &stats.current_duration, target);
         }
     } else {
         let start_time = Instant::now();

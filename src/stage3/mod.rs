@@ -15,8 +15,10 @@ use pnet_packet::ipv4::{self, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
 use pnet_packet::udp::MutableUdpPacket;
 use rand_core::*;
+use indicatif::{ProgressBar, ProgressStyle, ProgressState};
 use rand_pcg::Pcg32;
 use std::fs::OpenOptions;
+use std::fmt::Write;
 use std::io::BufWriter;
 use std::net::Ipv4Addr;
 use std::num::Wrapping;
@@ -560,10 +562,16 @@ pub fn run_export(
                 }
             }
 
-            log::trace!("Sorting the packets");
+            log::info!("Sorting the packets");
             all_packets.sort_unstable();
 
+            let pb_pcap = ProgressBar::new(all_packets.len() as u64);
+            pb_pcap.set_style(ProgressStyle::with_template("{spinner:.green} PCAP export [{wide_bar}] ({eta})")
+                .unwrap()
+                .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap()));
+
             for packet in all_packets.iter() {
+                pb_pcap.inc(1);
                 pcap_writer
                     .write_packet(&PcapPacket::new(
                         packet.timestamp,
@@ -572,6 +580,7 @@ pub fn run_export(
                     ))
                     .unwrap();
             }
+            pb_pcap.finish();
         } else {
             // write them as they come
             while let Some(packets) = rx_pcap.recv_ref() {
