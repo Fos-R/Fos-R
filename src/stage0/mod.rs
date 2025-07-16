@@ -57,7 +57,7 @@ impl Iterator for UniformGenerator {
             self.time_distrib = Uniform::new(
                 self.next_ts.as_millis() as u64,
                 self.next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS,
-            );
+            ).unwrap();
         }
         self.remaining -= 1;
         self.total_flow_count += 1;
@@ -85,10 +85,10 @@ impl UniformGenerator {
         let time_distrib = Uniform::new(
             next_ts.as_millis() as u64,
             next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS,
-        );
+        ).unwrap();
         let rng = match seed {
             Some(s) => Pcg32::seed_from_u64(s),
-            None => Pcg32::from_entropy(),
+            None => Pcg32::from_os_rng(),
         };
         let aux_rng = rng.clone();
         UniformGenerator {
@@ -123,7 +123,7 @@ impl UniformGenerator {
         let time_distrib = Uniform::new(
             next_ts.as_millis() as u64,
             next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS,
-        );
+        ).unwrap();
         let aux_rng = rng.clone();
         UniformGenerator {
             online: true,

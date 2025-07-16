@@ -1,6 +1,6 @@
 use crate::stage1::*;
-use rand_distr::Uniform;
-use rand_distr::{Distribution, WeightedIndex};
+use rand_distr::{Distribution, Uniform};
+use rand_distr::weighted::WeightedIndex;
 use rand_pcg::Pcg32;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -89,7 +89,7 @@ impl From<Vec<(u64, u64)>> for Intervals {
     fn from(v: Vec<(u64, u64)>) -> Intervals {
         Intervals(
             v.into_iter()
-                .map(|(low, high)| Uniform::new(low, high))
+                .map(|(low, high)| Uniform::new(low, high).unwrap())
                 .collect(),
         )
     }
@@ -190,12 +190,13 @@ struct Pattern {
 impl Pattern {
     /// Sample flows
     fn sample(&self, rng: &mut impl RngCore, config: &Hosts, ts: Duration) -> Vec<Flow> {
+        let uniform = Uniform::new(32000, 65535).unwrap();
         loop {
             // First, sample all the free cells
             let mut partially_defined_flows = self.sample_free_cells(rng, self.partial_flows.len());
             // Sample source port
             for p in partially_defined_flows.iter_mut() {
-                p.src_port = Some(Uniform::new(32000, 65535).sample(rng) as u16);
+                p.src_port = Some(uniform.sample(rng) as u16);
             }
             // Complete with reused Placeholder and fixed values
             let mut current_ts = ts;
