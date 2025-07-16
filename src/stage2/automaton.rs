@@ -1,8 +1,8 @@
 use crate::structs::*;
 use kd_tree::KdTree;
 use rand_core::*;
-use rand_distr::{Distribution, Normal, Poisson};
 use rand_distr::weighted::WeightedIndex;
+use rand_distr::{Distribution, Normal, Poisson};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter, Result};

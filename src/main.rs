@@ -5,6 +5,7 @@ use fosr::stage3;
 #[cfg(feature = "net_injection")]
 use fosr::stage4;
 use fosr::structs::*;
+use fosr::ui::Target;
 use fosr::*;
 mod cmd;
 
@@ -152,11 +153,23 @@ fn main() {
             minimum_threads,
             order_pcap,
             start_unix_time,
+            duration,
         } => {
             let profil = Profil::load(profil.as_deref());
             let automata_library = Arc::new(profil.automata);
             let patterns = Arc::new(profil.patterns);
-
+            let (target, duration) = match (packets_count, duration) {
+                (None, Some(d)) => {
+                    let d = humantime::parse_duration(&d).expect("Duration could not be parsed.");
+                    log::info!("Generating a pcap of {d:?}");
+                    (Target::Duration(d), Some(d))
+                },
+                (Some(p), None) => {
+                    log::info!("Generation at least {p} packets");
+                    (Target::PacketCount(p), None)
+                },
+                _ => unreachable!(),
+            };
             if let Some(s) = seed {
                 log::info!("Generating with seed {s}");
             }
@@ -167,43 +180,29 @@ fn main() {
                 SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
             };
 
-            let s0 = stage0::UniformGenerator::new(seed, false, 2, initial_ts);
-            // let s1 = stage1::ConstantFlowGenerator::new(
-            //     *local_interfaces.first().unwrap(),
-            //     *local_interfaces.last().unwrap(),
-            // ); // TODO: modify, only for testing
+            let s0 = stage0::UniformGenerator::new(seed, false, 2, initial_ts, duration);
             let s1 =
                 stage1::flowchronicle::FCGenerator::new(patterns, profil.config.clone(), false);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(false, profil.config);
 
-            if minimum_threads {
-                run(
-                    vec![],
-                    Some(outfile),
-                    s0,
-                    (s1, 1),
-                    (s2, 1),
-                    (s3, 1),
-                    cpu_usage,
-                    order_pcap,
-                    Arc::new(ui::Stats::new(packets_count)),
-                    None,
-                );
+            let (s1_count, s2_count, s3_count) = if minimum_threads {
+                (1, 1, 1)
             } else {
-                run(
-                    vec![],
-                    Some(outfile),
-                    s0,
-                    (s1, 3),
-                    (s2, 3),
-                    (s3, 6),
-                    cpu_usage,
-                    order_pcap,
-                    Arc::new(ui::Stats::new(packets_count)),
-                    None,
-                );
-            }
+                (3, 3, 6)
+            };
+            run(
+                vec![],
+                Some(outfile),
+                s0,
+                (s1, s1_count),
+                (s2, s2_count),
+                (s3, s3_count),
+                cpu_usage,
+                order_pcap,
+                Arc::new(ui::Stats::new(target)),
+                None,
+            );
         } // #[cfg(feature = "replay")]
           // cmd::Command::Replay {
           //     file,

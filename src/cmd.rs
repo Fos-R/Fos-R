@@ -65,9 +65,12 @@ pub enum Command {
         //     help = "Add noise in the output file"
         // )]
         // noise: bool,
-        #[arg(short = 'n', long, help = "Minimum number of packets to generate")]
-        packets_count: u64,
-        #[arg(short = 'd', long, default_value = None, help = "Unix time (in secs) for the beginning of the pcap. By default, use current time")]
+        #[arg(short = 'n', long, default_value = None, help = "Minimum number of packets to generate. Generation is not deterministic.")]
+        packets_count: Option<u64>,
+        #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\". Generation is deterministic.")]
+        duration: Option<String>, // TODO: packet_count et duration sont mutuellement exclusif mais
+        // l’un des deux doit être fourni
+        #[arg(short = 't', long, default_value = None, help = "Unix time (in secs) for the beginning of the pcap. By default, use current time")]
         start_unix_time: Option<u64>,
         #[arg(
             long,

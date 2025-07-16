@@ -26,12 +26,13 @@ pub trait Stage0:
 pub struct UniformGenerator {
     next_ts: Duration, // the start of the S0 generation window = the end of the sending window
     flows_per_window: u64,
-    remaining: u64,
+    remaining_flows: u64,
     total_flow_count: u64,
     time_distrib: Uniform<u64>,
     rng: Pcg32,
     aux_rng: Pcg32,
     online: bool,
+    remaining_windows: Option<u64>,
 }
 
 impl Stage0 for UniformGenerator {}
@@ -40,7 +41,13 @@ impl Iterator for UniformGenerator {
     type Item = SeededData<Duration>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.remaining == 0 {
+        if self.remaining_flows == 0 {
+            if let Some(ref mut r) = self.remaining_windows {
+                *r -= 1;
+                if *r == 0 {
+                    return None;
+                }
+            }
             if self.online {
                 // wait until the end of the current window
                 if SystemTime::now().duration_since(UNIX_EPOCH).unwrap() > self.next_ts {
@@ -52,14 +59,15 @@ impl Iterator for UniformGenerator {
                     );
                 }
             }
-            self.remaining = self.flows_per_window;
+            self.remaining_flows = self.flows_per_window;
             self.next_ts += Duration::from_secs(WINDOW_WIDTH_IN_SECS);
             self.time_distrib = Uniform::new(
                 self.next_ts.as_millis() as u64,
                 self.next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS,
-            ).unwrap();
+            )
+            .unwrap();
         }
-        self.remaining -= 1;
+        self.remaining_flows -= 1;
         self.total_flow_count += 1;
         // since we cannot know how many rng calls sample will make, better use an auxiliary rng
         self.aux_rng.clone_from(&self.rng);
@@ -79,27 +87,38 @@ impl UniformGenerator {
         online: bool,
         flow_per_second: u64,
         initial_ts: Duration,
+        total_duration: Option<Duration>,
     ) -> Self {
         let flows_per_window = flow_per_second * WINDOW_WIDTH_IN_SECS;
         let next_ts = initial_ts;
         let time_distrib = Uniform::new(
             next_ts.as_millis() as u64,
             next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS,
-        ).unwrap();
+        )
+        .unwrap();
         let rng = match seed {
             Some(s) => Pcg32::seed_from_u64(s),
             None => Pcg32::from_os_rng(),
+        };
+        let remaining_windows = if let Some(d) = total_duration {
+            Some(
+                d.div_duration_f32(Duration::from_secs(WINDOW_WIDTH_IN_SECS))
+                    .ceil() as u64,
+            )
+        } else {
+            None
         };
         let aux_rng = rng.clone();
         UniformGenerator {
             online,
             next_ts,
             total_flow_count: 0,
-            remaining: flows_per_window,
+            remaining_flows: flows_per_window,
             flows_per_window,
             rng,
             aux_rng,
             time_distrib,
+            remaining_windows,
         }
     }
 
@@ -123,17 +142,19 @@ impl UniformGenerator {
         let time_distrib = Uniform::new(
             next_ts.as_millis() as u64,
             next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS,
-        ).unwrap();
+        )
+        .unwrap();
         let aux_rng = rng.clone();
         UniformGenerator {
             online: true,
             next_ts,
             total_flow_count: 0,
-            remaining: flows_per_window,
+            remaining_flows: flows_per_window,
             flows_per_window,
             rng,
             aux_rng,
             time_distrib,
+            remaining_windows: None,
         }
     }
 }
