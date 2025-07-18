@@ -45,7 +45,7 @@ impl Profil {
                         .expect("Cannot access the configuration file."),
                 ),
                 patterns: stage1::flowchronicle::PatternSet::from_file(
-                    Path::new(path).join("patterns").to_str().unwrap(),
+                    Path::new(path).join("patterns/patterns.json").to_str().unwrap(),
                 )
                 .expect("Cannot load patterns"),
             }
@@ -351,12 +351,12 @@ fn run(
 
         // Handle ctrl+C
         let stats_ctrlc = Arc::clone(&stats);
+        let export = outfile.is_some();
         ctrlc::set_handler(move || {
-            if !stats_ctrlc.should_stop() {
+            if !stats_ctrlc.should_stop() && export {
                 log::warn!("Exporting the generated data, please wait a few seconds");
                 stats_ctrlc.stop_early();
             } else {
-                log::warn!("Ending immediately");
                 process::exit(1);
             }
         })
