@@ -273,8 +273,8 @@ impl Recycle<Packets> for PacketsRecycler {
             directions: Vec::with_capacity(150),
             timestamps: Vec::with_capacity(150),
             flow: Flow::TCP(FlowData {
-                src_ip: Ipv4Addr::new(0, 0, 0, 0),
-                dst_ip: Ipv4Addr::new(0, 0, 0, 0),
+                src_ip: Ipv4Addr::new(1, 2, 3, 4),
+                dst_ip: Ipv4Addr::new(5, 6, 7, 8),
                 src_port: 0,
                 dst_port: 0,
                 ttl_client: 0,

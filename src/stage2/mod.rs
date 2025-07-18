@@ -42,7 +42,7 @@ pub fn run(
         if stats.should_stop() {
             break;
         }
-
+        log::trace!("Generating packets info");
         match flow.data {
             Flow::TCP(data) => {
                 if let Some(pir) = generator.generate_tcp_packets_info(SeededData {

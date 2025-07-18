@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 pub mod flowchronicle;
+// pub mod bayesian_networks;
 
 /// Stage 1: generates flow descriptions
 pub trait Stage1: Clone + std::marker::Send + 'static {
@@ -50,7 +51,13 @@ impl<T: Stage1> Stage1 for FilterForOnline<T> {
     fn generate_flows(&self, ts: SeededData<Duration>) -> impl Iterator<Item = SeededData<Flow>> {
         self.s1.generate_flows(ts).filter(|f| {
             let data = f.data.get_data();
-            self.ips_to_keep.contains(&data.src_ip) || self.ips_to_keep.contains(&data.dst_ip)
+            let kept = self.ips_to_keep.contains(&data.src_ip) || self.ips_to_keep.contains(&data.dst_ip);
+            if kept {
+                log::trace!("{} -> {} (kept)", data.src_ip, data.dst_ip);
+            } else {
+                log::trace!("{} -> {} (dropped)", data.src_ip, data.dst_ip);
+            }
+            kept
         })
     }
 }
