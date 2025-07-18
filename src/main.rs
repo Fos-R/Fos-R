@@ -105,10 +105,17 @@ fn main() {
             let profil = Profil::load(profil.as_deref());
             log::debug!("Configuration: {:?}", profil.config);
             assert!(!local_interfaces.is_empty());
+            let mut has_role = false;
             for ip in local_interfaces.iter() {
                 if let Some(s) = profil.config.get_name(ip) {
                     log::info!("Computer role: {s}");
+                    has_role = true;
                 }
+            }
+            if !has_role {
+                log::error!("This computer has no traffic to inject in this profile! Exiting.");
+                process::exit(1);
+
             }
             log::info!("Model initialization");
             let s0 = stage0::UniformGenerator::new_for_honeypot(
