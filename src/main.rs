@@ -109,6 +109,8 @@ fn main() {
             for ip in local_interfaces.iter() {
                 if let Some(s) = profil.config.get_name(ip) {
                     log::info!("Computer role: {s}");
+                }
+                if profil.config.exists(ip) {
                     has_role = true;
                 }
             }
