@@ -58,7 +58,7 @@ impl Protocol {
 }
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Flow {
     TCP(FlowData),
     UDP(FlowData),
@@ -102,7 +102,7 @@ impl Flow {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct FlowData {
     // In online mode, the local IP will always be the source
     pub src_ip: Ipv4Addr,

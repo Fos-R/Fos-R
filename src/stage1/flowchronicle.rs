@@ -158,6 +158,14 @@ enum CellType {
     DstIpScenario,
 }
 
+/// Each pattern has partial flows and a Bayesian network that describes the distribution of "free" cells
+#[derive(Deserialize, Debug, Clone)]
+struct Pattern {
+    // TODO: add time distribution
+    partial_flows: Vec<Vec<CellType>>,
+    bayesian_network: Vec<BayesianNetworkNode>,
+}
+
 impl Pattern {
     /// Sample a vector from the Bayesian network
     fn sample_free_cells(
@@ -177,17 +185,7 @@ impl Pattern {
         }
         p
     }
-}
 
-/// Each pattern has partial flows and a Bayesian network that describes the distribution of "free" cells
-#[derive(Deserialize, Debug, Clone)]
-struct Pattern {
-    // TODO: add time distribution
-    partial_flows: Vec<Vec<CellType>>,
-    bayesian_network: Vec<BayesianNetworkNode>,
-}
-
-impl Pattern {
     /// Sample flows
     fn sample(&self, rng: &mut impl RngCore, config: &Hosts, ts: Duration) -> Vec<Flow> {
         let uniform = Uniform::new(32000, 65535).unwrap();
