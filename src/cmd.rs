@@ -72,7 +72,7 @@ pub enum Command {
         // noise: bool,
         #[arg(short = 'n', long, default_value = None, help = "Minimum number of packets to generate. Generation is not deterministic.")]
         packets_count: Option<u64>,
-        #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\". Generation is deterministic.")]
+        #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\". Generation is deterministic when used with --order-pcap.")]
         duration: Option<String>,
         #[arg(short = 't', long, default_value = None, help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use current time")]
         start_time: Option<String>,

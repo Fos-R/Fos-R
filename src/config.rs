@@ -144,6 +144,7 @@ pub fn import_config(config: &str) -> Hosts {
         }
     }
 
+    // TODO: verify that there is not duplicated IP
     let mut hosts_pairs = HashMap::new();
     for (port, ip1_vec) in uses {
         if let Some(ip2_vec) = provides.remove(&port) {
