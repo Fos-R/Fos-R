@@ -317,7 +317,7 @@ impl Stage3 {
     /// Returns a Packets struct encapsulating the packet data, directions, timestamps, and flow.
     pub fn generate_tcp_packets(
         &self,
-        input: SeededData<PacketsIR<TCPPacketInfo>>,
+        input: &SeededData<PacketsIR<TCPPacketInfo>>,
         packets: &mut Packets,
         payload_array: &mut [u8; 65536],
     ) {
@@ -379,7 +379,7 @@ impl Stage3 {
     /// Returns a Packets struct encapsulating the packet data, directions, timestamps, and flow.
     pub fn generate_udp_packets(
         &self,
-        input: SeededData<PacketsIR<UDPPacketInfo>>,
+        input: &SeededData<PacketsIR<UDPPacketInfo>>,
         packets: &mut Packets,
         payload_array: &mut [u8; 65536],
     ) {
@@ -432,7 +432,7 @@ impl Stage3 {
     #[allow(unused)]
     pub fn generate_icmp_packets(
         &self,
-        input: SeededData<PacketsIR<ICMPPacketInfo>>,
+        input: &SeededData<PacketsIR<ICMPPacketInfo>>,
         packets: &mut Packets,
         payload_array: &mut [u8; 65536],
     ) {
@@ -496,7 +496,7 @@ fn send_pcap(flow_packets: thingbuf::mpsc::blocking::SendRef<Packets>) {
 /// packets using the provided generator function, and then sends the generated flows
 /// to appropriate channels based on the configuration (online transmission and/or pcap export).
 pub fn run<T: PacketInfo>(
-    generator: impl Fn(SeededData<PacketsIR<T>>, &mut Packets, &mut [u8; 65536]),
+    generator: impl Fn(&SeededData<PacketsIR<T>>, &mut Packets, &mut [u8; 65536]),
     local_interfaces: Vec<Ipv4Addr>,
     rx_s3: Receiver<SeededData<PacketsIR<T>>>,
     tx_s3: Option<Sender<Packets>>,
@@ -514,8 +514,8 @@ pub fn run<T: PacketInfo>(
         log::trace!("Creating packets");
         let mut flow_packets = tx_s3_to_pcap.send_ref()?;
         // flow_packets.clear();
-        flow_packets.flow = headers.data.flow.clone();
-        generator(headers, &mut flow_packets, &mut payload_array);
+        generator(&headers, &mut flow_packets, &mut payload_array);
+        flow_packets.flow = headers.data.flow;
         stats.increase(&flow_packets);
 
         // only copy the flows if we need to send it to online and pcap
