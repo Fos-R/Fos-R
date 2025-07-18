@@ -468,10 +468,10 @@ pub fn send_online(
         flow_packets.reverse();
         tx_s3.send(flow_packets).unwrap();
     } else if src_s4 {
-        // log::info!("Source IP is local");
+        log::trace!("Source IP is local");
         tx_s3.send(flow_packets).unwrap();
     } else if dst_s4 {
-        // log::info!("Destination IP is local");
+        log::trace!("Destination IP is local");
         // ensure stage 4 is always the source
         flow_packets.reverse();
         tx_s3.send(flow_packets).unwrap();
@@ -511,9 +511,10 @@ pub fn run<T: PacketInfo>(
     // everytime. 65536 is the maximum payload
     // size.
     for headers in rx_s3 {
+        log::trace!("Creating packets");
         let mut flow_packets = tx_s3_to_pcap.send_ref()?;
         // flow_packets.clear();
-
+        flow_packets.flow = headers.data.flow.clone();
         generator(headers, &mut flow_packets, &mut payload_array);
         stats.increase(&flow_packets);
 
