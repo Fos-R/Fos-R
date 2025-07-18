@@ -69,6 +69,10 @@ impl Hosts {
         self.mac_addr.get(ip)
     }
 
+    pub fn exists(&self, ip: &Ipv4Addr) -> bool {
+        self.os.get(ip).is_some()
+    }
+
     pub fn get_name(&self, ip: &Ipv4Addr) -> Option<&str> {
         self.name.get(ip).map(|s| s.as_str())
     }
@@ -145,6 +149,7 @@ pub fn import_config(config: &str) -> Hosts {
     }
 
     // TODO: verify that there is not duplicated IP
+    // + check if not loopback
     let mut hosts_pairs = HashMap::new();
     for (port, ip1_vec) in uses {
         if let Some(ip2_vec) = provides.remove(&port) {
