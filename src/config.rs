@@ -42,7 +42,6 @@ pub struct Hosts {
 
 impl Hosts {
     /// Returns the default TTL for the given IP.
-    ///
     /// The default is determined by the operating system associated with the IP (or Linux if not set).
     pub fn get_default_ttl(&self, ip: &Ipv4Addr) -> u8 {
         // by default, assume Linux
@@ -53,8 +52,6 @@ impl Hosts {
     }
 
     /// Randomly selects a source and destination IP pair for a given destination port.
-    ///
-    /// The selection is based on the preconfigured hosts pairs for the port using RNG.
     pub fn get_src_and_dst_ip(
         &self,
         rng: &mut impl RngCore,
@@ -96,11 +93,9 @@ impl Default for Hosts {
     }
 }
 
-/// Imports and parses the configuration from a TOML string to produce a Hosts instance.
-///
 /// This function parses a TOML configuration file that defines hosts and their interfaces,
 /// then sets up internal mappings for provided and used ports, default operating systems,
-/// MAC addresses, and interface names. It also computes valid (src, dst) IP pairs for each port.
+/// MAC addresses, and interface names.
 pub fn import_config(config: &str) -> Hosts {
     let mut table: HashMap<String, Vec<HashMap<String, Vec<Interface>>>> =
         toml::from_str(config).expect("Ill-formed configuration file");

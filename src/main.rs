@@ -284,12 +284,8 @@ fn main() {
 /// - Stage 0: Generates timing data using a uniform generator.
 /// - Stage 1: Transforms stage 0 output into flow data based on flow patterns.
 /// - Stage 2: Transforms flows into protocol-specific packet information using automata.
-/// - Stage 3: Generates packets from flow data and forwards them to a collector (if applicable),
-///   and optionally to stage 4 in online mode.
-/// - Stage 4: (Optional) Further processes packets in online mode.
-///
-/// Additionally, the function sets up a thread for monitoring statistics and handling
-/// control signals (Ctrl+C) to stop the generation threads.
+/// - Stage 3: Generates packets from flow data.
+/// - Stage 4: (Optional) Send and receive packets with raw sockets.
 ///
 /// # Parameters
 ///
@@ -302,17 +298,6 @@ fn main() {
 /// - `s3`: The Stage3 instance that generates packets (for TCP, UDP, ICMP).
 /// - `cpu_usage`: A flag indicating if CPU usage statistics should be displayed in the monitoring UI.
 /// - `s4`: An optional Stage4 instance for additional online processing.
-///
-/// # Behavior
-///
-/// This function creates and links multiple bounded channels between the stages:
-/// - Between Stage 0 and Stage 1.
-/// - Between Stage 1 and Stage 2.
-/// - Between Stage 2 and Stage 3 (for each protocol).
-/// - Between Stage 3 and the PCAP collector/exporter (if an output file is provided).
-///
-/// It then spawns threads for each stage along with a monitoring thread, waits for all generation
-/// threads to finish, signals the UI thread to stop, and finally waits for the UI thread to exit.
 fn run(
     local_interfaces: Vec<Ipv4Addr>,
     outfile: Option<String>,
