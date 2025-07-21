@@ -45,7 +45,10 @@ impl Profile {
                         .expect("Cannot access the configuration file."),
                 ),
                 patterns: stage1::flowchronicle::PatternSet::from_file(
-                    Path::new(path).join("patterns/patterns.json").to_str().unwrap(),
+                    Path::new(path)
+                        .join("patterns/patterns.json")
+                        .to_str()
+                        .unwrap(),
                 )
                 .expect("Cannot load patterns"),
             }
@@ -117,7 +120,6 @@ fn main() {
             if !has_role {
                 log::error!("This computer has no traffic to inject in this profile! Exiting.");
                 process::exit(1);
-
             }
             log::info!("Model initialization");
             let s0 = stage0::UniformGenerator::new_for_honeypot(
