@@ -15,9 +15,4 @@ pub mod stage0;
 pub mod stage1;
 pub mod stage2;
 pub mod stage3;
-#[cfg(not(target_os = "linux"))]
-pub mod stage4 {
-    pub struct Stage4 {}
-}
-#[cfg(target_os = "linux")]
 pub mod stage4;

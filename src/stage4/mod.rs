@@ -151,6 +151,12 @@ impl FlowId {
 
         log::debug!("Ip tables created for {}", self.src_port);
     }
+
+    #[cfg(target_os = "windows")]
+    fn close_session(&self) {}
+
+    #[cfg(target_os = "windows")]
+    fn open_session(&self) {}
 }
 
 /// Handles sending and receiving packets for a given protocol.
@@ -215,6 +221,31 @@ fn handle_packets(
                 }
             }
         }
+
+        #[cfg(target_os = "windows")]
+        let received_data = match &packet_to_send {
+            None => {
+                // log::trace!("No next packet to send");
+                // TODO: trouver une alternative à "next_with_timeout" pour Windows
+                Some(rx_iter.next().expect("Network error"))
+            }
+            Some((ts, _)) => {
+                let timeout = if fast {
+                    Duration::from_secs(0)
+                } else {
+                    ts.saturating_sub(now)
+                };
+                if timeout.is_zero() {
+                    None
+                } else {
+                    // log::trace!("Waiting for {:?}", timeout);
+                    // seulement disponible sur Unix?
+                    Some(rx_iter.next().expect("Network error"))
+                }
+            }
+        };
+
+        #[cfg(target_os = "linux")]
         let received_data = match &packet_to_send {
             None => {
                 // log::trace!("No next packet to send");
