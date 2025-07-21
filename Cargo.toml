@@ -1,8 +1,11 @@
 [workspace]
-resolver = "3"
-members = ["crates/fosr"]
+resolver = "2"
+members = [ "crates/fosr-ebpf","crates/fosr", "crates/fosr-common"]
 
 [profile.release]
 strip = true
 lto = true
 
+[profile.release.package.fosr-ebpf]
+debug = 2
+codegen-units = 1

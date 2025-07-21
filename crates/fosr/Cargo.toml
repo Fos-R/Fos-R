@@ -38,3 +38,8 @@ humantime = "2.2.0"
 default = ["net_injection", "replay"]
 net_injection = []
 replay = []
+
+[build-dependencies]
+aya-build = { version = "0.1.2", default-features = false }
+fosr-ebpf = { path = "../fosr-ebpf" }
+anyhow = { version = "1", default-features = false }

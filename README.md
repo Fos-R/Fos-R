@@ -20,6 +20,13 @@ Then, you can check the install with:
 
 If you want Fos-R to use the network on Linux, you must execute it as root.
 
+### eBFP
+
+```
+$ cargo install bpf-linker
+$ cargo b -p fosr
+```
+
 # Generation modes
 
 Several generation modes are available.
