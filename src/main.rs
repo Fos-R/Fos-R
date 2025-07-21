@@ -24,16 +24,16 @@ use pnet::{datalink, ipnetwork::IpNetwork};
 
 const CHANNEL_SIZE: usize = 50;
 
-struct Profil {
+struct Profile {
     automata: stage2::tadam::AutomataLibrary,
     patterns: stage1::flowchronicle::PatternSet,
     config: config::Hosts,
 }
 
-impl Profil {
-    fn load(profil: Option<&str>) -> Self {
-        if let Some(path) = profil {
-            Profil {
+impl Profile {
+    fn load(profile: Option<&str>) -> Self {
+        if let Some(path) = profile {
+            Profile {
                 automata: stage2::tadam::AutomataLibrary::from_dir(
                     Path::new(path)
                         .join("automata")
@@ -41,7 +41,7 @@ impl Profil {
                         .expect("No \"automata\" directory found!"),
                 ),
                 config: config::import_config(
-                    &fs::read_to_string(Path::new(path).join("profil.toml"))
+                    &fs::read_to_string(Path::new(path).join("profile.toml"))
                         .expect("Cannot access the configuration file."),
                 ),
                 patterns: stage1::flowchronicle::PatternSet::from_file(
@@ -50,8 +50,8 @@ impl Profil {
                 .expect("Cannot load patterns"),
             }
         } else {
-            log::info!("Load default profil");
-            Profil {
+            log::info!("Load default profile");
+            Profile {
                 automata: stage2::tadam::AutomataLibrary::default(),
                 config: config::Hosts::default(),
                 patterns: stage1::flowchronicle::PatternSet::default(),
@@ -96,21 +96,21 @@ fn main() {
         cmd::Command::Inject {
             taint,
             seed,
-            profil,
+            profile,
             cpu_usage,
             outfile,
             flow_per_second,
             ..
         } => {
-            let profil = Profil::load(profil.as_deref());
-            log::debug!("Configuration: {:?}", profil.config);
+            let profile = Profile::load(profile.as_deref());
+            log::debug!("Configuration: {:?}", profile.config);
             assert!(!local_interfaces.is_empty());
             let mut has_role = false;
             for ip in local_interfaces.iter() {
-                if let Some(s) = profil.config.get_name(ip) {
+                if let Some(s) = profile.config.get_name(ip) {
                     log::info!("Computer role: {s}");
                 }
-                if profil.config.exists(ip) {
+                if profile.config.exists(ip) {
                     has_role = true;
                 }
             }
@@ -126,14 +126,14 @@ fn main() {
                 flow_per_second,
             );
 
-            let automata_library = Arc::new(profil.automata);
-            let patterns = Arc::new(profil.patterns);
+            let automata_library = Arc::new(profile.automata);
+            let patterns = Arc::new(profile.patterns);
 
             let s1 =
-                stage1::flowchronicle::FCGenerator::new(patterns, profil.config.clone(), false);
+                stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
             let s1 = stage1::FilterForOnline::new(local_interfaces.clone(), s1);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(taint, profil.config);
+            let s3 = stage3::Stage3::new(taint, profile.config);
             let s4 = stage4::Stage4::new(taint, false);
             run(
                 local_interfaces,
@@ -150,7 +150,7 @@ fn main() {
         }
         cmd::Command::CreatePcap {
             seed,
-            profil,
+            profile,
             outfile,
             packets_count,
             cpu_usage,
@@ -159,9 +159,9 @@ fn main() {
             start_time,
             duration,
         } => {
-            let profil = Profil::load(profil.as_deref());
-            let automata_library = Arc::new(profil.automata);
-            let patterns = Arc::new(profil.patterns);
+            let profile = Profile::load(profile.as_deref());
+            let automata_library = Arc::new(profile.automata);
+            let patterns = Arc::new(profile.patterns);
             let (target, duration) = match (packets_count, duration) {
                 (None, Some(d)) => {
                     let d = humantime::parse_duration(&d).expect("Duration could not be parsed.");
@@ -193,9 +193,9 @@ fn main() {
 
             let s0 = stage0::UniformGenerator::new(seed, false, 2, initial_ts, duration);
             let s1 =
-                stage1::flowchronicle::FCGenerator::new(patterns, profil.config.clone(), false);
+                stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(false, profil.config);
+            let s3 = stage3::Stage3::new(false, profile.config);
 
             let (s1_count, s2_count, s3_count) = if minimum_threads {
                 (1, 1, 1)

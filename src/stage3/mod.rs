@@ -6,6 +6,7 @@ use crate::udp::*;
 use crate::ui::Stats;
 
 use crossbeam_channel::{Receiver, Sender};
+use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use pcap_file::pcap::PcapPacket;
 use pcap_file::pcap::PcapWriter;
 use pnet::util::MacAddr;
@@ -15,10 +16,9 @@ use pnet_packet::ipv4::{self, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
 use pnet_packet::udp::MutableUdpPacket;
 use rand_core::*;
-use indicatif::{ProgressBar, ProgressStyle, ProgressState};
 use rand_pcg::Pcg32;
-use std::fs::OpenOptions;
 use std::fmt::Write;
+use std::fs::OpenOptions;
 use std::io::BufWriter;
 use std::net::Ipv4Addr;
 use std::num::Wrapping;
@@ -567,9 +567,13 @@ pub fn run_export(
             all_packets.sort_unstable();
 
             let pb_pcap = ProgressBar::new(all_packets.len() as u64);
-            pb_pcap.set_style(ProgressStyle::with_template("{spinner:.green} PCAP export [{wide_bar}] ({eta})")
-                .unwrap()
-                .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap()));
+            pb_pcap.set_style(
+                ProgressStyle::with_template("{spinner:.green} PCAP export [{wide_bar}] ({eta})")
+                    .unwrap()
+                    .with_key("eta", |state: &ProgressState, w: &mut dyn Write| {
+                        write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap()
+                    }),
+            );
 
             for packet in all_packets.iter() {
                 pb_pcap.inc(1);

@@ -70,7 +70,7 @@ impl Hosts {
     }
 
     pub fn exists(&self, ip: &Ipv4Addr) -> bool {
-        self.os.get(ip).is_some()
+        self.os.contains_key(ip)
     }
 
     pub fn get_name(&self, ip: &Ipv4Addr) -> Option<&str> {

@@ -87,16 +87,15 @@ impl Stats {
 }
 
 fn update_progress_bar(stats: Arc<Stats>, position: &AtomicU64, target: u64) {
-            loop {
-                let c = position.load(Ordering::Relaxed);
-                stats.progress_bar.set_position(c);
-                if c >= target || stats.should_stop() {
-                    stats.progress_bar.finish();
-                    break;
-                }
-                thread::sleep(Duration::from_millis(10));
-            }
-
+    loop {
+        let c = position.load(Ordering::Relaxed);
+        stats.progress_bar.set_position(c);
+        if c >= target || stats.should_stop() {
+            stats.progress_bar.finish();
+            break;
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
 }
 
 pub fn run(stats: Arc<Stats>, cpu_usage: bool) {

@@ -9,6 +9,7 @@
 - Default models: automata for protocols DNS and NTP
 - Significantly reduced binary size by compressing default models
 - Better documentation
+- Bugfixes
 
 ### Changed
 

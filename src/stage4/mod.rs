@@ -364,7 +364,9 @@ impl Stage4 {
             let channel_type = TransportChannelType::Layer3(IpNextHeaderProtocol::new(
                 proto.get_protocol_number(),
             ));
-            let (rx, tx) = transport_channel(4096, channel_type).map_err(|e| log::error!("Error {e}. Please retry with root privilege.")).unwrap();
+            let (rx, tx) = transport_channel(4096, channel_type)
+                .map_err(|e| log::error!("Error {e}. Please retry with root privilege."))
+                .unwrap();
 
             let builder = thread::Builder::new().name(format!("Stage4-{proto:?}"));
             let current_flows = self.current_flows.clone();
