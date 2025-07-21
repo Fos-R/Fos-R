@@ -1,0 +1,16 @@
+[package]
+name = "fosr-ebpf"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+aya-ebpf = { version = "0.1.1", default-features = false }
+aya-log-ebpf = { version = "0.1.1", default-features = false }
+
+[build-dependencies]
+which = { version = "6.0.0", default-features = false }
+
+[[bin]]
+name = "fosr"
+path = "src/main.rs"
