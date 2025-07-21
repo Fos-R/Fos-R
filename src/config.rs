@@ -112,10 +112,18 @@ pub fn import_config(config: &str) -> Hosts {
     let mut name: HashMap<Ipv4Addr, String> = HashMap::new();
     for mut host in hosts_toml {
         for iface in host.remove("interfaces").expect("Host without interface!") {
-            let ip_toml = iface
+            let ip_toml: Ipv4Addr = iface
                 .ip
                 .parse()
                 .expect("Cannot parse into an IPv4 address!");
+
+            if ip_toml.is_loopback() {
+                log::warn!("Loopback IP is ignored: {ip_toml}");
+            }
+            if os.contains_key(&ip_toml) {
+                log::warn!("IP {ip_toml} is defined twice in the configuration file!");
+                continue;
+            }
             os.insert(ip_toml, iface.os.unwrap_or(OS::Linux));
             // use a default mac if it is not defined
             let mac = iface
@@ -148,8 +156,6 @@ pub fn import_config(config: &str) -> Hosts {
         }
     }
 
-    // TODO: verify that there is not duplicated IP
-    // + check if not loopback
     let mut hosts_pairs = HashMap::new();
     for (port, ip1_vec) in uses {
         if let Some(ip2_vec) = provides.remove(&port) {
