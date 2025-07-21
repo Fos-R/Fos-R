@@ -42,9 +42,9 @@ pub enum Command {
             short,
             long,
             default_value = None,
-            help = "Path to the profil with the models and the configuration"
+            help = "Path to the profile with the models and the configuration"
         )]
-        profil: Option<String>,
+        profile: Option<String>,
     },
     /// Perform data augmentation on a pcap file. You should use your own models that have been
     /// fitted on that pcap file.
@@ -95,9 +95,9 @@ pub enum Command {
             short,
             long,
             default_value = None,
-            help = "Path to the profil with the models and the configuration"
+            help = "Path to the profile with the models and the configuration"
         )]
-        profil: Option<String>,
+        profile: Option<String>,
     },
     // /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
     // /// hosts, etc.) are ignored.
