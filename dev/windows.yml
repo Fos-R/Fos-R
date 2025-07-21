@@ -1,0 +1,24 @@
+# - name: Download source
+#   ansible.windows.win_get_url:
+#     url: https://gitlab.inria.fr/pirat-public/Fos-R/-/archive/main/Fos-R-main.zip
+#     dest: '%TEMP%\fosr.zip'
+
+# - name: Unzip source
+#   community.windows.win_unzip:
+#     src: '%TEMP%\fosr.zip'
+#     dest: 'C:\\Users\\vagrant\\fosr'
+
+- name: Install Git
+  win_chocolatey:
+    name: 'git'
+    state: 'present'
+
+- name: Install Rust
+  win_chocolatey:
+    name: 'rust'
+    state: 'present'
+
+- name: Compile Fos-R
+  become: yes
+  ansible.builtin.shell: '%userprofile%\\cargo install --git https://gitlab.inria.fr/pirat-public/Fos-R.git --branch ebpf'
+

@@ -1,0 +1,18 @@
+[Unit]
+Description="Run Fos-R"
+
+[Service]
+Type=simple
+RemainAfterExit=yes
+Restart=on-failure
+User=root
+WorkingDirectory=/root/
+{% if instance_name is defined %}
+ExecStart=/root/.cargo/bin/fosr honeynet -f 5 -t -s {{ instance_name | hash('sha1') | truncate(10, True, '') | int(base=16) }}
+{% else %}
+ExecStart=/root/.cargo/bin/fosr honeynet -f 5 -t
+{% endif %}
+TimeoutStartSec=0
+
+[Install]
+WantedBy=default.target

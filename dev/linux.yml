@@ -1,0 +1,51 @@
+- name: Install requirements
+  ansible.builtin.apt:
+    pkg:
+    - build-essential
+    update_cache: yes
+
+# If compiling from source
+- name: Download Cargo Installer
+  ansible.builtin.get_url:
+    url: https://sh.rustup.rs
+    dest: /tmp/sh.rustup.rs
+    mode: '0755'
+  # when: from_source
+
+- name: Install Cargo
+  become: yes
+  ansible.builtin.command: /tmp/sh.rustup.rs -y
+  # when: from_source
+
+- name: Compile Fos-R
+  become: yes
+  ansible.builtin.shell: /root/.cargo/bin/cargo install --git https://gitlab.inria.fr/pirat-public/Fos-R.git --branch ebpf
+  # when: from_source
+
+# If downloading precompiled binary
+# - name: Create cargo directory
+#   ansible.builtin.file:
+#     dest: /root/.cargo/bin/
+#     state: directory
+#     mode: '0755'
+#   when: not from_source
+
+# - name: Download Fos-R binary
+#   ansible.builtin.get_url:
+#     url: https://github.com/Fos-R/Fos-R/releases/download/v0.1.0/fosr
+#     dest: /root/.cargo/bin/fosr
+#     mode: '0755'
+#   when: not from_source
+
+# # Create service
+# - name: Copy service file
+#   ansible.builtin.template:
+#     src: "templates/fosr.service.j2"
+#     dest: "/etc/systemd/system/fosr.service"
+
+# - name: Start the service of Fos-R
+#   systemd:
+#     name: "fosr"
+#     state: started
+#     enabled: true
+
