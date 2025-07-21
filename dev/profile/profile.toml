@@ -1,0 +1,11 @@
+[[hosts]]
+    [[hosts.interfaces]]
+        name = "client"
+        ip = "192.168.56.101"
+        provides = []
+        uses = [1883,443,80,53,123,465]
+    [[hosts.interfaces]]
+        name = "server"
+        ip = "192.168.56.102"
+        provides = [1883,443,80,53,123,465]
+        uses = []
