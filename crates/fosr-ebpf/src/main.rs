@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(target_os = "none", no_std)]
+#![cfg_attr(target_os = "none", no_main)]
 
 use core::{mem, net::Ipv4Addr};
 
@@ -104,12 +104,17 @@ fn try_fosr_ebpf(ctx: XdpContext) -> Result<u32, ()> {
     Ok(XDP_PASS)
 }
 
-#[cfg(not(test))]
+#[unsafe(link_section = "license")]
+#[unsafe(no_mangle)]
+static LICENSE: [u8; 13] = *b"Dual MIT/GPL\0";
+
+/// To not break "cargo b" workspace compilation
+#[cfg(all(not(test), target_os = "none"))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
-#[unsafe(link_section = "license")]
-#[unsafe(no_mangle)]
-static LICENSE: [u8; 13] = *b"Dual MIT/GPL\0";
+/// To not break "cargo b" workspace compilation
+#[cfg(any(test, not(target_os = "none")))]
+fn main() {}
