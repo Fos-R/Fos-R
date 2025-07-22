@@ -1,0 +1,5 @@
+- name: Playbook
+  hosts: all
+  tasks:
+  - name: Install Fos-R
+    include_tasks: '{{ansible_system|lower}}.yml'
