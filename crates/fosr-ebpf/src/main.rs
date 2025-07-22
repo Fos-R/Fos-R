@@ -49,7 +49,7 @@ unsafe fn ptr_at<T>(ctx: &XdpContext, offset: usize) -> Result<*const T, ()> {
 ///
 /// - `ipv4_header`: IPV4 header of the packet.
 unsafe fn get_fosr_flag(ipv4_header: *const Ipv4Hdr) -> bool {
-    unsafe { *ipv4_header }.frag_off[0] & 0b100 > 0
+    unsafe { *ipv4_header }.frag_off[0] & 0b1000_0000 > 0
 }
 
 /// Get a mutable pointer to a zone of memory at a specific offset.
