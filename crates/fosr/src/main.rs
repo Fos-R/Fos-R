@@ -63,6 +63,17 @@ impl Profile {
     }
 }
 
+#[cfg(feature = "ebpf_log")]
+#[tokio::main]
+async fn main() {
+    start();
+}
+
+#[cfg(not(feature = "ebpf_log"))]
+fn main() {
+    start();
+}
+
 /// The entry point of the application.
 ///
 /// This function performs the following steps:
@@ -72,8 +83,7 @@ impl Profile {
 ///    automata libraries, and initializes several stages of the generator pipeline.
 /// 4. Invokes the `run` function with appropriate parameters to start the generation
 ///    process either in injection mode or in pcap creation mode.
-#[tokio::main]
-async fn main() {
+fn start() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args = cmd::Args::parse();
 
