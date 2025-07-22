@@ -1,13 +1,16 @@
 use crate::structs::*;
 use crossbeam_channel::Receiver;
 use crossbeam_channel::Select;
+use pnet::datalink;
 use pnet::transport::{
     TransportChannelType, TransportReceiver, TransportSender, ipv4_packet_iter, transport_channel,
 };
 use pnet_packet::MutablePacket;
 use pnet_packet::Packet;
 use pnet_packet::ip::IpNextHeaderProtocol;
+use std::any::Any;
 use std::collections::HashMap;
+use std::net::Ipv4Addr;
 use std::process::Command;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -22,6 +25,10 @@ pub struct Stage4 {
 
     // Flows
     current_flows: Arc<Mutex<Vec<Packets>>>,
+
+    // eBPF
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    ebpf: aya::Ebpf,
 }
 
 const INTERVAL_TIMEOUT_CHECKS_IN_SECS: u64 = 60;
@@ -360,17 +367,59 @@ fn handle_packets(
     }
 }
 
+/// Load the ebpf XDP program, and attach it to each valid interface used by Fos-R.
+///
+/// # Parameters
+///
+/// - `local_interfaces`: List of used (by Fos-R) network interfaces.
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+fn load_ebpf_program(local_interfaces: &[datalink::NetworkInterface]) -> aya::Ebpf {
+    use aya::programs::{Xdp, XdpFlags};
+
+    // Retrieve the stored eBPF program that where stored, at compilation, into the binary
+    // This only hold a reference, the object is stored by aya (globaly), so no need to store it anywhere,
+    // it will not be destroyed at the end of the function
+    let mut ebpf = aya::Ebpf::load(aya::include_bytes_aligned!(concat!(
+        env!("OUT_DIR"),
+        "/fosr"
+    )))
+    .expect("Couldn't retrieve eBPF program");
+    let program: &mut Xdp = ebpf
+        .program_mut("fosr_ebpf")
+        .expect("Failed to get mut reference of program")
+        .try_into()
+        .expect("Failed to get Xdp program reference");
+    program.load().expect("Failed to load eBPF program");
+
+    // Attach the program to each network interface
+    for local_interface in local_interfaces {
+        program.attach(&local_interface.name, XdpFlags::SKB_MODE)
+            .expect("failed to attach the XDP program with default flags - try changing XdpFlags::default() to XdpFlags::SKB_MODE");
+    }
+
+    if let Err(e) = aya_log::EbpfLogger::init(&mut ebpf) {
+        // This can happen if you remove all log statements from your eBPF program.
+        log::warn!("failed to initialize eBPF logger: {e}");
+    }
+
+    ebpf
+}
+
 impl Stage4 {
     /// Creates a new Stage4 instance.
     ///
     /// # Parameters
     ///
     /// - `taint`: Boolean flag to enable or disable taint-based packet filtering.
-    pub fn new(taint: bool, fast: bool) -> Self {
+    pub fn new(taint: bool, fast: bool, local_interfaces: &[datalink::NetworkInterface]) -> Self {
+        log::info!("Stage4 created");
+
         Stage4 {
             taint,
             fast,
             current_flows: Arc::new(Mutex::new(Vec::new())),
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            ebpf: load_ebpf_program(local_interfaces),
         }
     }
 
