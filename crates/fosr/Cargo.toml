@@ -8,6 +8,7 @@ homepage = "https://pfgimenez.fr/fosr/"
 repository = "https://gitlab.inria.fr/pirat-public/Fos-R"
 license = "GPL-3.0"
 rust-version = "1.85.1"
+default-run = "fosr"
 
 [[bin]]
 name = "fosr"

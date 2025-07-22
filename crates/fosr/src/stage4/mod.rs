@@ -380,7 +380,7 @@ fn load_ebpf_program(local_interfaces: &[datalink::NetworkInterface]) -> aya::Eb
     // it will not be destroyed at the end of the function
     let mut ebpf = aya::Ebpf::load(aya::include_bytes_aligned!(concat!(
         env!("OUT_DIR"),
-        "/fosr"
+        "/fosr-ebpf-prog"
     )))
     .expect("Couldn't retrieve eBPF program");
     let program: &mut Xdp = ebpf

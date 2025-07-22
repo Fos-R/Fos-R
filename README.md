@@ -22,8 +22,9 @@ If you want Fos-R to use the network on Linux, you must execute it as root.
 
 ### eBPF
 
-You need to install `bpf-linker` to enable eBPF support:
+You need to install the nightly toolchain and `bpf-linker` to enable eBPF support:
 ```
+$ rustup toolchain install nightly --component rust-src
 $ cargo install bpf-linker
 ```
 
