@@ -34,6 +34,11 @@ indicatif = "0.18.0"
 thingbuf = "0.1.6"
 humantime = "2.2.0"
 
+[target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
+aya = { version = "0.13.1", default-features = false}
+aya-log = { version = "0.2.1", default-features = false }
+tokio = { version = "1.40.0", default-features = false, features = ["rt", "rt-multi-thread", "macros"] }
+
 [features]
 default = ["net_injection", "replay"]
 net_injection = []

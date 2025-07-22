@@ -72,7 +72,8 @@ impl Profile {
 ///    automata libraries, and initializes several stages of the generator pipeline.
 /// 4. Invokes the `run` function with appropriate parameters to start the generation
 ///    process either in injection mode or in pcap creation mode.
-fn main() {
+#[tokio::main]
+async fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args = cmd::Args::parse();
 
@@ -87,12 +88,17 @@ fn main() {
                 _ => unreachable!(),
             })
     };
-    let local_interfaces: Vec<Ipv4Addr> = datalink::interfaces()
+    let local_interfaces: Vec<datalink::NetworkInterface> = datalink::interfaces()
+        .into_iter()
+        .filter(|iface| !iface.is_loopback())
+        .collect();
+    let local_ips: Vec<Ipv4Addr> = local_interfaces
+        .clone()
         .into_iter()
         .flat_map(extract_addr)
         .filter(|i| !i.is_loopback())
         .collect();
-    log::debug!("IPv4 interfaces: {:?}", &local_interfaces);
+    log::debug!("IPv4 interfaces: {:?}", &local_ips);
 
     match args.command {
         #[cfg(feature = "net_injection")]
@@ -107,9 +113,9 @@ fn main() {
         } => {
             let profile = Profile::load(profile.as_deref());
             log::debug!("Configuration: {:?}", profile.config);
-            assert!(!local_interfaces.is_empty());
+            assert!(!local_ips.is_empty());
             let mut has_role = false;
-            for ip in local_interfaces.iter() {
+            for ip in local_ips.iter() {
                 if let Some(s) = profile.config.get_name(ip) {
                     log::info!("Computer role: {s}");
                 }
@@ -133,12 +139,12 @@ fn main() {
 
             let s1 =
                 stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
-            let s1 = stage1::FilterForOnline::new(local_interfaces.clone(), s1);
+            let s1 = stage1::FilterForOnline::new(local_ips.clone(), s1);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(taint, profile.config);
-            let s4 = stage4::Stage4::new(taint, false);
+            let s4 = stage4::Stage4::new(taint, false, &local_interfaces);
             run(
-                local_interfaces,
+                local_ips,
                 outfile,
                 s0,
                 (s1, 3),
