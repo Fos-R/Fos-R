@@ -9,7 +9,6 @@ use pnet_packet::MutablePacket;
 use pnet_packet::Packet;
 use pnet_packet::ip::IpNextHeaderProtocol;
 use std::collections::HashMap;
-use std::process::Command;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
@@ -26,7 +25,7 @@ pub struct Stage4 {
 
     // eBPF
     #[allow(dead_code)]
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
     ebpf: aya::Ebpf,
 }
 
@@ -36,8 +35,10 @@ const SESSION_TIMEOUT_IN_SECS: u64 = 30;
 impl FlowId {
     /// Closes the current session via iptables rules in Linux.
     /// This function removes firewall rules created for the session.
-    #[cfg(target_os = "linux")]
+    #[cfg(all(target_os = "linux", feature = "iptables"))]
     fn close_session(&self) {
+        use std::process::Command;
+
         log::debug!("Ip tables removed for {self:?}");
         let status = Command::new("iptables")
             .args([
@@ -94,12 +95,18 @@ impl FlowId {
         assert!(status.success());
     }
 
+    #[cfg(not(all(target_os = "linux", feature = "iptables")))]
+    fn close_session(&self) {}
+
     /// Opens a session by creating iptables rules on Linux.
     /// Establishes firewall rules to monitor and control outgoing packets for this session.
-    #[cfg(target_os = "linux")]
+    #[cfg(all(target_os = "linux", feature = "iptables"))]
     fn open_session(&self) {
         // TODO: name chain "fosr"?
         // TODO: modifier la chaîne pour prendre en compte d’UDP
+
+        use std::process::Command;
+
         log::debug!("Ip tables created for {}", self.src_port);
         let status = Command::new("iptables")
             .args([
@@ -158,10 +165,7 @@ impl FlowId {
         log::debug!("Ip tables created for {}", self.src_port);
     }
 
-    #[cfg(target_os = "windows")]
-    fn close_session(&self) {}
-
-    #[cfg(target_os = "windows")]
+    #[cfg(not(all(target_os = "linux", feature = "iptables")))]
     fn open_session(&self) {}
 }
 
@@ -371,7 +375,7 @@ fn handle_packets(
 /// # Parameters
 ///
 /// - `local_interfaces`: List of used (by Fos-R) network interfaces.
-#[cfg(any(target_os = "windows", target_os = "linux"))]
+#[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
 fn load_ebpf_program(local_interfaces: &[datalink::NetworkInterface]) -> aya::Ebpf {
     use aya::programs::{Xdp, XdpFlags};
 
@@ -396,6 +400,7 @@ fn load_ebpf_program(local_interfaces: &[datalink::NetworkInterface]) -> aya::Eb
             .expect("failed to attach the XDP program with default flags - try changing XdpFlags::default() to XdpFlags::SKB_MODE");
     }
 
+    #[cfg(feature = "ebpf_log")]
     if let Err(e) = aya_log::EbpfLogger::init(&mut ebpf) {
         // This can happen if you remove all log statements from your eBPF program.
         log::warn!("failed to initialize eBPF logger: {e}");
@@ -410,14 +415,18 @@ impl Stage4 {
     /// # Parameters
     ///
     /// - `taint`: Boolean flag to enable or disable taint-based packet filtering.
-    pub fn new(taint: bool, fast: bool, local_interfaces: &[datalink::NetworkInterface]) -> Self {
+    pub fn new(
+        taint: bool,
+        fast: bool,
+        #[allow(unused_variables)] local_interfaces: &[datalink::NetworkInterface],
+    ) -> Self {
         log::info!("Stage4 created");
 
         Stage4 {
             taint,
             fast,
             current_flows: Arc::new(Mutex::new(Vec::new())),
-            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
             ebpf: load_ebpf_program(local_interfaces),
         }
     }
