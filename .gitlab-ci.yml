@@ -5,6 +5,7 @@ build:amd64:
   stage: build
   image: rust
   script:
+    - cargo install bpf-linker
     - cargo build
     - cargo build --release
   artifacts:

@@ -20,11 +20,11 @@ Then, you can check the install with:
 
 If you want Fos-R to use the network on Linux, you must execute it as root.
 
-### eBFP
+### eBPF
 
+You need to install `bpf-linker` to enable eBPF support:
 ```
 $ cargo install bpf-linker
-$ cargo b -p fosr
 ```
 
 # Generation modes

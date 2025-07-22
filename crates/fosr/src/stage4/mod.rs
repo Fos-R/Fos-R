@@ -8,9 +8,7 @@ use pnet::transport::{
 use pnet_packet::MutablePacket;
 use pnet_packet::Packet;
 use pnet_packet::ip::IpNextHeaderProtocol;
-use std::any::Any;
 use std::collections::HashMap;
-use std::net::Ipv4Addr;
 use std::process::Command;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -27,6 +25,7 @@ pub struct Stage4 {
     current_flows: Arc<Mutex<Vec<Packets>>>,
 
     // eBPF
+    #[allow(dead_code)]
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     ebpf: aya::Ebpf,
 }
