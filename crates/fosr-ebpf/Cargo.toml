@@ -7,6 +7,7 @@ publish = false
 [dependencies]
 aya-ebpf = { version = "0.1.1", default-features = false }
 aya-log-ebpf = { version = "0.1.1", default-features = false }
+network-types = "0.0.8"
 
 [build-dependencies]
 which = { version = "6.0.0", default-features = false }
