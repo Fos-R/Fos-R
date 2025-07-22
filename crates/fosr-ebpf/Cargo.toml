@@ -13,5 +13,5 @@ network-types = "0.0.8"
 which = { version = "6.0.0", default-features = false }
 
 [[bin]]
-name = "fosr"
+name = "fosr-ebpf-prog"
 path = "src/main.rs"

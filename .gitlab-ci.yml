@@ -5,6 +5,7 @@ build:amd64:
   stage: build
   image: rust
   script:
+    - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
     - cargo build
     - cargo build --release
@@ -20,6 +21,8 @@ rustdoc:
   stage: build
   image: rust
   script:
+    - rustup toolchain install nightly --component rust-src
+    - cargo install bpf-linker
     - cargo doc --no-deps
   artifacts:
     paths:
@@ -32,6 +35,8 @@ tests:
   stage: test
   image: rust
   script:
+    - rustup toolchain install nightly --component rust-src
+    - cargo install bpf-linker
     - cargo test
 
 # TODO: stage for generation & evaluation, and deploying generated pcap
