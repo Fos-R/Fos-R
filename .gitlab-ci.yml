@@ -11,8 +11,8 @@ build:amd64:
     - cargo build --release
   artifacts:
     paths:
-      - target/debug
-      - target/release
+      - target/debug/fosr
+      - target/release/fosr
 
 rustdoc:
   tags:
