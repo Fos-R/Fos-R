@@ -542,10 +542,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fosr-common"
-version = "0.1.0"
-
-[[package]]
 name = "fosr-ebpf"
 version = "0.1.0"
 dependencies = [

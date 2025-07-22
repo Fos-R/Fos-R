@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = [ "crates/fosr-ebpf","crates/fosr", "crates/fosr-common"]
+members = [ "crates/fosr-ebpf","crates/fosr"]
 
 [profile.release]
 strip = true
