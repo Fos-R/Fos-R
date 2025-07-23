@@ -49,8 +49,8 @@ replay = []
 iptables = ["net_injection"]
 
 # Linux & Windows only
-ebpf_log = ["dep:tokio", "dep:aya-log"]
-ebpf = ["dep:aya"]
+ebpf_log = ["dep:tokio", "dep:aya-log", "ebpf"]
+ebpf = ["dep:aya", "net_injection"]
 
 [build-dependencies]
 aya-build = { version = "0.1.2", default-features = false }
