@@ -18,11 +18,11 @@ Then, you can check the install with:
 
     $ fosr
 
-If you want Fos-R to use the network on Linux, you must execute it as root.
+If you want Fos-R to use the network, you must execute it as root/administrator.
 
 # Generation modes
 
-Several generation modes are available.
+Two generation modes are available.
 
 ## Create-pcap
 
@@ -79,21 +79,6 @@ Options:
           Overall number of flows to generate per second [default: 10]
   -c, --config-path <CONFIG_PATH>
           Path to the information system configuration file
-```
-
-## Replay-pcap
-
-In this mode, Fos-R replays a pcap file with raw sockets.
-
-```
-Usage: `fosr replay [OPTIONS]`
-
-Options:
-  -f, --file <FILE>                Path to the pcap file to be replayed [default: output.pcap]
-  -c, --config-path <CONFIG_PATH>  Path to the information system configuration file
-  -t, --taint                      Taint the packets to easily identify them
-      --fast                       Ignores timestamps and send packets without waiting
-  -h, --help                       Print help
 ```
 
 # Roadmap
