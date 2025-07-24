@@ -1,6 +1,6 @@
 [package]
 name = "fosr"
-version = "0.1.1-dev"
+version = "0.1.2-dev"
 authors = ["Pierre-François Gimenez","Dorian Bachelot","Florentin Labelle","Evan Morin"]
 edition = "2024"
 description = "Fos-R (Forger Of Security Records) is a synthetic network traffic generator."
@@ -9,6 +9,7 @@ repository = "https://gitlab.inria.fr/pirat-public/Fos-R"
 license = "GPL-3.0"
 rust-version = "1.85.1"
 default-run = "fosr"
+categories = ["network-programming","security","science"]
 
 [[bin]]
 name = "fosr"
