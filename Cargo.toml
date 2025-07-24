@@ -1,6 +1,6 @@
 [package]
 name = "fosr"
-version = "0.1.1-dev"
+version = "0.1.1"
 authors = ["Pierre-François Gimenez","Florentin Labelle","Evan Morin"]
 edition = "2024"
 description = "Fos-R (Forger Of Security Records) is a synthetic network traffic generator."

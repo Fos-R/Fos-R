@@ -29,29 +29,19 @@ Two generation modes are available.
 In this mode, Fos-R output a pcap file generated with the AI models.
 
 ```
-Usage: `fosr create-pcap [OPTIONS] --flow-count <FLOW_COUNT> --config-path <CONFIG_PATH>`
+Usage: fosr create-pcap [OPTIONS] <--duration <DURATION>|--packets-count <PACKETS_COUNT>>
 
 Options:
-  -o, --outfile <OUTFILE>
-          Output pcap file for synthetic network packets [default: output.pcap]
-      --minimum-threads
-          Use as few threads as possible
-  -f, --flow-count <FLOW_COUNT>
-          Minimum number of flows to generate
-  -d, --start-unix-time <START_UNIX_TIME>
-          Unix time for the beginning of the pcap. By default, use current time
-  -s, --seed <SEED>
-          Seed for random number generation
-  -p, --patterns <PATTERNS>
-          Path to the patterns file
-  -a, --automata <AUTOMATA>
-          Path to automata directory
-  -u, --cpu-usage
-          Show CPU usage per thread
-  -c, --config-path <CONFIG_PATH>
-          Path to the information system configuration file
-  -h, --help
-          Print help
+  -o, --outfile <OUTFILE>              Output pcap file for synthetic network packets [default: output.pcap]
+      --minimum-threads                Use as few threads as possible
+  -n, --packets-count <PACKETS_COUNT>  Minimum number of packets to generate. Generation is not deterministic.
+  -d, --duration <DURATION>            Minimum pcap traffic duration described in human-friendly time, such as "15days 30min 5s". Generation is deterministic when used with --order-pcap.
+  -t, --start-time <START_TIME>        Beginning time of the pcap in RFC3339 style ("2025-05-01 10:28:07") or a Unix timestamp. By default, use current time
+      --order-pcap                     Reorder temporally the generated pcap. Must fit the entire dataset in RAM.
+  -s, --seed <SEED>                    Seed for random number generation
+  -u, --cpu-usage                      Show CPU usage per thread
+  -p, --profile <PROFILE>              Path to the profile with the models and the configuration
+  -h, --help                           Print help
 ```
 
 ## Network injection
@@ -60,7 +50,7 @@ In this mode, Fos-R generates and play network traffic between different compute
 Fos-R needs to be executed on each computer and provided a configuration file.
 
 ```
-Usage: `fosr inject [OPTIONS] --config-path <CONFIG_PATH>`
+Usage: fosr inject [OPTIONS]
 
 Options:
   -o, --outfile <OUTFILE>
@@ -69,16 +59,14 @@ Options:
           Taint the packets to easily identify them
   -s, --seed <SEED>
           Seed for random number generation
-  -p, --patterns <PATTERNS>
-          Path to the patterns file
-  -a, --automata <AUTOMATA>
-          Path to automata directory
   -u, --cpu-usage
           Show CPU usage per thread
   -f, --flow-per-second <FLOW_PER_SECOND>
           Overall number of flows to generate per second [default: 10]
-  -c, --config-path <CONFIG_PATH>
-          Path to the information system configuration file
+  -p, --profile <PROFILE>
+          Path to the profile with the models and the configuration
+  -h, --help
+          Print help
 ```
 
 # Roadmap
