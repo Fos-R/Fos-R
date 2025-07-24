@@ -1,0 +1,23 @@
+- name: Install cargo
+  ansible.windows.win_shell: |
+    Invoke-WebRequest -Uri https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe -OutFile rustup-init.exe 
+    .\rustup-init.exe --quiet --profile complete -y
+    [Environment]::SetEnvironmentVariable('PATH', ($env:PATH + ";C:\Users\vagrant\.cargo\bin"), 'Machine')
+
+- name: Installer MinGW-w64 (outil GNU pour la compilation)
+  win_chocolatey:
+    name: mingw
+    state: present  
+
+- name: Installer Visual Studio Build Tools
+  ansible.windows.win_shell: |
+    Invoke-WebRequest -Uri https://aka.ms/vs/17/release/vs_buildtools.exe -OutFile "$env:TEMP\vs_buildtools.exe"
+    Start-Process "$env:TEMP\vs_buildtools.exe" -ArgumentList "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --quiet --norestart --wait" -Wait
+    [System.Environment]::SetEnvironmentVariable(
+      "Path",
+      [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64",
+      "Machine"
+    )
+
+#- name: Compile Fos-R
+#  ansible.windows.win_shell: 'cargo install --git https://gitlab.inria.fr/pirat-public/Fos-R.git --branch ebpf fosr'
