@@ -136,7 +136,9 @@ unsafe fn update_tcp_checksum(
     // }
 
     // Add TCP payload
-    let tcp_data_len = ip.total_len() as usize - Ipv4Hdr::LEN - tcp_hdr_len;
+    let tcp_len = ip.total_len() as usize - Ipv4Hdr::LEN;
+    let tcp_data_len = tcp_len - tcp_hdr_len;
+    checksum.add_bytes(&[(tcp_len >> 8) as u8, (tcp_len & 0xff) as u8]);
     info!(&ctx, "tcp data len: {}", tcp_data_len);
     // if tcp_data_len > 0 {
     //     let tcp_data: *mut u8 = unsafe {
@@ -150,7 +152,7 @@ unsafe fn update_tcp_checksum(
     // }
 
     unsafe {
-        (*tcp_header).check = u16::from_be_bytes(checksum.checksum());
+        (*tcp_header).check = u16::from_ne_bytes(checksum.checksum());
     }
 
     Ok(())
