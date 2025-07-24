@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [ "crates/fosr-ebpf","crates/fosr"]
+exclude = ["/dev","/learning","/resources"]
 
 [profile.release]
 strip = true
