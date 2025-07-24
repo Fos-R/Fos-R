@@ -2,7 +2,10 @@
   ansible.builtin.apt:
     pkg:
     - build-essential
+    - libpcap-dev
+    - iptables
     update_cache: yes
+  become: yes
 
 # If compiling from source
 - name: Download Cargo Installer
@@ -10,42 +13,51 @@
     url: https://sh.rustup.rs
     dest: /tmp/sh.rustup.rs
     mode: '0755'
-  # when: from_source
+  become: yes
 
 - name: Install Cargo
   become: yes
-  ansible.builtin.command: /tmp/sh.rustup.rs -y
-  # when: from_source
+  ansible.builtin.shell: |
+    /tmp/sh.rustup.rs -y
+    . "$HOME/.cargo/env"
+    echo "export PATH=$PATH:~/.cargo/bin" >> .bashrc
+    rustup toolchain install nightly --component rust-src
+    cargo install bpf-linker
+  become: yes
 
 - name: Compile Fos-R
   become: yes
-  ansible.builtin.shell: /root/.cargo/bin/cargo install --git https://gitlab.inria.fr/pirat-public/Fos-R.git --branch ebpf
-  # when: from_source
+  ansible.builtin.shell: cargo install --git https://gitlab.inria.fr/pirat-public/Fos-R --features "net_injection"
+  when: from_source
+  become: yes
 
 # If downloading precompiled binary
-# - name: Create cargo directory
-#   ansible.builtin.file:
-#     dest: /root/.cargo/bin/
-#     state: directory
-#     mode: '0755'
-#   when: not from_source
+- name: Create cargo directory
+  ansible.builtin.file:
+    dest: /root/.cargo/bin/
+    state: directory
+    mode: '0755'
+  when: not from_source
+  become: yes
 
-# - name: Download Fos-R binary
-#   ansible.builtin.get_url:
-#     url: https://github.com/Fos-R/Fos-R/releases/download/v0.1.0/fosr
-#     dest: /root/.cargo/bin/fosr
-#     mode: '0755'
-#   when: not from_source
+- name: Download Fos-R binary
+  ansible.builtin.get_url:
+    url: https://github.com/Fos-R/Fos-R/releases/download/v0.1.0/fosr
+    dest: /root/.cargo/bin/fosr
+    mode: '0755'
+  when: not from_source
+  become: yes
 
-# # Create service
-# - name: Copy service file
-#   ansible.builtin.template:
-#     src: "templates/fosr.service.j2"
-#     dest: "/etc/systemd/system/fosr.service"
+# Create service
+- name: Copy service file
+  ansible.builtin.template:
+    src: "templates/fosr.service.j2"
+    dest: "/etc/systemd/system/fosr.service"
+  become: yes
 
-# - name: Start the service of Fos-R
-#   systemd:
-#     name: "fosr"
-#     state: started
-#     enabled: true
-
+- name: Start the service of Fos-R
+  become: yes
+  systemd:
+    name: "fosr"
+    state: started
+    enabled: true
