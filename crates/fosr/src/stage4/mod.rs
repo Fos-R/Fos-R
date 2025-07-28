@@ -351,15 +351,24 @@ fn handle_packets(
 
             log::trace!("Send to {fid:?}");
 
-            match tx.send_to(&ipv4_packet, std::net::IpAddr::V4(fid.dst_ip)) {
-                Ok(n) => assert_eq!(n, ipv4_packet.packet().len()), // Check if the whole packet was sent
-                Err(e) => log::error!(
-                    "failed to send packet: {}, length: {}",
-                    e,
-                    ipv4_packet.packet().len()
-                ),
+            let mut retry_count = 3;
+            while retry_count > 0 {
+                match tx.send_to(&ipv4_packet, std::net::IpAddr::V4(fid.dst_ip)) {
+                    Ok(n) => {
+                        assert_eq!(n, ipv4_packet.packet().len()); // Check if the whole packet was sent
+                        log::trace!("Packet sent from port {}", fid.src_port);
+                        retry_count = 0;
+                    }
+                    Err(e) => {
+                        retry_count -= 1;
+                        if retry_count > 0 {
+                            log::error!("Failed to send packet: {}. Retry.", e);
+                        } else {
+                            log::error!("Failed to send packet: {}. Give up.", e);
+                        }
+                    }
+                }
             }
-            log::trace!("Packet sent from port {}", fid.src_port);
 
             if flow.directions.is_empty() {
                 // remove the flow ID from the socket list
