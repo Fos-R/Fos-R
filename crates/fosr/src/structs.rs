@@ -217,7 +217,11 @@ impl Packet {
 
 impl Ord for Packet {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.timestamp.cmp(&other.timestamp)
+        if self.timestamp == other.timestamp {
+            self.data.cmp(&other.data) // use data in case both timestamps are equal
+        } else {
+            self.timestamp.cmp(&other.timestamp)
+        }
     }
 }
 
@@ -229,7 +233,7 @@ impl PartialOrd for Packet {
 
 impl PartialEq for Packet {
     fn eq(&self, other: &Self) -> bool {
-        self.timestamp == other.timestamp
+        self.timestamp == other.timestamp && self.data == other.data
     }
 }
 
