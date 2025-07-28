@@ -344,7 +344,7 @@ fn handle_packets(
             let mut ipv4_packet =
                 pnet::packet::ipv4::MutableIpv4Packet::new(eth_packet.payload_mut()).unwrap();
 
-            if cfg!(target_os = "linux") {
+            if cfg!(target_os = "linux") && cfg!(feature = "iptables") {
                 // iptables hack
                 ipv4_packet.set_ttl(65);
             }
