@@ -239,10 +239,10 @@ impl Pattern {
                         p.src_ip = Some(src_ip);
                         p.dst_ip = Some(dst_ip);
                     } else {
-                        log::warn!(
-                            "No provider or user IP for dst port {}",
-                            p.dst_port.unwrap()
-                        );
+                        // log::warn!(
+                        //     "No provider or user IP for dst port {}",
+                        //     p.dst_port.unwrap()
+                        // );
                         restart = true;
                         break; // start again
                     }

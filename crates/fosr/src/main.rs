@@ -89,7 +89,7 @@ fn main() {
     };
     let local_interfaces: Vec<datalink::NetworkInterface> = datalink::interfaces()
         .into_iter()
-        .filter(|iface| !iface.is_loopback())
+        .filter(|iface| !iface.is_loopback() && iface.ips.iter().position(IpNetwork::is_ipv4).is_some())
         .collect();
     let local_ips: Vec<Ipv4Addr> = local_interfaces
         .clone()

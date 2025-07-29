@@ -405,8 +405,9 @@ fn load_ebpf_program(local_interfaces: &[datalink::NetworkInterface]) -> aya::Eb
 
     // Attach the program to each network interface
     for local_interface in local_interfaces {
-        program.attach(&local_interface.name, XdpFlags::SKB_MODE)
-            .expect("failed to attach the XDP program with default flags - try changing XdpFlags::default() to XdpFlags::SKB_MODE");
+        program
+            .attach(&local_interface.name, XdpFlags::SKB_MODE)
+            .expect(&format!("failed to attach the XDP program on interface {local_interface}"));
     }
 
     ebpf
