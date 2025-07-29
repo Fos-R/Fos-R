@@ -39,22 +39,18 @@ num_cpus = "1.17.0"
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
 aya = { version = "0.13.1", default-features = false, optional = true }
-aya-log = { version = "0.2.1", default-features = false, optional = true }
-tokio = { version = "1.40.0", default-features = false, features = ["rt", "rt-multi-thread", "macros"], optional = true }
 
 [features]
-default = ["net_injection", "replay", "ebpf"]
+default = ["net_injection", "ebpf"]
 net_injection = []
-replay = []
 
 # Linux only
 iptables = ["net_injection"]
 
 # Linux & Windows only
-ebpf_log = ["dep:tokio", "dep:aya-log", "ebpf"]
-ebpf = ["dep:aya", "net_injection"]
+ebpf = ["dep:aya", "net_injection", "dep:aya-build", "dep:fosr-ebpf", "dep:anyhow"]
 
-[build-dependencies]
-aya-build = { version = "0.1.2", default-features = false }
-fosr-ebpf = { path = "../fosr-ebpf" }
-anyhow = { version = "1", default-features = false }
+[target.'cfg(any(target_os = "windows", target_os = "linux"))'.build-dependencies]
+aya-build = { version = "0.1.2", default-features = false, optional = true }
+fosr-ebpf = { path = "../fosr-ebpf", optional = true }
+anyhow = { version = "1", default-features = false, optional = true }

@@ -6,7 +6,3 @@ exclude = ["/dev","/learning","/resources"]
 [profile.release]
 strip = true
 lto = true
-
-[profile.release.package.fosr-ebpf]
-debug = 2
-codegen-units = 1
