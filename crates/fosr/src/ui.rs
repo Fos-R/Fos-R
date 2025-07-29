@@ -3,7 +3,6 @@ use crate::structs::*;
 use indicatif::HumanBytes;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use std::fmt::Write;
-use std::process::Command;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread;
@@ -98,20 +97,7 @@ fn update_progress_bar(stats: Arc<Stats>, position: &AtomicU64, target: u64) {
     }
 }
 
-pub fn run(stats: Arc<Stats>, cpu_usage: bool) {
-    let child = if cpu_usage {
-        Some(
-            Command::new("top")
-                .arg("-H")
-                .arg("-p")
-                .arg(std::process::id().to_string())
-                .spawn()
-                .expect("command failed to start"),
-        )
-    } else {
-        None
-    };
-
+pub fn run(stats: Arc<Stats>) {
     if stats.packets_target.is_some() || stats.duration_target.is_some() {
         let stats2 = Arc::clone(&stats);
         stats.progress_bar.set_style(
@@ -155,8 +141,5 @@ pub fn run(stats: Arc<Stats>, cpu_usage: bool) {
                 }
             }
         }
-    }
-    if let Some(mut c) = child {
-        c.kill().expect("command couldn't be killed");
     }
 }

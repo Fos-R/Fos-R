@@ -486,7 +486,7 @@ fn send_pcap(flow_packets: thingbuf::mpsc::blocking::SendRef<Packets>) {
     // if noise { // insert noise // TODO: find a better way to do it
     //     stage3::insert_noise(&mut noisy_flow);
     // }
-    drop(flow_packets); // actually send (the drop in itself is useful but easier to read)
+    drop(flow_packets); // actually send (the drop in itself is useless but easier to read)
     // tx_s3_to_pcap.send(flow_packets).unwrap();
 }
 

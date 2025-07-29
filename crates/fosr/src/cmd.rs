@@ -15,22 +15,19 @@ pub enum Command {
     Inject {
         #[arg(short, long, default_value = None, help = "Output pcap file of generated packets")]
         outfile: Option<String>,
+        #[cfg(all(target_os = "linux", feature = "iptables"))]
+        #[arg(
+            long,
+            default_value_t = false,
+            help = "Do not taint the packets. Option only available on Linux with the \"iptables\" feature."
+        )]
+        stealthy: bool,
         #[arg(
             short,
             long,
-            default_value_t = false,
-            help = "Taint the packets to easily identify them"
+            help = "Seed for random number generation. All participant must use the same seed!"
         )]
-        taint: bool,
-        #[arg(short, long, help = "Seed for random number generation. All participant must use the same seed!")]
         seed: Option<u64>,
-        #[arg(
-            short = 'u',
-            long,
-            default_value_t = false,
-            help = "Show CPU usage per thread"
-        )]
-        cpu_usage: bool,
         #[arg(
             short,
             long,
@@ -84,13 +81,6 @@ pub enum Command {
         order_pcap: bool,
         #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,
-        #[arg(
-            short = 'u',
-            long,
-            default_value_t = false,
-            help = "Show CPU usage per thread"
-        )]
-        cpu_usage: bool,
         #[arg(
             short,
             long,
