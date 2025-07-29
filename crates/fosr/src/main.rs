@@ -215,10 +215,11 @@ fn start() {
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(false, profile.config);
 
+            let cpu_count = num_cpus::get();
             let (s1_count, s2_count, s3_count) = if minimum_threads {
                 (1, 1, 1)
             } else {
-                (3, 3, 6)
+                (cpu_count/2, cpu_count/2, cpu_count/2)
             };
             run(
                 vec![],
@@ -318,9 +319,9 @@ fn run(
     local_interfaces: Vec<Ipv4Addr>,
     outfile: Option<String>,
     s0: impl stage0::Stage0,
-    s1: (impl stage1::Stage1, u8),
-    s2: (impl stage2::Stage2, u8),
-    s3: (stage3::Stage3, u8),
+    s1: (impl stage1::Stage1, usize),
+    s2: (impl stage2::Stage2, usize),
+    s3: (stage3::Stage3, usize),
     cpu_usage: bool,
     order_pcap: bool,
     stats: Arc<ui::Stats>,
