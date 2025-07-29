@@ -5,7 +5,7 @@ build:amd64:
   stage: build
   image: rust
   script:
-    - cargo build --no-default-features --features iptables
+    - cargo build --no-default-features --features iptables -p fosr
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
     - cargo build
