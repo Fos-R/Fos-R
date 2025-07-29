@@ -429,8 +429,6 @@ impl Stage4 {
         fast: bool,
         #[allow(unused_variables)] local_interfaces: &[datalink::NetworkInterface],
     ) -> Self {
-        log::info!("Stage4 created");
-
         Stage4 {
             taint,
             fast,

@@ -22,7 +22,7 @@ pub enum Command {
             help = "Taint the packets to easily identify them"
         )]
         taint: bool,
-        #[arg(short, long, help = "Seed for random number generation")]
+        #[arg(short, long, help = "Seed for random number generation. All participant must use the same seed!")]
         seed: Option<u64>,
         #[arg(
             short = 'u',

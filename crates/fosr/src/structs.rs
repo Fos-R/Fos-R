@@ -215,6 +215,7 @@ impl Packet {
     }
 }
 
+/// Used for packet ordering before pcap export
 impl Ord for Packet {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.timestamp == other.timestamp {

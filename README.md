@@ -52,6 +52,8 @@ Options:
   -h, --help                           Print help
 ```
 
+If you need a deterministic generation, make sure to specify a seed with `-s`, to use `--order-pcap` and to set a start time with `-t`.
+
 ## Network injection
 
 In this mode, Fos-R generates and play network traffic between different computers in the same network.
