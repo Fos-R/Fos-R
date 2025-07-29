@@ -362,9 +362,9 @@ fn handle_packets(
                     Err(e) => {
                         retry_count -= 1;
                         if retry_count > 0 {
-                            log::error!("Failed to send packet: {}. Retry.", e);
+                            log::error!("Failed to send packet: {e}. Retry.");
                         } else {
-                            log::error!("Failed to send packet: {}. Give up.", e);
+                            log::error!("Failed to send packet: {e}. Give up.");
                         }
                     }
                 }

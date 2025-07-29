@@ -113,14 +113,17 @@ fn start() {
     match args.command {
         #[cfg(feature = "net_injection")]
         cmd::Command::Inject {
-            taint,
+            #[cfg(all(target_os = "linux", feature = "iptables"))]
+            stealthy,
             seed,
             profile,
-            cpu_usage,
             outfile,
             flow_per_second,
             ..
         } => {
+            #[cfg(not(all(target_os = "linux", feature = "iptables")))]
+            let stealthy = false;
+
             let profile = Profile::load(profile.as_deref());
             log::debug!("Configuration: {:?}", profile.config);
             assert!(!local_ips.is_empty());
@@ -151,8 +154,8 @@ fn start() {
                 stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
             let s1 = stage1::FilterForOnline::new(local_ips.clone(), s1);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(taint, profile.config);
-            let s4 = stage4::Stage4::new(taint, false, &local_interfaces);
+            let s3 = stage3::Stage3::new(!stealthy, profile.config);
+            let s4 = stage4::Stage4::new(!stealthy, false, &local_interfaces);
             run(
                 local_ips,
                 outfile,
@@ -160,7 +163,6 @@ fn start() {
                 (s1, 3),
                 (s2, 1),
                 (s3, 1),
-                cpu_usage,
                 false,
                 Arc::new(ui::Stats::default()),
                 Some(s4),
@@ -171,7 +173,6 @@ fn start() {
             profile,
             outfile,
             packets_count,
-            cpu_usage,
             minimum_threads,
             order_pcap,
             start_time,
@@ -215,11 +216,11 @@ fn start() {
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(false, profile.config);
 
-            let cpu_count = num_cpus::get();
             let (s1_count, s2_count, s3_count) = if minimum_threads {
                 (1, 1, 1)
             } else {
-                (cpu_count/2, cpu_count/2, cpu_count/2)
+                let cpu_count = num_cpus::get();
+                (cpu_count / 2, cpu_count / 2, cpu_count / 2)
             };
             run(
                 vec![],
@@ -228,7 +229,6 @@ fn start() {
                 (s1, s1_count),
                 (s2, s2_count),
                 (s3, s3_count),
-                cpu_usage,
                 order_pcap,
                 Arc::new(ui::Stats::new(target)),
                 None,
@@ -313,7 +313,6 @@ fn start() {
 /// - `s1`: An implementation of the Stage 1 trait that converts seed data to flow data.
 /// - `s2`: An implementation of the Stage 2 trait that converts flows into protocol data.
 /// - `s3`: The Stage3 instance that generates packets (for TCP, UDP, ICMP).
-/// - `cpu_usage`: A flag indicating if CPU usage statistics should be displayed in the monitoring UI.
 /// - `s4`: An optional Stage4 instance for additional online processing.
 fn run(
     local_interfaces: Vec<Ipv4Addr>,
@@ -322,7 +321,6 @@ fn run(
     s1: (impl stage1::Stage1, usize),
     s2: (impl stage2::Stage2, usize),
     s3: (stage3::Stage3, usize),
-    cpu_usage: bool,
     order_pcap: bool,
     stats: Arc<ui::Stats>,
     s4: Option<stage4::Stage4>,
@@ -525,7 +523,7 @@ fn run(
     {
         let stats = Arc::clone(&stats);
         let builder = thread::Builder::new().name("Monitoring".into());
-        threads.push(builder.spawn(move || ui::run(stats, cpu_usage)).unwrap());
+        threads.push(builder.spawn(move || ui::run(stats)).unwrap());
     }
 
     // Wait for the generation threads to end
