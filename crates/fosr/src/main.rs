@@ -63,17 +63,6 @@ impl Profile {
     }
 }
 
-#[cfg(feature = "ebpf_log")]
-#[tokio::main]
-async fn main() {
-    start();
-}
-
-#[cfg(not(feature = "ebpf_log"))]
-fn main() {
-    start();
-}
-
 /// The entry point of the application.
 ///
 /// This function performs the following steps:
@@ -83,7 +72,7 @@ fn main() {
 ///    automata libraries, and initializes several stages of the generator pipeline.
 /// 4. Invokes the `run` function with appropriate parameters to start the generation
 ///    process either in injection mode or in pcap creation mode.
-fn start() {
+fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args = cmd::Args::parse();
 
@@ -507,7 +496,7 @@ fn run(
         // STAGE 4 (online mode only)
         // TODO: only one stage 4 for all protocols
 
-        #[cfg(any(feature = "replay", feature = "net_injection"))]
+        #[cfg(feature = "net_injection")]
         if let Some(mut s4) = s4 {
             let builder = thread::Builder::new().name("Stage4".into());
             gen_threads.push(

@@ -409,12 +409,6 @@ fn load_ebpf_program(local_interfaces: &[datalink::NetworkInterface]) -> aya::Eb
             .expect("failed to attach the XDP program with default flags - try changing XdpFlags::default() to XdpFlags::SKB_MODE");
     }
 
-    #[cfg(feature = "ebpf_log")]
-    if let Err(e) = aya_log::EbpfLogger::init(&mut ebpf) {
-        // This can happen if you remove all log statements from your eBPF program.
-        log::warn!("failed to initialize eBPF logger: {e}");
-    }
-
     ebpf
 }
 

@@ -1,20 +1,17 @@
 [package]
 name = "fosr-ebpf"
+authors = ["Pierre-François Gimenez","Dorian Bachelot"]
 version = "0.1.0"
 edition = "2024"
 publish = false
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 aya-ebpf = { version = "0.1.1", default-features = false }
-aya-log-ebpf = { version = "0.1.1", default-features = false }
 network-types = "0.0.8"
 
-[dev-dependencies]
-rand_xorshift = "0.1.1"
-rand = "0.6"
-
 [build-dependencies]
-which = { version = "6.0.0", default-features = false }
+which = { version = "8.0.0" }
 
 [[bin]]
 name = "fosr-ebpf-prog"
