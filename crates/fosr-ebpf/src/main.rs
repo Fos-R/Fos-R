@@ -63,7 +63,6 @@ fn try_fosr_ebpf(ctx: XdpContext) -> Result<u32, ()> {
 
         // Check if the Fos-R flag is enabled
         if unsafe { get_fosr_flag(ipv4_header) } {
-
             // This will force the OS network stack to drop the packet:
             // setting MAC destination addresse to broadcast disables kernel’s answer
             unsafe { (*ethernet_header).dst_addr[0] |= 0x01 };
