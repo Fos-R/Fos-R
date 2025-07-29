@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Windows support through eBPF
+
+### Changed
+
+- Output for create-pcap can be deterministic (with the correct options)
+
 ## v0.1.1
 
 ### Added

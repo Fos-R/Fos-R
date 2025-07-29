@@ -130,7 +130,8 @@ pub fn import_config(config: &str) -> Hosts {
             if let Some(s) = iface.name {
                 name.insert(ip_toml, s);
             }
-            let provides_toml = iface.provides.unwrap_or_default();
+            let mut provides_toml = iface.provides.unwrap_or_default();
+            provides_toml.sort();
             for port in provides_toml {
                 let current_ips = provides.get_mut(&port);
                 if let Some(vec) = current_ips {
@@ -139,7 +140,8 @@ pub fn import_config(config: &str) -> Hosts {
                     provides.insert(port, vec![ip_toml]);
                 }
             }
-            let uses_toml = iface.uses.unwrap_or_default();
+            let mut uses_toml = iface.uses.unwrap_or_default();
+            uses_toml.sort();
             for port in uses_toml {
                 let current_ips = uses.get_mut(&port);
                 if let Some(vec) = current_ips {

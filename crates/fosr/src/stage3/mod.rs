@@ -511,7 +511,7 @@ pub fn run<T: PacketInfo>(
     // everytime. 65536 is the maximum payload
     // size.
     for headers in rx_s3 {
-        log::trace!("Creating packets");
+        // log::trace!("Creating packets");
         let mut flow_packets = tx_s3_to_pcap.send_ref()?;
         // flow_packets.clear();
         generator(&headers, &mut flow_packets, &mut payload_array);
