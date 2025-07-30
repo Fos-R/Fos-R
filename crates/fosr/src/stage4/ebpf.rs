@@ -46,7 +46,9 @@ fn load_ebpf_program(local_interfaces: &[datalink::NetworkInterface]) {
     for local_interface in local_interfaces {
         program
             .attach(&local_interface.name, XdpFlags::SKB_MODE)
-            .unwrap_or_else(|_| panic!("failed to attach the XDP program on interface {local_interface}"));
+            .unwrap_or_else(|_| {
+                panic!("failed to attach the XDP program on interface {local_interface}")
+            });
     }
 
     // leak the ebpf program so it lives as long as the process
