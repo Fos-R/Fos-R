@@ -3,12 +3,12 @@ use aya::Ebpf;
 use pnet::datalink;
 
 #[derive(Debug, Clone)]
-pub struct EBPFStage4 {
+pub struct EBPFNetEnabler {
     // Params
     fast: bool,
 }
 
-impl Stage4 for EBPFStage4 {
+impl NetEnabler for EBPFNetEnabler {
     fn is_packet_relevant(&self, flags: u8) -> bool {
         flags & 0b100 > 0 // we know the traffic is tainted
     }
@@ -53,9 +53,9 @@ fn load_ebpf_program(local_interfaces: &[datalink::NetworkInterface]) {
     Box::<Ebpf>::leak(Box::new(ebpf));
 }
 
-impl EBPFStage4 {
+impl EBPFNetEnabler {
     pub fn new(fast: bool, local_interfaces: &[datalink::NetworkInterface]) -> Self {
         load_ebpf_program(local_interfaces);
-        EBPFStage4 { fast }
+        EBPFNetEnabler { fast }
     }
 }

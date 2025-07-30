@@ -1,13 +1,13 @@
 use crate::stage4::*;
 
 #[derive(Debug, Clone)]
-pub struct IPTablesStage4 {
+pub struct IPTablesNetEnabler {
     // Params
     taint: bool,
     fast: bool,
 }
 
-impl Stage4 for IPTablesStage4 {
+impl NetEnabler for IPTablesNetEnabler {
     fn is_fast(&self) -> bool {
         self.fast
     }
@@ -144,8 +144,8 @@ impl Stage4 for IPTablesStage4 {
     }
 }
 
-impl IPTablesStage4 {
+impl IPTablesNetEnabler {
     pub fn new(taint: bool, fast: bool) -> Self {
-        IPTablesStage4 { taint, fast }
+        IPTablesNetEnabler { taint, fast }
     }
 }
