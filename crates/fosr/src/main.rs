@@ -89,9 +89,7 @@ fn main() {
     };
     let local_interfaces: Vec<datalink::NetworkInterface> = datalink::interfaces()
         .into_iter()
-        .filter(|iface| {
-            !iface.is_loopback() && iface.ips.iter().any(IpNetwork::is_ipv4)
-        })
+        .filter(|iface| !iface.is_loopback() && iface.ips.iter().any(IpNetwork::is_ipv4))
         .collect();
     let local_ips: Vec<Ipv4Addr> = local_interfaces
         .clone()
@@ -110,7 +108,7 @@ fn main() {
             profile,
             outfile,
             flow_per_second,
-            net_enabler
+            net_enabler,
         } => {
             #[cfg(not(all(target_os = "linux", feature = "iptables")))]
             let stealthy = false;
@@ -131,7 +129,6 @@ fn main() {
                 log::error!("This computer has no traffic to inject in this profile! Exiting.");
                 process::exit(1);
             }
-            log::info!("Model initialization");
             let s0 = stage0::UniformGenerator::new_for_honeypot(
                 seed,
                 SystemTime::now().duration_since(UNIX_EPOCH).unwrap(),
@@ -162,7 +159,7 @@ fn main() {
                         Arc::new(ui::Stats::default()),
                         Some(s4net),
                     );
-                },
+                }
                 #[cfg(all(target_os = "linux", feature = "iptables"))]
                 cmd::NetEnabler::Iptables => {
                     let s4net = stage4::iptables::IPTablesNetEnabler::new(!stealthy, false);
@@ -177,7 +174,7 @@ fn main() {
                         Arc::new(ui::Stats::default()),
                         Some(s4net),
                     );
-                },
+                }
             };
         }
         cmd::Command::CreatePcap {
@@ -208,7 +205,6 @@ fn main() {
             if let Some(s) = seed {
                 log::info!("Generating with seed {s}");
             }
-            log::info!("Model initialization");
             let initial_ts: Duration = if let Some(start_time) = start_time {
                 // try to parse a date
                 if let Ok(d) = humantime::parse_rfc3339_weak(&start_time) {

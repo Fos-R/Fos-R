@@ -1,4 +1,5 @@
 use crate::stage2::*;
+use indicatif::{ProgressBar, ProgressStyle};
 use rand_core::*;
 use rand_pcg::Pcg32;
 use std::ffi::OsStr;
@@ -18,7 +19,6 @@ pub struct AutomataLibrary {
 }
 
 impl Default for AutomataLibrary {
-    #[cfg(debug_assertions)]
     fn default() -> Self {
         let mut lib = AutomataLibrary {
             cons_tcp_automata: vec![],
@@ -29,32 +29,19 @@ impl Default for AutomataLibrary {
             udp_automata: vec![],
             icmp_automata: vec![],
         };
+
+        let pb = ProgressBar::new(6);
+        pb.set_style(
+            ProgressStyle::with_template(
+                "{spinner:.green} Automata initialization: {pos}/{len} {wide_bar}",
+            )
+            .unwrap(),
+        );
+
+        #[cfg(debug_assertions)]
         lib.import_from_str(include_str!("../../default_models/automata/mqtt.json"))
             .unwrap();
-        lib.import_from_str(include_str!("../../default_models/automata/smtp.json"))
-            .unwrap();
-        lib.import_from_str(include_str!("../../default_models/automata/ssh.json"))
-            .unwrap();
-        lib.import_from_str(include_str!("../../default_models/automata/https.json"))
-            .unwrap();
-        lib.import_from_str(include_str!("../../default_models/automata/dns.json"))
-            .unwrap();
-        lib.import_from_str(include_str!("../../default_models/automata/ntp.json"))
-            .unwrap();
-        lib
-    }
-
-    #[cfg(not(debug_assertions))]
-    fn default() -> Self {
-        let mut lib = AutomataLibrary {
-            cons_tcp_automata: vec![],
-            cons_udp_automata: vec![],
-            cons_icmp_automata: vec![],
-
-            tcp_automata: vec![],
-            udp_automata: vec![],
-            icmp_automata: vec![],
-        };
+        #[cfg(not(debug_assertions))]
         lib.import_from_str(
             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                 "default_models/automata/mqtt.json",
@@ -63,6 +50,12 @@ impl Default for AutomataLibrary {
             .unwrap(),
         )
         .unwrap();
+        pb.inc(1);
+
+        #[cfg(debug_assertions)]
+        lib.import_from_str(include_str!("../../default_models/automata/smtp.json"))
+            .unwrap();
+        #[cfg(not(debug_assertions))]
         lib.import_from_str(
             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                 "default_models/automata/smtp.json",
@@ -71,14 +64,12 @@ impl Default for AutomataLibrary {
             .unwrap(),
         )
         .unwrap();
-        lib.import_from_str(
-            &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "default_models/automata/https.json",
-                19
-            ))
-            .unwrap(),
-        )
-        .unwrap();
+        pb.inc(1);
+
+        #[cfg(debug_assertions)]
+        lib.import_from_str(include_str!("../../default_models/automata/ssh.json"))
+            .unwrap();
+        #[cfg(not(debug_assertions))]
         lib.import_from_str(
             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                 "default_models/automata/ssh.json",
@@ -87,6 +78,26 @@ impl Default for AutomataLibrary {
             .unwrap(),
         )
         .unwrap();
+        pb.inc(1);
+
+        #[cfg(debug_assertions)]
+        lib.import_from_str(include_str!("../../default_models/automata/https.json"))
+            .unwrap();
+        #[cfg(not(debug_assertions))]
+        lib.import_from_str(
+            &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                "default_models/automata/https.json",
+                19
+            ))
+            .unwrap(),
+        )
+        .unwrap();
+        pb.inc(1);
+
+        #[cfg(debug_assertions)]
+        lib.import_from_str(include_str!("../../default_models/automata/dns.json"))
+            .unwrap();
+        #[cfg(not(debug_assertions))]
         lib.import_from_str(
             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                 "default_models/automata/dns.json",
@@ -95,6 +106,12 @@ impl Default for AutomataLibrary {
             .unwrap(),
         )
         .unwrap();
+        pb.inc(1);
+
+        #[cfg(debug_assertions)]
+        lib.import_from_str(include_str!("../../default_models/automata/ntp.json"))
+            .unwrap();
+        #[cfg(not(debug_assertions))]
         lib.import_from_str(
             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                 "default_models/automata/ntp.json",
@@ -103,6 +120,8 @@ impl Default for AutomataLibrary {
             .unwrap(),
         )
         .unwrap();
+        pb.inc(1);
+
         lib
     }
 }
@@ -121,6 +140,14 @@ impl AutomataLibrary {
         };
 
         let paths = fs::read_dir(directory_name).expect("Cannot read directory");
+        let pb = ProgressBar::new(paths.count() as u64);
+        pb.set_style(
+            ProgressStyle::with_template(
+                "{spinner:.green} Automata initialization: {pos}/{len} {wide_bar}",
+            )
+            .unwrap(),
+        );
+        let paths = fs::read_dir(directory_name).expect("Cannot read directory");
         for p in paths {
             let p = p.expect("Cannot open path").path();
             if !p.is_dir() && p.extension() == Some(OsStr::new("json")) {
@@ -136,6 +163,7 @@ impl AutomataLibrary {
                     ),
                 }
             }
+            pb.inc(1);
         }
         log::info!("{nb} automata have been loaded");
         lib
