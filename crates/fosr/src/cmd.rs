@@ -1,10 +1,18 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Debug, Parser, Clone)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
     #[clap(subcommand)]
     pub command: Command,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+pub enum NetEnabler {
+    #[cfg(all(target_os = "linux", feature = "iptables"))]
+    Iptables,
+    #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
+    Ebpf,
 }
 
 #[derive(Debug, Subcommand, Clone)]
@@ -42,6 +50,12 @@ pub enum Command {
             help = "Path to the profile with the models and the configuration"
         )]
         profile: Option<String>,
+        #[arg(
+            short,
+            long,
+            help = "Path to the profile with the models and the configuration"
+        )]
+        net_enabler: NetEnabler,
     },
     /// Perform data augmentation on a pcap file. You should use your own models that have been
     /// fitted on that pcap file.

@@ -110,7 +110,7 @@ fn main() {
             profile,
             outfile,
             flow_per_second,
-            ..
+            net_enabler
         } => {
             #[cfg(not(all(target_os = "linux", feature = "iptables")))]
             let stealthy = false;
@@ -146,21 +146,39 @@ fn main() {
             let s1 = stage1::FilterForOnline::new(local_ips.clone(), s1);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(!stealthy, profile.config);
-            #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
-            let s4 = stage4::ebpf::EBPFStage4::new(false, &local_interfaces);
-            #[cfg(all(target_os = "linux", feature = "iptables"))]
-            let s4 = stage4::iptables::IPTablesStage4::new(!stealthy, false);
-            run(
-                local_ips,
-                outfile,
-                s0,
-                (s1, 3),
-                (s2, 1),
-                (s3, 1),
-                false,
-                Arc::new(ui::Stats::default()),
-                Some(s4),
-            );
+            log::info!("Network enabler: {net_enabler:?}");
+            match net_enabler {
+                #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
+                cmd::NetEnabler::Ebpf => {
+                    let s4net = stage4::ebpf::EBPFNetEnabler::new(false, &local_interfaces);
+                    run(
+                        local_ips,
+                        outfile,
+                        s0,
+                        (s1, 3),
+                        (s2, 1),
+                        (s3, 1),
+                        false,
+                        Arc::new(ui::Stats::default()),
+                        Some(s4net),
+                    );
+                },
+                #[cfg(all(target_os = "linux", feature = "iptables"))]
+                cmd::NetEnabler::Iptables => {
+                    let s4net = stage4::iptables::IPTablesNetEnabler::new(!stealthy, false);
+                    run(
+                        local_ips,
+                        outfile,
+                        s0,
+                        (s1, 3),
+                        (s2, 1),
+                        (s3, 1),
+                        false,
+                        Arc::new(ui::Stats::default()),
+                        Some(s4net),
+                    );
+                },
+            };
         }
         cmd::Command::CreatePcap {
             seed,
@@ -225,7 +243,7 @@ fn main() {
                 (s3, s3_count),
                 order_pcap,
                 Arc::new(ui::Stats::new(target)),
-                None::<stage4::DummyStage4>,
+                None::<stage4::DummyNetEnabler>,
             );
         } // #[cfg(feature = "replay")]
           // cmd::Command::Replay {
@@ -308,7 +326,7 @@ fn main() {
 /// - `s2`: An implementation of the Stage 2 trait that converts flows into protocol data.
 /// - `s3`: The Stage3 instance that generates packets (for TCP, UDP, ICMP).
 /// - `s4`: An optional Stage4 instance for additional online processing.
-fn run<T: stage4::Stage4>(
+fn run<T: stage4::NetEnabler>(
     local_interfaces: Vec<Ipv4Addr>,
     outfile: Option<String>,
     s0: impl stage0::Stage0,
@@ -317,7 +335,7 @@ fn run<T: stage4::Stage4>(
     s3: (stage3::Stage3, usize),
     order_pcap: bool,
     stats: Arc<ui::Stats>,
-    s4: Option<T>,
+    s4net: Option<T>,
 ) {
     let (s1, s1_count) = s1;
     let (s2, s2_count) = s2;
@@ -502,12 +520,12 @@ fn run<T: stage4::Stage4>(
         // TODO: only one stage 4 for all protocols
 
         #[cfg(feature = "net_injection")]
-        if let Some(s4) = s4 {
+        if let Some(s4net) = s4net {
             let builder = thread::Builder::new().name("Stage4".into());
             gen_threads.push(
                 builder
                     .spawn(move || {
-                        stage4::start(s4, rx_s4);
+                        stage4::start(s4net, rx_s4);
                     })
                     .unwrap(),
             );
