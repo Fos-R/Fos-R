@@ -8,6 +8,7 @@ use fosr::structs::*;
 use fosr::ui::Target;
 use fosr::*;
 mod cmd;
+mod pcap2flow;
 
 use std::collections::HashMap;
 use std::fs;
@@ -100,6 +101,11 @@ fn main() {
     log::debug!("IPv4 interfaces: {:?}", &local_ips);
 
     match args.command {
+        cmd::Command::Pcap2Flow {
+            pcap_file
+        } => {
+            pcap2flow::process_file(&pcap_file);
+        },
         #[cfg(feature = "net_injection")]
         cmd::Command::Inject {
             #[cfg(all(target_os = "linux", feature = "iptables"))]
