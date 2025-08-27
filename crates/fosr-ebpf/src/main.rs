@@ -25,7 +25,7 @@ pub fn fosr_ebpf(ctx: XdpContext) -> u32 {
 /// - `ipv4_header`: IPV4 header of the packet.
 #[inline(always)]
 unsafe fn get_fosr_flag(ipv4_header: *const Ipv4Hdr) -> bool {
-    unsafe { *ipv4_header }.frag_off[0] & 0b1000_0000 > 0
+    unsafe { *ipv4_header }.frag_flags() & 0b100 > 0
 }
 
 /// Get a mutable pointer to a zone of memory at a specific offset.
@@ -57,7 +57,7 @@ fn try_fosr_ebpf(ctx: XdpContext) -> Result<u32, ()> {
     // We parse the ethernet header first (mutable)
     let ethernet_header: *mut EthHdr = unsafe { mut_ptr_at(&ctx, 0)? };
     // Fos-R only supports IPv4
-    if let network_types::eth::EtherType::Ipv4 = unsafe { *ethernet_header }.ether_type {
+    if let Some(network_types::eth::EtherType::Ipv4) = unsafe { *ethernet_header }.ether_type().ok() {
         // Retrieve the packet header
         let ipv4_header: *const Ipv4Hdr = unsafe { mut_ptr_at(&ctx, EthHdr::LEN)? };
 
