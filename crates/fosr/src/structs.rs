@@ -201,18 +201,19 @@ pub struct PacketsIR<T: PacketInfo> {
 }
 
 // Stage 3 structures
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Packet {
     pub timestamp: Duration,
     pub data: Vec<u8>,
 }
 
 impl Packet {
-    pub fn get_mutable_ip_packet(&mut self) -> Option<pnet_packet::ipv4::MutableIpv4Packet> {
+    pub fn get_mutable_ip_packet(&mut self) -> Option<pnet_packet::ipv4::MutableIpv4Packet<'_>> {
         let eth_offset = pnet_packet::ethernet::EthernetPacket::minimum_packet_size();
         let ip_packet = pnet_packet::ipv4::MutableIpv4Packet::new(&mut self.data[eth_offset..])?;
         Some(ip_packet)
     }
+
 }
 
 /// Used for packet ordering before pcap export
@@ -231,14 +232,6 @@ impl PartialOrd for Packet {
         Some(self.cmp(other))
     }
 }
-
-impl PartialEq for Packet {
-    fn eq(&self, other: &Self) -> bool {
-        self.timestamp == other.timestamp && self.data == other.data
-    }
-}
-
-impl Eq for Packet {}
 
 #[derive(Debug, Clone)]
 pub struct Packets {
@@ -315,6 +308,7 @@ impl FlowId {
             && self.dst_port == d.dst_port
     }
 
+    // TODO: remove
     pub fn from_packet(p: &Packet) -> Self {
         let eth_packet = ethernet::EthernetPacket::new(&p.data).unwrap();
         let ip_packet = ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();

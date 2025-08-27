@@ -103,6 +103,13 @@ pub enum Command {
         )]
         profile: Option<String>,
     },
+    Pcap2Flow {
+        #[arg(
+            required = true,
+            help = "Pcap file to extract flows from"
+        )]
+        pcap_file: String,
+    }
     // /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
     // /// hosts, etc.) are ignored.
     // #[cfg(feature = "replay")]
