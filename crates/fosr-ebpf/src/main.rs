@@ -57,7 +57,7 @@ fn try_fosr_ebpf(ctx: XdpContext) -> Result<u32, ()> {
     // We parse the ethernet header first (mutable)
     let ethernet_header: *mut EthHdr = unsafe { mut_ptr_at(&ctx, 0)? };
     // Fos-R only supports IPv4
-    if let Some(network_types::eth::EtherType::Ipv4) = unsafe { *ethernet_header }.ether_type().ok() {
+    if let Ok(network_types::eth::EtherType::Ipv4) = unsafe { *ethernet_header }.ether_type() {
         // Retrieve the packet header
         let ipv4_header: *const Ipv4Hdr = unsafe { mut_ptr_at(&ctx, EthHdr::LEN)? };
 

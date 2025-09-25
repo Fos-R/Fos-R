@@ -1,6 +1,6 @@
 use pnet_packet::ip::IpNextHeaderProtocols;
 use pnet_packet::{Packet as _, ethernet, ipv4, tcp, udp};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
 use std::net::Ipv4Addr;
@@ -17,7 +17,7 @@ pub struct SeededData<T: Clone> {
 // Stage 1 and 2 structures
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Protocol {
     TCP,
     UDP,
@@ -153,7 +153,7 @@ pub enum NoiseType {
     Added,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum PacketDirection {
     Forward,  // client to server
     Backward, // server to client
@@ -213,7 +213,6 @@ impl Packet {
         let ip_packet = pnet_packet::ipv4::MutableIpv4Packet::new(&mut self.data[eth_offset..])?;
         Some(ip_packet)
     }
-
 }
 
 /// Used for packet ordering before pcap export

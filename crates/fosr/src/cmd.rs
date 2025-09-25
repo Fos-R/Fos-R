@@ -103,38 +103,40 @@ pub enum Command {
         )]
         profile: Option<String>,
     },
+    /// Extract flow statistics from a pcap file to a csv file
+    #[command(name = "pcap2flow")]
     Pcap2Flow {
-        #[arg(
-            required = true,
-            help = "Pcap file to extract flows from"
-        )]
-        pcap_file: String,
-    }
-    // /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
-    // /// hosts, etc.) are ignored.
-    // #[cfg(feature = "replay")]
-    // Replay {
-    //     #[arg(short, long, help = "Path to the pcap file to be replayed")]
-    //     file: String,
-    //     // #[arg(
-    //     //     short,
-    //     //     long,
-    //     //     default_value = None,
-    //     //     help = "Path to the information system configuration file"
-    //     // )]
-    //     // config_path: Option<String>,
-    //     #[arg(
-    //         short,
-    //         long,
-    //         default_value_t = false,
-    //         help = "Taint the packets to easily identify them"
-    //     )]
-    //     taint: bool,
-    //     #[arg(
-    //         long,
-    //         default_value_t = false,
-    //         help = "Ignores timestamps and send packets without waiting"
-    //     )]
-    //     fast: bool,
-    // },
+        #[arg(short, long, required = true, help = "Pcap file to extract flows from")]
+        input_pcap: String,
+        #[arg(short, long, required = true, help = "Csv file to export flow into")]
+        output_csv: String,
+        #[arg(short = 'p', long, help = "Include payloads", default_value_t = false)]
+        include_payloads: bool,
+    }, // /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
+       // /// hosts, etc.) are ignored.
+       // #[cfg(feature = "replay")]
+       // Replay {
+       //     #[arg(short, long, help = "Path to the pcap file to be replayed")]
+       //     file: String,
+       //     // #[arg(
+       //     //     short,
+       //     //     long,
+       //     //     default_value = None,
+       //     //     help = "Path to the information system configuration file"
+       //     // )]
+       //     // config_path: Option<String>,
+       //     #[arg(
+       //         short,
+       //         long,
+       //         default_value_t = false,
+       //         help = "Taint the packets to easily identify them"
+       //     )]
+       //     taint: bool,
+       //     #[arg(
+       //         long,
+       //         default_value_t = false,
+       //         help = "Ignores timestamps and send packets without waiting"
+       //     )]
+       //     fast: bool,
+       // },
 }
