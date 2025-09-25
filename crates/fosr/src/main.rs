@@ -102,10 +102,13 @@ fn main() {
 
     match args.command {
         cmd::Command::Pcap2Flow {
-            pcap_file
+            input_pcap,
+            output_csv,
+            include_payloads,
         } => {
-            pcap2flow::process_file(&pcap_file);
-        },
+            let flows = pcap2flow::process_file(&input_pcap);
+            pcap2flow::export_stats(&output_csv, flows, include_payloads);
+        }
         #[cfg(feature = "net_injection")]
         cmd::Command::Inject {
             #[cfg(all(target_os = "linux", feature = "iptables"))]
