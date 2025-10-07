@@ -55,6 +55,8 @@ pub enum Command {
             help = "Path to the profile with the models and the configuration"
         )]
         profile: Option<String>,
+        #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\"")]
+        duration: Option<String>,
         #[arg(
             short,
             long,

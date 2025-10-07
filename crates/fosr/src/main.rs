@@ -117,6 +117,7 @@ fn main() {
             order_pcap,
             flow_per_second,
             net_enabler,
+            duration,
         } => {
             #[cfg(not(all(target_os = "linux", feature = "iptables")))]
             let stealthy = false;
@@ -140,9 +141,10 @@ fn main() {
             }
 
             // load the models
-            let s0 = stage0::UniformGenerator::new_for_honeypot(
+            let s0 = stage0::UniformGenerator::new_for_injection(
                 seed,
-                SystemTime::now().duration_since(UNIX_EPOCH).unwrap(),
+                duration
+                    .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed.")),
                 flow_per_second,
             );
 
