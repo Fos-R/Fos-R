@@ -1,3 +1,5 @@
+// we access the code through the library
+use fosr::pcap2flow;
 use fosr::stage0;
 use fosr::stage1;
 use fosr::stage2;
@@ -7,8 +9,7 @@ use fosr::stage4;
 use fosr::structs::*;
 use fosr::ui::Target;
 use fosr::*;
-mod cmd;
-mod pcap2flow;
+mod cmd; // cmd is not part of the library
 
 use std::collections::HashMap;
 use std::fs;
@@ -66,13 +67,7 @@ impl Profile {
 
 /// The entry point of the application.
 ///
-/// This function performs the following steps:
-/// 1. Initializes logging and parses command-line arguments.
-/// 2. Extracts all non-loopback IPv4 local interface addresses.
-/// 3. Depending on the parsed subcommand, it loads configuration, pattern files,
-///    automata libraries, and initializes several stages of the generator pipeline.
-/// 4. Invokes the `run` function with appropriate parameters to start the generation
-///    process either in injection mode or in pcap creation mode.
+/// This function prepare the parameter for the function "run" according to the command line
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args = cmd::Args::parse();
@@ -88,10 +83,13 @@ fn main() {
                 _ => unreachable!(),
             })
     };
+    // the local interfaces are used by the stage 4 and to identify local IPs
+    // we do not include loopback interfaces or interfaces without an IPv4 address
     let local_interfaces: Vec<datalink::NetworkInterface> = datalink::interfaces()
         .into_iter()
         .filter(|iface| !iface.is_loopback() && iface.ips.iter().any(IpNetwork::is_ipv4))
         .collect();
+    // for each interface, we extract its addresses
     let local_ips: Vec<Ipv4Addr> = local_interfaces
         .clone()
         .into_iter()
@@ -116,12 +114,14 @@ fn main() {
             seed,
             profile,
             outfile,
+            order_pcap,
             flow_per_second,
             net_enabler,
         } => {
             #[cfg(not(all(target_os = "linux", feature = "iptables")))]
             let stealthy = false;
 
+            // identify the role of the current host
             let profile = Profile::load(profile.as_deref());
             log::debug!("Configuration: {:?}", profile.config);
             assert!(!local_ips.is_empty());
@@ -138,6 +138,8 @@ fn main() {
                 log::error!("This computer has no traffic to inject in this profile! Exiting.");
                 process::exit(1);
             }
+
+            // load the models
             let s0 = stage0::UniformGenerator::new_for_honeypot(
                 seed,
                 SystemTime::now().duration_since(UNIX_EPOCH).unwrap(),
@@ -152,6 +154,8 @@ fn main() {
             let s1 = stage1::FilterForOnline::new(local_ips.clone(), s1);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(!stealthy, profile.config);
+
+            // run
             log::info!("Network enabler: {net_enabler:?}");
             match net_enabler {
                 #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
@@ -159,12 +163,14 @@ fn main() {
                     let s4net = stage4::ebpf::EBPFNetEnabler::new(false, &local_interfaces);
                     run(
                         local_ips,
-                        outfile,
+                        outfile.map(|o| ExportParams {
+                            outfile: o,
+                            order_pcap,
+                        }),
                         s0,
                         (s1, 3),
                         (s2, 1),
                         (s3, 1),
-                        false,
                         Arc::new(ui::Stats::default()),
                         Some(s4net),
                     );
@@ -174,12 +180,14 @@ fn main() {
                     let s4net = stage4::iptables::IPTablesNetEnabler::new(!stealthy, false);
                     run(
                         local_ips,
-                        outfile,
+                        outfile.map(|o| ExportParams {
+                            outfile: o,
+                            order_pcap,
+                        }),
                         s0,
                         (s1, 3),
                         (s2, 1),
                         (s3, 1),
-                        false,
                         Arc::new(ui::Stats::default()),
                         Some(s4net),
                     );
@@ -196,9 +204,11 @@ fn main() {
             start_time,
             duration,
         } => {
+            // load the models
             let profile = Profile::load(profile.as_deref());
             let automata_library = Arc::new(profile.automata);
             let patterns = Arc::new(profile.patterns);
+            // handle the parameters: either there is a packet count target or a duration
             let (target, duration) = match (packets_count, duration) {
                 (None, Some(d)) => {
                     let d = humantime::parse_duration(&d).expect("Duration could not be parsed.");
@@ -234,19 +244,21 @@ fn main() {
             let s3 = stage3::Stage3::new(false, profile.config);
 
             let (s1_count, s2_count, s3_count) = if minimum_threads {
-                (1, 1, 1)
+                (1, 1, 1) // only use on thread per task
             } else {
                 let cpu_count = num_cpus::get();
-                (cpu_count / 2, cpu_count / 2, cpu_count / 2)
+                (cpu_count / 2, cpu_count / 2, cpu_count / 2) // the total is indeed larger than cpu_count. This has been empirically assessed to be a correct heuristic to maximise the performances
             };
             run(
                 vec![],
-                Some(outfile),
+                Some(ExportParams {
+                    outfile,
+                    order_pcap,
+                }),
                 s0,
                 (s1, s1_count),
                 (s2, s2_count),
                 (s3, s3_count),
-                order_pcap,
                 Arc::new(ui::Stats::new(target)),
                 None::<stage4::DummyNetEnabler>,
             );
@@ -312,6 +324,13 @@ fn main() {
     };
 }
 
+struct ExportParams {
+    /// the output file path
+    outfile: String,
+    /// whether to order the pcap once the generation has ended
+    order_pcap: bool,
+}
+
 /// Runs the generation pipeline by launching each of the stages as separate threads.
 ///
 /// The pipeline consists of multiple stages:
@@ -323,22 +342,22 @@ fn main() {
 ///
 /// # Parameters
 ///
-/// - `local_interfaces`: A vector of local IPv4 interfaces. If empty, some stages may disable
-///   certain functionality (e.g., network-specific processing).
-/// - `outfile`: The optional output file path for exporting PCAP packets.
-/// - `s0`: An implementation of the Stage 0 trait that produces the initial seed data.
-/// - `s1`: An implementation of the Stage 1 trait that converts seed data to flow data.
-/// - `s2`: An implementation of the Stage 2 trait that converts flows into protocol data.
-/// - `s3`: The Stage3 instance that generates packets (for TCP, UDP, ICMP).
-/// - `s4`: An optional Stage4 instance for additional online processing.
+/// - `local_interfaces`: local IPv4 interfaces
+/// - `export`: optional structure with parameters for the pcap export
+/// - `s0`: a stage 0 implementation
+/// - `s1`: a stage 1 implementation
+/// - `s2`: a stage 2 implementation
+/// - `s3`: a stage 3 implementation
+/// - `stats`: an Arc to a structure containing generation statistics
+/// - `s4net`: an optional network enable
+#[allow(clippy::too_many_arguments)]
 fn run<T: stage4::NetEnabler>(
     local_interfaces: Vec<Ipv4Addr>,
-    outfile: Option<String>,
+    export: Option<ExportParams>,
     s0: impl stage0::Stage0,
     s1: (impl stage1::Stage1, usize),
     s2: (impl stage2::Stage2, usize),
     s3: (stage3::Stage3, usize),
-    order_pcap: bool,
     stats: Arc<ui::Stats>,
     s4net: Option<T>,
 ) {
@@ -379,9 +398,9 @@ fn run<T: stage4::NetEnabler>(
 
         // Handle ctrl+C
         let stats_ctrlc = Arc::clone(&stats);
-        let export = outfile.is_some();
+        let do_export = export.is_some();
         ctrlc::set_handler(move || {
-            if !stats_ctrlc.should_stop() && export {
+            if !stats_ctrlc.should_stop() && do_export {
                 log::warn!("Exporting the generated data, please wait a few seconds");
                 stats_ctrlc.stop_early();
             } else {
@@ -450,7 +469,6 @@ fn run<T: stage4::NetEnabler>(
                 let local_interfaces = local_interfaces.clone();
 
                 let builder = thread::Builder::new().name(format!("Stage3-{proto:?}"));
-                let pcap_export = outfile.is_some();
                 match proto {
                     Protocol::TCP => {
                         let rx_s3_tcp = rx_s3_tcp.clone();
@@ -464,7 +482,7 @@ fn run<T: stage4::NetEnabler>(
                                         tx,
                                         tx_s3_to_pcap,
                                         stats,
-                                        pcap_export,
+                                        do_export,
                                     );
                                 })
                                 .unwrap(),
@@ -482,7 +500,7 @@ fn run<T: stage4::NetEnabler>(
                                         tx,
                                         tx_s3_to_pcap,
                                         stats,
-                                        pcap_export,
+                                        do_export,
                                     );
                                 })
                                 .unwrap(),
@@ -500,7 +518,7 @@ fn run<T: stage4::NetEnabler>(
                                         tx,
                                         tx_s3_to_pcap,
                                         stats,
-                                        pcap_export,
+                                        do_export,
                                     );
                                 })
                                 .unwrap(),
@@ -513,17 +531,22 @@ fn run<T: stage4::NetEnabler>(
         // PCAP EXPORT
 
         let builder = thread::Builder::new().name("Pcap-export".into());
-        export_threads.push(
+        export_threads.push(if let Some(export) = export {
             builder
                 .spawn(move || {
-                    stage3::run_export(rx_pcap, outfile, order_pcap);
+                    stage3::run_export(rx_pcap, export.outfile, export.order_pcap);
                 })
-                .unwrap(),
-        );
+                .unwrap()
+        } else {
+            // if there is no export, we still need to consume the packets
+            builder
+                .spawn(move || {
+                    stage3::run_dummy_export(rx_pcap);
+                })
+                .unwrap()
+        });
 
-        // STAGE 4 (online mode only)
-        // TODO: only one stage 4 for all protocols
-
+        // STAGE 4 (injection mode only)
         #[cfg(feature = "net_injection")]
         if let Some(s4net) = s4net {
             let builder = thread::Builder::new().name("Stage4".into());

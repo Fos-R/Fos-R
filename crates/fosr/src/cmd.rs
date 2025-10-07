@@ -17,12 +17,17 @@ pub enum NetEnabler {
 
 #[derive(Debug, Subcommand, Clone)]
 pub enum Command {
-    /// Generate and play network activity between hosts. Computers defined in the config file can
-    /// easily join or exit the activity.
     #[cfg(feature = "net_injection")]
+    /// Generate network activity and inject it on the wire
     Inject {
         #[arg(short, long, default_value = None, help = "Output pcap file of generated packets")]
         outfile: Option<String>,
+        #[arg(
+            long,
+            default_value_t = false,
+            help = "Reorder temporally the generated pcap. Must fit the entire dataset in RAM ! Requires --outfile."
+        )]
+        order_pcap: bool,
         #[cfg(all(target_os = "linux", feature = "iptables"))]
         #[arg(
             long,
@@ -33,7 +38,7 @@ pub enum Command {
         #[arg(
             short,
             long,
-            help = "Seed for random number generation. All participant must use the same seed!"
+            help = "Seed for random number generation. All participants must use the same seed!"
         )]
         seed: Option<u64>,
         #[arg(
@@ -53,11 +58,11 @@ pub enum Command {
         #[arg(
             short,
             long,
-            help = "Path to the profile with the models and the configuration"
+            help = "Method to avoid kernel interactions with the injected traffic"
         )]
         net_enabler: NetEnabler,
     },
-    /// Perform data augmentation on a pcap file. You should use your own models that have been
+    /// Extend a pcap file. You should use your own models that have been
     /// fitted on that pcap file.
     #[clap(group(
     clap::ArgGroup::new("target")
@@ -81,16 +86,16 @@ pub enum Command {
         //     help = "Add noise in the output file"
         // )]
         // noise: bool,
-        #[arg(short = 'n', long, default_value = None, help = "Minimum number of packets to generate. Generation is not deterministic.")]
+        #[arg(short = 'n', long, default_value = None, help = "Minimum number of packets to generate. Beware: generation is not deterministic.")]
         packets_count: Option<u64>,
-        #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\". Generation is deterministic when used with --order-pcap.")]
+        #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\". Generation is deterministic when used with --order-pcap and --seed.")]
         duration: Option<String>,
         #[arg(short = 't', long, default_value = None, help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use current time")]
         start_time: Option<String>,
         #[arg(
             long,
             default_value_t = false,
-            help = "Reorder temporally the generated pcap. Must fit the entire dataset in RAM."
+            help = "Reorder temporally the generated pcap. Must fit the entire dataset in RAM !"
         )]
         order_pcap: bool,
         #[arg(short, long, help = "Seed for random number generation")]
@@ -110,7 +115,12 @@ pub enum Command {
         input_pcap: String,
         #[arg(short, long, required = true, help = "Csv file to export flow into")]
         output_csv: String,
-        #[arg(short = 'p', long, help = "Include payloads", default_value_t = false)]
+        #[arg(
+            short = 'p',
+            long,
+            help = "Include the payloads into the csv file",
+            default_value_t = false
+        )]
         include_payloads: bool,
     }, // /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
        // /// hosts, etc.) are ignored.

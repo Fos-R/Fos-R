@@ -6,10 +6,10 @@ use pnet_packet::{ethernet, ipv4, tcp, udp};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
+use std::io::BufWriter;
 use std::io::Write;
 use std::net::Ipv4Addr;
 use std::time::Duration;
-use std::io::BufWriter;
 
 const DURATION_THRESHOLD: Duration = Duration::from_secs(600);
 
