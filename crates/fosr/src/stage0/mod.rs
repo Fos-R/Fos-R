@@ -125,11 +125,12 @@ impl UniformGenerator {
         }
     }
 
-    pub fn new_for_honeypot(
+    pub fn new_for_injection(
         seed: Option<u64>,
-        current_date: Duration,
+        total_duration: Option<Duration>,
         flow_per_second: u64,
     ) -> Self {
+        let current_date = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
         let flows_per_window = flow_per_second * WINDOW_WIDTH_IN_SECS;
         let window_count_since_unix_epoch =
             ((current_date + Duration::from_secs(WINDOW_WIDTH_IN_SECS)).as_secs_f64()
@@ -147,6 +148,10 @@ impl UniformGenerator {
             next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS,
         )
         .unwrap();
+        let remaining_windows = total_duration.map(|d| {
+            d.div_duration_f32(Duration::from_secs(WINDOW_WIDTH_IN_SECS))
+                .ceil() as u64
+        });
         let aux_rng = rng.clone();
         UniformGenerator {
             online: true,
@@ -158,7 +163,7 @@ impl UniformGenerator {
             rng,
             aux_rng,
             time_distrib,
-            remaining_windows: None,
+            remaining_windows,
         }
     }
 }
@@ -175,7 +180,7 @@ pub fn run(
             break;
         }
         stats.set_current_duration(ts.data.as_secs() - initial_ts.as_secs() + WINDOW_WIDTH_IN_SECS); // this hack (adding WINDOW_WIDTH_IN_SECS) is just a way to be sure to reach the duration target for the progress bar
-        log::trace!("S0 generates {ts:?}");
+        // log::trace!("S0 generates {ts:?}");
         tx_s0.send(ts)?;
     }
     log::trace!("S0 stops");
