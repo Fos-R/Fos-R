@@ -551,11 +551,12 @@ fn run<T: stage4::NetEnabler>(
         // STAGE 4 (injection mode only)
         #[cfg(feature = "net_injection")]
         if let Some(s4net) = s4net {
+            let stats = Arc::clone(&stats);
             let builder = thread::Builder::new().name("Stage4".into());
             gen_threads.push(
                 builder
                     .spawn(move || {
-                        stage4::start(s4net, rx_s4);
+                        stage4::start(s4net, rx_s4, stats);
                     })
                     .unwrap(),
             );
