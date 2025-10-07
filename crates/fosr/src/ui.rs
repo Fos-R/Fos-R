@@ -6,7 +6,7 @@ use std::fmt::Write;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 pub struct Stats {
     pub packets_target: Option<u64>,
@@ -16,6 +16,8 @@ pub struct Stats {
     pub duration_target: Option<u64>, // in secs
     pub current_duration: AtomicU64,  // in secs
     pub progress_bar: ProgressBar,
+    pub received_packets: AtomicU64,
+    pub sent_packets: AtomicU64,
 }
 
 impl Default for Stats {
@@ -28,6 +30,8 @@ impl Default for Stats {
             duration_target: None,
             current_duration: AtomicU64::new(0),
             progress_bar: ProgressBar::new(0),
+            received_packets: AtomicU64::new(0),
+            sent_packets: AtomicU64::new(0),
         }
     }
 }
@@ -55,11 +59,21 @@ impl Stats {
             duration_target,
             current_duration: AtomicU64::new(0),
             progress_bar: ProgressBar::new(target),
+            received_packets: AtomicU64::new(0),
+            sent_packets: AtomicU64::new(0),
         }
     }
 
     pub fn set_current_duration(&self, secs: u64) {
         self.current_duration.fetch_max(secs, Ordering::Relaxed);
+    }
+
+    pub fn packet_received(&self) {
+        self.received_packets.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn packet_sent(&self) {
+        self.sent_packets.fetch_add(1, Ordering::Relaxed);
     }
 
     pub fn increase(&self, p: &Packets) {
@@ -123,22 +137,13 @@ pub fn run(stats: Arc<Stats>) {
             update_progress_bar(stats.clone(), &stats.current_duration, target);
         }
     } else {
-        let start_time = Instant::now();
         while !stats.should_stop() {
             thread::sleep(Duration::new(20, 0));
             {
                 let pc = stats.packets_counter.load(Ordering::Relaxed);
-                let bc = stats.bytes_counter.load(Ordering::Relaxed);
-                let throughput = (bc as f64)
-                    / (Instant::now().duration_since(start_time).as_secs() as f64)
-                    / 1_000_000.;
-                if throughput < 1. {
-                    log::info!("{pc} created packets ({:.2} kbps)", throughput * 1000.);
-                } else if throughput < 1000. {
-                    log::info!("{pc} created packets ({throughput:.2} Mbps)");
-                } else {
-                    log::info!("{pc} created packets ({:.2} Gbps)", throughput / 1000.);
-                }
+                let sp = stats.sent_packets.load(Ordering::Relaxed);
+                let rp = stats.received_packets.load(Ordering::Relaxed);
+                log::info!("{pc} created packets, {sp} sent and {rp} received");
             }
         }
     }

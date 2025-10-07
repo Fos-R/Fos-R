@@ -461,7 +461,7 @@ pub fn send_online(
     let src_s4 = local_interfaces.contains(&f.src_ip);
     let dst_s4 = local_interfaces.contains(&f.dst_ip);
     if src_s4 && dst_s4 {
-        // log::info!("Both source and destination IP are local");
+        log::trace!("Both source and destination IP are local");
         // only copy if we have to
         tx_s3.send(flow_packets.clone()).unwrap();
         // ensure stage 4 is always the source
