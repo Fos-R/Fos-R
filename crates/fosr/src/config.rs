@@ -4,8 +4,10 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
 
-#[derive(Deserialize, Debug, Clone, Copy)]
-enum OS {
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+/// The OS of an host. By default, assume Linux
+pub enum OS {
+    #[default]
     Linux,
     Windows,
 }
@@ -44,11 +46,7 @@ impl Hosts {
     /// Returns the default TTL for the given IP.
     /// The default is determined by the operating system associated with the IP (or Linux if not set).
     pub fn get_default_ttl(&self, ip: &Ipv4Addr) -> u8 {
-        // by default, assume Linux
-        self.os
-            .get(ip)
-            .map(|os| os.get_default_ttl())
-            .unwrap_or(OS::Linux.get_default_ttl())
+        self.get_os(ip).get_default_ttl()
     }
 
     /// Randomly selects a source and destination IP pair for a given destination port.
@@ -62,12 +60,18 @@ impl Hosts {
             .map(|v| v[(rng.next_u32() as usize) % v.len()])
     }
 
+    /// Get the MAC address of an IP, if it is defined
     pub fn get_mac(&self, ip: &Ipv4Addr) -> Option<&MacAddr> {
         self.mac_addr.get(ip)
     }
 
+    /// Verify if an IP is present
     pub fn exists(&self, ip: &Ipv4Addr) -> bool {
         self.os.contains_key(ip)
+    }
+
+    pub fn get_os(&self, ip: &Ipv4Addr) -> OS {
+        *self.os.get(ip).expect("Non-existant IP address!")
     }
 
     pub fn get_name(&self, ip: &Ipv4Addr) -> Option<&str> {
@@ -174,5 +178,65 @@ pub fn import_config(config: &str) -> Hosts {
         os,
         mac_addr,
         name,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_config() {
+        // try to load the default config
+        Hosts::default();
+    }
+
+    #[test]
+    fn test_config() {
+        let config = import_config(
+            r#"
+[[hosts]]
+    [[hosts.interfaces]]
+        name = "barrel"
+        ip = "10.25.100.10"
+        provides = []
+        uses = [465,53,123]
+        os = "Linux"
+[[hosts]]
+    [[hosts.interfaces]]
+        name = "cabin1"
+        ip = "10.25.100.11"
+        provides = [53,123]
+        uses = [1883]
+        os = "Windows"
+[[hosts]]
+    [[hosts.interfaces]]
+        name = "cabin2"
+        ip = "10.25.100.12"
+        provides = []
+        uses = [1883,443,80,53,123]
+[[hosts]]
+    [[hosts.interfaces]]
+        name = "cabin3"
+        ip = "10.25.100.13"
+        provides = []
+        uses = [1883,443,80,53,123]
+[[hosts]]
+    [[hosts.interfaces]]
+        name = "quarters"
+        ip = "10.25.100.14"
+        provides = [1883,443,80,465]
+        uses = [123]
+"#,
+        );
+        assert_eq!(
+            config.get_name(&Ipv4Addr::new(10, 25, 100, 14)),
+            Some("quarters")
+        );
+        assert_eq!(config.get_mac(&Ipv4Addr::new(10, 25, 100, 14)), None);
+        assert_eq!(config.get_os(&Ipv4Addr::new(10, 25, 100, 10)), OS::Linux);
+        assert_eq!(config.get_os(&Ipv4Addr::new(10, 25, 100, 11)), OS::Windows);
+        assert_eq!(config.get_os(&Ipv4Addr::new(10, 25, 100, 12)), OS::Linux);
+        assert!(!config.exists(&Ipv4Addr::new(10, 25, 100, 15)));
     }
 }
