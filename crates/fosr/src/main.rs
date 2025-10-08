@@ -11,6 +11,7 @@ use fosr::ui::Target;
 use fosr::*;
 mod cmd; // cmd is not part of the library
 
+use std::cmp::max;
 use std::collections::HashMap;
 use std::fs;
 use std::net::Ipv4Addr;
@@ -251,7 +252,11 @@ fn main() {
                 (1, 1, 1) // only use on thread per task
             } else {
                 let cpu_count = num_cpus::get();
-                (cpu_count / 2, cpu_count / 2, cpu_count / 2) // the total is indeed larger than cpu_count. This has been empirically assessed to be a correct heuristic to maximise the performances
+                (
+                    max(1, cpu_count / 2),
+                    max(1, cpu_count / 2),
+                    max(1, cpu_count / 2),
+                ) // the total is indeed larger than cpu_count. This has been empirically assessed to be a correct heuristic to maximise the performances
             };
             run(
                 vec![],
