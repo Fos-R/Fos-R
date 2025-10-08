@@ -118,6 +118,7 @@ fn main() {
             flow_per_second,
             net_enabler,
             duration,
+            deterministic,
         } => {
             #[cfg(not(all(target_os = "linux", feature = "iptables")))]
             let stealthy = false;
@@ -146,6 +147,7 @@ fn main() {
                 duration
                     .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed.")),
                 flow_per_second,
+                deterministic,
             );
 
             let automata_library = Arc::new(profile.automata);
