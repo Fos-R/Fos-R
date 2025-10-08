@@ -17,6 +17,7 @@ pub struct Stats {
     pub current_duration: AtomicU64,  // in secs
     pub progress_bar: ProgressBar,
     pub received_packets: AtomicU64,
+    pub ignored_packets: AtomicU64,
     pub sent_packets: AtomicU64,
 }
 
@@ -31,6 +32,7 @@ impl Default for Stats {
             current_duration: AtomicU64::new(0),
             progress_bar: ProgressBar::new(0),
             received_packets: AtomicU64::new(0),
+            ignored_packets: AtomicU64::new(0),
             sent_packets: AtomicU64::new(0),
         }
     }
@@ -60,12 +62,17 @@ impl Stats {
             current_duration: AtomicU64::new(0),
             progress_bar: ProgressBar::new(target),
             received_packets: AtomicU64::new(0),
+            ignored_packets: AtomicU64::new(0),
             sent_packets: AtomicU64::new(0),
         }
     }
 
     pub fn set_current_duration(&self, secs: u64) {
         self.current_duration.fetch_max(secs, Ordering::Relaxed);
+    }
+
+    pub fn packet_ignored(&self) {
+        self.ignored_packets.fetch_add(1, Ordering::Relaxed);
     }
 
     pub fn packet_received(&self) {
@@ -143,7 +150,10 @@ pub fn run(stats: Arc<Stats>) {
                 let pc = stats.packets_counter.load(Ordering::Relaxed);
                 let sp = stats.sent_packets.load(Ordering::Relaxed);
                 let rp = stats.received_packets.load(Ordering::Relaxed);
-                log::info!("{pc} created packets, {sp} sent and {rp} received");
+                let ip = stats.ignored_packets.load(Ordering::Relaxed);
+                log::info!(
+                    "{pc} created packets, {sp} sent and {rp} received (including {ip} ignored)"
+                );
             }
         }
     }

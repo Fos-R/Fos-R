@@ -11,6 +11,8 @@ use pnet_packet::ip::IpNextHeaderProtocol;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::thread;
 use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -75,12 +77,13 @@ fn handle_packets(
     mut rx: TransportReceiver,
     current_flows: Arc<Mutex<Vec<Packets>>>,
     stats: Arc<Stats>,
+    running: Arc<AtomicBool>,
 ) {
     // Send and receive packets in this thread
     let mut rx_iter = ipv4_packet_iter(&mut rx);
     let mut next_timeout_check = SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
         + Duration::from_secs(INTERVAL_TIMEOUT_CHECKS_IN_SECS);
-    loop {
+    while running.load(Ordering::Relaxed) {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
         if now > next_timeout_check {
             // flows that should have ended for more than "SESSION_TIMEOUT_IN_SECS"
@@ -106,7 +109,7 @@ fn handle_packets(
             let flows = current_flows.lock().unwrap();
             for f in flows.iter() {
                 assert!(!f.packets.is_empty());
-                if f.directions[0] == PacketDirection::Forward {
+                if f.flow.get_proto() == proto && f.directions[0] == PacketDirection::Forward {
                     match &packet_to_send {
                         None => packet_to_send = Some((f.timestamps[0], f.flow.get_flow_id())),
                         Some(t) if f.timestamps[0] < t.0 => {
@@ -159,9 +162,11 @@ fn handle_packets(
                 } else {
                     ts.saturating_sub(now)
                 };
-                if timeout.is_zero() { // we do not wait to receive anything 
+                if timeout.is_zero() {
+                    // we do not wait to receive anything
                     None
-                } else { // while waiting to send the packet, we listen to incoming packets
+                } else {
+                    // while waiting to send the packet, we listen to incoming packets
                     // log::trace!("Waiting for {:?}", timeout);
                     // seulement disponible sur Unix?
                     rx_iter.next_with_timeout(timeout).expect("Network error")
@@ -186,7 +191,10 @@ fn handle_packets(
             if s4net.is_packet_relevant(recv_packet.get_flags()) {
                 let mut flows = current_flows.lock().unwrap();
                 log::trace!("{} ongoing flows", flows.len());
-                let flow_pos = flows.iter().position(|f| { log::trace!("Checking {fid:?} with {:?}", f.flow); fid.is_compatible(&f.flow)});
+                let flow_pos = flows.iter().position(|f| {
+                    log::trace!("Incoming packet. Checking {fid:?} with {:?}", f.flow);
+                    fid.is_compatible(&f.flow)
+                });
                 if let Some(flow_pos) = flow_pos {
                     log::debug!("Packet received: processed on port {}", fid.src_port);
                     let flow = &mut flows[flow_pos];
@@ -207,6 +215,7 @@ fn handle_packets(
                     }
                 } else {
                     log::warn!("Packet received: ignored ({fid:?})");
+                    stats.packet_ignored();
                 }
             }
             // Go back to searching for the next packet to send because it may have changed
@@ -215,7 +224,10 @@ fn handle_packets(
             let mut flows = current_flows.lock().unwrap();
             let flow_pos = flows
                 .iter()
-                .position(|f| fid.is_compatible(&f.flow))
+                .position(|f| {
+                    log::trace!("Outgoing packet. Checking {fid:?} with {:?}", f.flow);
+                    fid.is_compatible(&f.flow)
+                })
                 .expect("Need to send a packet in an unknown session");
             let flow = &mut flows[flow_pos];
             let pos = flow
@@ -287,6 +299,7 @@ pub fn start(
     stats: Arc<Stats>,
 ) {
     log::trace!("Start S4");
+    let running = Arc::new(AtomicBool::new(true));
     let mut sel = Select::new();
     let mut join_handles = Vec::new();
     let mut receivers = Vec::<Receiver<Packets>>::new(); // a list of receivers, for when used with Select
@@ -305,11 +318,12 @@ pub fn start(
         let stats = stats.clone();
         let s4net = s4net.clone();
 
+        let running = running.clone();
         // each protocol is handled by a different thread
         join_handles.push(
             builder
                 .spawn(move || {
-                    handle_packets(s4net, proto, rx, tx, current_flows, stats);
+                    handle_packets(s4net, proto, rx, tx, current_flows, stats, running);
                 })
                 .unwrap(),
         );
@@ -353,6 +367,8 @@ pub fn start(
             }
         }
     }
+
+    running.store(false, Ordering::Relaxed);
 
     for handle in join_handles.into_iter() {
         // stop the networking threads
