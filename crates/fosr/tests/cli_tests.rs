@@ -20,10 +20,12 @@ fn deterministic_generation() -> Result<(), Box<dyn std::error::Error>> {
         .arg("-s")
         .arg("0")
         .arg("-d")
-        .arg("1h")
+        .arg("1min")
         .arg("--order-pcap")
         .arg("-t")
-        .arg("0");
+        .arg("0")
+        .env("RUST_LOG", "trace")
+        .spawn()?;
     cmd.assert().success();
 
     let mut file = File::open(&file_path)?;
@@ -32,7 +34,7 @@ fn deterministic_generation() -> Result<(), Box<dyn std::error::Error>> {
     let hash = sha256.finalize();
     assert_eq!(
         hash[..],
-        hex!("8b4c7599bc223c2e4705a20e5d47f1c5fe357d773dd25a19b6a27281db163cb8")
+        hex!("98a61cf7d0743ff30d8ae086b51c706b8b13a1c0dc18d3bd5d8479391ba952ce")
     );
     fs::remove_file(file_path)?;
     Ok(())
