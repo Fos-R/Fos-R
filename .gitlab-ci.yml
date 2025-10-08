@@ -39,6 +39,10 @@ tests:
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
     - cargo test
+  artifacts:
+    when: on_failure
+    paths:
+      - crates/fosr/deterministic-test.pcap
 
 # TODO: stage for generation & evaluation, and deploying generated pcap
 
