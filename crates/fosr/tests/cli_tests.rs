@@ -2,10 +2,10 @@ use assert_cmd::prelude::*;
 use hex_literal::hex;
 use sha2::Digest;
 use sha2::Sha256;
+use std::fs;
 use std::fs::File;
 use std::io;
 use std::process::Command;
-use std::fs;
 
 #[test]
 fn deterministic_generation() -> Result<(), Box<dyn std::error::Error>> {
