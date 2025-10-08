@@ -38,7 +38,7 @@ tests:
   script:
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
-    - cargo test
+    - cargo test -- --nocapture
   artifacts:
     when: on_failure
     paths:
