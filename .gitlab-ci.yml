@@ -38,7 +38,7 @@ tests:
   script:
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
-    - CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER='sudo -E' cargo test -- --nocapture # some tests require root
+    - cargo test -- --nocapture
   artifacts:
     when: on_failure
     paths:
