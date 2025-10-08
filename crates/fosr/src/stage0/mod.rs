@@ -129,6 +129,7 @@ impl UniformGenerator {
         seed: Option<u64>,
         total_duration: Option<Duration>,
         flow_per_second: u64,
+        deterministic: bool,
     ) -> Self {
         let current_date = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
         let flows_per_window = flow_per_second * WINDOW_WIDTH_IN_SECS;
@@ -140,7 +141,9 @@ impl UniformGenerator {
             Some(s) => Pcg32::seed_from_u64(s),
             None => Pcg32::new(0xcafef00dd15ea5e5, 0xa02bdbf7bb3c0a7), // default values
         };
-        rng.advance(10 * window_count_since_unix_epoch * flows_per_window);
+        if !deterministic {
+            rng.advance(10 * window_count_since_unix_epoch * flows_per_window);
+        }
         // 10 = 8 by advancing + 2 for a next_u64 call
         let next_ts = Duration::from_secs(window_count_since_unix_epoch * WINDOW_WIDTH_IN_SECS);
         let time_distrib = Uniform::new(

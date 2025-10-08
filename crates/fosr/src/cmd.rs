@@ -63,6 +63,12 @@ pub enum Command {
             help = "Method to avoid kernel interactions with the injected traffic"
         )]
         net_enabler: NetEnabler,
+        #[arg(
+            long,
+            default_value_t = false,
+            help = "Ensure the generated traffic is always the same. It makes Fos-R less robust to staggered process starts, so avoid unless for testing"
+        )]
+        deterministic: bool,
     },
     /// Extend a pcap file. You should use your own models that have been
     /// fitted on that pcap file.
