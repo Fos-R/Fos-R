@@ -42,9 +42,7 @@ aya = { version = "0.13.1", default-features = false, optional = true }
 
 [dev-dependencies]
 assert_cmd = "2.0.14"
-assert_fs = "1.1.1"
 hex-literal = "1.0.0"
-predicates = "3.1.0"
 sha2 = "0.10.9"
 
 [features]
