@@ -173,7 +173,7 @@ fn main() {
                             order_pcap,
                         }),
                         s0,
-                        (s1, 3),
+                        (s1, 1),
                         (s2, 1),
                         (s3, 1),
                         Arc::new(ui::Stats::default()),
@@ -190,7 +190,7 @@ fn main() {
                             order_pcap,
                         }),
                         s0,
-                        (s1, 3),
+                        (s1, 1),
                         (s2, 1),
                         (s3, 1),
                         Arc::new(ui::Stats::default()),
@@ -271,6 +271,9 @@ fn main() {
                 Arc::new(ui::Stats::new(target)),
                 None::<stage4::DummyNetEnabler>,
             );
+        }
+        cmd::Command::Untaint { input, output } => {
+            pcap2flow::untaint_file(&input, &output);
         } // #[cfg(feature = "replay")]
           // cmd::Command::Replay {
           //     file,

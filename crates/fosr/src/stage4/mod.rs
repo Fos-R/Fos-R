@@ -366,8 +366,7 @@ pub fn start(
 
                 current_flows.0.lock().unwrap().push(flow);
             }
-            Err(error) => {
-                log::warn!("Error: {error}");
+            Err(_) => {
                 sel.remove(index);
                 open -= 1;
                 if open == 0 {
@@ -383,7 +382,7 @@ pub fn start(
     // wait until there is no flow left
     let (lock, cvar) = &*current_flows;
     let mut flows = lock.lock().unwrap();
-    while flows.len() > 0 {
+    while !flows.is_empty() {
         flows = cvar.wait(flows).unwrap();
     }
 

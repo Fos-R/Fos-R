@@ -17,8 +17,8 @@ fn deterministic_generation() -> Result<(), Box<dyn std::error::Error>> {
     cmd.arg("create-pcap")
         .args(["-o", &file_path])
         .args(["-s", "0"])
-        .args(["-d","1min"])
-        .args(["-t","0"])
+        .args(["-d", "1min"])
+        .args(["-t", "0"])
         .arg("--order-pcap")
         .env("RUST_LOG", "trace")
         .spawn()?;

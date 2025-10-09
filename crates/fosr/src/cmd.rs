@@ -130,7 +130,15 @@ pub enum Command {
             default_value_t = false
         )]
         include_payloads: bool,
-    }, // /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
+    },
+    /// Remove the Fos-R taint from a pcap file
+    Untaint {
+        #[arg(short, long, required = true, help = "Pcap file to untaint")]
+        input: String,
+        #[arg(short, long, required = true, help = "Pcap file output")]
+        output: String,
+    },
+       // /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
        // /// hosts, etc.) are ignored.
        // #[cfg(feature = "replay")]
        // Replay {
