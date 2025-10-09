@@ -6,6 +6,7 @@
 
 - Windows support through eBPF
 - Pcap2flow mode
+- Utility to remove Fos-R taint from pcap files
 
 ### Changed
 

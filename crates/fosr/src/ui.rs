@@ -146,19 +146,23 @@ pub fn run(stats: Arc<Stats>) {
     } else {
         while !stats.should_stop() {
             for i in 0..10 {
-                thread::sleep(Duration::new(1, 0));
-                if stats.should_stop() || i == 0{
+                thread::sleep(Duration::new(1, 0)); // check regularly if should stop
+                if stats.should_stop() || i == 0 {
+                    // print just before ending
                     let pc = stats.packets_counter.load(Ordering::Relaxed);
                     let sp = stats.sent_packets.load(Ordering::Relaxed);
                     let rp = stats.received_packets.load(Ordering::Relaxed);
                     let ip = stats.ignored_packets.load(Ordering::Relaxed);
-                    log::info!(
-                        "{pc} created packets, {sp} sent and {rp} received (including {ip} ignored)"
-                    );
+                    if ip > 0 {
+                        log::info!(
+                            "{pc} prepared packets, {sp} sent and {rp} received (including {ip} ignored)"
+                        );
+                    } else {
+                        log::info!("{pc} prepared packets, {sp} sent and {rp} received");
+                    }
                     if stats.should_stop() {
                         break;
                     }
-
                 }
             }
         }

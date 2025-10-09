@@ -1,15 +1,18 @@
 use crate::structs::*;
+use indicatif::ProgressBar;
 use pcap_file::pcap;
 use pnet_packet::Packet;
 use pnet_packet::ip::IpNextHeaderProtocols;
 use pnet_packet::{ethernet, ipv4, tcp, udp};
 use std::collections::HashMap;
 use std::fs::File;
+use std::fs::OpenOptions;
 use std::io::BufReader;
 use std::io::BufWriter;
 use std::io::Write;
 use std::net::Ipv4Addr;
 use std::time::Duration;
+use indicatif::ProgressStyle;
 
 const DURATION_THRESHOLD: Duration = Duration::from_secs(600);
 
@@ -455,4 +458,52 @@ pub fn process_file(file: &str) -> Vec<FlowStats> {
     }
 
     finished_flows
+}
+
+/// Remove the Fos-R taint (i.e., the third IP flag bit) from a pcap file
+pub fn untaint_file(input: &str, output: &str) {
+    let file_out = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&output)
+        .expect("Error opening or creating file");
+    let mut pcap_writer =
+        pcap::PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
+
+    let mut count = 0;
+    {
+        // count the number of packet so we can put a progress bar
+        let file_in = BufReader::new(File::open(input).expect("Error opening file"));
+        let mut pcap_reader = pcap::PcapReader::new(file_in).unwrap();
+        while pcap_reader.next_packet().is_some() {
+            count += 1;
+        }
+    }
+    let file_in = BufReader::new(File::open(input).expect("Error opening file"));
+    let mut pcap_reader = pcap::PcapReader::new(file_in).unwrap();
+
+    // setup the progress bar
+    let pb = ProgressBar::new(count);
+    pb.set_style(
+        ProgressStyle::with_template("{spinner:.green} Untainting [{wide_bar}] ({eta})")
+            .unwrap()
+    );
+
+    while let Some(packet) = pcap_reader.next_packet() {
+        let mut packet = packet.expect("Error during packet parsing");
+        // let packet = packet.into_owned();
+        let data = packet.data.to_mut();
+        // let mut eth_packet = ethernet::MutableEthernetPacket::new(&mut data).unwrap();
+        let ip_start = ethernet::MutableEthernetPacket::minimum_packet_size();
+        let mut ipv4_packet = ipv4::MutableIpv4Packet::new(&mut data[ip_start..]).unwrap();
+        let ip_flags = ipv4_packet.get_flags();
+        ipv4_packet.set_flags(ip_flags & 0b011);
+        ipv4_packet.set_checksum(ipv4::checksum(&ipv4_packet.to_immutable()));
+        pb.inc(1);
+        pcap_writer
+            .write_packet(&packet)
+            .unwrap();
+    }
+    pb.finish();
 }
