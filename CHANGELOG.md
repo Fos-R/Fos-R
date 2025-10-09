@@ -5,10 +5,12 @@
 ### Added
 
 - Windows support through eBPF
+- Pcap2flow mode
 
 ### Changed
 
 - Output for create-pcap can be deterministic (with the correct options)
+- Bugfixes
 
 ## v0.1.1
 

@@ -10,6 +10,7 @@ use pnet_packet::Packet;
 use pnet_packet::ip::IpNextHeaderProtocol;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::Condvar;
 use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -51,8 +52,8 @@ impl NetEnabler for DummyNetEnabler {
     fn open_session(&self, _: &FlowId) {}
 }
 
-const INTERVAL_TIMEOUT_CHECKS_IN_SECS: u64 = 60; // when to check for timeouts
-const SESSION_TIMEOUT_IN_SECS: u64 = 30; // minimum amount of time after the theoretical last
+const INTERVAL_TIMEOUT_CHECKS_IN_SECS: u64 = 15; // when to check for timeouts
+const SESSION_TIMEOUT_IN_SECS: u64 = 10; // minimum amount of time after the theoretical last
 // timestamp before we can dismiss a flow
 
 /// Handles sending and receiving packets for a given protocol.
@@ -75,7 +76,7 @@ fn handle_packets(
     proto: Protocol,
     mut tx: TransportSender,
     mut rx: TransportReceiver,
-    current_flows: Arc<Mutex<Vec<Packets>>>,
+    current_flows: Arc<(Mutex<Vec<Packets>>, Condvar)>,
     stats: Arc<Stats>,
     running: Arc<AtomicBool>,
 ) {
@@ -89,13 +90,14 @@ fn handle_packets(
             // flows that should have ended for more than "SESSION_TIMEOUT_IN_SECS"
             // seconds ago are pruned
             let timeout = now - Duration::from_secs(SESSION_TIMEOUT_IN_SECS);
-            let mut flows = current_flows.lock().unwrap();
+            let mut flows = current_flows.0.lock().unwrap();
             let len = flows.len(); // used to count how many flows have been closed early
             flows.retain(|p| {
                 if p.timestamps.last().unwrap() > &timeout {
                     true // we keep this flow
                 } else {
                     s4net.close_session(&p.flow.get_flow_id());
+                    current_flows.1.notify_one();
                     false // we discard it
                 }
             });
@@ -106,7 +108,7 @@ fn handle_packets(
         }
         let mut packet_to_send: Option<(Duration, FlowId)> = None;
         {
-            let flows = current_flows.lock().unwrap();
+            let flows = current_flows.0.lock().unwrap();
             for f in flows.iter() {
                 assert!(!f.packets.is_empty());
                 if f.flow.get_proto() == proto && f.directions[0] == PacketDirection::Forward {
@@ -189,7 +191,7 @@ fn handle_packets(
                 protocol: proto,
             };
             if s4net.is_packet_relevant(recv_packet.get_flags()) {
-                let mut flows = current_flows.lock().unwrap();
+                let mut flows = current_flows.0.lock().unwrap();
                 log::trace!("{} ongoing flows", flows.len());
                 let flow_pos = flows.iter().position(|f| {
                     log::trace!("Incoming packet. Checking {fid:?} with {:?}", f.flow);
@@ -212,6 +214,7 @@ fn handle_packets(
                     if flow.directions.is_empty() {
                         flows.remove(flow_pos);
                         s4net.close_session(&fid);
+                        current_flows.1.notify_one();
                     }
                 } else {
                     log::warn!("Packet received: ignored ({fid:?})");
@@ -221,7 +224,7 @@ fn handle_packets(
             // Go back to searching for the next packet to send because it may have changed
         } else if let Some((_, fid)) = packet_to_send {
             // We need to send a packet
-            let mut flows = current_flows.lock().unwrap();
+            let mut flows = current_flows.0.lock().unwrap();
             let flow_pos = flows
                 .iter()
                 .position(|f| {
@@ -278,6 +281,7 @@ fn handle_packets(
                 // remove the flow ID from the socket list
                 flows.remove(flow_pos);
                 s4net.close_session(&fid);
+                current_flows.1.notify_one();
             }
         } // else: no packet received, none to send
     }
@@ -303,7 +307,7 @@ pub fn start(
     let mut sel = Select::new();
     let mut join_handles = Vec::new();
     let mut receivers = Vec::<Receiver<Packets>>::new(); // a list of receivers, for when used with Select
-    let current_flows = Arc::new(Mutex::new(Vec::new()));
+    let current_flows = Arc::new((Mutex::new(Vec::new()), Condvar::new()));
     for (proto, rx_s4) in incoming_flows.into_iter() {
         // for each transport protocol, create a new raw socket
         // the raw socket listens to all the interfaces
@@ -337,35 +341,50 @@ pub fn start(
 
     // Handle packets
     let mut open = receivers.len();
+
     loop {
         let oper = sel.select(); // block until one receiver become ready
         let index = oper.index(); // get the receiver that is ready
-        if let Ok(flow) = oper.recv(&receivers[index]) {
-            log::debug!(
-                "Currently {} ongoing flows",
-                current_flows.lock().unwrap().len() + 1
-            );
+        match oper.recv(&receivers[index]) {
+            Ok(flow) => {
+                log::debug!(
+                    "Currently {} ongoing flows",
+                    current_flows.0.lock().unwrap().len() + 1
+                );
 
-            let fid = flow.flow.get_flow_id();
-            // log::info!(
-            //     "Next Fos-R flow: {}, {}, {}, {}, {}",
-            //     fid.src_ip,
-            //     fid.dst_ip,
-            //     fid.src_port,
-            //     fid.dst_port,
-            //     flow.timestamps[0].as_millis()
-            // );
-            // set up the session as soon as possible
-            s4net.open_session(&fid);
+                let fid = flow.flow.get_flow_id();
+                // log::info!(
+                //     "Next Fos-R flow: {}, {}, {}, {}, {}",
+                //     fid.src_ip,
+                //     fid.dst_ip,
+                //     fid.src_port,
+                //     fid.dst_port,
+                //     flow.timestamps[0].as_millis()
+                // );
+                // set up the session as soon as possible
+                s4net.open_session(&fid);
 
-            current_flows.lock().unwrap().push(flow);
-        } else {
-            open -= 1;
-            if open == 0 {
-                // all receivers are closed: we stop the stage
-                break;
+                current_flows.0.lock().unwrap().push(flow);
+            }
+            Err(error) => {
+                log::warn!("Error: {error}");
+                sel.remove(index);
+                open -= 1;
+                if open == 0 {
+                    // all receivers are closed: we stop the stage
+                    break;
+                }
             }
         }
+    }
+
+    log::trace!("S4 waiting for the remaining flows");
+
+    // wait until there is no flow left
+    let (lock, cvar) = &*current_flows;
+    let mut flows = lock.lock().unwrap();
+    while flows.len() > 0 {
+        flows = cvar.wait(flows).unwrap();
     }
 
     running.store(false, Ordering::Relaxed);
