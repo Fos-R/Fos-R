@@ -10,6 +10,14 @@ build:amd64:
     - cargo install bpf-linker
     - cargo build
     - cargo build --release
+    - rustup target add arm-unknown-linux-musleabihf
+    - cargo build --target=arm-unknown-linux-musleabihf -p fosr -r
+    - rustup target add x86_64-pc-windows-gnu
+    - cargo build --target=x86_64-pc-windows-gnu -p fosr -r
+    # - rustup target add x86_64-apple-darwin
+    # - cargo build --target=x86_64-apple-darwin -p fosr -r
+    # - rustup target add x86_64-unknown-freebsd
+    # - cargo build --target=x86_64-unknown-freebsd -p fosr -r
   artifacts:
     paths:
       - target/debug/fosr
@@ -43,6 +51,7 @@ tests:
     when: on_failure
     paths:
       - crates/fosr/deterministic-test.pcap
+      # TODO: lancer zeek dessus
 
 # TODO: stage for generation & evaluation, and deploying generated pcap
 
