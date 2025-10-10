@@ -5,19 +5,25 @@ build:amd64:
   stage: build
   image: rust
   script:
+    # version without network injection
+    - cargo build --no-default-features -p fosr
+    # version without ebpf
     - cargo build --no-default-features --features iptables -p fosr
+    # version with ebpf
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
     - cargo build
     - cargo build --release
+    # cross-compilation
+    - apt update
+    - apt install -y gcc-arm-linux-gnueabihf
     - rustup target add arm-unknown-linux-musleabihf
-    - cargo build --target=arm-unknown-linux-musleabihf -p fosr -r
-    - rustup target add x86_64-pc-windows-gnu
-    - cargo build --target=x86_64-pc-windows-gnu -p fosr -r
-    # - rustup target add x86_64-apple-darwin
-    # - cargo build --target=x86_64-apple-darwin -p fosr -r
+    - cargo build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
+    # - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
+    # - rustup target add x86_64-pc-windows-gnu
+    # - cargo build --target=x86_64-pc-windows-gnu -p fosr -r --no-default-features
     # - rustup target add x86_64-unknown-freebsd
-    # - cargo build --target=x86_64-unknown-freebsd -p fosr -r
+    # - cargo build --target=x86_64-unknown-freebsd --config target.x86_64-unknown-freebsd.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
   artifacts:
     paths:
       - target/debug/fosr

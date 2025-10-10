@@ -18,9 +18,9 @@ use std::thread;
 use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
+#[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf", feature = "net_injection"))]
 pub mod ebpf;
-#[cfg(all(target_os = "linux", feature = "iptables"))]
+#[cfg(all(target_os = "linux", feature = "iptables", feature = "net_injection"))]
 pub mod iptables;
 
 pub trait NetEnabler: Clone + std::marker::Send + 'static {
@@ -71,6 +71,7 @@ const SESSION_TIMEOUT_IN_SECS: u64 = 10; // minimum amount of time after the the
 /// - `rx`: Transport receiver channel used to receive packets.
 /// - `current_flows`: Shared list of active flows.
 /// - `taint`: Flag indicating whether taint-checking is active.
+#[cfg(feature = "net_injection")]
 fn handle_packets(
     s4net: impl NetEnabler,
     proto: Protocol,
@@ -149,7 +150,7 @@ fn handle_packets(
             }
         };
 
-        #[cfg(target_os = "linux")]
+        #[cfg(unix)]
         let received_data = match &packet_to_send {
             None => {
                 // log::trace!("No next packet to send");
@@ -297,6 +298,7 @@ fn handle_packets(
 /// - `s4net`: a network enabler that handles the session opening and closing.
 /// - `incoming_flows`: A HashMap mapping each Protocol to its incoming packets channel.
 /// - `stats`: an Arc to a shared statistics structure
+#[cfg(feature = "net_injection")]
 pub fn start(
     s4net: impl NetEnabler,
     incoming_flows: HashMap<Protocol, Receiver<Packets>>,
