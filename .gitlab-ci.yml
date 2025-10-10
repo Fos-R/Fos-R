@@ -5,6 +5,7 @@ build:amd64:
   stage: build
   image: rust
   script:
+    - apt update
     # version without network injection
     - cargo build --no-default-features -p fosr
     # version without ebpf
@@ -14,14 +15,29 @@ build:amd64:
     - cargo install bpf-linker
     - cargo build
     - cargo build --release
-    # cross-compilation
-    - apt update
+    - cargo install cargo-deb
+    - cargo deb -p fosr
+    # cross-compilation (x86 32 bits)
+    - apt install -y gcc-i686-linux-gnu
+    - rustup target add i686-unknown-linux-gnu
+    # Aya doesn’t compile for some reason
+    - cargo build --target=i686-unknown-linux-gnu --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\" -p fosr -r --no-default-features
+    - cargo deb --target=i686-unknown-linux-gnu -p fosr --no-default-features -- --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\"
+    # cross-compilation (arm 32 bits with musl)
     - apt install -y gcc-arm-linux-gnueabihf
     - rustup target add arm-unknown-linux-musleabihf
     - cargo build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
+    - cargo deb --target=arm-unknown-linux-musleabihf -p fosr -- --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\"
+    # cross-compilation (arm 64 bits with libc)
+    - apt install -y gcc-aarch64-linux-gnu
+    - rustup target add aarch64-unknown-linux-gnu
+    - cargo build --target=aarch64-unknown-linux-gnu --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\" -p fosr -r
+    - cargo deb --target=aarch64-unknown-linux-gnu -p fosr -- --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\"
+    # cross-compilation (windows, WIP)
     # - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
     # - rustup target add x86_64-pc-windows-gnu
     # - cargo build --target=x86_64-pc-windows-gnu -p fosr -r --no-default-features
+    # cross-compilation (FreedBSD, WIP)
     # - rustup target add x86_64-unknown-freebsd
     # - cargo build --target=x86_64-unknown-freebsd --config target.x86_64-unknown-freebsd.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
   artifacts:

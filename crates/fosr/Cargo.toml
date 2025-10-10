@@ -1,7 +1,7 @@
 [package]
 name = "fosr"
 version = "0.1.2-dev"
-authors = ["Pierre-François Gimenez","Dorian Bachelot","Florentin Labelle","Evan Morin"]
+authors = ["Pierre-François Gimenez <pierre-francois.gimenez@inria.fr>","Dorian Bachelot","Florentin Labelle","Evan Morin"]
 edition = "2024"
 description = "Fos-R (Forger Of Security Records) is an AI-based synthetic network traffic generator."
 homepage = "https://pfgimenez.fr/fosr/"
