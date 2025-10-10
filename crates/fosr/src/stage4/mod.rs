@@ -1,24 +1,25 @@
 use crate::structs::*;
 use crate::ui::Stats;
 use crossbeam_channel::Receiver;
-use crossbeam_channel::Select;
+use crossbeam_channel::TryRecvError;
 use pnet::transport::{
     TransportChannelType, TransportReceiver, TransportSender, ipv4_packet_iter, transport_channel,
 };
-use pnet_packet::MutablePacket;
 use pnet_packet::Packet;
 use pnet_packet::ip::IpNextHeaderProtocol;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::Condvar;
 use std::sync::Mutex;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::thread;
 use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
+use crossbeam_channel::RecvTimeoutError;
 
-#[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf", feature = "net_injection"))]
+#[cfg(all(
+    any(target_os = "windows", target_os = "linux"),
+    feature = "ebpf",
+    feature = "net_injection"
+))]
 pub mod ebpf;
 #[cfg(all(target_os = "linux", feature = "iptables", feature = "net_injection"))]
 pub mod iptables;
@@ -72,33 +73,111 @@ const SESSION_TIMEOUT_IN_SECS: u64 = 10; // minimum amount of time after the the
 /// - `current_flows`: Shared list of active flows.
 /// - `taint`: Flag indicating whether taint-checking is active.
 #[cfg(feature = "net_injection")]
-fn handle_packets(
+fn receive_packets(
     s4net: impl NetEnabler,
     proto: Protocol,
-    mut tx: TransportSender,
     mut rx: TransportReceiver,
-    current_flows: Arc<(Mutex<Vec<Packets>>, Condvar)>,
+    current_flows: Arc<Mutex<Vec<Packets>>>,
     stats: Arc<Stats>,
-    running: Arc<AtomicBool>,
 ) {
     // Send and receive packets in this thread
+    log::info!("Start S4-rx");
     let mut rx_iter = ipv4_packet_iter(&mut rx);
+    loop {
+        let (recv_packet, _) = rx_iter.next().expect("Network error");
+
+        let recv_tcp_packet = pnet::packet::tcp::TcpPacket::new(recv_packet.payload())
+            .expect("Failed to parse received packet");
+
+        // since this is a backward packet, we need to reverse source and destination
+        let fid = FlowId {
+            dst_ip: recv_packet.get_source(),
+            src_ip: recv_packet.get_destination(),
+            dst_port: recv_tcp_packet.get_source(),
+            src_port: recv_tcp_packet.get_destination(),
+            protocol: proto,
+        };
+        if s4net.is_packet_relevant(recv_packet.get_flags()) {
+            stats.packet_received(); // only count the Fos-R packets
+            log::warn!("Waiting for current_flows…");
+            let mut flows = current_flows.lock().unwrap();
+            log::warn!("Got current flows");
+            log::trace!("{} ongoing flows", flows.len());
+            let flow_pos = flows.iter().position(|f| {
+                log::trace!("Incoming packet. Checking {fid:?} with {:?}", f.flow);
+                fid.is_compatible(&f.flow)
+            });
+            if let Some(flow_pos) = flow_pos {
+                log::debug!("Packet received: processed on port {}", fid.src_port);
+                let flow = &mut flows[flow_pos];
+                // look for the first backward packet. TODO: check for that particular packet
+                // in case of inversion
+                let pos = flow
+                    .directions
+                    .iter()
+                    .position(|d| d == &PacketDirection::Backward);
+                if let Some(pos) = pos {
+                    flow.directions.remove(pos);
+                    flow.packets.remove(pos);
+                    flow.timestamps.remove(pos);
+                    assert_eq!(flow.directions.len(), flow.packets.len());
+                    assert_eq!(flow.directions.len(), flow.timestamps.len());
+                    if flow.directions.is_empty() {
+                        // the flow has been entirely consumed: we can reove it
+                        flows.remove(flow_pos);
+                        s4net.close_session(&fid);
+                    }
+                } else {
+                    log::warn!("Packet ignored: flow was not expecting one ({fid:?})");
+                    stats.packet_ignored();
+                }
+            } else {
+                log::warn!("Packet ignored: no corresponding flow ({fid:?})");
+                stats.packet_ignored();
+            }
+        }
+    }
+}
+
+/// Handles sending and receiving packets for a given protocol.
+///
+/// This function continuously:
+/// - Checks for session timeouts and prunes expired flows.
+/// - Determines the next packet to send based on flow timestamps.
+/// - Waits to receive an incoming packet with an appropriate timeout,
+///   or sends the next packet if its scheduled time has arrived.
+///
+/// # Parameters
+///
+/// - `proto`: The protocol associated with these packets.
+/// - `tx`: Transport sender channel used to send packets.
+/// - `rx`: Transport receiver channel used to receive packets.
+/// - `current_flows`: Shared list of active flows.
+#[cfg(feature = "net_injection")]
+fn send_packets(
+    s4net: impl NetEnabler,
+    mut tx: TransportSender,
+    current_flows: Arc<Mutex<Vec<Packets>>>,
+    stats: Arc<Stats>,
+    rx_s4: Receiver<Packets>,
+) {
+    log::info!("Start S4-tx");
+    // Send and receive packets in this thread
     let mut next_timeout_check = SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
         + Duration::from_secs(INTERVAL_TIMEOUT_CHECKS_IN_SECS);
-    while running.load(Ordering::Relaxed) {
+    loop {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
         if now > next_timeout_check {
             // flows that should have ended for more than "SESSION_TIMEOUT_IN_SECS"
             // seconds ago are pruned
             let timeout = now - Duration::from_secs(SESSION_TIMEOUT_IN_SECS);
-            let mut flows = current_flows.0.lock().unwrap();
+            let mut flows = current_flows.lock().unwrap();
             let len = flows.len(); // used to count how many flows have been closed early
             flows.retain(|p| {
                 if p.timestamps.last().unwrap() > &timeout {
                     true // we keep this flow
                 } else {
                     s4net.close_session(&p.flow.get_flow_id());
-                    current_flows.1.notify_one();
                     false // we discard it
                 }
             });
@@ -107,184 +186,132 @@ fn handle_packets(
                 log::debug!("Session timeout: {} sessions closed", len - flows.len());
             }
         }
-        let mut packet_to_send: Option<(Duration, FlowId)> = None;
-        {
-            let flows = current_flows.0.lock().unwrap();
-            for f in flows.iter() {
+
+        loop {
+            // check for new flows, but do not lose time if there is none
+            match rx_s4.try_recv() {
+                Ok(flow) => {
+                    let fid = flow.flow.get_flow_id();
+                    // set up the session as soon as possible
+                    s4net.open_session(&fid);
+                    current_flows.lock().unwrap().push(flow);
+                }
+                Err(TryRecvError::Empty) => break, // proceed to send a packet
+                Err(TryRecvError::Disconnected) if current_flows.lock().unwrap().is_empty() => {
+                    return;
+                } // stop the thread
+                _ => break,                        // disconnected, but still some message to send
+            }
+        }
+
+        let duration_to_next_send: Option<Duration> = current_flows
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|f| f.directions[0] == PacketDirection::Forward)
+            .map(|f| f.timestamps[0])
+            .min();
+
+        if let Some(timestamp) = duration_to_next_send {
+            // we have to wait before sending the message. Wait a new message meanwhile ; if it’s a new
+            // packet, we have to check the next packet to send again as it may have changed
+
+            let waiting_duration =
+                timestamp.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap());
+
+            log::warn!("Waiting duration: {waiting_duration:?}");
+
+            match rx_s4.recv_timeout(waiting_duration) {
+                Ok(flow) => {
+                    let fid = flow.flow.get_flow_id();
+                    // set up the session as soon as possible
+                    s4net.open_session(&fid);
+
+                    current_flows.lock().unwrap().push(flow);
+                    continue; // we received a new flow while waiting: maybe its first packet needs to
+                    // be send earlier that the current one
+                }
+                Err(RecvTimeoutError::Timeout) => (), // timeout: we can send the current one
+                Err(RecvTimeoutError::Disconnected) => thread::sleep(timestamp.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap())), // disconnected: we need to wait a bit more
+            };
+
+            let flows = current_flows.lock().unwrap();
+
+            // TODO: réécrire avec min_by
+            let mut packet_to_send: Option<(Duration, FlowId, usize)> = None;
+            for (index, f) in flows.iter().enumerate() {
                 assert!(!f.packets.is_empty());
-                if f.flow.get_proto() == proto && f.directions[0] == PacketDirection::Forward {
+                if f.directions[0] == PacketDirection::Forward {
                     match &packet_to_send {
-                        None => packet_to_send = Some((f.timestamps[0], f.flow.get_flow_id())),
+                        None => {
+                            packet_to_send = Some((f.timestamps[0], f.flow.get_flow_id(), index))
+                        }
                         Some(t) if f.timestamps[0] < t.0 => {
                             // this packet should be sent sooner
-                            packet_to_send = Some((f.timestamps[0], f.flow.get_flow_id()))
+                            packet_to_send = Some((f.timestamps[0], f.flow.get_flow_id(), index))
                         }
                         _ => (), // the packet should be sent later, ignore it
                     }
                 }
             }
-        }
 
-        #[cfg(target_os = "windows")]
-        // TODO: faire un thread qui envoie et l’autre qui reçoit ?
-        // TODO: si "fast", pas besoin d’écouter
-        let received_data = match &packet_to_send {
-            None => {
-                // log::trace!("No next packet to send");
-                // TODO: trouver une alternative à "next_with_timeout" pour Windows
-                Some(rx_iter.next().expect("Network error"))
-            }
-            Some((ts, _)) => {
-                let timeout = if s4net.is_fast() {
-                    Duration::from_secs(0)
-                } else {
-                    ts.saturating_sub(now)
-                };
-                if timeout.is_zero() {
-                    None
-                } else {
-                    // log::trace!("Waiting for {:?}", timeout);
-                    // seulement disponible sur Unix?
-                    Some(rx_iter.next().expect("Network error"))
+            if let Some((_, fid, flow_pos)) = packet_to_send {
+                let mut flows = current_flows.lock().unwrap();
+                // We need to send a packet
+                let flow = &mut flows[flow_pos];
+                let packet = flow.packets.remove(0);
+                flow.directions.remove(0);
+                flow.timestamps.remove(0);
+                assert_eq!(flow.directions.len(), flow.packets.len());
+                assert_eq!(flow.directions.len(), flow.timestamps.len());
+
+                if flow.directions.is_empty() {
+                    // remove the flow ID from the socket list
+                    flows.remove(flow_pos);
+                    s4net.close_session(&fid);
                 }
-            }
-        };
+                drop(flows); // we release the mutex before sending the packet
 
-        #[cfg(unix)]
-        let received_data = match &packet_to_send {
-            None => {
-                // log::trace!("No next packet to send");
-                rx_iter
-                    .next_with_timeout(Duration::from_secs(1)) // we wait a bit
-                    .expect("Network error")
-            }
-            Some((ts, _)) => {
-                // there is a packet to send
-                let timeout = if s4net.is_fast() {
-                    Duration::from_secs(0)
-                } else {
-                    ts.saturating_sub(now)
-                };
-                if timeout.is_zero() {
-                    // we do not wait to receive anything
-                    None
-                } else {
-                    // while waiting to send the packet, we listen to incoming packets
-                    // log::trace!("Waiting for {:?}", timeout);
-                    // seulement disponible sur Unix?
-                    rx_iter.next_with_timeout(timeout).expect("Network error")
-                }
-            }
-        };
+                let eth_packet = pnet::packet::ethernet::EthernetPacket::new(&packet.data).unwrap();
+                let ipv4_packet =
+                    pnet::packet::ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
 
-        if let Some((recv_packet, _addr)) = received_data {
-            stats.packet_received();
-            // We received a packet during our wait
-            let recv_tcp_packet = pnet::packet::tcp::TcpPacket::new(recv_packet.payload())
-                .expect("Failed to parse received packet");
+                log::trace!("Send to {fid:?}");
 
-            // since this is a backward packet, we need to reverse source and destination
-            let fid = FlowId {
-                dst_ip: recv_packet.get_source(),
-                src_ip: recv_packet.get_destination(),
-                dst_port: recv_tcp_packet.get_source(),
-                src_port: recv_tcp_packet.get_destination(),
-                protocol: proto,
-            };
-            if s4net.is_packet_relevant(recv_packet.get_flags()) {
-                let mut flows = current_flows.0.lock().unwrap();
-                log::trace!("{} ongoing flows", flows.len());
-                let flow_pos = flows.iter().position(|f| {
-                    log::trace!("Incoming packet. Checking {fid:?} with {:?}", f.flow);
-                    fid.is_compatible(&f.flow)
-                });
-                if let Some(flow_pos) = flow_pos {
-                    log::debug!("Packet received: processed on port {}", fid.src_port);
-                    let flow = &mut flows[flow_pos];
-                    // look for the first backward packet. TODO: check for that particular packet
-                    let pos = flow
-                        .directions
-                        .iter()
-                        .position(|d| d == &PacketDirection::Backward)
-                        .unwrap();
-                    // assert_eq!(pos, 0);
-                    flow.directions.remove(pos);
-                    flow.packets.remove(pos);
-                    flow.timestamps.remove(pos);
-
-                    if flow.directions.is_empty() {
-                        flows.remove(flow_pos);
-                        s4net.close_session(&fid);
-                        current_flows.1.notify_one();
-                    }
-                } else {
-                    log::warn!("Packet received: ignored ({fid:?})");
-                    stats.packet_ignored();
-                }
-            }
-            // Go back to searching for the next packet to send because it may have changed
-        } else if let Some((_, fid)) = packet_to_send {
-            // We need to send a packet
-            let mut flows = current_flows.0.lock().unwrap();
-            let flow_pos = flows
-                .iter()
-                .position(|f| {
-                    log::trace!("Outgoing packet. Checking {fid:?} with {:?}", f.flow);
-                    fid.is_compatible(&f.flow)
-                })
-                .expect("Need to send a packet in an unknown session");
-            let flow = &mut flows[flow_pos];
-            let pos = flow
-                .directions
-                .iter()
-                .position(|d| d == &PacketDirection::Forward)
-                .unwrap();
-            // assert_eq!(pos, 0); // it should be the first in the list
-            let mut packet = flow.packets.remove(pos);
-            flow.directions.remove(pos);
-            flow.timestamps.remove(pos);
-
-            // Get the expected time of arrival of the packet to know if we should wait before sending or receiving it
-
-            let mut eth_packet =
-                pnet::packet::ethernet::MutableEthernetPacket::new(&mut packet.data).unwrap();
-            let mut ipv4_packet =
-                pnet::packet::ipv4::MutableIpv4Packet::new(eth_packet.payload_mut()).unwrap();
-
-            if cfg!(target_os = "linux") && cfg!(feature = "iptables") {
-                // iptables hack
-                ipv4_packet.set_ttl(65);
-            }
-
-            log::trace!("Send to {fid:?}");
-
-            let mut retry_count = 3;
-            while retry_count > 0 {
-                match tx.send_to(&ipv4_packet, std::net::IpAddr::V4(fid.dst_ip)) {
-                    Ok(n) => {
-                        assert_eq!(n, ipv4_packet.packet().len()); // Check if the whole packet was sent
-                        log::trace!("Packet sent from port {}", fid.src_port);
-                        stats.packet_sent();
-                        retry_count = 0;
-                    }
-                    Err(e) => {
-                        retry_count -= 1;
-                        if retry_count > 0 {
-                            log::error!("Failed to send packet: {e}. Retry.");
-                        } else {
-                            log::error!("Failed to send packet: {e}. Give up.");
+                let mut retry_count = 3;
+                while retry_count > 0 {
+                    // only send the IP part (the network layer is handled by the kernel)
+                    match tx.send_to(&ipv4_packet, std::net::IpAddr::V4(fid.dst_ip)) {
+                        Ok(n) => {
+                            assert_eq!(n, ipv4_packet.packet().len()); // Check if the whole packet was sent
+                            log::trace!("Packet sent from port {}", fid.src_port);
+                            stats.packet_sent();
+                            retry_count = 0;
+                        }
+                        Err(e) => {
+                            retry_count -= 1;
+                            if retry_count > 0 {
+                                log::error!("Failed to send packet: {e}. Retry.");
+                            } else {
+                                log::error!("Failed to send packet: {e}. Give up.");
+                            }
                         }
                     }
                 }
+            } // if we received a new flow while waiting, directly go back to the start of the loop
+        } else {
+            // we have nothing to do... so we can only wait
+            // to it in a blocking way
+            match rx_s4.recv() {
+                Ok(flow) => {
+                    let fid = flow.flow.get_flow_id();
+                    // set up the session as soon as possible
+                    s4net.open_session(&fid);
+                    current_flows.lock().unwrap().push(flow);
+                }
+                Err(_) => return, // no more packet to send, ever
             }
-
-            if flow.directions.is_empty() {
-                // remove the flow ID from the socket list
-                flows.remove(flow_pos);
-                s4net.close_session(&fid);
-                current_flows.1.notify_one();
-            }
-        } // else: no packet received, none to send
+        }
     }
 }
 
@@ -305,93 +332,65 @@ pub fn start(
     stats: Arc<Stats>,
 ) {
     log::trace!("Start S4");
-    let running = Arc::new(AtomicBool::new(true));
-    let mut sel = Select::new();
+    // let mut sel = Select::new();
     let mut join_handles = Vec::new();
-    let mut receivers = Vec::<Receiver<Packets>>::new(); // a list of receivers, for when used with Select
-    let current_flows = Arc::new((Mutex::new(Vec::new()), Condvar::new()));
+    // let mut receivers = Vec::<Receiver<Packets>>::new(); // a list of receivers, for when used with Select
     for (proto, rx_s4) in incoming_flows.into_iter() {
         // for each transport protocol, create a new raw socket
         // the raw socket listens to all the interfaces
         let channel_type =
             TransportChannelType::Layer3(IpNextHeaderProtocol::new(proto.get_protocol_number()));
-        let (rx, tx) = transport_channel(4096, channel_type)
+        let (tx, rx) = transport_channel(4096, channel_type)
             .map_err(|e| log::error!("Error {e}. Please retry with root privilege."))
             .unwrap();
+        let current_flows = Arc::new(Mutex::new(Vec::new())); // one per protocol
 
-        let builder = thread::Builder::new().name(format!("Stage4-{proto:?}"));
-        let current_flows = current_flows.clone();
-        let stats = stats.clone();
-        let s4net = s4net.clone();
-
-        let running = running.clone();
-        // each protocol is handled by a different thread
-        join_handles.push(
+        // TODO: si "fast", pas besoin d’écouter ?
+        // autre possibilité : on drain les backward
+        {
+            let builder = thread::Builder::new().name(format!("Stage4-{proto:?}-rx"));
+            let current_flows = current_flows.clone();
+            let stats = stats.clone();
+            let s4net = s4net.clone();
+            // each protocol is handled by a different thread
+            // the packet receiver is *not* waited with a join, because it can hang forever
+            // effectively, the thread is detached
+            // join_handles.push(
+            // TODO: il faut rajouter son join_handle, car sinon le processus peut terminer alors
+            // qu’on doit encore attendre des paquets, ce qui causerait l’arrêt du module eBPF et
+            // causerait des réponses du noyau à ces messages
             builder
                 .spawn(move || {
-                    handle_packets(s4net, proto, rx, tx, current_flows, stats, running);
+                    receive_packets(s4net, proto, rx, current_flows, stats);
                 })
-                .unwrap(),
-        );
-        // transfer receivers to a list so they have an index
-        receivers.push(rx_s4);
-    }
-
-    for rx in receivers.iter() {
-        sel.recv(rx); // we configure the selector
-    }
-
-    // Handle packets
-    let mut open = receivers.len();
-
-    loop {
-        let oper = sel.select(); // block until one receiver become ready
-        let index = oper.index(); // get the receiver that is ready
-        match oper.recv(&receivers[index]) {
-            Ok(flow) => {
-                log::debug!(
-                    "Currently {} ongoing flows",
-                    current_flows.0.lock().unwrap().len() + 1
-                );
-
-                let fid = flow.flow.get_flow_id();
-                // log::info!(
-                //     "Next Fos-R flow: {}, {}, {}, {}, {}",
-                //     fid.src_ip,
-                //     fid.dst_ip,
-                //     fid.src_port,
-                //     fid.dst_port,
-                //     flow.timestamps[0].as_millis()
-                // );
-                // set up the session as soon as possible
-                s4net.open_session(&fid);
-
-                current_flows.0.lock().unwrap().push(flow);
-            }
-            Err(_) => {
-                sel.remove(index);
-                open -= 1;
-                if open == 0 {
-                    // all receivers are closed: we stop the stage
-                    break;
-                }
-            }
+                .unwrap();
+            // );
         }
+
+        {
+            // iptables hack
+            #[cfg(all(target_os = "linux", feature = "iptables"))]
+            tx.set_ttl(65);
+
+            let builder = thread::Builder::new().name(format!("Stage4-{proto:?}-tx"));
+            let current_flows = current_flows.clone();
+            let stats = stats.clone();
+            let s4net = s4net.clone();
+            join_handles.push(
+                builder
+                    .spawn(move || {
+                        send_packets(s4net, tx, current_flows, stats, rx_s4);
+                    })
+                    .unwrap(),
+            );
+        }
+
+        // transfer receivers to a list so they have an index
+        // receivers.push(rx_s4);
     }
-
-    log::trace!("S4 waiting for the remaining flows");
-
-    // wait until there is no flow left
-    let (lock, cvar) = &*current_flows;
-    let mut flows = lock.lock().unwrap();
-    while !flows.is_empty() {
-        flows = cvar.wait(flows).unwrap();
-    }
-
-    running.store(false, Ordering::Relaxed);
 
     for handle in join_handles.into_iter() {
-        // stop the networking threads
+        // wait for the TX threads to finish
         handle.join().unwrap();
     }
     log::trace!("S4 stops");

@@ -303,44 +303,8 @@ impl FlowId {
             && self.dst_ip == d.dst_ip
             && self.src_port == d.src_port
             && self.dst_port == d.dst_port
-        // || (self.src_ip == d.dst_ip
-        //     && self.dst_ip == d.src_ip
-        //     && self.src_port == d.dst_port
-        //     && self.dst_port == d.src_port)
+            && self.protocol == f.get_proto()
     }
-
-    // pub fn from_packet(p: &Packet) -> Self {
-    //     let eth_packet = ethernet::EthernetPacket::new(&p.data).unwrap();
-    //     let ip_packet = ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
-
-    //     let (protocol, src_port, dst_port) = match ip_packet.get_next_level_protocol() {
-    //         IpNextHeaderProtocols::Tcp => {
-    //             let tcp_packet = tcp::TcpPacket::new(ip_packet.payload()).unwrap();
-    //             (
-    //                 Protocol::TCP,
-    //                 tcp_packet.get_source(),
-    //                 tcp_packet.get_destination(),
-    //             )
-    //         }
-    //         IpNextHeaderProtocols::Udp => {
-    //             let udp_packet = udp::UdpPacket::new(ip_packet.payload()).unwrap();
-    //             (
-    //                 Protocol::UDP,
-    //                 udp_packet.get_source(),
-    //                 udp_packet.get_destination(),
-    //             )
-    //         }
-    //         _ => panic!("Unsupported protocol"),
-    //     };
-
-    //     FlowId {
-    //         protocol,
-    //         src_ip: ip_packet.get_source(),
-    //         dst_ip: ip_packet.get_destination(),
-    //         src_port,
-    //         dst_port,
-    //     }
-    // }
 
     pub fn normalize(&mut self) {
         if self.src_ip > self.dst_ip
