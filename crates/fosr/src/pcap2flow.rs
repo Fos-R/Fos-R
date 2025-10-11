@@ -466,7 +466,7 @@ pub fn untaint_file(input: &str, output: &str) {
         .write(true)
         .create(true)
         .truncate(true)
-        .open(&output)
+        .open(output)
         .expect("Error opening or creating file");
     let mut pcap_writer =
         pcap::PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
