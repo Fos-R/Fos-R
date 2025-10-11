@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand, ValueEnum};
+use std::fmt;
 
 #[derive(Debug, Parser, Clone)]
 #[command(author, version, about, long_about = None)]
@@ -13,6 +14,18 @@ pub enum NetEnabler {
     Iptables,
     #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
     Ebpf,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+pub enum InjectionAlgo {
+    Fast,
+    Reliable,
+}
+
+impl fmt::Display for InjectionAlgo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", format!("{:?}", self).to_lowercase())
+    }
 }
 
 #[derive(Debug, Subcommand, Clone)]
@@ -63,6 +76,13 @@ pub enum Command {
             help = "Method to avoid kernel interactions with the injected traffic"
         )]
         net_enabler: NetEnabler,
+        #[arg(
+            short = 'a',
+            long,
+            default_value_t = InjectionAlgo::Reliable,
+            help = "Algorithm for injecting on the wire"
+        )]
+        injection_algo: InjectionAlgo,
         #[arg(
             long,
             default_value_t = false,
@@ -138,31 +158,31 @@ pub enum Command {
         #[arg(short, long, required = true, help = "Pcap file output")]
         output: String,
     },
-       // /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
-       // /// hosts, etc.) are ignored.
-       // #[cfg(feature = "replay")]
-       // Replay {
-       //     #[arg(short, long, help = "Path to the pcap file to be replayed")]
-       //     file: String,
-       //     // #[arg(
-       //     //     short,
-       //     //     long,
-       //     //     default_value = None,
-       //     //     help = "Path to the information system configuration file"
-       //     // )]
-       //     // config_path: Option<String>,
-       //     #[arg(
-       //         short,
-       //         long,
-       //         default_value_t = false,
-       //         help = "Taint the packets to easily identify them"
-       //     )]
-       //     taint: bool,
-       //     #[arg(
-       //         long,
-       //         default_value_t = false,
-       //         help = "Ignores timestamps and send packets without waiting"
-       //     )]
-       //     fast: bool,
-       // },
+    // /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
+    // /// hosts, etc.) are ignored.
+    // #[cfg(feature = "replay")]
+    // Replay {
+    //     #[arg(short, long, help = "Path to the pcap file to be replayed")]
+    //     file: String,
+    //     // #[arg(
+    //     //     short,
+    //     //     long,
+    //     //     default_value = None,
+    //     //     help = "Path to the information system configuration file"
+    //     // )]
+    //     // config_path: Option<String>,
+    //     #[arg(
+    //         short,
+    //         long,
+    //         default_value_t = false,
+    //         help = "Taint the packets to easily identify them"
+    //     )]
+    //     taint: bool,
+    //     #[arg(
+    //         long,
+    //         default_value_t = false,
+    //         help = "Ignores timestamps and send packets without waiting"
+    //     )]
+    //     fast: bool,
+    // },
 }
