@@ -1,6 +1,7 @@
 use crate::structs::*;
 use crate::ui::Stats;
 use crossbeam_channel::Receiver;
+use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::TryRecvError;
 use pnet::transport::{
     TransportChannelType, TransportReceiver, TransportSender, ipv4_packet_iter, transport_channel,
@@ -13,7 +14,6 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
-use crossbeam_channel::RecvTimeoutError;
 
 #[cfg(all(
     any(target_os = "windows", target_os = "linux"),
@@ -208,8 +208,13 @@ fn send_packets(
             .lock()
             .unwrap()
             .iter()
-            .filter(|f| f.directions[0] == PacketDirection::Forward)
-            .map(|f| f.timestamps[0])
+            // for each flow, find the first forward packet and returns its timestamp
+            .filter_map(|f| {
+                f.directions
+                    .iter()
+                    .position(|d| d == &PacketDirection::Forward)
+                    .map(|pos| f.timestamps[pos])
+            })
             .min();
 
         if let Some(timestamp) = duration_to_next_send {
@@ -232,68 +237,74 @@ fn send_packets(
                     // be send earlier that the current one
                 }
                 Err(RecvTimeoutError::Timeout) => (), // timeout: we can send the current one
-                Err(RecvTimeoutError::Disconnected) => thread::sleep(timestamp.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap())), // disconnected: we need to wait a bit more
+                Err(RecvTimeoutError::Disconnected) => thread::sleep(
+                    timestamp.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap()),
+                ), // disconnected: we need to wait a bit more
             };
 
-            let flows = current_flows.lock().unwrap();
+            // we waited long enough to send the packet. We need to find it again and to verify
+            // whether it’s the first one of the sequence (i.e., if we are not waiting for any
+            // other packet)
 
-            // TODO: réécrire avec min_by
-            let mut packet_to_send: Option<(Duration, FlowId, usize)> = None;
-            for (index, f) in flows.iter().enumerate() {
-                assert!(!f.packets.is_empty());
-                if f.directions[0] == PacketDirection::Forward {
-                    match &packet_to_send {
-                        None => {
-                            packet_to_send = Some((f.timestamps[0], f.flow.get_flow_id(), index))
-                        }
-                        Some(t) if f.timestamps[0] < t.0 => {
-                            // this packet should be sent sooner
-                            packet_to_send = Some((f.timestamps[0], f.flow.get_flow_id(), index))
-                        }
-                        _ => (), // the packet should be sent later, ignore it
+            // we find the closest packet we can actually send
+            let mut flows = current_flows.lock().unwrap();
+            let next_sendable_packet: Option<(usize, &mut Packets)> = flows
+                .iter_mut()
+                .filter(|f| f.directions[0] == PacketDirection::Forward)
+                .enumerate()
+                .min_by_key(|x| x.1.timestamps[0]);
+
+            // if should always exist at this point
+            if let Some((flow_pos, flow)) = next_sendable_packet {
+                let timestamp = flow.timestamps[0];
+                let fid = flow.flow.get_flow_id();
+                let waiting_duration =
+                    timestamp.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap());
+
+                // the next sendable packet is not necessarily the one we waited for
+                // check if it’s reasonable to sent it now
+                // otherwise, go back at the beginning
+                if waiting_duration < Duration::from_millis(3) {
+                    // let mut flows = current_flows.lock().unwrap();
+                    // We need to send a packet
+                    // let flow = &mut flows[flow_pos];
+                    let packet = flow.packets.remove(0);
+                    flow.directions.remove(0);
+                    flow.timestamps.remove(0);
+                    assert_eq!(flow.directions.len(), flow.packets.len());
+                    assert_eq!(flow.directions.len(), flow.timestamps.len());
+
+                    if flow.directions.is_empty() {
+                        // remove the flow ID from the socket list
+                        flows.remove(flow_pos);
+                        s4net.close_session(&fid);
                     }
-                }
-            }
+                    drop(flows); // we release the mutex before sending the packet
 
-            if let Some((_, fid, flow_pos)) = packet_to_send {
-                let mut flows = current_flows.lock().unwrap();
-                // We need to send a packet
-                let flow = &mut flows[flow_pos];
-                let packet = flow.packets.remove(0);
-                flow.directions.remove(0);
-                flow.timestamps.remove(0);
-                assert_eq!(flow.directions.len(), flow.packets.len());
-                assert_eq!(flow.directions.len(), flow.timestamps.len());
+                    let eth_packet =
+                        pnet::packet::ethernet::EthernetPacket::new(&packet.data).unwrap();
+                    let ipv4_packet =
+                        pnet::packet::ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
 
-                if flow.directions.is_empty() {
-                    // remove the flow ID from the socket list
-                    flows.remove(flow_pos);
-                    s4net.close_session(&fid);
-                }
-                drop(flows); // we release the mutex before sending the packet
+                    log::trace!("Send to {fid:?}");
 
-                let eth_packet = pnet::packet::ethernet::EthernetPacket::new(&packet.data).unwrap();
-                let ipv4_packet =
-                    pnet::packet::ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
-
-                log::trace!("Send to {fid:?}");
-
-                let mut retry_count = 3;
-                while retry_count > 0 {
-                    // only send the IP part (the network layer is handled by the kernel)
-                    match tx.send_to(&ipv4_packet, std::net::IpAddr::V4(fid.dst_ip)) {
-                        Ok(n) => {
-                            assert_eq!(n, ipv4_packet.packet().len()); // Check if the whole packet was sent
-                            log::trace!("Packet sent from port {}", fid.src_port);
-                            stats.packet_sent();
-                            retry_count = 0;
-                        }
-                        Err(e) => {
-                            retry_count -= 1;
-                            if retry_count > 0 {
-                                log::error!("Failed to send packet: {e}. Retry.");
-                            } else {
-                                log::error!("Failed to send packet: {e}. Give up.");
+                    let mut retry_count = 3;
+                    while retry_count > 0 {
+                        // only send the IP part (the network layer is handled by the kernel)
+                        match tx.send_to(&ipv4_packet, std::net::IpAddr::V4(fid.dst_ip)) {
+                            Ok(n) => {
+                                assert_eq!(n, ipv4_packet.packet().len()); // Check if the whole packet was sent
+                                log::trace!("Packet sent from port {}", fid.src_port);
+                                stats.packet_sent();
+                                retry_count = 0;
+                            }
+                            Err(e) => {
+                                retry_count -= 1;
+                                if retry_count > 0 {
+                                    log::error!("Failed to send packet: {e}. Retry.");
+                                } else {
+                                    log::error!("Failed to send packet: {e}. Give up.");
+                                }
                             }
                         }
                     }
