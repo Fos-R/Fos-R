@@ -99,16 +99,16 @@ fn receive_packets(
         };
         if s4net.is_packet_relevant(recv_packet.get_flags()) {
             stats.packet_received(); // only count the Fos-R packets
-            log::warn!("Waiting for current_flows…");
+            // log::warn!("Waiting for current_flows…");
             let mut flows = current_flows.lock().unwrap();
-            log::warn!("Got current flows");
-            log::trace!("{} ongoing flows", flows.len());
+            // log::warn!("Got current flows");
+            // log::trace!("{} ongoing flows", flows.len());
             let flow_pos = flows.iter().position(|f| {
-                log::trace!("Incoming packet. Checking {fid:?} with {:?}", f.flow);
+                // log::trace!("Incoming packet. Checking {fid:?} with {:?}", f.flow);
                 fid.is_compatible(&f.flow)
             });
             if let Some(flow_pos) = flow_pos {
-                log::debug!("Packet received: processed on port {}", fid.src_port);
+                // log::debug!("Packet received: processed on port {}", fid.src_port);
                 let flow = &mut flows[flow_pos];
                 // look for the first backward packet. TODO: check for that particular packet
                 // in case of inversion
@@ -127,6 +127,7 @@ fn receive_packets(
                         flows.remove(flow_pos);
                         s4net.close_session(&fid);
                     }
+                    assert!(flows.iter().all(|f| !f.directions.is_empty()));
                 } else {
                     log::warn!("Packet ignored: flow was not expecting one ({fid:?})");
                     stats.packet_ignored();
@@ -224,23 +225,25 @@ fn send_packets(
             let waiting_duration =
                 timestamp.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap());
 
-            log::warn!("Waiting duration: {waiting_duration:?}");
+            // log::warn!("Waiting duration: {waiting_duration:?}");
 
-            match rx_s4.recv_timeout(waiting_duration) {
-                Ok(flow) => {
-                    let fid = flow.flow.get_flow_id();
-                    // set up the session as soon as possible
-                    s4net.open_session(&fid);
+            if !timestamp.is_zero() {
+                match rx_s4.recv_timeout(waiting_duration) {
+                    Ok(flow) => {
+                        let fid = flow.flow.get_flow_id();
+                        // set up the session as soon as possible
+                        s4net.open_session(&fid);
 
-                    current_flows.lock().unwrap().push(flow);
-                    continue; // we received a new flow while waiting: maybe its first packet needs to
-                    // be send earlier that the current one
-                }
-                Err(RecvTimeoutError::Timeout) => (), // timeout: we can send the current one
-                Err(RecvTimeoutError::Disconnected) => thread::sleep(
-                    timestamp.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap()),
-                ), // disconnected: we need to wait a bit more
-            };
+                        current_flows.lock().unwrap().push(flow);
+                        continue; // we received a new flow while waiting: maybe its first packet needs to
+                        // be send earlier that the current one
+                    }
+                    Err(RecvTimeoutError::Timeout) => (), // timeout: we can send the current one
+                    Err(RecvTimeoutError::Disconnected) => thread::sleep(
+                        timestamp.saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap()),
+                    ), // disconnected: we need to wait a bit more
+                };
+            }
 
             // we waited long enough to send the packet. We need to find it again and to verify
             // whether it’s the first one of the sequence (i.e., if we are not waiting for any
@@ -250,8 +253,8 @@ fn send_packets(
             let mut flows = current_flows.lock().unwrap();
             let next_sendable_packet: Option<(usize, &mut Packets)> = flows
                 .iter_mut()
-                .filter(|f| f.directions[0] == PacketDirection::Forward)
                 .enumerate()
+                .filter(|(_,f)| f.directions[0] == PacketDirection::Forward)
                 .min_by_key(|x| x.1.timestamps[0]);
 
             // if should always exist at this point
@@ -265,9 +268,6 @@ fn send_packets(
                 // check if it’s reasonable to sent it now
                 // otherwise, go back at the beginning
                 if waiting_duration < Duration::from_millis(3) {
-                    // let mut flows = current_flows.lock().unwrap();
-                    // We need to send a packet
-                    // let flow = &mut flows[flow_pos];
                     let packet = flow.packets.remove(0);
                     flow.directions.remove(0);
                     flow.timestamps.remove(0);
@@ -279,6 +279,8 @@ fn send_packets(
                         flows.remove(flow_pos);
                         s4net.close_session(&fid);
                     }
+                    // ensure there is no empty flow
+                    assert!(flows.iter().all(|f| !f.directions.is_empty()));
                     drop(flows); // we release the mutex before sending the packet
 
                     let eth_packet =
@@ -286,7 +288,7 @@ fn send_packets(
                     let ipv4_packet =
                         pnet::packet::ipv4::Ipv4Packet::new(eth_packet.payload()).unwrap();
 
-                    log::trace!("Send to {fid:?}");
+                    // log::trace!("Send to {fid:?}");
 
                     let mut retry_count = 3;
                     while retry_count > 0 {
@@ -294,7 +296,7 @@ fn send_packets(
                         match tx.send_to(&ipv4_packet, std::net::IpAddr::V4(fid.dst_ip)) {
                             Ok(n) => {
                                 assert_eq!(n, ipv4_packet.packet().len()); // Check if the whole packet was sent
-                                log::trace!("Packet sent from port {}", fid.src_port);
+                                // log::trace!("Packet sent from port {}", fid.src_port);
                                 stats.packet_sent();
                                 retry_count = 0;
                             }
