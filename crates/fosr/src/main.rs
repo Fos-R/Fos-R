@@ -33,6 +33,11 @@ struct Profile {
     config: config::Hosts,
 }
 
+struct S4Param<T: stage4::NetEnabler> {
+    net_enabler: T,
+    injection_algo: cmd::InjectionAlgo,
+}
+
 impl Profile {
     fn load(profile: Option<&str>) -> Self {
         if let Some(path) = profile {
@@ -120,6 +125,7 @@ fn main() {
             net_enabler,
             duration,
             deterministic,
+            injection_algo,
         } => {
             #[cfg(not(all(target_os = "linux", feature = "iptables")))]
             let stealthy = false;
@@ -165,7 +171,10 @@ fn main() {
             match net_enabler {
                 #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
                 cmd::NetEnabler::Ebpf => {
-                    let s4net = stage4::ebpf::EBPFNetEnabler::new(false, &local_interfaces);
+                    let s4net = S4Param {
+                        net_enabler: stage4::ebpf::EBPFNetEnabler::new(false, &local_interfaces),
+                        injection_algo,
+                    };
                     run(
                         local_ips,
                         outfile.map(|o| ExportParams {
@@ -269,7 +278,7 @@ fn main() {
                 (s2, s2_count),
                 (s3, s3_count),
                 Arc::new(ui::Stats::new(target)),
-                None::<stage4::DummyNetEnabler>,
+                None::<S4Param<stage4::DummyNetEnabler>>,
             );
         }
         cmd::Command::Untaint { input, output } => {
@@ -371,7 +380,7 @@ fn run<T: stage4::NetEnabler>(
     s2: (impl stage2::Stage2, usize),
     s3: (stage3::Stage3, usize),
     stats: Arc<ui::Stats>,
-    s4net: Option<T>,
+    s4net: Option<S4Param<T>>,
 ) {
     let (s1, s1_count) = s1;
     let (s2, s2_count) = s2;
@@ -565,8 +574,13 @@ fn run<T: stage4::NetEnabler>(
             let builder = thread::Builder::new().name("Stage4".into());
             gen_threads.push(
                 builder
-                    .spawn(move || {
-                        stage4::start(s4net, rx_s4, stats);
+                    .spawn(move || match s4net.injection_algo {
+                        cmd::InjectionAlgo::Fast => {
+                            stage4::start_fast(s4net.net_enabler, rx_s4, stats)
+                        }
+                        cmd::InjectionAlgo::Reliable => {
+                            stage4::start_reliable(s4net.net_enabler, rx_s4, stats)
+                        }
                     })
                     .unwrap(),
             );

@@ -16,6 +16,7 @@ pub struct Stats {
     pub duration_target: Option<u64>, // in secs
     pub current_duration: AtomicU64,  // in secs
     pub progress_bar: ProgressBar,
+    pub received_packets: AtomicU64,
     pub ignored_packets: AtomicU64,
     pub sent_packets: AtomicU64,
 }
@@ -30,6 +31,7 @@ impl Default for Stats {
             duration_target: None,
             current_duration: AtomicU64::new(0),
             progress_bar: ProgressBar::new(0),
+            received_packets: AtomicU64::new(0),
             ignored_packets: AtomicU64::new(0),
             sent_packets: AtomicU64::new(0),
         }
@@ -59,6 +61,7 @@ impl Stats {
             duration_target,
             current_duration: AtomicU64::new(0),
             progress_bar: ProgressBar::new(target),
+            received_packets: AtomicU64::new(0),
             ignored_packets: AtomicU64::new(0),
             sent_packets: AtomicU64::new(0),
         }
@@ -70,6 +73,10 @@ impl Stats {
 
     pub fn packet_ignored(&self) {
         self.ignored_packets.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn packet_received(&self) {
+        self.received_packets.fetch_add(1, Ordering::Relaxed);
     }
 
     pub fn packet_sent(&self) {
@@ -144,11 +151,14 @@ pub fn run(stats: Arc<Stats>) {
                     // print just before ending
                     let pc = stats.packets_counter.load(Ordering::Relaxed);
                     let sp = stats.sent_packets.load(Ordering::Relaxed);
+                    let rp = stats.received_packets.load(Ordering::Relaxed);
                     let ip = stats.ignored_packets.load(Ordering::Relaxed);
                     if ip > 0 {
-                        log::info!("{pc} prepared packets, {sp} sent, {ip} ignored");
+                        log::info!(
+                            "{pc} prepared packets, {sp} sent and {rp} received (including {ip} ignored)"
+                        );
                     } else {
-                        log::info!("{pc} prepared packets, {sp} sent");
+                        log::info!("{pc} prepared packets, {sp} sent and {rp} received");
                     }
                     if stats.should_stop() {
                         break;
