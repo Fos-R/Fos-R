@@ -1,5 +1,6 @@
 use crate::structs::*;
 use indicatif::ProgressBar;
+use indicatif::ProgressStyle;
 use pcap_file::pcap;
 use pnet_packet::Packet;
 use pnet_packet::ip::IpNextHeaderProtocols;
@@ -12,7 +13,6 @@ use std::io::BufWriter;
 use std::io::Write;
 use std::net::Ipv4Addr;
 use std::time::Duration;
-use indicatif::ProgressStyle;
 
 const DURATION_THRESHOLD: Duration = Duration::from_secs(600);
 
@@ -486,8 +486,7 @@ pub fn untaint_file(input: &str, output: &str) {
     // setup the progress bar
     let pb = ProgressBar::new(count);
     pb.set_style(
-        ProgressStyle::with_template("{spinner:.green} Untainting [{wide_bar}] ({eta})")
-            .unwrap()
+        ProgressStyle::with_template("{spinner:.green} Untainting [{wide_bar}] ({eta})").unwrap(),
     );
 
     while let Some(packet) = pcap_reader.next_packet() {
@@ -501,9 +500,7 @@ pub fn untaint_file(input: &str, output: &str) {
         ipv4_packet.set_flags(ip_flags & 0b011);
         ipv4_packet.set_checksum(ipv4::checksum(&ipv4_packet.to_immutable()));
         pb.inc(1);
-        pcap_writer
-            .write_packet(&packet)
-            .unwrap();
+        pcap_writer.write_packet(&packet).unwrap();
     }
     pb.finish();
 }
