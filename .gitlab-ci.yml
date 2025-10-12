@@ -85,11 +85,27 @@ evalzeek:
   script:
     - mkdir analysis-zeek
     - cd analysis-zeek
-    - zeek -r ../deterministic-test.pcap
+    - zeek -r ../crates/fosr/deterministic-test.pcap
   artifacts:
     paths:
-      - crates/fosr/analysis-zeek
+      - analysis-zeek
 
+evaltshark:
+  image: alpine
+  tags:
+    - ci.inria.fr
+    - small
+  stage: deploy
+  pages:
+    publish: public
+  script:
+    - apk add tshark
+    - mkdir analysis-tshark
+    - cd analysis-tshark
+    - tshark -r ../crates/fosr/deterministic-test.pcap -z expert > analysis.txt
+  artifacts:
+    paths:
+      - analysis-tshark
 
 # TODO: stage for generation & evaluation, and deploying generated pcap
 
