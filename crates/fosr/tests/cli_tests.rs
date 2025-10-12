@@ -32,6 +32,5 @@ fn deterministic_generation() -> Result<(), Box<dyn std::error::Error>> {
         hash[..],
         hex!("98a61cf7d0743ff30d8ae086b51c706b8b13a1c0dc18d3bd5d8479391ba952ce")
     );
-    fs::remove_file(file_path)?;
     Ok(())
 }
