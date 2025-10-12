@@ -1,4 +1,4 @@
-build:amd64:
+build:
   tags:
     - ci.inria.fr
     - small
@@ -43,8 +43,11 @@ build:amd64:
     # - cargo build --target=x86_64-unknown-freebsd --config target.x86_64-unknown-freebsd.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
   artifacts:
     paths:
-      - target/debug/fosr
       - target/release/fosr
+      - target/i686-unknown-linux-gnu/fosr
+      - target/arm-unknown-linux-musleabihf/fosr
+      - target/aarch64-unknown-linux-gnu/fosr
+      - targes/debian/*.deb
 
 rustdoc:
   tags:
