@@ -6,7 +6,11 @@
 
 Fos-R is a network traffic generator based on AI models. It does not require GPU and can generate in the order of Gbps of network traffic with a laptop.
 
-## Setup
+## Binaries
+
+You can either download the last stable version from the [release page](https://gitlab.inria.fr/pirat-public/Fos-R/-/releases) or download the most recent binaries from the artifacts of the [CI/CD pipeline](https://gitlab.inria.fr/pirat-public/Fos-R/-/pipelines) (select the "build:archive" one).
+
+## Compiling from sources
 
 Install Rust, preferably with [rustup.rs](https://rustup.rs/).
 
