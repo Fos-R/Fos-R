@@ -71,10 +71,24 @@ tests:
     - cargo install bpf-linker
     - cargo test -- --nocapture
   artifacts:
-    when: on_failure
     paths:
       - crates/fosr/deterministic-test.pcap
-      # TODO: lancer zeek dessus
+
+evalzeek:
+  image: zeek/zeek
+  tags:
+    - ci.inria.fr
+    - small
+  stage: test
+  needs: tests
+  script:
+    - mkdir analysis-zeek
+    - cd analysis-zeek
+    - zeek -r ../deterministic-test.pcap
+  artifacts:
+    paths:
+      - crates/fosr/analysis-zeek
+
 
 # TODO: stage for generation & evaluation, and deploying generated pcap
 
