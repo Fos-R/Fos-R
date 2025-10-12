@@ -80,7 +80,8 @@ evalzeek:
     - ci.inria.fr
     - small
   stage: test
-  needs: tests
+  needs:
+    - job: tests
   script:
     - mkdir analysis-zeek
     - cd analysis-zeek
