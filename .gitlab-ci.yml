@@ -13,7 +13,8 @@ build:amd64:
     # version with ebpf
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
-    - cargo build
+    - cargo build --features iptables # version with ebpf + iptables
+    - cargo build # version with ebpf only
     - cargo build --release
     - cargo install cargo-deb
     - cargo deb -p fosr

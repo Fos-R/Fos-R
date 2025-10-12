@@ -191,7 +191,10 @@ fn main() {
                 }
                 #[cfg(all(target_os = "linux", feature = "iptables"))]
                 cmd::NetEnabler::Iptables => {
-                    let s4net = stage4::iptables::IPTablesNetEnabler::new(!stealthy, false);
+                    let s4net = S4Param {
+                        net_enabler: stage4::iptables::IPTablesNetEnabler::new(!stealthy, false),
+                        injection_algo,
+                    };
                     run(
                         local_ips,
                         outfile.map(|o| ExportParams {
