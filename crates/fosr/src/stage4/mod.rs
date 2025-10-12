@@ -1,8 +1,12 @@
 use crate::structs::*;
 
+#[cfg(feature = "net_injection")]
 pub mod fast;
+#[cfg(feature = "net_injection")]
 pub use fast::start_fast;
+#[cfg(feature = "net_injection")]
 pub mod reliable;
+#[cfg(feature = "net_injection")]
 pub use reliable::start_reliable;
 
 #[cfg(all(

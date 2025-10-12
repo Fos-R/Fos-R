@@ -222,13 +222,14 @@ pub fn start_fast(
         // the raw socket listens to all the interfaces
         let channel_type =
             TransportChannelType::Layer3(IpNextHeaderProtocol::new(proto.get_protocol_number()));
-        let (tx, _) = transport_channel(4096, channel_type)
+        #[allow(unused_mut)]
+        let (mut tx, _) = transport_channel(4096, channel_type)
             .map_err(|e| log::error!("Error {e}. Please retry with root privilege."))
             .unwrap();
 
         // iptables hack
         #[cfg(all(target_os = "linux", feature = "iptables"))]
-        tx.set_ttl(65);
+        tx.set_ttl(65).unwrap();
 
         let builder = thread::Builder::new().name(format!("Stage4-{proto:?}"));
         let stats = stats.clone();
