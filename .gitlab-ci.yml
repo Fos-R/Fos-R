@@ -95,9 +95,9 @@ evaltshark:
   tags:
     - ci.inria.fr
     - small
-  stage: deploy
-  pages:
-    publish: public
+  stage: test
+  needs:
+    - job: tests
   script:
     - apk add tshark
     - mkdir analysis-tshark
