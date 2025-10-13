@@ -44,13 +44,12 @@ build:
     # - cargo build --target=x86_64-unknown-freebsd --config target.x86_64-unknown-freebsd.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
     - mkdir target/x86_64-unknown-linux-gnu
     - mv target/release target/x86_64-unknown-linux-gnu
-    - mv target/debian target/x86_64-unknown-linux-gnu
     - apt install -y tree # for debug
     - tree
   artifacts:
     paths:
       - target/*/release/fosr
-      - target/*/debian/*.deb
+      - target/debian/*.deb
       - target/doc
 
 tests:
@@ -61,7 +60,7 @@ tests:
   image: rust
   script:
     # generation only, so no need for ebpf
-    - cargo test --no-default-features -- --nocapture
+    - cargo test -p fosr --no-default-features -- --nocapture
     - mv crates/fosr/deterministic-test.pcap sample.pcap
   artifacts:
     paths:
