@@ -17,6 +17,7 @@ build:
     - cargo build # version with ebpf only
     - cargo build --release
     - cargo doc --no-deps
+    - mv target/doc doc
     - cargo install cargo-deb
     - cargo deb -p fosr
     # cross-compilation (x86 32 bits)
@@ -50,7 +51,7 @@ build:
     paths:
       - target/*/release/fosr
       - target/debian/*.deb
-      - target/doc
+      - doc
 
 tests:
   tags:
@@ -110,10 +111,15 @@ pages:
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
-    - mkdir public
+    - apk add pandoc
+    - mv doc public/
     - mv target public/bin
     - mv analysis* public/
     - mv sample.pcap public/
+    - cd public
+    - echo "## Directory listing" >> ./index.md
+    - find . -path "./doc" -prune -o -exec echo "- [{}]({})" \; >> ./index.md
+    - pandoc index.md -o index.html
   artifacts:
     paths:
       - public
