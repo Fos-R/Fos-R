@@ -41,13 +41,12 @@ build:
     # cross-compilation (FreedBSD, WIP)
     # - rustup target add x86_64-unknown-freebsd
     # - cargo build --target=x86_64-unknown-freebsd --config target.x86_64-unknown-freebsd.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
+    - apt install -y tree # for debug
+    - tree
   artifacts:
     paths:
-      - target/release/fosr
-      - target/i686-unknown-linux-gnu/fosr
-      - target/arm-unknown-linux-musleabihf/fosr
-      - target/aarch64-unknown-linux-gnu/fosr
-      - targes/debian/*.deb
+      - target/*/fosr
+      - target/debian/*.deb
 
 rustdoc:
   tags:
