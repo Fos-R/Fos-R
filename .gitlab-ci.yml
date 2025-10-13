@@ -117,9 +117,18 @@ pages:
     - mv analysis* public/
     - mv sample.pcap public/
     - cd public
-    - echo "## Directory listing" >> ./index.md
-    - find . -path "./doc" -prune -o -exec echo "- [{}]({})" \; >> ./index.md
-    - pandoc index.md -o index.html
+    - mv index.md .. # do not include it in the listing
+    - echo "## Binaries" >> ../index.md
+    - find "bin" -type f -name "fosr" -exec echo "- [{}]({})" \; >> ../index.md
+    - echo "## .deb packages" >> ../index.md
+    - find "bin" -type f -name "*.deb" -exec echo "- [{}]({})" \; >> ../index.md
+    - echo "## pcap sample" >> ../index.md
+    - find . -type f -name "*.pcap" -exec echo "- [{}]({})" \; >> ../index.md
+    - echo "## Zeek analysis" >> ../index.md
+    - find "analysis-zeek" -type f -exec echo "- [{}]({})" \; >> ../index.md
+    - echo "## tshark analysis" >> ../index.md
+    - find "analysis-tshark" -type f -exec echo "- [{}]({})" \; >> ../index.md
+    - pandoc ../index.md -o index.html
   artifacts:
     paths:
       - public
