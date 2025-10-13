@@ -67,6 +67,8 @@ tests:
     paths:
       - sample.pcap
 
+# TODO: define "analysis" stage
+
 evalzeek:
   image: zeek/zeek
   tags:
@@ -100,6 +102,22 @@ evaltshark:
     paths:
       - analysis-tshark
 
+evalsuricata:
+  image: jasonish/suricata
+  tags:
+    - ci.inria.fr
+    - small
+  stage: test
+  needs:
+    - job: tests
+  script:
+    - mkdir analysis-suricata
+    - cd analysis-suricata
+    - suricata -c /etc/suricata/suricata.yaml -r ../sample.pcap > analysis.txt
+  artifacts:
+    paths:
+      - analysis-suricata
+
 pages:
   image: alpine
   tags:
@@ -118,16 +136,18 @@ pages:
     - mv sample.pcap public/
     - cd public
     - mv index.md .. # do not include it in the listing
-    - echo "## Binaries" >> ../index.md
+    - echo "\n## Binaries" >> ../index.md
     - find "bin" -type f -name "fosr" -exec echo "- [{}]({})" \; >> ../index.md
-    - echo "## .deb packages" >> ../index.md
+    - echo "\n## .deb packages" >> ../index.md
     - find "bin" -type f -name "*.deb" -exec echo "- [{}]({})" \; >> ../index.md
-    - echo "## pcap sample" >> ../index.md
+    - echo "\n## pcap sample" >> ../index.md
     - find . -type f -name "*.pcap" -exec echo "- [{}]({})" \; >> ../index.md
-    - echo "## Zeek analysis" >> ../index.md
+    - echo "\n## Zeek analysis" >> ../index.md
     - find "analysis-zeek" -type f -exec echo "- [{}]({})" \; >> ../index.md
-    - echo "## tshark analysis" >> ../index.md
+    - echo "\n## tshark analysis" >> ../index.md
     - find "analysis-tshark" -type f -exec echo "- [{}]({})" \; >> ../index.md
+    - echo "\n## Suricata analysis" >> ../index.md
+    - find "analysis-suricata" -type f -exec echo "- [{}]({})" \; >> ../index.md
     - pandoc ../index.md -o index.html
   artifacts:
     paths:
