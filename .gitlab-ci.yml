@@ -8,7 +8,7 @@ build:
     - apt update
     # version without network injection
     - cargo build --no-default-features -p fosr
-    # version without ebpf
+    # version without ebpf and with iptables
     - cargo build --no-default-features --features iptables -p fosr
     # version with ebpf
     - rustup toolchain install nightly --component rust-src
@@ -16,6 +16,7 @@ build:
     - cargo build --features iptables # version with ebpf + iptables
     - cargo build # version with ebpf only
     - cargo build --release
+    - cargo doc --no-deps
     - cargo install cargo-deb
     - cargo deb -p fosr
     # cross-compilation (x86 32 bits)
@@ -41,25 +42,15 @@ build:
     # cross-compilation (FreedBSD, WIP)
     # - rustup target add x86_64-unknown-freebsd
     # - cargo build --target=x86_64-unknown-freebsd --config target.x86_64-unknown-freebsd.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
+    - mkdir target/x86_64-unknown-linux-gnu
+    - mv target/release target/x86_64-unknown-linux-gnu
+    - mv target/debian target/x86_64-unknown-linux-gnu
     - apt install -y tree # for debug
     - tree
   artifacts:
     paths:
-      - target/*/fosr
-      - target/debian/*.deb
-
-rustdoc:
-  tags:
-    - ci.inria.fr
-    - small
-  stage: build
-  image: rust
-  script:
-    - rustup toolchain install nightly --component rust-src
-    - cargo install bpf-linker
-    - cargo doc --no-deps
-  artifacts:
-    paths:
+      - target/*/release/fosr
+      - target/*/debian/*.deb
       - target/doc
 
 tests:
@@ -69,12 +60,12 @@ tests:
   stage: test
   image: rust
   script:
-    - rustup toolchain install nightly --component rust-src
-    - cargo install bpf-linker
-    - cargo test -- --nocapture
+    # generation only, so no need for ebpf
+    - cargo test --no-default-features -- --nocapture
+    - mv crates/fosr/deterministic-test.pcap sample.pcap
   artifacts:
     paths:
-      - crates/fosr/deterministic-test.pcap
+      - sample.pcap
 
 evalzeek:
   image: zeek/zeek
@@ -87,7 +78,7 @@ evalzeek:
   script:
     - mkdir analysis-zeek
     - cd analysis-zeek
-    - zeek -r ../crates/fosr/deterministic-test.pcap
+    - zeek -r ../sample.pcap
   artifacts:
     paths:
       - analysis-zeek
@@ -104,12 +95,10 @@ evaltshark:
     - apk add tshark
     - mkdir analysis-tshark
     - cd analysis-tshark
-    - tshark -r ../crates/fosr/deterministic-test.pcap -z expert > analysis.txt
+    - tshark -r ../sample.pcap -z expert > analysis.txt
   artifacts:
     paths:
       - analysis-tshark
-
-# TODO: stage for generation & evaluation, and deploying generated pcap
 
 pages:
   image: alpine
@@ -122,9 +111,9 @@ pages:
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
-    - mkdir -p public
-    - mv target/doc public/doc
-    - mv target/release/fosr public/fosr
+    - mv target public
+    - mv analysis* public/
+    - mv sample public/
   artifacts:
     paths:
       - public
