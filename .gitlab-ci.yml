@@ -110,9 +110,10 @@ pages:
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
-    - mv target public
+    - mkdir public
+    - mv target public/bin
     - mv analysis* public/
-    - mv sample public/
+    - mv sample.pcap public/
   artifacts:
     paths:
       - public
