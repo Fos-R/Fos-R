@@ -1,3 +1,9 @@
+stages:
+  - build
+  - test
+  - analyze
+  - deploy
+
 build:
   tags:
     - ci.inria.fr
@@ -67,16 +73,12 @@ tests:
     paths:
       - sample.pcap
 
-# TODO: define "analysis" stage
-
-evalzeek:
+eval-zeek:
   image: zeek/zeek
   tags:
     - ci.inria.fr
     - small
-  stage: test
-  needs:
-    - job: tests
+  stage: analyze
   script:
     - mkdir analysis-zeek
     - cd analysis-zeek
@@ -85,14 +87,12 @@ evalzeek:
     paths:
       - analysis-zeek
 
-evaltshark:
+eval-tshark:
   image: alpine
   tags:
     - ci.inria.fr
     - small
-  stage: test
-  needs:
-    - job: tests
+  stage: analyze
   script:
     - apk add tshark
     - mkdir analysis-tshark
@@ -102,14 +102,12 @@ evaltshark:
     paths:
       - analysis-tshark
 
-evalsuricata:
+eval-suricata:
   image: jasonish/suricata
   tags:
     - ci.inria.fr
     - small
-  stage: test
-  needs:
-    - job: tests
+  stage: analyze
   script:
     - mkdir analysis-suricata
     - cd analysis-suricata
