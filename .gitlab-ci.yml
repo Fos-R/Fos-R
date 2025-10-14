@@ -7,7 +7,7 @@ stages:
 build:
   tags:
     - ci.inria.fr
-    - small
+    - large
   stage: build
   image: rust
   script:
@@ -51,8 +51,6 @@ build:
     # - cargo build --target=x86_64-unknown-freebsd --config target.x86_64-unknown-freebsd.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
     - mkdir target/x86_64-unknown-linux-gnu
     - mv target/release target/x86_64-unknown-linux-gnu
-    - apt install -y tree # for debug
-    - tree
   artifacts:
     paths:
       - target/*/release/fosr
@@ -62,7 +60,7 @@ build:
 tests:
   tags:
     - ci.inria.fr
-    - small
+    - large
   stage: test
   image: rust
   script:
@@ -123,17 +121,17 @@ pages:
     - mv analysis* public/
     - mv sample.pcap public/
     - cd public
-    - echo "\n## Binaries\n" >> index.md
+    - echo -e "\n## Binaries\n" >> index.md
     - find "bin" -type f -name "fosr" -exec echo "- [{}]({})" \; >> index.md
-    - echo "\n## .deb packages\n" >> index.md
+    - echo -e "\n## .deb packages\n" >> index.md
     - find "bin" -type f -name "*.deb" -exec echo "- [{}]({})" \; >> index.md
-    - echo "\n## pcap sample\n" >> index.md
+    - echo -e "\n## pcap sample\n" >> index.md
     - find . -type f -name "*.pcap" -exec echo "- [{}]({})" \; >> index.md
-    - echo "\n## Zeek analysis\n" >> index.md
+    - echo -e "\n## Zeek analysis\n" >> index.md
     - find "analysis-zeek" -type f -exec echo "- [{}]({})" \; >> index.md
-    - echo "\n## tshark analysis\n" >> index.md
+    - echo -e "\n## tshark analysis\n" >> index.md
     - find "analysis-tshark" -type f -exec echo "- [{}]({})" \; >> index.md
-    - echo "\n## Suricata analysis\n" >> index.md
+    - echo -e "\n## Suricata analysis\n" >> index.md
     - find "analysis-suricata" -type f -exec echo "- [{}]({})" \; >> index.md
     - pandoc index.md -o index.html
   artifacts:
