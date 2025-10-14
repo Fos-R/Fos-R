@@ -123,20 +123,19 @@ pages:
     - mv analysis* public/
     - mv sample.pcap public/
     - cd public
-    - mv index.md .. # do not include it in the listing
-    - echo "\n## Binaries" >> ../index.md
-    - find "bin" -type f -name "fosr" -exec echo "- [{}]({})" \; >> ../index.md
-    - echo "\n## .deb packages" >> ../index.md
-    - find "bin" -type f -name "*.deb" -exec echo "- [{}]({})" \; >> ../index.md
-    - echo "\n## pcap sample" >> ../index.md
-    - find . -type f -name "*.pcap" -exec echo "- [{}]({})" \; >> ../index.md
-    - echo "\n## Zeek analysis" >> ../index.md
-    - find "analysis-zeek" -type f -exec echo "- [{}]({})" \; >> ../index.md
-    - echo "\n## tshark analysis" >> ../index.md
-    - find "analysis-tshark" -type f -exec echo "- [{}]({})" \; >> ../index.md
-    - echo "\n## Suricata analysis" >> ../index.md
-    - find "analysis-suricata" -type f -exec echo "- [{}]({})" \; >> ../index.md
-    - pandoc ../index.md -o index.html
+    - echo "\n## Binaries\n" >> index.md
+    - find "bin" -type f -name "fosr" -exec echo "- [{}]({})" \; >> index.md
+    - echo "\n## .deb packages\n" >> index.md
+    - find "bin" -type f -name "*.deb" -exec echo "- [{}]({})" \; >> index.md
+    - echo "\n## pcap sample\n" >> index.md
+    - find . -type f -name "*.pcap" -exec echo "- [{}]({})" \; >> index.md
+    - echo "\n## Zeek analysis\n" >> index.md
+    - find "analysis-zeek" -type f -exec echo "- [{}]({})" \; >> index.md
+    - echo "\n## tshark analysis\n" >> index.md
+    - find "analysis-tshark" -type f -exec echo "- [{}]({})" \; >> index.md
+    - echo "\n## Suricata analysis\n" >> index.md
+    - find "analysis-suricata" -type f -exec echo "- [{}]({})" \; >> index.md
+    - pandoc index.md -o index.html
   artifacts:
     paths:
       - public
