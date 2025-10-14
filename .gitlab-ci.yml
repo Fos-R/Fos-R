@@ -87,7 +87,7 @@ eval-zeek:
     paths:
       - analysis-zeek
 
-eval-tshark:
+eval-tshark-suricata:
   image: alpine
   tags:
     - ci.inria.fr
@@ -96,24 +96,14 @@ eval-tshark:
   script:
     - apk add tshark
     - mkdir analysis-tshark
-    - cd analysis-tshark
-    - tshark -r ../sample.pcap -z expert > analysis.txt
-  artifacts:
-    paths:
-      - analysis-tshark
-
-eval-suricata:
-  image: jasonish/suricata
-  tags:
-    - ci.inria.fr
-    - small
-  stage: analyze
-  script:
+    - tshark -r sample.pcap -z expert > analysis-tshark/analysis.txt
+    - apk add suricata
     - mkdir analysis-suricata
     - cd analysis-suricata
     - suricata -c /etc/suricata/suricata.yaml -r ../sample.pcap > analysis.txt
   artifacts:
     paths:
+      - analysis-tshark
       - analysis-suricata
 
 pages:
