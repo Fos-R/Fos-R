@@ -140,6 +140,12 @@ pub enum Command {
             help = "Path to the profile with the models and the configuration"
         )]
         profile: Option<String>,
+        #[arg(
+            long,
+            default_value = None,
+            help = "Timezone of the generated, used for realistic work hours. By default, local timezone is used. Use a IANA time zone (like Europe/Paris) or an abbreviation (like CET). The offset is assumed constant during the generated time range"
+        )]
+        tz: Option<String>,
     },
     /// Extract flow statistics from a pcap file to a csv file
     #[command(name = "pcap2flow")]
