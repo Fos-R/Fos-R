@@ -21,12 +21,13 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use chrono::Offset;
+use chrono::TimeZone;
+use chrono_tz::Tz;
 use clap::Parser;
 use crossbeam_channel::bounded;
 use pnet::{datalink, ipnetwork::IpNetwork};
-use chrono_tz::Tz;
-use chrono::TimeZone;
-use chrono::Offset;
+use chrono::DateTime;
 
 const CHANNEL_SIZE: usize = 50;
 
@@ -253,20 +254,6 @@ fn main() {
             if let Some(s) = seed {
                 log::info!("Generating with seed {s}");
             }
-            let tz_offset = match tz {
-                Some(tz_str) => {
-                    // TODO: not "now"
-                    let tz: Tz = tz_str.parse().expect("Could not parse the timezone");
-                    let tz = tz.offset_from_utc_datetime(&chrono::Utc::now().naive_utc()).fix();
-                    log::info!("Using {tz_str} timezone (UTC{tz})");
-                    tz
-                }
-                None => {
-                    let tz =*chrono::Local::now().fixed_offset().offset();
-                    log::info!("Using local timezone (UTC{tz})");
-                    tz
-                }
-            };
 
             let initial_ts: Duration = if let Some(start_time) = start_time {
                 // try to parse a date
@@ -279,6 +266,24 @@ fn main() {
                 }
             } else {
                 SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
+            };
+
+            let tz_offset = match tz {
+                Some(tz_str) => {
+                    let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0).unwrap().naive_utc();
+                    let tz: Tz = tz_str.parse().expect("Could not parse the timezone");
+                    let tz = tz
+                        .offset_from_utc_datetime(&date)
+                        .fix();
+                    log::info!("Using {tz_str} timezone (UTC{tz})");
+                    tz
+                }
+                None => {
+                    // let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0).unwrap().naive_local().fixed_offset().offset();
+                    let tz = *chrono::Local::now().fixed_offset().offset();
+                    log::info!("Using local timezone (UTC{tz})");
+                    tz
+                }
             };
 
             let s0 = stage0::BinBasedGenerator::new(

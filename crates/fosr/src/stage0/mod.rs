@@ -1,6 +1,7 @@
 use crate::structs::*;
 use crate::ui::Stats;
 
+use chrono::FixedOffset;
 use chrono::{DateTime, Timelike};
 use crossbeam_channel::Sender;
 use rand_core::*;
@@ -13,7 +14,6 @@ use std::fs::File;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use chrono::FixedOffset;
 
 const WINDOW_WIDTH_IN_SECS: u64 = 5;
 
@@ -82,13 +82,15 @@ impl Iterator for BinBasedGenerator {
     }
 }
 
-fn get_poisson(lambdas: &Vec<f64>, tz_offset: FixedOffset, ts: Duration) -> Poisson<f64> {
-    let secs = DateTime::from_timestamp_secs(ts.as_secs() as i64).unwrap().with_timezone(&tz_offset).time()
+fn get_poisson(lambdas: &[f64], tz_offset: FixedOffset, ts: Duration) -> Poisson<f64> {
+    let secs = DateTime::from_timestamp_secs(ts.as_secs() as i64)
+        .unwrap()
+        .with_timezone(&tz_offset)
+        .time()
         .num_seconds_from_midnight();
     // log::info!("Hours since midnight: {}", secs/3600);
     let secs_per_bin = (60 * 60 * 24 / lambdas.len()) as u32;
     let index = ((secs / secs_per_bin) as usize).min(lambdas.len() - 1);
-    // log::info!("Poisson’ lambda: {}", lambdas[index]);
     Poisson::new(lambdas[index]).unwrap()
 }
 
@@ -207,7 +209,8 @@ impl BinBasedGenerator {
             flow_rng: Pcg32::seed_from_u64(0), // it will be overwritten
             time_distrib,
             remaining_windows,
-            tz_offset: *chrono::Local::now().fixed_offset().offset(), // use local timezone
+            tz_offset: *chrono::Local::now().fixed_offset().offset(), // use local timezone with
+                                                                      // current offset
         };
         generator.start_new_window();
         generator
@@ -216,7 +219,6 @@ impl BinBasedGenerator {
     /// Start a new window
     /// Returns "false" it’s not possible
     fn start_new_window(&mut self) -> bool {
-        // log::info!("New window!");
         self.flow_rng = Pcg32::seed_from_u64(self.window_rng.next_u64());
         if let Some(ref mut r) = self.remaining_windows {
             *r -= 1;
@@ -227,14 +229,13 @@ impl BinBasedGenerator {
 
         self.current_distrib = get_poisson(&self.lambdas, self.tz_offset, self.next_ts);
         self.remaining_flows = self.current_distrib.sample(&mut self.flow_rng.clone()) as u64;
-        // log::info!("{}", self.remaining_flows);
         self.time_distrib = Uniform::new(
             self.next_ts.as_millis() as u64,
             self.next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS,
         )
         .unwrap();
         self.next_ts += Duration::from_secs(WINDOW_WIDTH_IN_SECS);
-        return true;
+        true
     }
 }
 
@@ -245,9 +246,9 @@ pub struct TimeBins {
 impl Default for TimeBins {
     fn default() -> Self {
         if cfg!(debug_assertions) {
-            TimeBins::from_str(include_str!("../../default_models/time_bins.json")).unwrap()
+            TimeBins::import_from_str(include_str!("../../default_models/time_bins.json")).unwrap()
         } else {
-            TimeBins::from_str(
+            TimeBins::import_from_str(
                 &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                     "default_models/time_bins.json",
                     19
@@ -268,7 +269,7 @@ impl TimeBins {
         })
     }
 
-    pub fn from_str(string: &str) -> std::io::Result<Self> {
+    pub fn import_from_str(string: &str) -> std::io::Result<Self> {
         let config: Config = serde_json::from_str(string)?;
         Ok(TimeBins {
             bins: config.histogram,
