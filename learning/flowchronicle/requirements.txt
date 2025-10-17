@@ -1,4 +1,3 @@
-tadam-learner
 flowchronicle
 numpy
 pandas
