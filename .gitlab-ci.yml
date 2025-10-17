@@ -85,7 +85,7 @@ eval-zeek:
     paths:
       - analysis-zeek
 
-eval-tshark-suricata:
+eval-tshark:
   image: alpine
   tags:
     - ci.inria.fr
@@ -94,15 +94,31 @@ eval-tshark-suricata:
   script:
     - apk add tshark
     - mkdir analysis-tshark
-    - tshark -r sample.pcap -z expert > analysis-tshark/analysis.txt
+    - capinfos sample.pcap > analysis-tshark/capinfos.txt
+    - tshark -r sample.pcap > analysis-tshark/summary_per_pkt.txt
+    - tshark -r sample.pcap -z expert -q > analysis-tshark/expert.txt
+    - tshark -r sample.pcap -z conv,ip -q > analysis-tshark/conv_ip.txt
+    - tshark -r sample.pcap -z conv,udp -q > analysis-tshark/conv_udp.txt
+    - tshark -r sample.pcap -z conv,tcp -q > analysis-tshark/conv_tcp.txt
+  artifacts:
+    paths:
+      - analysis-tshark
+
+eval-suricata:
+  image: alpine
+  tags:
+    - ci.inria.fr
+    - small
+  stage: analyze
+  script:
     - apk add suricata
     - mkdir analysis-suricata
     - cd analysis-suricata
     - suricata -c /etc/suricata/suricata.yaml -r ../sample.pcap > analysis.txt
   artifacts:
     paths:
-      - analysis-tshark
       - analysis-suricata
+
 
 pages:
   image: alpine
@@ -125,13 +141,14 @@ pages:
     - find "bin" -type f -name "fosr" -exec echo "- [{}]({})" \; >> index.md
     - echo -e "\n## .deb packages\n" >> index.md
     - find "bin" -type f -name "*.deb" -exec echo "- [{}]({})" \; >> index.md
-    - echo -e "\n## pcap sample\n" >> index.md
+    - echo -e "\n## Synthetic data analysis\n" >> index.md
+    - echo -e "\n### Analyzed pcap sample\n" >> index.md
     - find . -type f -name "*.pcap" -exec echo "- [{}]({})" \; >> index.md
-    - echo -e "\n## Zeek analysis\n" >> index.md
+    - echo -e "\n### Zeek analysis\n" >> index.md
     - find "analysis-zeek" -type f -exec echo "- [{}]({})" \; >> index.md
-    - echo -e "\n## tshark analysis\n" >> index.md
+    - echo -e "\n### TShark analysis\n" >> index.md
     - find "analysis-tshark" -type f -exec echo "- [{}]({})" \; >> index.md
-    - echo -e "\n## Suricata analysis\n" >> index.md
+    - echo -e "\n### Suricata analysis\n" >> index.md
     - find "analysis-suricata" -type f -exec echo "- [{}]({})" \; >> index.md
     - pandoc index.md -o index.html
   artifacts:
