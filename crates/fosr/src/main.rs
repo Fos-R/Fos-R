@@ -24,6 +24,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use clap::Parser;
 use crossbeam_channel::bounded;
 use pnet::{datalink, ipnetwork::IpNetwork};
+use chrono_tz::Tz;
+use chrono::TimeZone;
+use chrono::Offset;
 
 const CHANNEL_SIZE: usize = 50;
 
@@ -228,6 +231,7 @@ fn main() {
             start_time,
             duration,
             flow_per_day,
+            tz,
         } => {
             // load the models
             let profile = Profile::load(profile.as_deref());
@@ -249,6 +253,21 @@ fn main() {
             if let Some(s) = seed {
                 log::info!("Generating with seed {s}");
             }
+            let tz_offset = match tz {
+                Some(tz_str) => {
+                    // TODO: not "now"
+                    let tz: Tz = tz_str.parse().expect("Could not parse the timezone");
+                    let tz = tz.offset_from_utc_datetime(&chrono::Utc::now().naive_utc()).fix();
+                    log::info!("Using {tz_str} timezone (UTC{tz})");
+                    tz
+                }
+                None => {
+                    let tz =*chrono::Local::now().fixed_offset().offset();
+                    log::info!("Using local timezone (UTC{tz})");
+                    tz
+                }
+            };
+
             let initial_ts: Duration = if let Some(start_time) = start_time {
                 // try to parse a date
                 if let Ok(d) = humantime::parse_rfc3339_weak(&start_time) {
@@ -269,6 +288,7 @@ fn main() {
                 profile.time_bins,
                 initial_ts,
                 duration,
+                tz_offset,
             );
             let s1 =
                 stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
