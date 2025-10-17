@@ -57,10 +57,9 @@ pub enum Command {
         #[arg(
             short,
             long,
-            default_value_t = 10,
-            help = "Overall number of flows to generate per second"
+            help = "Average number of flows to generate per day. Actual number of generated flows can be lower or higher"
         )]
-        flow_per_second: u64,
+        flow_per_day: Option<u64>,
         #[arg(
             short,
             long,
@@ -120,6 +119,12 @@ pub enum Command {
         duration: Option<String>,
         #[arg(short = 't', long, default_value = None, help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use current time")]
         start_time: Option<String>,
+        #[arg(
+            short,
+            long,
+            help = "Average number of flows to generate per day. Actual number of generated flows can be lower or higher"
+        )]
+        flow_per_day: Option<u64>,
         #[arg(
             long,
             default_value_t = false,
