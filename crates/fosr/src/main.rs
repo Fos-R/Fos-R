@@ -30,6 +30,7 @@ const CHANNEL_SIZE: usize = 50;
 struct Profile {
     automata: stage2::tadam::AutomataLibrary,
     patterns: stage1::flowchronicle::PatternSet,
+    time_bins: stage0::TimeBins,
     config: config::Hosts,
 }
 
@@ -59,6 +60,12 @@ impl Profile {
                         .unwrap(),
                 )
                 .expect("Cannot load patterns"),
+                time_bins: stage0::TimeBins::from_file(
+                    Path::new(path)
+                        .join("time_bins.json")
+                        .to_str()
+                        .unwrap(),
+                    ).unwrap(),
             }
         } else {
             log::info!("Load default profile");
@@ -66,6 +73,7 @@ impl Profile {
                 automata: stage2::tadam::AutomataLibrary::default(),
                 config: config::Hosts::default(),
                 patterns: stage1::flowchronicle::PatternSet::default(),
+                time_bins: stage0::TimeBins::default(),
             }
         }
     }
@@ -149,11 +157,12 @@ fn main() {
             }
 
             // load the models
-            let s0 = stage0::UniformGenerator::new_for_injection(
+            let s0 = stage0::BinBasedGenerator::new_for_injection(
                 seed,
                 duration
                     .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed.")),
                 flow_per_second,
+                profile.time_bins,
                 deterministic,
             );
 
@@ -254,7 +263,7 @@ fn main() {
                 SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
             };
 
-            let s0 = stage0::UniformGenerator::new(seed, false, 2, initial_ts, duration);
+            let s0 = stage0::BinBasedGenerator::new(seed, false, 2, profile.time_bins, initial_ts, duration);
             let s1 =
                 stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
