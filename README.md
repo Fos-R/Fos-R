@@ -8,7 +8,7 @@ Fos-R is a network traffic generator based on AI models. It does not require GPU
 
 ## Binaries
 
-You can either download the last stable version from the [release page](https://gitlab.inria.fr/pirat-public/Fos-R/-/releases) or download the most recent binaries from the artifacts of the [CI/CD pipeline](https://gitlab.inria.fr/pirat-public/Fos-R/-/pipelines) (select the "build:archive" one).
+You can either download the last stable version from the [release page](https://gitlab.inria.fr/pirat-public/Fos-R/-/releases) or download the most recent binaries from the [CI/CD pipeline](https://pirat-public.gitlabpages.inria.fr/Fos-R/).
 
 ## Compiling from sources
 
