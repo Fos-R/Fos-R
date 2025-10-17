@@ -1,23 +1,23 @@
 use crate::structs::*;
 use crate::ui::Stats;
 
+use chrono::{DateTime, Timelike};
 use crossbeam_channel::Sender;
 use rand_core::*;
 use rand_distr::Distribution;
-use rand_distr::Uniform;
 use rand_distr::Poisson;
+use rand_distr::Uniform;
 use rand_pcg::Pcg32;
+use serde::Deserialize;
+use std::fs::File;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use chrono::{DateTime, Timelike};
-use serde::Deserialize;
-use std::fs::File;
 
 const WINDOW_WIDTH_IN_SECS: u64 = 5;
 
 /// Stage 0: generate timestamps.
-/// Generate a uniform throughput and never stops. It always prepares the next windows (i.e., not
+/// Generate a throughput according to some distribution and never stops. It always prepares the next windows (i.e., not
 /// the one being sent)
 pub trait Stage0:
     Iterator<Item = SeededData<Duration>> + Clone + std::marker::Send + 'static
@@ -29,12 +29,12 @@ pub trait Stage0:
 /// In net_injection mode, it trickles the generation
 #[derive(Debug, Clone)]
 pub struct BinBasedGenerator {
-    next_ts: Duration, // the start of the S0 generation window = the end of the sending window
+    next_ts: Duration, // the start of the *next* generation window
     initial_ts: Duration,
     remaining_flows: u64,
     lambdas: Vec<f64>,
     current_distrib: Poisson<f64>,
-    // total_flow_count: u64,
+    total_flow_count: u64,
     time_distrib: Uniform<u64>,
     window_rng: Pcg32,
     flow_rng: Pcg32,
@@ -52,15 +52,7 @@ impl Iterator for BinBasedGenerator {
     type Item = SeededData<Duration>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.remaining_flows == 0 {
-            // new window: advance the main window rng
-            self.flow_rng = Pcg32::seed_from_u64(self.window_rng.next_u64());
-            if let Some(ref mut r) = self.remaining_windows {
-                *r -= 1;
-                if *r == 0 {
-                    return None;
-                }
-            }
+        while self.remaining_flows == 0 {
             if self.net_injection {
                 // wait until the end of the current window
                 if SystemTime::now().duration_since(UNIX_EPOCH).unwrap() > self.next_ts {
@@ -71,20 +63,18 @@ impl Iterator for BinBasedGenerator {
                             .saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap()),
                     );
                 }
-                self.current_distrib = get_poisson(&self.lambdas, self.next_ts);
             }
-            self.remaining_flows = self.current_distrib.sample(&mut self.flow_rng.clone()) as u64;
-            self.next_ts += Duration::from_secs(WINDOW_WIDTH_IN_SECS);
-            self.time_distrib = Uniform::new(
-                self.next_ts.as_millis() as u64,
-                self.next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS,
-            )
-            .unwrap();
+
+            let ok = self.start_new_window();
+            if !ok {
+                log::info!("{} generated flows", self.total_flow_count);
+                return None;
+            }
         }
         self.remaining_flows -= 1;
-        // self.total_flow_count += 1;
+        self.total_flow_count += 1;
         Some(SeededData {
-            seed: self.window_rng.next_u64(),
+            seed: self.flow_rng.next_u64(),
             data: Duration::from_millis(self.time_distrib.sample(&mut self.flow_rng.clone())),
         })
     }
@@ -92,33 +82,50 @@ impl Iterator for BinBasedGenerator {
 
 fn get_poisson(lambdas: &Vec<f64>, ts: Duration) -> Poisson<f64> {
     // TODO timezone
-    let secs = DateTime::from_timestamp_secs(ts.as_secs() as i64).unwrap().time().num_seconds_from_midnight();
-    let secs_per_bin = (60*60*24 / lambdas.len()) as u32;
-    let index = (secs / secs_per_bin) as usize;
+    let secs = DateTime::from_timestamp_secs(ts.as_secs() as i64)
+        .unwrap()
+        .time()
+        .num_seconds_from_midnight();
+    let secs_per_bin = (60 * 60 * 24 / lambdas.len()) as u32;
+    let index = ((secs / secs_per_bin) as usize).min(lambdas.len() - 1);
+    // log::info!("Poisson’ lambda: {}", lambdas[index]);
     Poisson::new(lambdas[index]).unwrap()
 }
 
-fn get_lambdas(flow_per_day: u64, bins: TimeBins) -> Vec<f64> {
+/// Compute the parameters of the Poisson distribution from the bins
+/// If "flow_per_day" is None, then simply reuse the values of the bins
+/// Otherwise, normalize the bins so their sum is "flow_per_day"
+fn get_lambdas(flow_per_day: Option<u64>, bins: TimeBins) -> Vec<f64> {
     let bin_count: f64 = bins.bins.len() as f64;
-    let flow_per_bin: f64 = (flow_per_day as f64) / (bin_count as f64);
     let window_per_bin: f64 = 60. * 60. * 24. / (WINDOW_WIDTH_IN_SECS as f64) / bin_count;
-    let sum: f64 = bins.bins.iter().sum::<u64>() as f64;
-    // Lambda is equal to the expected value of the Poisson distribution
-    // First, we normalize the bin so the sum of all bins is flow_per_day
-    // Then, we divide by the number of windows in one bin
-    bins.bins.into_iter().map(|val| (val as f64) / sum * flow_per_bin / window_per_bin).collect()
+    match flow_per_day {
+        Some(flow_per_day) => {
+            let sum: f64 = bins.bins.iter().sum::<u64>() as f64;
+            // Lambda is equal to the expected value of the Poisson distribution
+            // First, we normalize the bin so the sum of all bins is flow_per_day
+            // Then, we divide by the number of windows in one bin
+            bins.bins
+                .into_iter()
+                .map(|val| (val as f64) / sum * (flow_per_day as f64) / window_per_bin)
+                .collect()
+        }
+        None => bins
+            .bins
+            .into_iter()
+            .map(|val| (val as f64) / window_per_bin)
+            .collect(),
+    }
 }
 
 impl BinBasedGenerator {
     pub fn new(
         seed: Option<u64>,
         net_injection: bool,
-        flow_per_day: u64,
+        flow_per_day: Option<u64>,
         bins: TimeBins,
         initial_ts: Duration,
         total_duration: Option<Duration>,
     ) -> Self {
-        // let flows_per_window = flow_per_second * WINDOW_WIDTH_IN_SECS;
         let next_ts = initial_ts;
         let time_distrib = Uniform::new(
             next_ts.as_millis() as u64,
@@ -135,27 +142,28 @@ impl BinBasedGenerator {
         });
 
         let lambdas = get_lambdas(flow_per_day, bins);
-        let current_distrib = get_poisson(&lambdas, initial_ts);
-        let remaining_flows = current_distrib.sample(&mut window_rng.clone()) as u64;
-        let flow_rng = window_rng.clone();
-        BinBasedGenerator {
+
+        let mut generator = BinBasedGenerator {
             net_injection,
             initial_ts,
             next_ts,
             lambdas,
-            remaining_flows,
-            current_distrib, 
+            current_distrib: Poisson::new(1.).unwrap(), // it will be overwritten
+            remaining_flows: 0,
+            total_flow_count: 0,
             window_rng,
-            flow_rng,
+            flow_rng: Pcg32::seed_from_u64(0), // it will be overwritten
             time_distrib,
             remaining_windows,
-        }
+        };
+        generator.start_new_window();
+        generator
     }
 
     pub fn new_for_injection(
         seed: Option<u64>,
         total_duration: Option<Duration>,
-        flow_per_day: u64,
+        flow_per_day: Option<u64>,
         bins: TimeBins,
         deterministic: bool,
     ) -> Self {
@@ -168,7 +176,8 @@ impl BinBasedGenerator {
             Some(s) => Pcg32::seed_from_u64(s),
             None => Pcg32::new(0xcafef00dd15ea5e5, 0xa02bdbf7bb3c0a7), // default values from the doc
         };
-        if !deterministic { // each process should use the same rng at the same time !
+        if !deterministic {
+            // each process should use the same rng at the same time !
             // 2 for a next_u64 call
             window_rng.advance(2 * window_count_since_unix_epoch);
         }
@@ -183,22 +192,46 @@ impl BinBasedGenerator {
                 .ceil() as u64
         });
         let lambdas = get_lambdas(flow_per_day, bins);
-        let current_distrib = get_poisson(&lambdas, next_ts);
-        let remaining_flows = current_distrib.sample(&mut window_rng.clone()) as u64;
 
-        let flow_rng = window_rng.clone();
-        BinBasedGenerator {
+        let mut generator = BinBasedGenerator {
             net_injection: true,
             initial_ts: next_ts,
             next_ts,
             lambdas,
-            current_distrib,
-            remaining_flows,
+            current_distrib: Poisson::new(1.).unwrap(), // it will be overwritten
+            remaining_flows: 0,
+            total_flow_count: 0,
             window_rng,
-            flow_rng,
+            flow_rng: Pcg32::seed_from_u64(0), // it will be overwritten
             time_distrib,
             remaining_windows,
+        };
+        generator.start_new_window();
+        generator
+    }
+
+    /// Start a new window
+    /// Returns "false" it’s not possible
+    fn start_new_window(&mut self) -> bool {
+        // log::info!("New window!");
+        self.flow_rng = Pcg32::seed_from_u64(self.window_rng.next_u64());
+        if let Some(ref mut r) = self.remaining_windows {
+            *r -= 1;
+            if *r == 0 {
+                return false;
+            }
         }
+
+        self.current_distrib = get_poisson(&self.lambdas, self.next_ts);
+        self.remaining_flows = self.current_distrib.sample(&mut self.flow_rng.clone()) as u64;
+        // log::info!("{}", self.remaining_flows);
+        self.time_distrib = Uniform::new(
+            self.next_ts.as_millis() as u64,
+            self.next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS,
+        )
+        .unwrap();
+        self.next_ts += Duration::from_secs(WINDOW_WIDTH_IN_SECS);
+        return true;
     }
 }
 
@@ -209,32 +242,34 @@ pub struct TimeBins {
 impl Default for TimeBins {
     fn default() -> Self {
         if cfg!(debug_assertions) {
-            TimeBins::from_str(include_str!("../../default_models/time_bins.json"))
-            .unwrap()
+            TimeBins::from_str(include_str!("../../default_models/time_bins.json")).unwrap()
         } else {
             TimeBins::from_str(
-            &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "default_models/time_bins.json",
-                19
-            ))
-            .unwrap(),
-        )
-        .unwrap()
+                &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                    "default_models/time_bins.json",
+                    19
+                ))
+                .unwrap(),
+            )
+            .unwrap()
         }
     }
 }
 
 impl TimeBins {
-
     pub fn from_file(filename: &str) -> std::io::Result<Self> {
         let f = File::open(filename)?;
         let config: Config = serde_json::from_reader(f)?;
-        Ok(TimeBins { bins: config.histogram })
+        Ok(TimeBins {
+            bins: config.histogram,
+        })
     }
 
     pub fn from_str(string: &str) -> std::io::Result<Self> {
         let config: Config = serde_json::from_str(string)?;
-        Ok(TimeBins { bins: config.histogram })
+        Ok(TimeBins {
+            bins: config.histogram,
+        })
     }
 }
 
