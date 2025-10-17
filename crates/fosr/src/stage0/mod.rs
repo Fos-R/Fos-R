@@ -13,6 +13,7 @@ use std::fs::File;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use chrono::FixedOffset;
 
 const WINDOW_WIDTH_IN_SECS: u64 = 5;
 
@@ -25,7 +26,7 @@ pub trait Stage0:
     fn get_initial_ts(&self) -> Duration;
 }
 
-/// The generator generates timestamp uniformily without any seasonability (day/night cycle, etc.)
+/// The generator generates timestamp from bins
 /// In net_injection mode, it trickles the generation
 #[derive(Debug, Clone)]
 pub struct BinBasedGenerator {
@@ -40,6 +41,7 @@ pub struct BinBasedGenerator {
     flow_rng: Pcg32,
     net_injection: bool,
     remaining_windows: Option<u64>,
+    tz_offset: FixedOffset,
 }
 
 impl Stage0 for BinBasedGenerator {
@@ -80,12 +82,10 @@ impl Iterator for BinBasedGenerator {
     }
 }
 
-fn get_poisson(lambdas: &Vec<f64>, ts: Duration) -> Poisson<f64> {
-    // TODO timezone
-    let secs = DateTime::from_timestamp_secs(ts.as_secs() as i64)
-        .unwrap()
-        .time()
+fn get_poisson(lambdas: &Vec<f64>, tz_offset: FixedOffset, ts: Duration) -> Poisson<f64> {
+    let secs = DateTime::from_timestamp_secs(ts.as_secs() as i64).unwrap().with_timezone(&tz_offset).time()
         .num_seconds_from_midnight();
+    // log::info!("Hours since midnight: {}", secs/3600);
     let secs_per_bin = (60 * 60 * 24 / lambdas.len()) as u32;
     let index = ((secs / secs_per_bin) as usize).min(lambdas.len() - 1);
     // log::info!("Poisson’ lambda: {}", lambdas[index]);
@@ -125,6 +125,7 @@ impl BinBasedGenerator {
         bins: TimeBins,
         initial_ts: Duration,
         total_duration: Option<Duration>,
+        tz_offset: FixedOffset,
     ) -> Self {
         let next_ts = initial_ts;
         let time_distrib = Uniform::new(
@@ -155,6 +156,7 @@ impl BinBasedGenerator {
             flow_rng: Pcg32::seed_from_u64(0), // it will be overwritten
             time_distrib,
             remaining_windows,
+            tz_offset,
         };
         generator.start_new_window();
         generator
@@ -205,6 +207,7 @@ impl BinBasedGenerator {
             flow_rng: Pcg32::seed_from_u64(0), // it will be overwritten
             time_distrib,
             remaining_windows,
+            tz_offset: *chrono::Local::now().fixed_offset().offset(), // use local timezone
         };
         generator.start_new_window();
         generator
@@ -222,7 +225,7 @@ impl BinBasedGenerator {
             }
         }
 
-        self.current_distrib = get_poisson(&self.lambdas, self.next_ts);
+        self.current_distrib = get_poisson(&self.lambdas, self.tz_offset, self.next_ts);
         self.remaining_flows = self.current_distrib.sample(&mut self.flow_rng.clone()) as u64;
         // log::info!("{}", self.remaining_flows);
         self.time_distrib = Uniform::new(
