@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 pub mod flowchronicle;
-// pub mod bayesian_networks;
+pub mod bayesian_networks;
 
 /// Stage 1: generates flow descriptions
 pub trait Stage1: Clone + std::marker::Send + 'static {
