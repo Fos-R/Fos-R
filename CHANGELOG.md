@@ -5,9 +5,11 @@
 ### Added
 
 - Windows support through eBPF
+- New stage 0 with daily seasonality
 - Pcap2flow mode
 - Utility to remove Fos-R taint from pcap files
 - Add the "fast" injection algorithm for higher throughput
+- CI pipeline for continuous evaluation
 
 ### Changed
 
