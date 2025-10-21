@@ -136,21 +136,21 @@ pages:
     - mv target public/bin
     - mv analysis* public/
     - mv sample.pcap public/
+    - cp resources/logo.png public/
     - cd public
-    - echo -e "\n## Binaries\n" >> index.md
-    - find "bin" -type f -name "fosr" -exec echo "- [{}]({})" \; >> index.md
-    - echo -e "\n## .deb packages\n" >> index.md
-    - find "bin" -type f -name "*.deb" -exec echo "- [{}]({})" \; >> index.md
-    - echo -e "\n## Synthetic data analysis\n" >> index.md
-    - echo -e "\n### Analyzed pcap sample\n" >> index.md
-    - find . -type f -name "*.pcap" -exec echo "- [{}]({})" \; >> index.md
-    - echo -e "\n### Zeek analysis\n" >> index.md
-    - find "analysis-zeek" -type f -exec echo "- [{}]({})" \; >> index.md
-    - echo -e "\n### TShark analysis\n" >> index.md
-    - find "analysis-tshark" -type f -exec echo "- [{}]({})" \; >> index.md
-    - echo -e "\n### Suricata analysis\n" >> index.md
-    - find "analysis-suricata" -type f -exec echo "- [{}]({})" \; >> index.md
-    - pandoc index.md -o index.html --template template.html --include-after-body footer.html --standalone --no-highlight --toc --toc-depth 2 --mathjax
+    - echo -e "\n## Binaries\n" > binaries.md
+    - find "bin" -type f -name "fosr" -exec echo "- [{}]({})" \; >> binaries.md
+    - echo -e "\n## .deb packages\n" >> binaries.md
+    - find "bin" -type f -name "*.deb" -exec echo "- [{}]({})" \; >> binaries.md
+    - echo -e "\n## Analyzed pcap sample\n" > analysis.md
+    - find . -type f -name "*.pcap" -exec echo "- [{}]({})" \; >> analysis.md
+    - echo -e "\n## Zeek analysis\n" >> analysis.md
+    - find "analysis-zeek" -type f -exec echo "- [{}]({})" \; >> analysis.md
+    - echo -e "\n## TShark analysis\n" >> analysis.md
+    - find "analysis-tshark" -type f -exec echo "- [{}]({})" \; >> analysis.md
+    - echo -e "\n## Suricata analysis\n" >> analysis.md
+    - find "analysis-suricata" -type f -exec echo "- [{}]({})" \; >> analysis.md
+    - pandoc intro.md binaries.md compile.md howto.md roadmap.md usecases.md analysis-intro.md analysis.md refs.md -o index.html --template template.html --include-after-body footer.html --standalone --no-highlight --toc --toc-depth 1 --mathjax
   artifacts:
     paths:
       - public
