@@ -150,7 +150,7 @@ pages:
     - find "analysis-tshark" -type f -exec echo "- [{}]({})" \; >> index.md
     - echo -e "\n### Suricata analysis\n" >> index.md
     - find "analysis-suricata" -type f -exec echo "- [{}]({})" \; >> index.md
-    - pandoc index.md -o index.html
+    - pandoc index.md -o index.html --template template.html --include-after-body footer.html --standalone --no-highlight --toc --toc-depth 2 --mathjax
   artifacts:
     paths:
       - public
