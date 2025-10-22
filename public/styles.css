@@ -102,3 +102,9 @@ blockquote {
 	display: none;
     }
 }
+
+/* Added by PFG */
+img {
+  width: 100%;
+  height: auto;
+}
