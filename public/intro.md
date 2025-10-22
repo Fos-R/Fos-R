@@ -10,8 +10,18 @@ Fos-R is a network traffic generator based on AI models. It does not require a G
 
 # Get Fos-R
 
-Currently, we provide binaries for Linux only. You can also use `cargo` to compile Fos-R from the sources.
+## Conditional features
+
+Fos-R make use of Rust features for conditional compilation. The available features:
+
+- `net_injection`: whether the program can inject traffic on the network interface [default]
+- `iptables`: a method for network injection (Linux only)
+- `ebpf`: a method for network injection (Windows and Linux) [default]
+
+Generation is always available.
 
 ## Stable binaries
 
 The binaries of the last stable versions are stored on [GitLab](https://gitlab.inria.fr/pirat-public/Fos-R/-/releases).
+
+## Experimental binaries

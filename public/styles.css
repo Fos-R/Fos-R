@@ -108,3 +108,12 @@ img {
   width: 100%;
   height: auto;
 }
+
+table {
+    width: 100%;
+    /* margin: auto; */
+}
+
+table tr:nth-child(even) {
+  background: var(--bd-pre-bg);
+}
