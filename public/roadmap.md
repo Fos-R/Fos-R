@@ -17,5 +17,5 @@ Fos-R is currently at v0.1. The following roadmap is indicative. Priorities may 
 
 ## v0.4 - High-throughput network injection
 
-- A new stage 4 for reliable and high-throughput network injection
+- A new stage 4 for a reliable and high-throughput network injection
 - Injection mode on Windows

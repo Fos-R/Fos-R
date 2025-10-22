@@ -4,7 +4,7 @@ You can also compile Fos-R from source directly. Fos-R is distributed with [crat
 
 `cargo install fosr`
 
-You can check the install with:
+You can check the installation with:
 
 `fosr`
 

@@ -49,4 +49,4 @@ The evaluation of network intrusion detection systems requires a sufficient amou
 
 # Contact
 
-You can contain the maintainer at <pierre-francois.gimenez@inria.fr>.
+You can contact the maintainer at <pierre-francois.gimenez@inria.fr>.
