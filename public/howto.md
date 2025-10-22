@@ -25,7 +25,7 @@ If you need a deterministic generation, make sure to specify a seed with `-s`, t
 
 ## Network injection
 
-In this mode, Fos-R generates and injects network traffic between different computers in the same network.
+This mode requires the `net_injection` feature. In this mode, Fos-R generates and injects network traffic between different computers in the same network.
 Fos-R needs to be executed on each computer and provided a configuration file.
 
 ```
@@ -45,7 +45,7 @@ Options:
   -d, --duration <DURATION>
           Minimum pcap traffic duration described in human-friendly time, such as "15days 30min 5s"
   -n, --net-enabler <NET_ENABLER>
-          Method to avoid kernel interactions with the injected traffic [possible values: ebpf]
+          Method to avoid kernel interactions with the injected traffic [possible values: iptables, ebpf]
   -a, --injection-algo <INJECTION_ALGO>
           Algorithm for injecting on the wire [default: reliable] [possible values: fast, reliable]
       --deterministic
