@@ -33,12 +33,12 @@ pub enum Command {
     #[cfg(feature = "net_injection")]
     /// Generate network activity and inject it on the wire
     Inject {
-        #[arg(short, long, default_value = None, help = "Output pcap file of generated packets")]
+        #[arg(short, long, default_value = None, help = "Output pcap file of the generated packets")]
         outfile: Option<String>,
         #[arg(
             long,
             default_value_t = false,
-            help = "Reorder temporally the generated pcap. Must fit the entire dataset in RAM ! Requires --outfile."
+            help = "Reorder temporally the generated pcap. Must fit the entire dataset in RAM! Requires --outfile."
         )]
         order_pcap: bool,
         #[cfg(all(target_os = "linux", feature = "iptables"))]
@@ -85,7 +85,7 @@ pub enum Command {
         #[arg(
             long,
             default_value_t = false,
-            help = "Ensure the generated traffic is always the same. It makes Fos-R less robust to staggered process starts, so avoid unless for testing"
+            help = "Ensure the generated traffic is always the same. It makes Fos-R less robust to staggered process starts, so avoid it unless for testing"
         )]
         deterministic: bool,
     },
@@ -117,7 +117,7 @@ pub enum Command {
         packets_count: Option<u64>,
         #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\". Generation is deterministic when used with --order-pcap and --seed.")]
         duration: Option<String>,
-        #[arg(short = 't', long, default_value = None, help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use current time")]
+        #[arg(short = 't', long, default_value = None, help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use the current time")]
         start_time: Option<String>,
         #[arg(
             short,
@@ -152,12 +152,12 @@ pub enum Command {
     Pcap2Flow {
         #[arg(short, long, required = true, help = "Pcap file to extract flows from")]
         input_pcap: String,
-        #[arg(short, long, required = true, help = "Csv file to export flow into")]
+        #[arg(short, long, required = true, help = "CSV file to export flow into")]
         output_csv: String,
         #[arg(
             short = 'p',
             long,
-            help = "Include the payloads into the csv file",
+            help = "Include the payloads in the CSV file",
             default_value_t = false
         )]
         include_payloads: bool,

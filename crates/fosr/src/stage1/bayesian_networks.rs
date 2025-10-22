@@ -22,6 +22,7 @@ struct PartiallyDefinedFlowData {
     bwd_packets_count: Option<usize>,
     timestamp: Option<Duration>,
     proto: Option<Protocol>,
+    // tcp_flags: Option<TCPEndFlags>,
 }
 
 impl From<PartiallyDefinedFlowData> for Flow {
@@ -37,6 +38,11 @@ impl From<PartiallyDefinedFlowData> for Flow {
             bwd_packets_count: p.bwd_packets_count,
             timestamp: p.timestamp.unwrap(),
         };
+        // match p.proto.unwrap() {
+        //     Protocol::TCP => Flow::TCP(d, p.tcp_flags.unwrap()),
+        //     Protocol::UDP => Flow::UDP(d),
+        //     Protocol::ICMP => Flow::ICMP(d),
+        // }
         p.proto.unwrap().wrap(d)
     }
 }

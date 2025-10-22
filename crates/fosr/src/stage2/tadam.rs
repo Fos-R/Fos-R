@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 pub struct AutomataLibrary {
     // TODO: map port -> automata
+    // TODO: deux types d’automates TCP: ceux finissant par FIN et ceux finissant par RESET
     cons_tcp_automata: Vec<automaton::CrossProductTimedAutomaton<TCPEdgeTuple>>,
     cons_udp_automata: Vec<automaton::CrossProductTimedAutomaton<UDPEdgeTuple>>,
     cons_icmp_automata: Vec<automaton::CrossProductTimedAutomaton<ICMPEdgeTuple>>,
