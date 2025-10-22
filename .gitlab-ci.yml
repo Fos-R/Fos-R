@@ -139,7 +139,7 @@ pages:
     - cp resources/logo.png public/
     - cd public
     - echo -e "\n## Experimental binaries\n" > binaries.md
-    - echo -e "\nBuild version: "$(./public/bin/x86_64-unknown-linux-gnu/release/fosr -V | cut -d" " -f 2)-$CI_COMMIT_SHORT_SHA", compiled on $(date)\n" >> binaries.md
+    - echo -e "\nBuild version "$(./public/bin/x86_64-unknown-linux-gnu/release/fosr -V | cut -d" " -f 2)-$CI_COMMIT_SHA", compiled on $(date)\n" >> binaries.md
     - find "bin" -type f -name "fosr" -exec echo "- [{}]({})" \; >> binaries.md
     - echo -e "\n## .deb packages\n" >> binaries.md
     - find "bin" -type f -name "*.deb" -exec echo "- [{}]({})" \; >> binaries.md
