@@ -4,7 +4,7 @@ Fos-R contains several commands.
 
 ## Create-pcap
 
-In this mode, Fos-R output a pcap file generated with the AI models.
+In this mode, Fos-R outputs a pcap file generated with the AI models.
 
 ```
 Usage: fosr create-pcap [OPTIONS] <--duration <DURATION>|--packets-count <PACKETS_COUNT>>
@@ -25,7 +25,7 @@ If you need a deterministic generation, make sure to specify a seed with `-s`, t
 
 ## Network injection
 
-In this mode, Fos-R generates and play network traffic between different computers in the same network.
+In this mode, Fos-R generates and injects network traffic between different computers in the same network.
 Fos-R needs to be executed on each computer and provided a configuration file.
 
 ```

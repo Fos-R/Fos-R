@@ -19,7 +19,7 @@ a {
 
 /* Layout Styles */
 .bd-layout {
-    margin-top: calc(var(--navbar-height) + 1.5rem);
+    margin-top: 1.5rem;
 }
 
 /* Code Block Styles */
