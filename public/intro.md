@@ -4,7 +4,7 @@ author: "Pierre-François Gimenez"
 description: "A network synthetic traffic generator"
 ---
 
-![Fos-R logo](logo.png)
+![](logo.png)
 
 Fos-R is a network traffic generator based on AI models. It does not require GPU and can generate in the order of Gbps of network traffic with a laptop.
 
