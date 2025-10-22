@@ -139,10 +139,10 @@ pages:
     - cp resources/logo.png public/
     - cd public
     - echo -e "\n## Experimental binaries\n" > binaries.md
-    - echo -e "\nBuild version $CI_COMMIT_SHORT_SHA, compiled on $(date -I)\n" >> binaries.md
+    - echo -e "\nBuild version $CI_COMMIT_SHORT_SHA, compiled on $(date -I).\n" >> binaries.md
     - find "bin" -type f -name "fosr" -exec echo "- [{}]({})" \; >> binaries.md
     - echo -e "\n## Experimental .deb packages\n" >> binaries.md
-    - echo -e "\nBuild version $CI_COMMIT_SHORT_SHA, compiled on $(date -I)\n" >> binaries.md
+    - echo -e "\nBuild version $CI_COMMIT_SHORT_SHA, compiled on $(date -I).\n" >> binaries.md
     - find "bin" -type f -name "*.deb" -exec echo "- [{}]({})" \; >> binaries.md
     - echo -e "\n## Analyzed pcap sample\n" > analysis.md
     - find . -type f -name "*.pcap" -exec echo "- [{}]({})" \; >> analysis.md

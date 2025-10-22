@@ -49,4 +49,4 @@ The evaluation of network intrusion detection systems requires a sufficient amou
 
 # Contact
 
-You can contact the maintainer at <pierre-francois.gimenez@inria.fr>.
+You can contact the maintainer at <pierre-francois.gimenez@inria.fr>. Feel free to post an issue on [GitHub](https://github.com/Fos-R/Fos-R/issues).
