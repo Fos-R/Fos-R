@@ -2,7 +2,7 @@
 
 Fos-R contains several commands.
 
-## Create-pcap
+## Pcap creation
 
 In this mode, Fos-R outputs a pcap file generated with the AI models.
 
@@ -25,7 +25,7 @@ If you need a deterministic generation, make sure to specify a seed with `-s`, t
 
 ## Network injection
 
-This mode requires the `net_injection` feature. In this mode, Fos-R generates and injects network traffic between different computers in the same network.
+This mode requires the `iptables` or `ebpf` feature. In this mode, Fos-R generates and injects network traffic between different computers in the same network.
 Fos-R needs to be executed on each computer and provided a configuration file.
 
 ```
