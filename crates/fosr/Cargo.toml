@@ -57,5 +57,5 @@ ebpf = ["dep:aya", "net_injection", "dep:aya-build", "dep:fosr-ebpf", "dep:anyho
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.build-dependencies]
 aya-build = { version = "0.1.2", default-features = false, optional = true }
-fosr-ebpf = { path = "../fosr-ebpf", optional = true }
+fosr-ebpf = { version = "0.1.0", path = "../fosr-ebpf", optional = true }
 anyhow = { version = "1", default-features = false, optional = true }

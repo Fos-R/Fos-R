@@ -1,11 +1,11 @@
 ### Linux
 
-| Target            | Iptables      | eBPF          | Binary file                                           | .deb package                                  |
-| :---------------: | :-----------: | :-----------: | :----------:                                          | :-----------:                                 |
-| x86 (32 bits)     | &check;       |               | [link](bin/i686-unknown-linux-gnu/release/fosr)       | [link](bin/debian/fosr_0.1.2-dev-1_i386.deb)  |
-| x86 (64 bits)     | &check;       | &check;       | [link](bin/x86_64-unknown-linux-gnu/release/fosr)     | [link](bin/debian/fosr_0.1.2-dev-1_amd64.deb) |
-| ARM (32 bits)     | &check;       | &check;       | [link](bin/arm-unknown-linux-musleabihf/release/fosr) | [link](bin/debian/fosr_0.1.2-dev-1_armhf.deb) |
-| ARM (64 bits)     | &check;       | &check;       | [link](bin/aarch64-unknown-linux-gnu/release/fosr)    | [link](bin/debian/fosr_0.1.2-dev-1_arm64.deb) |
+| Target            | Iptables      | eBPF          | Binary file                                           | .deb package                              |
+| :---------------: | :-----------: | :-----------: | :----------:                                          | :-----------:                             |
+| x86 (32 bits)     | &check;       |               | [link](bin/i686-unknown-linux-gnu/release/fosr)       | [link](bin/debian/fosr_0.1.2-1_i386.deb)  |
+| x86 (64 bits)     | &check;       | &check;       | [link](bin/x86_64-unknown-linux-gnu/release/fosr)     | [link](bin/debian/fosr_0.1.2-1_amd64.deb) |
+| ARM (32 bits)     | &check;       | &check;       | [link](bin/arm-unknown-linux-musleabihf/release/fosr) | [link](bin/debian/fosr_0.1.2-1_armhf.deb) |
+| ARM (64 bits)     | &check;       | &check;       | [link](bin/aarch64-unknown-linux-gnu/release/fosr)    | [link](bin/debian/fosr_0.1.2-1_arm64.deb) |
 
 ### Other OS
 
