@@ -1,6 +1,6 @@
 # How to use Fos-R
 
-Fos-R contains several commands.
+Fos-R contains several subcommands.
 
 ## Pcap creation
 
@@ -21,7 +21,7 @@ Options:
   -h, --help                           Print help
 ```
 
-If you need a deterministic generation, make sure to specify a seed with `-s`, to use `--order-pcap` and to set a start time with `-t`.
+If you need a deterministic generation, make sure to specify a seed with `-s`, to set a maximum duration with `-d`, to use `--order-pcap` and to set a start time with `-t`.
 
 ## Network injection
 
