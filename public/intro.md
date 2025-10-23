@@ -14,11 +14,10 @@ Fos-R is a network traffic generator based on AI models. It does not require a G
 
 Fos-R make use of Rust features for conditional compilation. The available features:
 
-- `net_injection`: whether the program can inject traffic on the network interface [default]
 - `iptables`: a method for network injection (Linux only)
 - `ebpf`: a method for network injection (Windows and Linux) [default]
 
-Generation is always available.
+If you do not enable `iptables` or `ebpf`, Fos-R won’t be able to inject traffic on the network. Generation is always available.
 
 ## Stable binaries
 
