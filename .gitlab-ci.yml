@@ -4,21 +4,6 @@ stages:
   - analyze
   - deploy
 
-build-doc:
-  tags:
-    - ci.inria.fr
-    - small
-  stage: build
-  image: rust
-  script:
-    - rustup toolchain install nightly --component rust-src
-    - cargo install bpf-linker
-    - cargo doc --no-deps
-    - mv target/doc doc
-  artifacts:
-    paths:
-      - doc
-
 build-x86-64:
   tags:
     - ci.inria.fr
@@ -39,10 +24,13 @@ build-x86-64:
     - cargo deb -p fosr
     - mkdir target/x86_64-unknown-linux-gnu
     - mv target/release target/x86_64-unknown-linux-gnu
+    - cargo doc --no-deps
+    - mv target/doc doc
   artifacts:
     paths:
       - target/*/release/fosr
       - target/debian/*.deb
+      - doc
 
 build-x86-32:
   tags:
