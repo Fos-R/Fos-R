@@ -11,6 +11,8 @@ build-doc:
   stage: build
   image: rust
   script:
+    - rustup toolchain install nightly --component rust-src
+    - cargo install bpf-linker
     - cargo doc --no-deps
     - mv target/doc doc
   artifacts:
@@ -31,9 +33,9 @@ build-x86-64:
     # version with ebpf
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
+    - cargo install cargo-deb
     - cargo build # version with ebpf only
     - cargo build --features iptables --release # version with ebpf + iptables
-    - cargo install cargo-deb
     - cargo deb -p fosr
     - mkdir target/x86_64-unknown-linux-gnu
     - mv target/release target/x86_64-unknown-linux-gnu
@@ -49,6 +51,7 @@ build-x86-32:
   stage: build
   image: rust
   script:
+    - cargo install cargo-deb
     - apt update
     - apt install -y gcc-i686-linux-gnu
     - rustup target add i686-unknown-linux-gnu
@@ -69,6 +72,7 @@ build-ARM-32:
   script:
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
+    - cargo install cargo-deb
     - apt update
     - apt install -y gcc-arm-linux-gnueabihf
     - rustup target add arm-unknown-linux-musleabihf
@@ -88,6 +92,7 @@ build-ARM-64:
   script:
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
+    - cargo install cargo-deb
     - apt update
     - apt install -y gcc-aarch64-linux-gnu
     - rustup target add aarch64-unknown-linux-gnu
