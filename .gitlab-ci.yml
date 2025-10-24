@@ -4,14 +4,26 @@ stages:
   - analyze
   - deploy
 
-build:
+build-doc:
+  tags:
+    - ci.inria.fr
+    - small
+  stage: build
+  image: rust
+  script:
+    - cargo doc --no-deps
+    - mv target/doc doc
+  artifacts:
+    paths:
+      - doc
+
+build-x86-64:
   tags:
     - ci.inria.fr
     - large
   stage: build
   image: rust
   script:
-    - apt update
     # version without network injection
     - cargo build --no-default-features -p fosr
     # version without ebpf and with iptables
@@ -20,42 +32,100 @@ build:
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
     - cargo build # version with ebpf only
-    - cargo build --features iptables # version with ebpf + iptables
-    - cargo build --features iptables --release
-    - cargo doc --no-deps
-    - mv target/doc doc
+    - cargo build --features iptables --release # version with ebpf + iptables
     - cargo install cargo-deb
     - cargo deb -p fosr
-    # cross-compilation (x86 32 bits)
-    - apt install -y gcc-i686-linux-gnu
-    - rustup target add i686-unknown-linux-gnu
-    # Aya doesn’t compile for some reason
-    - cargo build --target=i686-unknown-linux-gnu --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\" -p fosr -r --no-default-features --features iptables
-    - cargo deb --target=i686-unknown-linux-gnu -p fosr --no-default-features --features iptables -- --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\"
-    # cross-compilation (arm 32 bits with musl)
-    - apt install -y gcc-arm-linux-gnueabihf
-    - rustup target add arm-unknown-linux-musleabihf
-    - cargo build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r --features iptables
-    - cargo deb --target=arm-unknown-linux-musleabihf -p fosr --features iptables -- --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\"
-    # cross-compilation (arm 64 bits with libc)
-    - apt install -y gcc-aarch64-linux-gnu
-    - rustup target add aarch64-unknown-linux-gnu
-    - cargo build --target=aarch64-unknown-linux-gnu --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\" -p fosr -r --features iptables
-    - cargo deb --target=aarch64-unknown-linux-gnu -p fosr --features iptables -- --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\"
-    # cross-compilation (windows, WIP)
-    # - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
-    # - rustup target add x86_64-pc-windows-gnu
-    # - cargo build --target=x86_64-pc-windows-gnu -p fosr -r --no-default-features
-    # cross-compilation (FreedBSD, WIP)
-    # - rustup target add x86_64-unknown-freebsd
-    # - cargo build --target=x86_64-unknown-freebsd --config target.x86_64-unknown-freebsd.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
     - mkdir target/x86_64-unknown-linux-gnu
     - mv target/release target/x86_64-unknown-linux-gnu
   artifacts:
     paths:
       - target/*/release/fosr
       - target/debian/*.deb
-      - doc
+
+build-x86-32:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: build
+  image: rust
+  script:
+    - apt update
+    - apt install -y gcc-i686-linux-gnu
+    - rustup target add i686-unknown-linux-gnu
+    # Aya doesn’t compile for some reason
+    - cargo build --target=i686-unknown-linux-gnu --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\" -p fosr -r --no-default-features --features iptables
+    - cargo deb --target=i686-unknown-linux-gnu -p fosr --no-default-features --features iptables -- --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\"
+  artifacts:
+    paths:
+      - target/*/release/fosr
+      - target/debian/*.deb
+
+build-ARM-32:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: build
+  image: rust
+  script:
+    - rustup toolchain install nightly --component rust-src
+    - cargo install bpf-linker
+    - apt update
+    - apt install -y gcc-arm-linux-gnueabihf
+    - rustup target add arm-unknown-linux-musleabihf
+    - cargo build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r --features iptables
+    - cargo deb --target=arm-unknown-linux-musleabihf -p fosr --features iptables -- --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\"
+  artifacts:
+    paths:
+      - target/*/release/fosr
+      - target/debian/*.deb
+
+build-ARM-64:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: build
+  image: rust
+  script:
+    - rustup toolchain install nightly --component rust-src
+    - cargo install bpf-linker
+    - apt update
+    - apt install -y gcc-aarch64-linux-gnu
+    - rustup target add aarch64-unknown-linux-gnu
+    - cargo build --target=aarch64-unknown-linux-gnu --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\" -p fosr -r --features iptables
+    - cargo deb --target=aarch64-unknown-linux-gnu -p fosr --features iptables -- --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\"
+  artifacts:
+    paths:
+      - target/*/release/fosr
+      - target/debian/*.deb
+
+# WIP
+# build-win64:
+#   tags:
+#     - ci.inria.fr
+#     - large
+#   stage: build
+#   image: rust
+#   script:
+#     - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
+#     - rustup target add x86_64-pc-windows-gnu
+#     - cargo build --target=x86_64-pc-windows-gnu -p fosr -r --no-default-features
+#   artifacts:
+#     paths:
+#       - target/*/release/fosr
+
+# WIP
+# build-freebsd:
+#   tags:
+#     - ci.inria.fr
+#     - large
+#   stage: build
+#   image: rust
+#   script:
+#     - rustup target add x86_64-unknown-freebsd
+#     - cargo build --target=x86_64-unknown-freebsd --config target.x86_64-unknown-freebsd.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
+#   artifacts:
+#     paths:
+#       - target/*/release/fosr
 
 tests:
   tags:
