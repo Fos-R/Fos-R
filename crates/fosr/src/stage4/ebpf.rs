@@ -30,11 +30,8 @@ fn load_ebpf_program(local_interfaces: &[datalink::NetworkInterface]) {
     // Retrieve the stored eBPF program that where stored, at compilation, into the binary
     // This only hold a reference, the object is stored by aya (globaly), so no need to store it anywhere,
     // it will not be destroyed at the end of the function
-    let mut ebpf = aya::Ebpf::load(aya::include_bytes_aligned!(concat!(
-        env!("OUT_DIR"),
-        "/fosr-ebpf-prog"
-    )))
-    .expect("Couldn't retrieve eBPF program");
+    let mut ebpf =
+        aya::Ebpf::load(fosr_ebpf::EBPF_PROGRAM).expect("Couldn't retrieve eBPF program");
     let program: &mut Xdp = ebpf
         .program_mut("fosr_ebpf")
         .expect("Failed to get mut reference of program")
