@@ -517,10 +517,8 @@ checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
 name = "fosr"
 version = "0.1.2"
 dependencies = [
- "anyhow",
  "assert_cmd",
  "aya",
- "aya-build",
  "clap",
  "crossbeam-channel",
  "ctrlc",
@@ -551,6 +549,8 @@ dependencies = [
 name = "fosr-ebpf"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "aya-build",
  "aya-ebpf",
  "network-types",
  "which",

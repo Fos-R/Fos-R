@@ -36,6 +36,7 @@ serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0"
 thingbuf = "0.1.6"
 toml = "0.9.2"
+fosr-ebpf = { version = "0.1.0", path = "../fosr-ebpf", optional = true }
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
 aya = { version = "0.13.1", default-features = false, optional = true }
@@ -53,9 +54,5 @@ net_injection = []
 iptables = ["net_injection"]
 
 # Linux & Windows only
-ebpf = ["dep:aya", "net_injection", "dep:aya-build", "dep:fosr-ebpf", "dep:anyhow"]
+ebpf = ["dep:aya", "net_injection", "dep:fosr-ebpf"]
 
-[target.'cfg(any(target_os = "windows", target_os = "linux"))'.build-dependencies]
-aya-build = { version = "0.1.2", default-features = false, optional = true }
-fosr-ebpf = { version = "0.1.0", path = "../fosr-ebpf", optional = true }
-anyhow = { version = "1", default-features = false, optional = true }

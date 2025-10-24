@@ -1,3 +1,5 @@
+use anyhow::{Context as _, anyhow};
+use aya_build::cargo_metadata;
 use which::which;
 
 /// Building this crate has an undeclared dependency on the `bpf-linker` binary. This would be
@@ -11,7 +13,26 @@ use which::which;
 /// which would likely mean far too much cache invalidation.
 ///
 /// [bindeps]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html?highlight=feature#artifact-dependencies
-fn main() {
+fn main() -> anyhow::Result<()> {
     let bpf_linker = which("bpf-linker").unwrap();
     println!("cargo:rerun-if-changed={}", bpf_linker.to_str().unwrap());
+
+    // We try to avoid recursion here, since build_ebpf will still
+    let target = std::env::var_os("TARGET");
+    if let Some(target) = target
+        && (target == "bpfeb-unknown-none" || target == "bpfel-unknown-none")
+    {
+        return Ok(());
+    }
+
+    // On build trigger, let's build our ebpf binary
+    let cargo_metadata::Metadata { packages, .. } = cargo_metadata::MetadataCommand::new()
+        .no_deps()
+        .exec()
+        .context("MetadataCommand::exec")?;
+    let ebpf_package = packages
+        .into_iter()
+        .find(|cargo_metadata::Package { name, .. }| name == "fosr-ebpf")
+        .ok_or_else(|| anyhow!("fosr-ebpf package not found"))?;
+    aya_build::build_ebpf([ebpf_package])
 }
