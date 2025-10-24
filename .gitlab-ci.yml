@@ -143,6 +143,7 @@ tests:
     - cargo test -p fosr --no-default-features -- --nocapture
     - mv crates/fosr/deterministic-test.pcap sample.pcap
   artifacts:
+    when: always
     paths:
       - sample.pcap
 
