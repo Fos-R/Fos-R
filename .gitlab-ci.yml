@@ -21,7 +21,6 @@ build-x86-64:
     - cargo install cargo-deb
     - cargo build # version with ebpf only
     - cargo build --features iptables --release # version with ebpf + iptables
-    - cargo publish --dry-run
     - cargo deb -p fosr
     - mkdir target/x86_64-unknown-linux-gnu
     - mv target/release target/x86_64-unknown-linux-gnu
@@ -91,6 +90,19 @@ build-ARM-64:
     paths:
       - target/*/release/fosr
       - target/debian/*.deb
+
+test-publish:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: test
+  image: rust
+  script:
+    - rustup toolchain install nightly --component rust-src
+    - cargo install bpf-linker
+    - cargo build --features iptables --release
+    - cargo publish --dry-run
+  allow_failure: true # it can fail on new version update
 
 # WIP
 # build-win64:
