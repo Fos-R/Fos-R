@@ -1,6 +1,6 @@
 [package]
 name = "fosr-ebpf"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Pierre-François Gimenez <pierre-francois.gimenez@inria.fr>","Dorian Bachelot"]
 edition = "2024"
 description = "An eBPF program used by Fos-R."
