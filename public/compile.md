@@ -7,9 +7,14 @@
 | ARM (32 bits)     | &check;       | &check;       | [link](bin/arm-unknown-linux-musleabihf/release/fosr) | [link](bin/debian/fosr_0.1.2-1_armhf.deb) |
 | ARM (64 bits)     | &check;       | &check;       | [link](bin/aarch64-unknown-linux-gnu/release/fosr)    | [link](bin/debian/fosr_0.1.2-1_arm64.deb) |
 
-### Other OS
+### Windows
 
-Not supported at the moment.
+Windows builds can only generate data but cannot inject data into the network.
+
+| Target            | Iptables      | eBPF          | Binary file                                           |
+| :---------------: | :-----------: | :-----------: | :----------:                                          |
+| x86 (64 bits)     |               |               | [link](bin/x86_64-pc-windows-gnu/release/fosr)       |
+
 
 ## Compile from source
 
