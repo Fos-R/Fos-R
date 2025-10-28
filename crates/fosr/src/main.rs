@@ -23,6 +23,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use clap::Parser;
 use crossbeam_channel::bounded;
+#[cfg(feature = "net_injection")]
 use pnet::{datalink, ipnetwork::IpNetwork};
 
 const CHANNEL_SIZE: usize = 50;
@@ -78,31 +79,6 @@ fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args = cmd::Args::parse();
 
-    // Extract all IPv4 local interfaces (except loopback)
-    let extract_addr = |iface: datalink::NetworkInterface| {
-        iface
-            .ips
-            .into_iter()
-            .filter(IpNetwork::is_ipv4)
-            .map(|i| match i {
-                IpNetwork::V4(data) => data.ip(),
-                _ => unreachable!(),
-            })
-    };
-    // the local interfaces are used by the stage 4 and to identify local IPs
-    // we do not include loopback interfaces or interfaces without an IPv4 address
-    let local_interfaces: Vec<datalink::NetworkInterface> = datalink::interfaces()
-        .into_iter()
-        .filter(|iface| !iface.is_loopback() && iface.ips.iter().any(IpNetwork::is_ipv4))
-        .collect();
-    // for each interface, we extract its addresses
-    let local_ips: Vec<Ipv4Addr> = local_interfaces
-        .clone()
-        .into_iter()
-        .flat_map(extract_addr)
-        .filter(|i| !i.is_loopback())
-        .collect();
-    log::debug!("IPv4 interfaces: {:?}", &local_ips);
 
     match args.command {
         cmd::Command::Pcap2Flow {
@@ -129,6 +105,34 @@ fn main() {
         } => {
             #[cfg(not(all(target_os = "linux", feature = "iptables")))]
             let stealthy = false;
+
+            // Extract all IPv4 local interfaces (except loopback)
+            let extract_addr = |iface: datalink::NetworkInterface| {
+                iface
+                    .ips
+                    .into_iter()
+                    .filter(IpNetwork::is_ipv4)
+                    .map(|i| match i {
+                        IpNetwork::V4(data) => data.ip(),
+                        _ => unreachable!(),
+                    })
+            };
+            // the local interfaces are used by the stage 4 and to identify local IPs
+            // we do not include loopback interfaces or interfaces without an IPv4 address
+            let local_interfaces: Vec<datalink::NetworkInterface> = datalink::interfaces()
+                .into_iter()
+                .filter(|iface| !iface.is_loopback() && iface.ips.iter().any(IpNetwork::is_ipv4))
+                .collect();
+
+            // for each interface, we extract its addresses
+            let local_ips: Vec<Ipv4Addr> = local_interfaces
+                .clone()
+                .into_iter()
+                .flat_map(extract_addr)
+                .filter(|i| !i.is_loopback())
+                .collect();
+            log::debug!("IPv4 interfaces: {:?}", &local_ips);
+
 
             // identify the role of the current host
             let profile = Profile::load(profile.as_deref());

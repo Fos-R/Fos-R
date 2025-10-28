@@ -104,34 +104,20 @@ test-publish:
     - cargo publish --dry-run
   allow_failure: true # it can fail on new version update
 
-# WIP
-# build-win64:
-#   tags:
-#     - ci.inria.fr
-#     - large
-#   stage: build
-#   image: rust
-#   script:
-#     - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
-#     - rustup target add x86_64-pc-windows-gnu
-#     - cargo build --target=x86_64-pc-windows-gnu -p fosr -r --no-default-features
-#   artifacts:
-#     paths:
-#       - target/*/release/fosr
-
-# WIP
-# build-freebsd:
-#   tags:
-#     - ci.inria.fr
-#     - large
-#   stage: build
-#   image: rust
-#   script:
-#     - rustup target add x86_64-unknown-freebsd
-#     - cargo build --target=x86_64-unknown-freebsd --config target.x86_64-unknown-freebsd.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
-#   artifacts:
-#     paths:
-#       - target/*/release/fosr
+build-win64:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: build
+  image: rust
+  script:
+    - apt update
+    - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
+    - rustup target add x86_64-pc-windows-gnu
+    - cargo build --target=x86_64-pc-windows-gnu -p fosr -r --no-default-features
+  artifacts:
+    paths:
+      - target/*/release/fosr
 
 tests:
   tags:
