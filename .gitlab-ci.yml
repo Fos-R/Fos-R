@@ -117,7 +117,7 @@ build-win64:
     - cargo build --target=x86_64-pc-windows-gnu -p fosr -r --no-default-features
   artifacts:
     paths:
-      - target/*/release/fosr
+      - target/*/release/fosr.exe
 
 tests:
   tags:
