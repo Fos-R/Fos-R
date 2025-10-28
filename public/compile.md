@@ -13,7 +13,7 @@ Windows builds can only generate data but cannot inject data into the network.
 
 | Target            | Iptables      | eBPF          | Binary file                                           |
 | :---------------: | :-----------: | :-----------: | :----------:                                          |
-| x86 (64 bits)     |               |               | [link](bin/x86_64-pc-windows-gnu/release/fosr)       |
+| x86 (64 bits)     |               |               | [link](bin/x86_64-pc-windows-gnu/release/fosr.exe)    |
 
 
 ## Compile from source
