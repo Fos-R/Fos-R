@@ -106,21 +106,6 @@ build-win64-x86:
     paths:
       - target/*/release/fosr.exe
 
-build-freebsd-x86-32:
-  tags:
-    - ci.inria.fr
-    - large
-  stage: build
-  image: rust
-  services:
-    - docker:dind
-  script:
-    - cargo install cross
-    - cross build --target i686-unknown-freebsd -p fosr -r --no-default-features
-  artifacts:
-    paths:
-      - target/*/release/fosr
-
 build-freebsd-x86-64:
   tags:
     - ci.inria.fr
@@ -135,7 +120,7 @@ build-freebsd-x86-64:
     - . "$HOME/.cargo/env"
     - export CROSS_CONTAINER_IN_CONTAINER=true
     - cargo install cross
-    - rustup target add x86_64-unknown-linux-gnu --force-non-host
+    - rustup toolchain add stable-x86_64-unknown-linux-gnu --force-non-host
     - cross build --target x86_64-unknown-freebsd -p fosr -r --no-default-features
   artifacts:
     paths:
