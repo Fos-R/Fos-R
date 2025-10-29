@@ -4,7 +4,7 @@ stages:
   - analyze
   - deploy
 
-build-x86-64:
+build-linux-x86-64:
   tags:
     - ci.inria.fr
     - large
@@ -32,7 +32,7 @@ build-x86-64:
       - target/debian/*.deb
       - doc
 
-build-x86-32:
+build-linux-x86-32:
   tags:
     - ci.inria.fr
     - large
@@ -51,7 +51,7 @@ build-x86-32:
       - target/*/release/fosr
       - target/debian/*.deb
 
-build-ARM-32:
+build-linux-arm-32:
   tags:
     - ci.inria.fr
     - large
@@ -71,7 +71,7 @@ build-ARM-32:
       - target/*/release/fosr
       - target/debian/*.deb
 
-build-ARM-64:
+build-linux-arm-64:
   tags:
     - ci.inria.fr
     - large
@@ -91,20 +91,7 @@ build-ARM-64:
       - target/*/release/fosr
       - target/debian/*.deb
 
-test-publish:
-  tags:
-    - ci.inria.fr
-    - large
-  stage: test
-  image: rust
-  script:
-    - rustup toolchain install nightly --component rust-src
-    - cargo install bpf-linker
-    - cargo build --features iptables --release
-    - cargo publish --dry-run
-  allow_failure: true # it can fail on new version update
-
-build-win64:
+build-win64-x86:
   tags:
     - ci.inria.fr
     - large
@@ -119,6 +106,54 @@ build-win64:
     paths:
       - target/*/release/fosr.exe
 
+build-freebsd-x86-32:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: build
+  image: rust
+  services:
+    - docker:dind
+  script:
+    - cargo install cross
+    - cross build --target i686-unknown-freebsd -p fosr -r --no-default-features
+  artifacts:
+    paths:
+      - target/*/release/fosr
+
+build-freebsd-x86-64:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - apk add curl build-base
+    - curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh -s -- -y
+    - . "$HOME/.cargo/env"
+    - export CROSS_CONTAINER_IN_CONTAINER=true
+    - cargo install cross
+    - rustup target add x86_64-unknown-linux-gnu --force-non-host
+    - cross build --target x86_64-unknown-freebsd -p fosr -r --no-default-features
+  artifacts:
+    paths:
+      - target/*/release/fosr
+
+test-publish:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: test
+  image: rust
+  script:
+    - rustup toolchain install nightly --component rust-src
+    - cargo install bpf-linker
+    - cargo build --features iptables --release
+    - cargo publish --dry-run
+  allow_failure: true # it can fail on new version update
+
 tests:
   tags:
     - ci.inria.fr
@@ -132,6 +167,7 @@ tests:
   artifacts:
     when: always
     paths:
+      - crates/fosr/deterministic-test.pcap # in case of error
       - sample.pcap
 
 eval-zeek:

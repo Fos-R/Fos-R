@@ -21,6 +21,6 @@ If you do not enable `iptables` or `ebpf`, Fos-R won’t be able to inject traff
 
 ## Stable binaries
 
-The binaries of the last stable versions are stored on [GitLab](https://gitlab.inria.fr/pirat-public/Fos-R/-/releases).
+The binaries of the last stable versions are stored on [GitHub](https://github.com/Fos-R/Fos-R/releases).
 
 ## Experimental binaries
