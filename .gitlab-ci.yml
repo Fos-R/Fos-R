@@ -4,16 +4,16 @@ stages:
   - analyze
   - deploy
 
-services:
-  - docker:18.09-dind
+# services:
+#   - docker:18.09-dind
 
-variables:
-  # the host where the docker instance is running
-  DOCKER_HOST: tcp://docker:2375/
-  # use for much faster builds
-  DOCKER_DRIVER: overlay2
-  # ensure cross knows it's running remotely
-  CROSS_REMOTE: 1
+# variables:
+#   # the host where the docker instance is running
+#   DOCKER_HOST: tcp://docker:2375/
+#   # use for much faster builds
+#   DOCKER_DRIVER: overlay2
+#   # ensure cross knows it's running remotely
+#   CROSS_REMOTE: 1
 
 build-linux-x86-64:
   tags:
@@ -117,22 +117,22 @@ build-win64-x86:
     paths:
       - target/*/release/fosr.exe
 
-build-freebsd-x86-64:
-  tags:
-    - ci.inria.fr
-    - large
-  stage: build
-  image: docker:latest
-  script:
-    - apk add curl build-base
-    - curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh -s -- -y
-    - . "$HOME/.cargo/env"
-    - cargo install cross --git https://github.com/cross-rs/cross
-    - rustup toolchain add stable-x86_64-unknown-linux-gnu --force-non-host
-    - cross build --target x86_64-unknown-freebsd -p fosr -r --no-default-features
-  artifacts:
-    paths:
-      - target/*/release/fosr
+# build-freebsd-x86-64:
+#   tags:
+#     - ci.inria.fr
+#     - large
+#   stage: build
+#   image: docker:latest
+#   script:
+#     - apk add curl build-base
+#     - curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh -s -- -y
+#     - . "$HOME/.cargo/env"
+#     - cargo install cross --git https://github.com/cross-rs/cross
+#     - rustup toolchain add stable-x86_64-unknown-linux-gnu --force-non-host
+#     - cross build --target x86_64-unknown-freebsd -p fosr -r --no-default-features
+#   artifacts:
+#     paths:
+#       - target/*/release/fosr
 
 test-publish:
   tags:
