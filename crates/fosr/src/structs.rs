@@ -5,7 +5,7 @@ use std::net::Ipv4Addr;
 use std::time::Duration;
 use thingbuf::Recycle;
 
-// A general wrapper to pass a seed along with actual data
+/// A general wrapper to pass a seed along with actual data
 #[derive(Debug, Clone)]
 pub struct SeededData<T: Clone> {
     pub seed: u64,

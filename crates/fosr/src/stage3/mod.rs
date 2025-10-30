@@ -24,8 +24,7 @@ use std::net::Ipv4Addr;
 use std::num::Wrapping;
 use std::sync::Arc;
 
-/// Represents stage 3 of the packet generator.
-/// It contains configuration data and state necessary for generating packets.
+/// Stage 3: generate full packets from packet metadata
 #[derive(Debug, Clone)]
 pub struct Stage3 {
     taint: bool,
@@ -600,6 +599,7 @@ pub fn run_export(
     }
 }
 
+/// Simulates a pcap export. It must be called to consume the generated data.
 pub fn run_dummy_export(rx_pcap: thingbuf::mpsc::blocking::Receiver<Packets, PacketsRecycler>) {
     while rx_pcap.recv_ref().is_some() {}
 }

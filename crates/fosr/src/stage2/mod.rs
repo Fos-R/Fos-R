@@ -7,8 +7,10 @@ use crossbeam_channel::{Receiver, Sender};
 use std::sync::Arc;
 
 mod automaton;
+/// An implementation of TADAM automaton for generation
 pub mod tadam;
 
+/// A trait for Stage 2 that generates packet metadata from flows
 pub trait Stage2: Clone + std::marker::Send + 'static {
     fn generate_tcp_packets_info(
         &self,
@@ -24,6 +26,7 @@ pub trait Stage2: Clone + std::marker::Send + 'static {
     ) -> Option<SeededData<PacketsIR<ICMPPacketInfo>>>;
 }
 
+/// A set of Sender used by a Stage 2. Each Sender corresponds to a L4 protocol.
 #[derive(Debug, Clone)]
 pub struct S2Sender {
     pub tcp: Sender<SeededData<PacketsIR<TCPPacketInfo>>>,
@@ -31,6 +34,7 @@ pub struct S2Sender {
     pub icmp: Sender<SeededData<PacketsIR<ICMPPacketInfo>>>,
 }
 
+/// Generate packet metadata from flows
 pub fn run(
     generator: impl Stage2,
     rx_s2: Receiver<SeededData<Flow>>,
