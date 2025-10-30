@@ -56,3 +56,6 @@ iptables = ["net_injection"]
 # Linux & Windows only
 ebpf = ["dep:aya", "net_injection", "dep:fosr-ebpf"]
 
+[package.metadata.deb]
+section = "science"
+depends = ["$auto", "iptables"]
