@@ -224,6 +224,7 @@ fn main() {
             order_pcap,
             start_time,
             duration,
+            taint,
         } => {
             // load the models
             let profile = Profile::load(profile.as_deref());
@@ -262,7 +263,7 @@ fn main() {
             let s1 =
                 stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(false, profile.config);
+            let s3 = stage3::Stage3::new(taint, profile.config);
 
             let (s1_count, s2_count, s3_count) = if minimum_threads {
                 (1, 1, 1) // only use on thread per task
