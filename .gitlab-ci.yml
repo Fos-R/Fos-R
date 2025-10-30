@@ -213,7 +213,7 @@ eval-suricata:
 
 
 pages:
-  image: alpine
+  image: debian:bookworm # required to run fosr
   tags:
     - ci.inria.fr
     - small
@@ -223,7 +223,8 @@ pages:
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
-    - apk add pandoc
+    - apt update
+    - apt install -y pandoc
     - mv doc public/
     - mv target public/bin
     - mv analysis* public/
