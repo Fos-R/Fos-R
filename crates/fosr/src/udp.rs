@@ -3,9 +3,13 @@ use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct UDPPacketInfo {
+    /// the payload of the packet
     pub payload: Payload,
+    /// the timestamp of the packet
     pub ts: Duration,
+    /// the direction of the packet
     pub direction: PacketDirection,
+    /// whether the packet is a noise
     pub noise: NoiseType,
 }
 

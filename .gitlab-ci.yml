@@ -35,7 +35,7 @@ build-linux-x86-64:
     - cargo deb -p fosr
     - mkdir target/x86_64-unknown-linux-gnu
     - mv target/release target/x86_64-unknown-linux-gnu
-    - cargo doc --no-deps
+    - cargo doc
     - mv target/doc doc
   artifacts:
     paths:
@@ -239,7 +239,7 @@ pages:
     - find "analysis-tshark" -type f -exec echo "- [{}]({})" \; >> analysis.md
     - echo -e "\n## Suricata analysis\n" >> analysis.md
     - find "analysis-suricata" -type f -exec echo "- [{}]({})" \; >> analysis.md
-    - sed -i -e "s/FOSR_VERSION/$(bin/x86_64-unknown-linux-gnu/release/fosr -V | cut -d" " -f 2)/g" compile.md
+    - sed -i -e "s/FOSR_VERSION/$(./bin/x86_64-unknown-linux-gnu/release/fosr -V | cut -d" " -f 2)/g" compile.md
     - pandoc intro.md compile.md howto.md other_software roadmap.md usecases.md analysis-intro.md analysis.md refs.md -o index.html --template template.html --include-after-body footer.html --standalone --no-highlight --toc --toc-depth 2 --mathjax
   artifacts:
     paths:

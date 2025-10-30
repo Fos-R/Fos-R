@@ -8,14 +8,17 @@ use std::net::Ipv4Addr;
 use std::sync::Arc;
 use std::time::Duration;
 
+/// A implementation of FlowChronicle’s generation
 pub mod flowchronicle;
 // pub mod bayesian_networks;
 
-/// Stage 1: generates flow descriptions
+/// A trait for Stage 1 that generates flow descriptions
 pub trait Stage1: Clone + std::marker::Send + 'static {
+    /// Generate flow(s) from a starting timestamp
     fn generate_flows(&self, ts: SeededData<Duration>) -> impl Iterator<Item = SeededData<Flow>>;
 }
 
+/// Generate flows from timestamps
 pub fn run(
     generator: impl Stage1,
     rx_s1: Receiver<SeededData<Duration>>,
@@ -35,6 +38,7 @@ pub fn run(
     Ok(())
 }
 
+/// A structure used to drop generated flow that are irrelevant in a network injection scenario
 #[derive(Debug, Clone)]
 pub struct FilterForOnline<T: Stage1> {
     ips_to_keep: Vec<Ipv4Addr>,
