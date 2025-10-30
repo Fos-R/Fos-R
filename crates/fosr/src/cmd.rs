@@ -31,7 +31,8 @@ impl fmt::Display for InjectionAlgo {
 #[derive(Debug, Subcommand, Clone)]
 pub enum Command {
     #[cfg(feature = "net_injection")]
-    /// Generate network activity and inject it on the wire
+    /// This mode requires the `iptables` or `ebpf` feature. In this mode, Fos-R generates and injects network traffic between different computers in the same network.
+    /// Fos-R needs to be executed on each computer and provided a configuration file.
     Inject {
         #[arg(short, long, default_value = None, help = "Output pcap file of generated packets")]
         outfile: Option<String>,
@@ -68,7 +69,7 @@ pub enum Command {
             help = "Path to the profile with the models and the configuration"
         )]
         profile: Option<String>,
-        #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\"")]
+        #[arg(short = 'd', long, default_value = None, help = "Automatically stop the generation after this time. You can use human-friendly time, such as \"15days 30min 5s\"")]
         duration: Option<String>,
         #[arg(
             short,
