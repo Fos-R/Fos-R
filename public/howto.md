@@ -12,6 +12,7 @@ Usage: fosr create-pcap [OPTIONS] <--duration <DURATION>|--packets-count <PACKET
 Options:
   -o, --outfile <OUTFILE>              Output pcap file for synthetic network packets [default: output.pcap]
       --minimum-threads                Use as few threads as possible
+      --taint                          Taint the packets
   -n, --packets-count <PACKETS_COUNT>  Minimum number of packets to generate. Beware: generation is not deterministic.
   -d, --duration <DURATION>            Minimum pcap traffic duration described in human-friendly time, such as "15days 30min 5s". Generation is deterministic when used with --order-pcap and --seed.
   -t, --start-time <START_TIME>        Beginning time of the pcap in RFC3339 style ("2025-05-01 10:28:07") or a Unix timestamp. By default, use current time
