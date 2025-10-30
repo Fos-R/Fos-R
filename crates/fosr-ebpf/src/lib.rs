@@ -16,7 +16,7 @@
 ///
 /// # Ok::<(), aya::EbpfError>(())
 /// ```
-#[macro_export]
+#[allow(unused_macros)]
 macro_rules! include_bytes_aligned {
     ($path:expr) => {{
         #[repr(align(32))]
@@ -38,5 +38,6 @@ macro_rules! include_bytes_aligned {
 }
 
 #[cfg(not(target_os = "none"))]
+/// The compiled eBPF program, ready to be loaded
 pub static EBPF_PROGRAM: &[u8] =
     include_bytes_aligned!(concat!(env!("OUT_DIR"), "/fosr-ebpf-prog"));
