@@ -11,7 +11,6 @@ use fosr::ui::Target;
 use fosr::*;
 mod cmd; // cmd is not part of the library
 
-use pcap_file::pcap::{PcapPacket, PcapWriter};
 use std::cmp::max;
 use std::collections::HashMap;
 use std::fs;
@@ -23,11 +22,14 @@ use std::process;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Instant;
 
 use clap::Parser;
 use crossbeam_channel::bounded;
 #[cfg(feature = "net_injection")]
 use pnet::{datalink, ipnetwork::IpNetwork};
+use pcap_file::pcap::{PcapPacket, PcapWriter};
+use indicatif::HumanBytes;
 
 const CHANNEL_SIZE: usize = 50;
 
@@ -642,6 +644,8 @@ fn run_monothread(
     s2: impl stage2::Stage2,
     s3: stage3::Stage3,
 ) {
+    let start = Instant::now();
+
     log::info!("Stage 0 generation");
     let vec = stage0::run_vec(s0);
     log::info!("Stage 1 generation");
@@ -664,6 +668,10 @@ fn run_monothread(
         |f, p, a| s3.generate_icmp_packets(f, p, a),
         vec.icmp,
     ));
+
+    let gen_duration = start.elapsed().as_secs_f64();
+    let total_size = all_packets.iter().map(|p| p.data.len()).sum::<usize>() as u64;
+    log::info!("Generation throughput: {}/s", HumanBytes(((total_size as f64) / gen_duration) as u64));
 
     if export.order_pcap {
         log::info!("Sorting the packets");

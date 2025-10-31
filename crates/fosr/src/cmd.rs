@@ -111,7 +111,7 @@ pub enum Command {
         #[arg(
             long,
             default_value_t = false,
-            help = "Do not multithread. Severely degrade the performances."
+            help = "Do not multithread. Use this option if you have a limited number of cores."
         )]
         monothread: bool,
         // #[arg(
