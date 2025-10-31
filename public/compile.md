@@ -38,7 +38,7 @@ The sources of Fos-R are located on [Inria’s GitLab](https://gitlab.inria.fr/p
 
 ## Use as a library
 
-Fos-R also includes a Rust library that exposes the main parts of the software. Its documentation is [here](doc/fosr/all.html). You can add the stable version of Fos-R to a Rust project with:
+Fos-R also includes a Rust library that exposes the main parts of the software. Its documentation is [here](doc/fosr/index.html). You can add the stable version of Fos-R to a Rust project with:
 
 `cargo add fosr`
 
