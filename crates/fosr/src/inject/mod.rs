@@ -24,6 +24,8 @@ pub mod iptables;
 
 /// A trait for network enablers
 pub trait NetEnabler: Clone + std::marker::Send + 'static {
+    fn get_ttl(&self) -> Option<u8>;
+
     /// is this packet sent by Fos-R ?
     fn is_packet_relevant(&self, flags: u8) -> bool;
 
@@ -50,4 +52,7 @@ impl NetEnabler for DummyNetEnabler {
     }
     fn close_session(&self, _: &FlowId) {}
     fn open_session(&self, _: &FlowId) {}
+    fn get_ttl(&self) -> Option<u8> {
+        None
+    }
 }
