@@ -494,7 +494,7 @@ fn send_pcap(flow_packets: thingbuf::mpsc::blocking::SendRef<Packets>) {
 /// This function receives intermediate packet data from rx_s3, generates complete
 /// packets using the provided generator function, and then sends the generated flows
 /// to appropriate channels based on the configuration (online transmission and/or pcap export).
-pub fn run<T: PacketInfo>(
+pub fn run_channel<T: PacketInfo>(
     generator: impl Fn(&SeededData<PacketsIR<T>>, &mut Packets, &mut [u8; 65536]),
     local_interfaces: Vec<Ipv4Addr>,
     rx_s3: Receiver<SeededData<PacketsIR<T>>>,
@@ -530,6 +530,26 @@ pub fn run<T: PacketInfo>(
     }
     log::trace!("S3 stops");
     Ok(())
+}
+
+/// Complete the packets
+pub fn run_vec<T: PacketInfo>(
+    generator: impl Fn(&SeededData<PacketsIR<T>>, &mut Packets, &mut [u8; 65536]),
+    vec_s3: Vec<SeededData<PacketsIR<T>>>,
+) -> Vec<Packet> {
+    let mut payload_array: [u8; 65536] = [0; 65536]; // to avoid allocating Vec for payloads
+    let mut all_packets: Vec<Packet> = vec![];
+
+    for headers in vec_s3 {
+        let mut flow_packets = Packets::default();
+        generator(&headers, &mut flow_packets, &mut payload_array);
+        for packet in flow_packets.packets.iter() {
+            all_packets.push(packet.clone());
+        }
+
+    }
+
+    all_packets
 }
 
 /// Runs the pcap export thread.

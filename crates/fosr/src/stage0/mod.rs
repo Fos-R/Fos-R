@@ -171,7 +171,7 @@ impl UniformGenerator {
     }
 }
 
-pub fn run(
+pub fn run_channel(
     generator: impl Stage0,
     tx_s0: Sender<SeededData<Duration>>,
     stats: Arc<Stats>,
@@ -188,4 +188,14 @@ pub fn run(
     }
     log::trace!("S0 stops");
     Ok(())
+}
+
+pub fn run_vec(generator: impl Stage0) -> Vec<SeededData<Duration>> {
+    log::trace!("Start S0");
+    let mut vector = vec![];
+    for ts in generator {
+        vector.push(ts);
+    }
+    log::trace!("S0 stops");
+    vector
 }

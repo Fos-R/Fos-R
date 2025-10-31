@@ -108,8 +108,12 @@ pub enum Command {
         outfile: String,
         #[arg(long, default_value_t = false, help = "Taint the packets")]
         taint: bool,
-        #[arg(long, default_value_t = false, help = "Use as few threads as possible")]
-        minimum_threads: bool,
+        #[arg(
+            long,
+            default_value_t = false,
+            help = "Do not multithread. Severely degrade the performances."
+        )]
+        monothread: bool,
         // #[arg(
         //     short,
         //     long,
