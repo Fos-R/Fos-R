@@ -1,11 +1,11 @@
 // we access the code through the library
+#[cfg(feature = "net_injection")]
+use fosr::inject;
 use fosr::pcap2flow;
 use fosr::stage0;
 use fosr::stage1;
 use fosr::stage2;
 use fosr::stage3;
-#[cfg(feature = "net_injection")]
-use fosr::inject;
 use fosr::structs::*;
 use fosr::ui::Target;
 use fosr::*;
@@ -21,15 +21,15 @@ use std::path::Path;
 use std::process;
 use std::sync::Arc;
 use std::thread;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::time::Instant;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use clap::Parser;
 use crossbeam_channel::bounded;
+use indicatif::HumanBytes;
+use pcap_file::pcap::{PcapPacket, PcapWriter};
 #[cfg(feature = "net_injection")]
 use pnet::{datalink, ipnetwork::IpNetwork};
-use pcap_file::pcap::{PcapPacket, PcapWriter};
-use indicatif::HumanBytes;
 
 const CHANNEL_SIZE: usize = 50;
 
@@ -671,7 +671,10 @@ fn run_monothread(
 
     let gen_duration = start.elapsed().as_secs_f64();
     let total_size = all_packets.iter().map(|p| p.data.len()).sum::<usize>() as u64;
-    log::info!("Generation throughput: {}/s", HumanBytes(((total_size as f64) / gen_duration) as u64));
+    log::info!(
+        "Generation throughput: {}/s",
+        HumanBytes(((total_size as f64) / gen_duration) as u64)
+    );
 
     if export.order_pcap {
         log::info!("Sorting the packets");

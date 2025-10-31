@@ -17,6 +17,9 @@ impl NetEnabler for EBPFNetEnabler {
     }
     fn close_session(&self, _: &FlowId) {}
     fn open_session(&self, _: &FlowId) {}
+    fn get_ttl(&self) -> Option<u8> {
+        None
+    }
 }
 
 /// Load the ebpf XDP program, and attach it to each valid interface used by Fos-R.
