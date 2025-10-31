@@ -19,7 +19,7 @@ pub trait Stage1: Clone + std::marker::Send + 'static {
 }
 
 /// Generate flows from timestamps
-pub fn run(
+pub fn run_channel(
     generator: impl Stage1,
     rx_s1: Receiver<SeededData<Duration>>,
     tx_s1: Sender<SeededData<Flow>>,
@@ -36,6 +36,19 @@ pub fn run(
     }
     log::trace!("S1 stops");
     Ok(())
+}
+
+/// Generate flows from timestamps
+pub fn run_vec(generator: impl Stage1, vec_s1: Vec<SeededData<Duration>>) -> Vec<SeededData<Flow>> {
+    log::trace!("Start S1");
+    let mut vector = vec![];
+    for ts in vec_s1 {
+        for f in generator.generate_flows(ts) {
+            vector.push(f);
+        }
+    }
+    log::trace!("S1 stops");
+    vector
 }
 
 /// A structure used to drop generated flow that are irrelevant in a network injection scenario

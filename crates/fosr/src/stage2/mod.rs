@@ -34,8 +34,14 @@ pub struct S2Sender {
     pub icmp: Sender<SeededData<PacketsIR<ICMPPacketInfo>>>,
 }
 
+pub struct S2Vector {
+    pub tcp: Vec<SeededData<PacketsIR<TCPPacketInfo>>>,
+    pub udp: Vec<SeededData<PacketsIR<UDPPacketInfo>>>,
+    pub icmp: Vec<SeededData<PacketsIR<ICMPPacketInfo>>>,
+}
+
 /// Generate packet metadata from flows
-pub fn run(
+pub fn run_channel(
     generator: impl Stage2,
     rx_s2: Receiver<SeededData<Flow>>,
     tx_s2: S2Sender,
@@ -76,4 +82,45 @@ pub fn run(
     }
     log::trace!("S2 stops");
     Ok(())
+}
+
+/// Generate packet metadata from flows
+pub fn run_vec(generator: impl Stage2, vec_s2: Vec<SeededData<Flow>>) -> S2Vector {
+    log::trace!("Start S2");
+    let mut vectors = S2Vector {
+        tcp: vec![],
+        udp: vec![],
+        icmp: vec![],
+    };
+    for flow in vec_s2 {
+        log::trace!("Generating packets info");
+        match flow.data {
+            Flow::TCP(data) => {
+                if let Some(pir) = generator.generate_tcp_packets_info(SeededData {
+                    seed: flow.seed,
+                    data,
+                }) {
+                    vectors.tcp.push(pir);
+                }
+            }
+            Flow::UDP(data) => {
+                if let Some(pir) = generator.generate_udp_packets_info(SeededData {
+                    seed: flow.seed,
+                    data,
+                }) {
+                    vectors.udp.push(pir);
+                }
+            }
+            Flow::ICMP(data) => {
+                if let Some(pir) = generator.generate_icmp_packets_info(SeededData {
+                    seed: flow.seed,
+                    data,
+                }) {
+                    vectors.icmp.push(pir);
+                }
+            }
+        }
+    }
+    log::trace!("S2 stops");
+    vectors
 }

@@ -20,6 +20,9 @@ use std::process;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::fs::OpenOptions;
+use pcap_file::pcap::{PcapWriter, PcapPacket};
+use std::io::BufWriter;
 
 use clap::Parser;
 use crossbeam_channel::bounded;
@@ -79,7 +82,6 @@ fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args = cmd::Args::parse();
 
-
     match args.command {
         cmd::Command::Pcap2Flow {
             input_pcap,
@@ -132,7 +134,6 @@ fn main() {
                 .filter(|i| !i.is_loopback())
                 .collect();
             log::debug!("IPv4 interfaces: {:?}", &local_ips);
-
 
             // identify the role of the current host
             let profile = Profile::load(profile.as_deref());
@@ -220,7 +221,7 @@ fn main() {
             profile,
             outfile,
             packets_count,
-            minimum_threads,
+            monothread,
             order_pcap,
             start_time,
             duration,
@@ -265,29 +266,39 @@ fn main() {
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(taint, profile.config);
 
-            let (s1_count, s2_count, s3_count) = if minimum_threads {
-                (1, 1, 1) // only use on thread per task
+            let cpu_count = num_cpus::get();
+            let (s1_count, s2_count, s3_count) = (
+                max(1, cpu_count / 2),
+                max(1, cpu_count / 2),
+                max(1, cpu_count / 2),
+            ); // the total is indeed larger than cpu_count. This has been empirically assessed to be a correct heuristic to maximise the performances
+
+            if monothread {
+                run_monothread(
+                    ExportParams {
+                        outfile,
+                        order_pcap,
+                    },
+                    s0,
+                    s1,
+                    s2,
+                    s3,
+                );
             } else {
-                let cpu_count = num_cpus::get();
-                (
-                    max(1, cpu_count / 2),
-                    max(1, cpu_count / 2),
-                    max(1, cpu_count / 2),
-                ) // the total is indeed larger than cpu_count. This has been empirically assessed to be a correct heuristic to maximise the performances
-            };
-            run(
-                vec![],
-                Some(ExportParams {
-                    outfile,
-                    order_pcap,
-                }),
-                s0,
-                (s1, s1_count),
-                (s2, s2_count),
-                (s3, s3_count),
-                Arc::new(ui::Stats::new(target)),
-                None::<S4Param<stage4::DummyNetEnabler>>,
-            );
+                run(
+                    vec![],
+                    Some(ExportParams {
+                        outfile,
+                        order_pcap,
+                    }),
+                    s0,
+                    (s1, s1_count),
+                    (s2, s2_count),
+                    (s3, s3_count),
+                    Arc::new(ui::Stats::new(target)),
+                    None::<S4Param<stage4::DummyNetEnabler>>,
+                );
+            }
         }
         cmd::Command::Untaint { input, output } => {
             pcap2flow::untaint_file(&input, &output);
@@ -444,7 +455,7 @@ fn run<T: stage4::NetEnabler>(
         gen_threads.push(
             builder
                 .spawn(move || {
-                    let _ = stage0::run(s0, tx_s0, stats_s0);
+                    let _ = stage0::run_channel(s0, tx_s0, stats_s0);
                 })
                 .unwrap(),
         );
@@ -460,7 +471,7 @@ fn run<T: stage4::NetEnabler>(
             gen_threads.push(
                 builder
                     .spawn(move || {
-                        let _ = stage1::run(s1, rx_s1, tx_s1, stats);
+                        let _ = stage1::run_channel(s1, rx_s1, tx_s1, stats);
                     })
                     .unwrap(),
             );
@@ -477,7 +488,7 @@ fn run<T: stage4::NetEnabler>(
             gen_threads.push(
                 builder
                     .spawn(move || {
-                        let _ = stage2::run(s2, rx_s2, tx_s2, stats);
+                        let _ = stage2::run_channel(s2, rx_s2, tx_s2, stats);
                     })
                     .unwrap(),
             );
@@ -504,7 +515,7 @@ fn run<T: stage4::NetEnabler>(
                         gen_threads.push(
                             builder
                                 .spawn(move || {
-                                    let _ = stage3::run(
+                                    let _ = stage3::run_channel(
                                         |f, p, a| s3.generate_tcp_packets(f, p, a),
                                         local_interfaces,
                                         rx_s3_tcp,
@@ -522,7 +533,7 @@ fn run<T: stage4::NetEnabler>(
                         gen_threads.push(
                             builder
                                 .spawn(move || {
-                                    let _ = stage3::run(
+                                    let _ = stage3::run_channel(
                                         |f, p, a| s3.generate_udp_packets(f, p, a),
                                         local_interfaces,
                                         rx_s3_udp,
@@ -540,7 +551,7 @@ fn run<T: stage4::NetEnabler>(
                         gen_threads.push(
                             builder
                                 .spawn(move || {
-                                    let _ = stage3::run(
+                                    let _ = stage3::run_channel(
                                         |f, p, a| s3.generate_icmp_packets(f, p, a),
                                         local_interfaces,
                                         rx_s3_icmp,
@@ -619,5 +630,56 @@ fn run<T: stage4::NetEnabler>(
     // Wait for the other threads to stop
     for thread in threads {
         thread.join().unwrap();
+    }
+}
+
+/// Run the generation with only one thread
+fn run_monothread(
+    export: ExportParams,
+    s0: impl stage0::Stage0,
+    s1: impl stage1::Stage1,
+    s2: impl stage2::Stage2,
+    s3: stage3::Stage3,
+) {
+    let vec = stage0::run_vec(s0);
+    let vec = stage1::run_vec(s1, vec);
+    let vec = stage2::run_vec(s2, vec);
+
+    let mut all_packets = vec![];
+
+    all_packets.append(&mut stage3::run_vec(
+        |f, p, a| s3.generate_udp_packets(f, p, a),
+        vec.udp,
+    ));
+    all_packets.append(&mut stage3::run_vec(
+        |f, p, a| s3.generate_tcp_packets(f, p, a),
+        vec.tcp,
+    ));
+    all_packets.append(&mut stage3::run_vec(
+        |f, p, a| s3.generate_icmp_packets(f, p, a),
+        vec.icmp,
+    ));
+
+    if export.order_pcap {
+        log::info!("Sorting the packets");
+        all_packets.sort_unstable();
+    }
+
+    let file_out = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&export.outfile)
+        .expect("Error opening or creating file");
+    let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
+
+    for packet in all_packets.iter() {
+        pcap_writer
+            .write_packet(&PcapPacket::new(
+                packet.timestamp,
+                packet.data.len() as u32,
+                &packet.data,
+            ))
+            .unwrap();
     }
 }
