@@ -274,6 +274,7 @@ fn main() {
             ); // the total is indeed larger than cpu_count. This has been empirically assessed to be a correct heuristic to maximise the performances
 
             if monothread {
+                log::info!("Monothread generation");
                 run_monothread(
                     ExportParams {
                         outfile,
@@ -641,12 +642,16 @@ fn run_monothread(
     s2: impl stage2::Stage2,
     s3: stage3::Stage3,
 ) {
+    log::info!("Stage 0 generation");
     let vec = stage0::run_vec(s0);
+    log::info!("Stage 1 generation");
     let vec = stage1::run_vec(s1, vec);
+    log::info!("Stage 2 generation");
     let vec = stage2::run_vec(s2, vec);
 
     let mut all_packets = vec![];
 
+    log::info!("Stage 3 generation");
     all_packets.append(&mut stage3::run_vec(
         |f, p, a| s3.generate_udp_packets(f, p, a),
         vec.udp,
@@ -673,6 +678,7 @@ fn run_monothread(
         .expect("Error opening or creating file");
     let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
 
+    log::info!("Pcap export");
     for packet in all_packets.iter() {
         pcap_writer
             .write_packet(&PcapPacket::new(
