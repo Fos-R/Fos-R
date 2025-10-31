@@ -546,7 +546,6 @@ pub fn run_vec<T: PacketInfo>(
         for packet in flow_packets.packets.iter() {
             all_packets.push(packet.clone());
         }
-
     }
 
     all_packets

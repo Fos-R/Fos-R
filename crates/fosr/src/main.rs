@@ -11,18 +11,18 @@ use fosr::ui::Target;
 use fosr::*;
 mod cmd; // cmd is not part of the library
 
+use pcap_file::pcap::{PcapPacket, PcapWriter};
 use std::cmp::max;
 use std::collections::HashMap;
 use std::fs;
+use std::fs::OpenOptions;
+use std::io::BufWriter;
 use std::net::Ipv4Addr;
 use std::path::Path;
 use std::process;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use std::fs::OpenOptions;
-use pcap_file::pcap::{PcapWriter, PcapPacket};
-use std::io::BufWriter;
 
 use clap::Parser;
 use crossbeam_channel::bounded;
