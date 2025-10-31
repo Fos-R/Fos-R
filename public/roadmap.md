@@ -23,6 +23,6 @@ Goal: a documented Fos-R library, a GUI and more generation portability
 
 Goal: High-throughput network injection
 
-- A new stage 4 for a reliable and high-throughput network injection
+- A new network enabler for reliable and high-throughput network injection
 - Injection mode on Windows
 - New injection modes

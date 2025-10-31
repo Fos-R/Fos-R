@@ -44,7 +44,7 @@ fn receive_packets(
     stats: Arc<Stats>,
 ) {
     // Send and receive packets in this thread
-    log::info!("Start S4-rx");
+    log::info!("Start injection rx");
     let mut rx_iter = ipv4_packet_iter(&mut rx);
     loop {
         let (recv_packet, _) = rx_iter.next().expect("Network error");
@@ -125,7 +125,7 @@ fn send_packets(
     stats: Arc<Stats>,
     rx_s4: Receiver<Packets>,
 ) {
-    log::info!("Start S4-tx");
+    log::info!("Start injection tx");
     // Send and receive packets in this thread
     let mut next_timeout_check = SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
         + Duration::from_secs(INTERVAL_TIMEOUT_CHECKS_IN_SECS);
@@ -308,7 +308,7 @@ pub fn start_reliable(
     incoming_flows: HashMap<Protocol, Receiver<Packets>>,
     stats: Arc<Stats>,
 ) {
-    log::trace!("Start S4");
+    log::trace!("Start injection");
     // let mut sel = Select::new();
     let mut join_handles = Vec::new();
     // let mut receivers = Vec::<Receiver<Packets>>::new(); // a list of receivers, for when used with Select
@@ -371,5 +371,5 @@ pub fn start_reliable(
         // wait for the TX threads to finish
         handle.join().unwrap();
     }
-    log::trace!("S4 stops");
+    log::trace!("Injection stops");
 }

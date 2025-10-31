@@ -444,12 +444,6 @@ impl Stage3 {
 //     todo!()
 // }
 
-/// Sends packets online based on the local interfaces.
-///
-/// Depending on whether the source, destination, or both IPs exist on local
-/// interfaces, the function sends the packet flow to stage 4 (tx_s3) in one or
-/// two forms. If both IPs are local, a clone is sent, and then the flow is
-/// reversed before sending to ensure stage 4 is always the source.
 pub fn send_online(
     local_interfaces: &[Ipv4Addr],
     mut flow_packets: Packets,
@@ -463,7 +457,7 @@ pub fn send_online(
         log::trace!("Both source and destination IP are local");
         // only copy if we have to
         tx_s3.send(flow_packets.clone()).unwrap();
-        // ensure stage 4 is always the source
+        // ensure this host is always the source
         flow_packets.reverse();
         tx_s3.send(flow_packets).unwrap();
     } else if src_s4 {
@@ -471,7 +465,7 @@ pub fn send_online(
         tx_s3.send(flow_packets).unwrap();
     } else if dst_s4 {
         log::trace!("Destination IP is local");
-        // ensure stage 4 is always the source
+        // ensure this host is always the source
         flow_packets.reverse();
         tx_s3.send(flow_packets).unwrap();
     }
