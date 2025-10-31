@@ -5,7 +5,7 @@ use fosr::stage1;
 use fosr::stage2;
 use fosr::stage3;
 #[cfg(feature = "net_injection")]
-use fosr::stage4;
+use fosr::inject;
 use fosr::structs::*;
 use fosr::ui::Target;
 use fosr::*;
@@ -39,7 +39,7 @@ struct Profile {
     config: config::Hosts,
 }
 
-struct S4Param<T: stage4::NetEnabler> {
+struct InjectParam<T: inject::NetEnabler> {
     net_enabler: T,
     injection_algo: cmd::InjectionAlgo,
 }
@@ -121,7 +121,7 @@ fn main() {
                         _ => unreachable!(),
                     })
             };
-            // the local interfaces are used by the stage 4 and to identify local IPs
+            // the local interfaces are used by the inject module and used to identify local IPs
             // we do not include loopback interfaces or interfaces without an IPv4 address
             let local_interfaces: Vec<datalink::NetworkInterface> = datalink::interfaces()
                 .into_iter()
@@ -178,8 +178,8 @@ fn main() {
             match net_enabler {
                 #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
                 cmd::NetEnabler::Ebpf => {
-                    let s4net = S4Param {
-                        net_enabler: stage4::ebpf::EBPFNetEnabler::new(false, &local_interfaces),
+                    let s4net = InjectParam {
+                        net_enabler: inject::ebpf::EBPFNetEnabler::new(false, &local_interfaces),
                         injection_algo,
                     };
                     run(
@@ -198,8 +198,8 @@ fn main() {
                 }
                 #[cfg(all(target_os = "linux", feature = "iptables"))]
                 cmd::NetEnabler::Iptables => {
-                    let s4net = S4Param {
-                        net_enabler: stage4::iptables::IPTablesNetEnabler::new(!stealthy, false),
+                    let s4net = InjectParam {
+                        net_enabler: inject::iptables::IPTablesNetEnabler::new(!stealthy, false),
                         injection_algo,
                     };
                     run(
@@ -299,7 +299,7 @@ fn main() {
                     (s2, s2_count),
                     (s3, s3_count),
                     Arc::new(ui::Stats::new(target)),
-                    None::<S4Param<stage4::DummyNetEnabler>>,
+                    None::<InjectParam<inject::DummyNetEnabler>>,
                 );
             }
         }
@@ -353,8 +353,8 @@ fn main() {
           //         .unwrap();
 
           //     // Stage 4
-          //     let mut stage_4 = stage4::Stage4::new(taint, fast);
-          //     let thread_builder = thread::Builder::new().name("replay_stage4".to_owned());
+          //     let mut stage_4 = inject::inject::new(taint, fast);
+          //     let thread_builder = thread::Builder::new().name("replay_inject".to_owned());
           //     let stage_4_thread = thread_builder
           //         .spawn(move || {
           //             stage_4.start(stage_4_rx);
@@ -394,7 +394,7 @@ struct ExportParams {
 /// - `stats`: an Arc to a structure containing generation statistics
 /// - `s4net`: an optional network enable
 #[allow(clippy::too_many_arguments)]
-fn run<T: stage4::NetEnabler>(
+fn run<T: inject::NetEnabler>(
     local_interfaces: Vec<Ipv4Addr>,
     export: Option<ExportParams>,
     s0: impl stage0::Stage0,
@@ -402,7 +402,7 @@ fn run<T: stage4::NetEnabler>(
     s2: (impl stage2::Stage2, usize),
     s3: (stage3::Stage3, usize),
     stats: Arc<ui::Stats>,
-    s4net: Option<S4Param<T>>,
+    s4net: Option<InjectParam<T>>,
 ) {
     let (s1, s1_count) = s1;
     let (s2, s2_count) = s2;
@@ -593,15 +593,15 @@ fn run<T: stage4::NetEnabler>(
         #[cfg(feature = "net_injection")]
         if let Some(s4net) = s4net {
             let stats = Arc::clone(&stats);
-            let builder = thread::Builder::new().name("Stage4".into());
+            let builder = thread::Builder::new().name("inject".into());
             gen_threads.push(
                 builder
                     .spawn(move || match s4net.injection_algo {
                         cmd::InjectionAlgo::Fast => {
-                            stage4::start_fast(s4net.net_enabler, rx_s4, stats)
+                            inject::start_fast(s4net.net_enabler, rx_s4, stats)
                         }
                         cmd::InjectionAlgo::Reliable => {
-                            stage4::start_reliable(s4net.net_enabler, rx_s4, stats)
+                            inject::start_reliable(s4net.net_enabler, rx_s4, stats)
                         }
                     })
                     .unwrap(),

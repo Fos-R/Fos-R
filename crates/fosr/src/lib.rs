@@ -38,4 +38,4 @@ pub mod stage2;
 pub mod stage3;
 
 /// Network injection
-pub mod stage4;
+pub mod inject;
