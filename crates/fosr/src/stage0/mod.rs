@@ -1,5 +1,5 @@
 use crate::structs::*;
-use crate::ui::Stats;
+use crate::stats::Stats;
 
 use crossbeam_channel::Sender;
 use rand_core::*;

@@ -7,7 +7,7 @@ use fosr::stage1;
 use fosr::stage2;
 use fosr::stage3;
 use fosr::structs::*;
-use fosr::ui::Target;
+use fosr::stats::Target;
 use fosr::*;
 mod cmd; // cmd is not part of the library
 
@@ -192,7 +192,7 @@ fn main() {
                         (s1, 1),
                         (s2, 1),
                         (s3, 1),
-                        Arc::new(ui::Stats::default()),
+                        Arc::new(stats::Stats::default()),
                         Some(s4net),
                     );
                 }
@@ -212,7 +212,7 @@ fn main() {
                         (s1, 1),
                         (s2, 1),
                         (s3, 1),
-                        Arc::new(ui::Stats::default()),
+                        Arc::new(stats::Stats::default()),
                         Some(s4net),
                     );
                 }
@@ -300,7 +300,7 @@ fn main() {
                     (s1, s1_count),
                     (s2, s2_count),
                     (s3, s3_count),
-                    Arc::new(ui::Stats::new(target)),
+                    Arc::new(stats::Stats::new(target)),
                     None::<InjectParam<inject::DummyNetEnabler>>,
                 );
             }
@@ -345,7 +345,7 @@ fn run<T: inject::NetEnabler>(
     s1: (impl stage1::Stage1, usize),
     s2: (impl stage2::Stage2, usize),
     s3: (stage3::Stage3, usize),
-    stats: Arc<ui::Stats>,
+    stats: Arc<stats::Stats>,
     s4net: Option<InjectParam<T>>,
 ) {
     let (s1, s1_count) = s1;
@@ -556,7 +556,7 @@ fn run<T: inject::NetEnabler>(
     {
         let stats = Arc::clone(&stats);
         let builder = thread::Builder::new().name("Monitoring".into());
-        threads.push(builder.spawn(move || ui::run(stats)).unwrap());
+        threads.push(builder.spawn(move || stats::run(stats)).unwrap());
     }
 
     // Wait for the generation threads to end

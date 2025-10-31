@@ -6,7 +6,7 @@ pub mod config;
 /// Structures used throughout the library
 pub mod structs;
 /// Generation statistics
-pub mod ui;
+pub mod stats;
 
 /// ICMP-specific fonctions
 mod icmp;

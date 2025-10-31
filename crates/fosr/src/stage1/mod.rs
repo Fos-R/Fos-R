@@ -1,6 +1,6 @@
 use crate::config::Hosts;
 use crate::structs::*;
-use crate::ui::Stats;
+use crate::stats::Stats;
 use crossbeam_channel::{Receiver, Sender};
 use rand_core::*;
 use rand_pcg::Pcg32;
