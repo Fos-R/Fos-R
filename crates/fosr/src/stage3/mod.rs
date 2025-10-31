@@ -3,7 +3,7 @@ use crate::icmp::*;
 use crate::structs::*;
 use crate::tcp::TCPPacketInfo;
 use crate::udp::*;
-use crate::ui::Stats;
+use crate::stats::Stats;
 
 use crossbeam_channel::{Receiver, Sender};
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
