@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Better library documentation
+- Option for monothreaded generation
+
+### Changed
+
+- "stage4" module renamed to "inject"
+- Bugfixes
+
 ## v0.1.2
 
 ### Added

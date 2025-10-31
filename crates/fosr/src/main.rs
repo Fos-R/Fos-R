@@ -267,14 +267,6 @@ fn main() {
                 stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(taint, profile.config);
-
-            let cpu_count = num_cpus::get();
-            let (s1_count, s2_count, s3_count) = (
-                max(1, cpu_count / 2),
-                max(1, cpu_count / 2),
-                max(1, cpu_count / 2),
-            ); // the total is indeed larger than cpu_count. This has been empirically assessed to be a correct heuristic to maximise the performances
-
             if monothread {
                 log::info!("Monothread generation");
                 run_monothread(
@@ -288,6 +280,16 @@ fn main() {
                     s3,
                 );
             } else {
+                let cpu_count = num_cpus::get();
+                if cpu_count <= 2 {
+                    log::warn!("This host has only {cpu_count} core(s). Consider using the --monothread option.");
+                }
+                let (s1_count, s2_count, s3_count) = (
+                    max(1, cpu_count / 2),
+                    max(1, cpu_count / 2),
+                    max(1, cpu_count / 2),
+                ); // the total is indeed larger than cpu_count. This has been empirically assessed to be a correct heuristic to maximise the performances
+
                 run(
                     vec![],
                     Some(ExportParams {
@@ -305,65 +307,7 @@ fn main() {
         }
         cmd::Command::Untaint { input, output } => {
             pcap2flow::untaint_file(&input, &output);
-        } // #[cfg(feature = "replay")]
-          // cmd::Command::Replay {
-          //     file,
-          //     // config_path,
-          //     taint,
-          //     fast,
-          // } => {
-          //     // Read content of the file
-          //     log::debug!("Initialize stages");
-          //     let mut flow_router_tx = HashMap::new();
-          //     let mut stage_4_rx = HashMap::new();
-
-          //     for proto in Protocol::iter() {
-          //         let (tx, rx) = bounded::<Packets>(crate::CHANNEL_SIZE);
-          //         flow_router_tx.insert(proto, tx);
-          //         stage_4_rx.insert(proto, rx);
-          //     }
-          //     // let ip_replacement_map: HashMap<Ipv4Addr, Ipv4Addr> = if let Some(path) = config_path {
-          //     //     // read from config file
-          //     //     replay::parse_config(
-          //     //         &fs::read_to_string(path).expect("Cannot access the configuration file."),
-          //     //     )
-          //     // } else {
-          //     //     // no IP replacement
-          //     //     HashMap::new()
-          //     // };
-
-          //     let stage_replay = replay::Replay::new();
-          //     let flows = stage_replay.parse_flows(&file);
-
-          //     // Flow router
-          //     let thread_builder = thread::Builder::new().name("replay_flow_router".to_string());
-          //     let flow_router = thread_builder
-          //         .spawn(move || {
-          //             let mut sent_flows = 0;
-          //             for flow in flows {
-          //                 let proto = flow.flow.get_proto();
-
-          //                 let tx = flow_router_tx.get(&proto).expect("Unknown protocol");
-          //                 stage3::send_online(&local_interfaces, flow, tx);
-          //                 sent_flows += 1;
-          //             }
-
-          //             log::info!("Sent {} flows to be replayed", sent_flows);
-          //         })
-          //         .unwrap();
-
-          //     // Stage 4
-          //     let mut stage_4 = inject::inject::new(taint, fast);
-          //     let thread_builder = thread::Builder::new().name("replay_inject".to_owned());
-          //     let stage_4_thread = thread_builder
-          //         .spawn(move || {
-          //             stage_4.start(stage_4_rx);
-          //         })
-          //         .unwrap();
-
-          //     flow_router.join().unwrap();
-          //     stage_4_thread.join().unwrap();
-          // }
+        }
     };
 }
 
