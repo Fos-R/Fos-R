@@ -43,7 +43,7 @@ aya = { version = "0.13.1", default-features = false, optional = true }
 
 [dev-dependencies]
 assert_cmd = "2.0.14"
-hex-literal = "1.0.0"
+hex = "0.4.3"
 sha2 = "0.10.9"
 
 [features]

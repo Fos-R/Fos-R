@@ -259,7 +259,6 @@ impl Packets {
 }
 
 impl Default for Packets {
-
     fn default() -> Self {
         Packets {
             packets: Vec::with_capacity(150),
@@ -278,7 +277,6 @@ impl Default for Packets {
             }),
         }
     }
-
 }
 
 pub struct PacketsRecycler {}
