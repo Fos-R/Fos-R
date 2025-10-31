@@ -19,6 +19,7 @@ fn deterministic_generation() -> Result<(), Box<dyn std::error::Error>> {
         .args(["-s", "0"])
         .args(["-d", "1min"])
         .args(["-t", "0"])
+        .args(["--tz", "CET"])
         .arg("--order-pcap")
         .env("RUST_LOG", "trace")
         .spawn()?;

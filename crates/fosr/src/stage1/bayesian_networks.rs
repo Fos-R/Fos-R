@@ -1,4 +1,5 @@
 use crate::stage1::*;
+
 use rand_distr::weighted::WeightedIndex;
 use rand_distr::{Distribution, Uniform};
 use rand_pcg::Pcg32;
@@ -9,6 +10,7 @@ use std::net::Ipv4Addr;
 use std::sync::Arc;
 use std::time::Duration;
 use std::iter;
+use serde_xml_rs::{from_str, to_string};
 
 #[derive(Debug, Clone, Default)]
 struct PartiallyDefinedFlowData {
@@ -74,13 +76,6 @@ struct BayesianNetworkNode {
 #[serde(from = "Vec<String>")]
 struct Ipv4Vector(Vec<Ipv4Addr>);
 
-impl From<Vec<String>> for Ipv4Vector {
-    fn from(v: Vec<String>) -> Ipv4Vector {
-        // ignore non-IPv4, like anonymised public IP addresses
-        Ipv4Vector(v.into_iter().flat_map(|s| s.parse()).collect())
-    }
-}
-
 #[derive(Deserialize, Debug, Clone)]
 #[serde(from = "Vec<(u64,u64)>")]
 struct Intervals(Vec<Uniform<u64>>);
@@ -96,20 +91,40 @@ impl From<Vec<(u64, u64)>> for Intervals {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-#[serde(tag = "type", content = "domain")]
-#[allow(unused)]
+#[serde(from = "Variable")]
 enum Feature {
     SrcIP(Ipv4Vector),
     DstIP(Ipv4Vector),
     DstPt(Vec<u16>),
     FwdPkt(Intervals),
     BwdPkt(Intervals),
-    // FwdByt(Intervals),
-    // BwdByt(Intervals),
-    Proto(Vec<Protocol>),
+    L7Proto(Vec<String>)
+    L4Proto(Vec<Protocol>),
     Duration(Vec<(f64, f64)>),
     Flags(Vec<String>),
 }
+
+impl From<Variable> for Feature {
+
+    fn from(v: Variable) -> Feature {
+        match v.name {
+            "Src IP Role" => SrcIPRole,
+            "Dst IP Role" => DstIPRole,
+            "Application Proto" => AppProto,
+            "Cat Out Packet" => FwdPkt(),
+            _ => panic!("Unknown variable!")
+        }
+    }
+}
+
+impl From<Vec<String>> for Ipv4Vector {
+    fn from(v: Vec<String>) -> Ipv4Vector {
+        // ignore non-IPv4, like anonymised public IP addresses
+        Ipv4Vector(v.into_iter().flat_map(|s| s.parse()).collect())
+    }
+}
+
+
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Deserialize, Debug, Clone)]
@@ -174,6 +189,41 @@ pub struct BayesianModel {
     metadata: BNMetaData,
 }
 
+
+// BIFXML format
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "UPPERCASE")]
+pub struct Bif {
+    network: Network
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "UPPERCASE")]
+pub struct Network {
+    name: String,
+    property: String,
+    variable: Vec<Variable>,
+    definition: Vec<Definition>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "UPPERCASE")]
+pub struct Variable {
+    name: String,
+    property: Vec<String>,
+    outcome: Vec<String>
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "UPPERCASE")]
+pub struct Definition {
+    #[serde(rename = "FOR")]
+    variable: String,
+    given: Option<String>,
+    table: String,
+}
+
 // TODO: add again when the file is written
 // impl Default for BayesianModel {
 //     #[cfg(debug_assertions)]
@@ -226,8 +276,14 @@ pub struct BNGenerator {
 }
 
 impl BNGenerator {
+    pub fn test() {
+        serde_xml_rs::from_str::<Bif>(include_str!("../../bn_common.bifxml")).unwrap();
+        log::warn!("Chargement réussi");
+    }
+
     pub fn new(model: Arc<BayesianModel>, config: Hosts, online: bool) -> Self {
         // TODO: adapter le modèle à la config !
+
         BNGenerator {
             model,
             config,
