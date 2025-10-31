@@ -2,7 +2,7 @@
 
 ## BreizhCTF 2025
 
-Fos-R created background network traffic during the [BreizhCTF 2025](https://www.breizhctf.com/) hacking competition for about 600 participants. During that competition, Fos-R was deployed on 750 virtual machines for a total of 23,000 cumulated hours.
+Fos-R created background network traffic for the [Pirhack](https://gitlab.inria.fr/pirat-public/pirhack/pirhack) challenge during the [BreizhCTF 2025](https://www.breizhctf.com/) hacking competition for about 600 participants. During that competition, Fos-R was deployed on 750 virtual machines for a total of 23,000 cumulated hours.
 
 ## Education
 
