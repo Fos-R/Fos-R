@@ -63,6 +63,9 @@ tests:
     - large
   stage: test
   image: rust
+  rules:
+    # other branch may have outdated tests
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
     # generation only, so no need for ebpf
     - cargo test -p fosr --no-default-features -- --nocapture
@@ -77,6 +80,8 @@ eval-zeek:
     - ci.inria.fr
     - small
   stage: analyze
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
     - mkdir analysis-zeek
     - cd analysis-zeek
@@ -91,6 +96,8 @@ eval-tshark:
     - ci.inria.fr
     - small
   stage: analyze
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
     - apk add tshark
     - mkdir analysis-tshark
@@ -110,6 +117,8 @@ eval-suricata:
     - ci.inria.fr
     - small
   stage: analyze
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
     - apk add suricata
     - mkdir analysis-suricata
