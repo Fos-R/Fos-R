@@ -229,7 +229,6 @@ pages:
     - mv target public/bin
     - mv analysis* public/
     - mv sample.pcap public/
-    - cp resources/logo.png public/
     - cd public
     - echo -e "\nBuild version $CI_COMMIT_SHORT_SHA, compiled on $(date -I).\n" >> intro.md
     - chmod +x ./bin/x86_64-unknown-linux-gnu/release/fosr
