@@ -40,7 +40,7 @@ pub struct S2Vector {
     pub icmp: Vec<SeededData<PacketsIR<ICMPPacketInfo>>>,
 }
 
-/// Generate packet metadata from flows
+/// Generate packet metadata from flows sends them progressively to a channel
 pub fn run_channel(
     generator: impl Stage2,
     rx_s2: Receiver<SeededData<Flow>>,
@@ -84,7 +84,7 @@ pub fn run_channel(
     Ok(())
 }
 
-/// Generate packet metadata from flows
+/// Generate packet metadata from flows and into a vector
 pub fn run_vec(generator: impl Stage2, vec_s2: Vec<SeededData<Flow>>) -> S2Vector {
     log::trace!("Start S2");
     let mut vectors = S2Vector {

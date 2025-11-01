@@ -37,5 +37,8 @@ pub mod stage2;
 /// Full packet generation
 pub mod stage3;
 
+/// Export to pcap
+pub mod export;
+
 /// Network injection
 pub mod inject;

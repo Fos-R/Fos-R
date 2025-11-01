@@ -6,6 +6,7 @@ use fosr::stage0;
 use fosr::stage1;
 use fosr::stage2;
 use fosr::stage3;
+use fosr::export;
 use fosr::structs::*;
 use fosr::stats::Target;
 use fosr::*;
@@ -583,14 +584,14 @@ fn run<T: inject::NetEnabler>(
         export_threads.push(if let Some(export) = export {
             builder
                 .spawn(move || {
-                    stage3::run_export(rx_pcap, export.outfile, export.order_pcap);
+                    export::run_export(rx_pcap, export.outfile, export.order_pcap);
                 })
                 .unwrap()
         } else {
             // if there is no export, we still need to consume the packets
             builder
                 .spawn(move || {
-                    stage3::run_dummy_export(rx_pcap);
+                    export::run_dummy_export(rx_pcap);
                 })
                 .unwrap()
         });
