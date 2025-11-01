@@ -360,11 +360,11 @@ impl FCGenerator {
 
 impl Stage1 for FCGenerator {
     /// Generates flows
-    fn generate_flows(&self, ts: SeededData<Duration>) -> impl Iterator<Item = SeededData<Flow>> {
+    fn generate_flows(&self, ts: SeededData<TimePoint>) -> impl Iterator<Item = SeededData<Flow>> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
         let index = self.set.pattern_distrib.sample(&mut rng);
         let pattern = &self.set.patterns[index];
-        let p = pattern.sample(&mut rng, &self.config, ts.data);
+        let p = pattern.sample(&mut rng, &self.config, ts.data.unix_time);
         p.into_iter().map(move |f| SeededData {
             seed: rng.next_u64(),
             data: f,

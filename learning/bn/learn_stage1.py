@@ -63,13 +63,16 @@ def get_network_role(ip, clients, servers):
     else:
         return "Internet"
 
+bin_count = 24*4
+
 def categorize_time(t):
-    return "bin-"+str(t % (1000000000*60*60*24) // (1000000000*60*60*24 / (4*24)))
+    return "bin-"+str(t % (1000000000*60*60*24) // (1000000000*60*60*24 / bin_count))
 
 if __name__ == '__main__':
     random.seed(0)
 
     output = {}
+    output["s0_bin_count"] = bin_count
 
     flow = pd.read_csv("cidds.csv", header = 0, sep = ",")
 
@@ -133,7 +136,6 @@ if __name__ == '__main__':
 
     print("Gaussian mixture for TCP out packet count")
     mu, cov, labels = categorize(TCP_out_pkt_count)
-    print(mu,cov)
     output["TCP_out_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
     flow.loc[flow['Proto']=="TCP", ["Cat Out Packet"]] = labels
 

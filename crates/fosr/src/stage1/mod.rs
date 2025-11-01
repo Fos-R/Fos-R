@@ -8,17 +8,17 @@ use std::net::Ipv4Addr;
 use std::sync::Arc;
 use std::time::Duration;
 
-pub mod flowchronicle;
 pub mod bayesian_networks;
+pub mod flowchronicle;
 
 /// Stage 1: generates flow descriptions
 pub trait Stage1: Clone + std::marker::Send + 'static {
-    fn generate_flows(&self, ts: SeededData<Duration>) -> impl Iterator<Item = SeededData<Flow>>;
+    fn generate_flows(&self, ts: SeededData<TimePoint>) -> impl Iterator<Item = SeededData<Flow>>;
 }
 
 pub fn run(
     generator: impl Stage1,
-    rx_s1: Receiver<SeededData<Duration>>,
+    rx_s1: Receiver<SeededData<TimePoint>>,
     tx_s1: Sender<SeededData<Flow>>,
     stats: Arc<Stats>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -48,7 +48,7 @@ impl<T: Stage1> FilterForOnline<T> {
 }
 
 impl<T: Stage1> Stage1 for FilterForOnline<T> {
-    fn generate_flows(&self, ts: SeededData<Duration>) -> impl Iterator<Item = SeededData<Flow>> {
+    fn generate_flows(&self, ts: SeededData<TimePoint>) -> impl Iterator<Item = SeededData<Flow>> {
         self.s1.generate_flows(ts).filter(|f| {
             let data = f.data.get_data();
             let kept =
@@ -63,37 +63,37 @@ impl<T: Stage1> Stage1 for FilterForOnline<T> {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct ConfigBasedModifier<T: Stage1> {
-    conf: Hosts,
-    s1: T,
-}
+// #[derive(Debug, Clone)]
+// pub struct ConfigBasedModifier<T: Stage1> {
+//     conf: Hosts,
+//     s1: T,
+// }
 
-impl<T: Stage1> ConfigBasedModifier<T> {
-    pub fn new(conf: Hosts, s1: T) -> Self {
-        ConfigBasedModifier { conf, s1 }
-    }
+// impl<T: Stage1> ConfigBasedModifier<T> {
+//     pub fn new(conf: Hosts, s1: T) -> Self {
+//         ConfigBasedModifier { conf, s1 }
+//     }
 
-    fn modify_flow(&self, mut f: SeededData<Flow>) -> SeededData<Flow> {
-        let mut rng = Pcg32::seed_from_u64(f.seed);
-        let src_and_dst_ips = self
-            .conf
-            .get_src_and_dst_ip(&mut rng, f.data.get_data().dst_port);
-        if let Some((src_ip, dst_ip)) = src_and_dst_ips {
-            let dataflow = f.data.get_data_mut();
-            dataflow.src_ip = src_ip;
-            dataflow.dst_ip = dst_ip;
-        }
-        // TODO: et si c’est pas le cas ?
-        SeededData {
-            seed: rng.next_u64(),
-            data: f.data,
-        }
-    }
-}
+//     fn modify_flow(&self, mut f: SeededData<Flow>) -> SeededData<Flow> {
+//         let mut rng = Pcg32::seed_from_u64(f.seed);
+//         let src_and_dst_ips = self
+//             .conf
+//             .get_src_and_dst_ip(&mut rng, f.data.get_data().dst_port);
+//         if let Some((src_ip, dst_ip)) = src_and_dst_ips {
+//             let dataflow = f.data.get_data_mut();
+//             dataflow.src_ip = src_ip;
+//             dataflow.dst_ip = dst_ip;
+//         }
+//         // TODO: et si c’est pas le cas ?
+//         SeededData {
+//             seed: rng.next_u64(),
+//             data: f.data,
+//         }
+//     }
+// }
 
-impl<T: Stage1> Stage1 for ConfigBasedModifier<T> {
-    fn generate_flows(&self, ts: SeededData<Duration>) -> impl Iterator<Item = SeededData<Flow>> {
-        self.s1.generate_flows(ts).map(move |f| self.modify_flow(f))
-    }
-}
+// impl<T: Stage1> Stage1 for ConfigBasedModifier<T> {
+//     fn generate_flows(&self, ts: SeededData<TimePoint>) -> impl Iterator<Item = SeededData<Flow>> {
+//         self.s1.generate_flows(ts).map(move |f| self.modify_flow(f))
+//     }
+// }

@@ -2,7 +2,10 @@ use crate::structs::*;
 use crate::ui::Stats;
 
 use chrono::FixedOffset;
+use chrono::Offset;
+use chrono::TimeZone;
 use chrono::{DateTime, Timelike};
+use chrono_tz::Tz;
 use crossbeam_channel::Sender;
 use rand_core::*;
 use rand_distr::Distribution;
@@ -21,7 +24,7 @@ const WINDOW_WIDTH_IN_SECS: u64 = 5;
 /// Generate a throughput according to some distribution and never stops. It always prepares the next windows (i.e., not
 /// the one being sent)
 pub trait Stage0:
-    Iterator<Item = SeededData<Duration>> + Clone + std::marker::Send + 'static
+    Iterator<Item = SeededData<TimePoint>> + Clone + std::marker::Send + 'static
 {
     fn get_initial_ts(&self) -> Duration;
 }
@@ -41,7 +44,8 @@ pub struct BinBasedGenerator {
     flow_rng: Pcg32,
     net_injection: bool,
     remaining_windows: Option<u64>,
-    tz_offset: FixedOffset,
+    source_tz_offset: FixedOffset,
+    dest_tz_offset: FixedOffset,
 }
 
 impl Stage0 for BinBasedGenerator {
@@ -51,7 +55,7 @@ impl Stage0 for BinBasedGenerator {
 }
 
 impl Iterator for BinBasedGenerator {
-    type Item = SeededData<Duration>;
+    type Item = SeededData<TimePoint>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while self.remaining_flows == 0 {
@@ -75,17 +79,24 @@ impl Iterator for BinBasedGenerator {
         }
         self.remaining_flows -= 1;
         self.total_flow_count += 1;
+        let unix_time = Duration::from_millis(self.time_distrib.sample(&mut self.flow_rng.clone()));
+        let date_time = DateTime::from_timestamp_secs(self.initial_ts.as_secs() as i64)
+            .unwrap()
+            .with_timezone(&self.dest_tz_offset);
         Some(SeededData {
             seed: self.flow_rng.next_u64(),
-            data: Duration::from_millis(self.time_distrib.sample(&mut self.flow_rng.clone())),
+            data: TimePoint {
+                unix_time,
+                date_time,
+            },
         })
     }
 }
 
-fn get_poisson(lambdas: &[f64], tz_offset: FixedOffset, ts: Duration) -> Poisson<f64> {
+fn get_poisson(lambdas: &[f64], source_tz_offset: FixedOffset, ts: Duration) -> Poisson<f64> {
     let secs = DateTime::from_timestamp_secs(ts.as_secs() as i64)
         .unwrap()
-        .with_timezone(&tz_offset)
+        .with_timezone(&source_tz_offset)
         .time()
         .num_seconds_from_midnight();
     // log::info!("Hours since midnight: {}", secs/3600);
@@ -97,22 +108,20 @@ fn get_poisson(lambdas: &[f64], tz_offset: FixedOffset, ts: Duration) -> Poisson
 /// Compute the parameters of the Poisson distribution from the bins
 /// If "flow_per_day" is None, then simply reuse the values of the bins
 /// Otherwise, normalize the bins so their sum is "flow_per_day"
-fn get_lambdas(flow_per_day: Option<u64>, bins: TimeBins) -> Vec<f64> {
-    let bin_count: f64 = bins.bins.len() as f64;
+fn get_lambdas(flow_per_day: Option<u64>, bins: Vec<u64>) -> Vec<f64> {
+    let bin_count: f64 = bins.len() as f64;
     let window_per_bin: f64 = 60. * 60. * 24. / (WINDOW_WIDTH_IN_SECS as f64) / bin_count;
     match flow_per_day {
         Some(flow_per_day) => {
-            let sum: f64 = bins.bins.iter().sum::<u64>() as f64;
+            let sum: f64 = bins.iter().sum::<u64>() as f64;
             // Lambda is equal to the expected value of the Poisson distribution
             // First, we normalize the bin so the sum of all bins is flow_per_day
             // Then, we divide by the number of windows in one bin
-            bins.bins
-                .into_iter()
+            bins.into_iter()
                 .map(|val| (val as f64) / sum * (flow_per_day as f64) / window_per_bin)
                 .collect()
         }
         None => bins
-            .bins
             .into_iter()
             .map(|val| (val as f64) / window_per_bin)
             .collect(),
@@ -124,10 +133,10 @@ impl BinBasedGenerator {
         seed: Option<u64>,
         net_injection: bool,
         flow_per_day: Option<u64>,
-        bins: TimeBins,
+        profile: TimeProfile,
         initial_ts: Duration,
         total_duration: Option<Duration>,
-        tz_offset: FixedOffset,
+        dest_tz_offset: FixedOffset,
     ) -> Self {
         let next_ts = initial_ts;
         let time_distrib = Uniform::new(
@@ -144,7 +153,15 @@ impl BinBasedGenerator {
                 .ceil() as u64
         });
 
-        let lambdas = get_lambdas(flow_per_day, bins);
+        let lambdas = get_lambdas(flow_per_day, profile.bins);
+
+        let initial_date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
+            .unwrap()
+            .naive_utc();
+        let source_tz_offset = profile
+            .source_tz
+            .offset_from_utc_datetime(&initial_date)
+            .fix();
 
         let mut generator = BinBasedGenerator {
             net_injection,
@@ -158,7 +175,8 @@ impl BinBasedGenerator {
             flow_rng: Pcg32::seed_from_u64(0), // it will be overwritten
             time_distrib,
             remaining_windows,
-            tz_offset,
+            dest_tz_offset,
+            source_tz_offset,
         };
         generator.start_new_window();
         generator
@@ -168,7 +186,7 @@ impl BinBasedGenerator {
         seed: Option<u64>,
         total_duration: Option<Duration>,
         flow_per_day: Option<u64>,
-        bins: TimeBins,
+        profile: TimeProfile,
         deterministic: bool,
     ) -> Self {
         let current_date = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
@@ -195,7 +213,15 @@ impl BinBasedGenerator {
             d.div_duration_f32(Duration::from_secs(WINDOW_WIDTH_IN_SECS))
                 .ceil() as u64
         });
-        let lambdas = get_lambdas(flow_per_day, bins);
+        let lambdas = get_lambdas(flow_per_day, profile.bins);
+
+        let initial_date = DateTime::from_timestamp(current_date.as_secs() as i64, 0)
+            .unwrap()
+            .naive_utc();
+        let source_tz_offset = profile
+            .source_tz
+            .offset_from_utc_datetime(&initial_date)
+            .fix();
 
         let mut generator = BinBasedGenerator {
             net_injection: true,
@@ -209,8 +235,9 @@ impl BinBasedGenerator {
             flow_rng: Pcg32::seed_from_u64(0), // it will be overwritten
             time_distrib,
             remaining_windows,
-            tz_offset: *chrono::Local::now().fixed_offset().offset(), // use local timezone with
-                                                                      // current offset
+            source_tz_offset,
+            dest_tz_offset: *chrono::Local::now().fixed_offset().offset(), // use local timezone with
+                                                                           // current offset
         };
         generator.start_new_window();
         generator
@@ -227,7 +254,7 @@ impl BinBasedGenerator {
             }
         }
 
-        self.current_distrib = get_poisson(&self.lambdas, self.tz_offset, self.next_ts);
+        self.current_distrib = get_poisson(&self.lambdas, self.dest_tz_offset, self.next_ts);
         self.remaining_flows = self.current_distrib.sample(&mut self.flow_rng.clone()) as u64;
         self.time_distrib = Uniform::new(
             self.next_ts.as_millis() as u64,
@@ -239,18 +266,23 @@ impl BinBasedGenerator {
     }
 }
 
-pub struct TimeBins {
+#[derive(Deserialize, Debug, Clone)]
+#[serde(from = "Config")]
+pub struct TimeProfile {
     bins: Vec<u64>,
+    source_tz: Tz,
+    metadata: Metadata,
 }
 
-impl Default for TimeBins {
+impl Default for TimeProfile {
     fn default() -> Self {
         if cfg!(debug_assertions) {
-            TimeBins::import_from_str(include_str!("../../default_models/time_bins.json")).unwrap()
+            TimeProfile::import_from_str(include_str!("../../default_models/time_profile.json"))
+                .unwrap()
         } else {
-            TimeBins::import_from_str(
+            TimeProfile::import_from_str(
                 &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                    "default_models/time_bins.json",
+                    "default_models/time_profile.json",
                     19
                 ))
                 .unwrap(),
@@ -260,27 +292,34 @@ impl Default for TimeBins {
     }
 }
 
-impl TimeBins {
+impl TimeProfile {
     pub fn from_file(filename: &str) -> std::io::Result<Self> {
         let f = File::open(filename)?;
-        let config: Config = serde_json::from_reader(f)?;
-        Ok(TimeBins {
-            bins: config.histogram,
-        })
+        Ok(serde_json::from_reader(f)?)
     }
 
     pub fn import_from_str(string: &str) -> std::io::Result<Self> {
-        let config: Config = serde_json::from_str(string)?;
-        Ok(TimeBins {
-            bins: config.histogram,
-        })
+        Ok(serde_json::from_str(string)?)
+    }
+}
+
+impl From<Config> for TimeProfile {
+    fn from(c: Config) -> TimeProfile {
+        TimeProfile {
+            bins: c.histogram,
+            source_tz: c
+                .tz
+                .parse()
+                .expect("Could not parse the timezone in the time profile"),
+            metadata: c.metadata,
+        }
     }
 }
 
 #[derive(Deserialize, Debug, Clone)]
-#[allow(unused)]
 struct Config {
     histogram: Vec<u64>,
+    tz: String,
     metadata: Metadata,
 }
 
@@ -293,7 +332,7 @@ struct Metadata {
 
 pub fn run(
     generator: impl Stage0,
-    tx_s0: Sender<SeededData<Duration>>,
+    tx_s0: Sender<SeededData<TimePoint>>,
     stats: Arc<Stats>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     log::trace!("Start S0");
@@ -302,7 +341,9 @@ pub fn run(
         if stats.should_stop() {
             break;
         }
-        stats.set_current_duration(ts.data.as_secs() - initial_ts.as_secs() + WINDOW_WIDTH_IN_SECS); // this hack (adding WINDOW_WIDTH_IN_SECS) is just a way to be sure to reach the duration target for the progress bar
+        stats.set_current_duration(
+            ts.data.unix_time.as_secs() - initial_ts.as_secs() + WINDOW_WIDTH_IN_SECS,
+        ); // this hack (adding WINDOW_WIDTH_IN_SECS) is just a way to be sure to reach the duration target for the progress bar
         // log::trace!("S0 generates {ts:?}");
         tx_s0.send(ts)?;
     }
