@@ -89,8 +89,8 @@ pub enum Command {
         )]
         deterministic: bool,
     },
-    /// Extend a pcap file. You should use your own models that have been
-    /// fitted on that pcap file.
+    /// Create a pcap file. If you require deterministic generation,
+    /// you must specify -d, --order-pcap, -t, --tz and --seed.
     #[clap(group(
     clap::ArgGroup::new("target")
         .required(true)
@@ -115,9 +115,9 @@ pub enum Command {
         // noise: bool,
         #[arg(short = 'n', long, default_value = None, help = "Minimum number of packets to generate. Beware: generation is not deterministic.")]
         packets_count: Option<u64>,
-        #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\". Generation is deterministic when used with --order-pcap and --seed.")]
+        #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\"")]
         duration: Option<String>,
-        #[arg(short = 't', long, default_value = None, help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use the current time. Date time are considered to be in the timezone specified with --tz.")]
+        #[arg(short = 't', long, default_value = None, help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use the current time. Date time is considered to be in the timezone specified with --tz")]
         start_time: Option<String>,
         #[arg(
             short,
