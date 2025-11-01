@@ -49,6 +49,7 @@ fn deterministic_generation_monothread() -> Result<(), Box<dyn std::error::Error
         .args(["-s", "0"])
         .args(["-d", "1min"])
         .args(["-t", "0"])
+        .args(["--tz", "CET"])
         .arg("--order-pcap")
         .arg("--monothread")
         .env("RUST_LOG", "trace")
