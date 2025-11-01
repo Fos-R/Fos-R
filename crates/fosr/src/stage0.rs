@@ -23,6 +23,7 @@ const WINDOW_WIDTH_IN_SECS: u64 = 5;
 pub trait Stage0:
     Iterator<Item = SeededData<TimePoint>> + Clone + std::marker::Send + 'static
 {
+    /// Used to compute the duration of generated data
     fn get_initial_ts(&self) -> Duration;
 }
 
