@@ -44,7 +44,6 @@ pub struct BinBasedGenerator {
     flow_rng: Pcg32,
     net_injection: bool,
     remaining_windows: Option<u64>,
-    source_tz_offset: FixedOffset,
     dest_tz_offset: FixedOffset,
 }
 
@@ -93,10 +92,10 @@ impl Iterator for BinBasedGenerator {
     }
 }
 
-fn get_poisson(lambdas: &[f64], source_tz_offset: FixedOffset, ts: Duration) -> Poisson<f64> {
+fn get_poisson(lambdas: &[f64], dest_tz_offset: FixedOffset, ts: Duration) -> Poisson<f64> {
     let secs = DateTime::from_timestamp_secs(ts.as_secs() as i64)
         .unwrap()
-        .with_timezone(&source_tz_offset)
+        .with_timezone(&dest_tz_offset)
         .time()
         .num_seconds_from_midnight();
     // log::info!("Hours since midnight: {}", secs/3600);
@@ -155,14 +154,6 @@ impl BinBasedGenerator {
 
         let lambdas = get_lambdas(flow_per_day, profile.bins);
 
-        let initial_date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
-            .unwrap()
-            .naive_utc();
-        let source_tz_offset = profile
-            .source_tz
-            .offset_from_utc_datetime(&initial_date)
-            .fix();
-
         let mut generator = BinBasedGenerator {
             net_injection,
             initial_ts,
@@ -176,7 +167,6 @@ impl BinBasedGenerator {
             time_distrib,
             remaining_windows,
             dest_tz_offset,
-            source_tz_offset,
         };
         generator.start_new_window();
         generator
@@ -215,14 +205,6 @@ impl BinBasedGenerator {
         });
         let lambdas = get_lambdas(flow_per_day, profile.bins);
 
-        let initial_date = DateTime::from_timestamp(current_date.as_secs() as i64, 0)
-            .unwrap()
-            .naive_utc();
-        let source_tz_offset = profile
-            .source_tz
-            .offset_from_utc_datetime(&initial_date)
-            .fix();
-
         let mut generator = BinBasedGenerator {
             net_injection: true,
             initial_ts: next_ts,
@@ -235,7 +217,6 @@ impl BinBasedGenerator {
             flow_rng: Pcg32::seed_from_u64(0), // it will be overwritten
             time_distrib,
             remaining_windows,
-            source_tz_offset,
             dest_tz_offset: *chrono::Local::now().fixed_offset().offset(), // use local timezone with
                                                                            // current offset
         };
@@ -269,8 +250,7 @@ impl BinBasedGenerator {
 #[derive(Deserialize, Debug, Clone)]
 #[serde(from = "Config")]
 pub struct TimeProfile {
-    bins: Vec<u64>,
-    source_tz: Tz,
+    bins: Vec<u64>, // we assume the bins start at midnight (in the local dataset timezone)
     metadata: Metadata,
 }
 
@@ -295,11 +275,15 @@ impl Default for TimeProfile {
 impl TimeProfile {
     pub fn from_file(filename: &str) -> std::io::Result<Self> {
         let f = File::open(filename)?;
-        Ok(serde_json::from_reader(f)?)
+        let profile: TimeProfile = serde_json::from_reader(f)?;
+        log::info!("Time profile learned on {}", profile.metadata.input_file);
+        Ok(profile)
     }
 
     pub fn import_from_str(string: &str) -> std::io::Result<Self> {
-        Ok(serde_json::from_str(string)?)
+        let profile: TimeProfile = serde_json::from_str(string)?;
+        log::info!("Time profile learned on {}", profile.metadata.input_file);
+        Ok(profile)
     }
 }
 
@@ -307,10 +291,6 @@ impl From<Config> for TimeProfile {
     fn from(c: Config) -> TimeProfile {
         TimeProfile {
             bins: c.histogram,
-            source_tz: c
-                .tz
-                .parse()
-                .expect("Could not parse the timezone in the time profile"),
             metadata: c.metadata,
         }
     }
@@ -319,7 +299,6 @@ impl From<Config> for TimeProfile {
 #[derive(Deserialize, Debug, Clone)]
 struct Config {
     histogram: Vec<u64>,
-    tz: String,
     metadata: Metadata,
 }
 

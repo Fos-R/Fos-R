@@ -256,18 +256,19 @@ fn main() {
                 log::info!("Generating with seed {s}");
             }
 
-            let initial_ts: Duration = if let Some(start_time) = start_time {
-                // try to parse a date
-                if let Ok(d) = humantime::parse_rfc3339_weak(&start_time) {
-                    d.duration_since(UNIX_EPOCH).unwrap()
-                } else if let Ok(n) = start_time.parse::<u64>() {
-                    Duration::from_secs(n)
+            let (mut initial_ts, ts_requires_offset): (Duration, bool) =
+                if let Some(start_time) = start_time {
+                    // try to parse a date
+                    if let Ok(d) = humantime::parse_rfc3339_weak(&start_time) {
+                        (d.duration_since(UNIX_EPOCH).unwrap(), true)
+                    } else if let Ok(n) = start_time.parse::<u64>() {
+                        (Duration::from_secs(n), false)
+                    } else {
+                        panic!("Could not parse start time");
+                    }
                 } else {
-                    panic!("Could not parse start time");
-                }
-            } else {
-                SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
-            };
+                    (SystemTime::now().duration_since(UNIX_EPOCH).unwrap(), false)
+                };
 
             let tz_offset = match tz {
                 Some(tz_str) => {
@@ -293,6 +294,19 @@ fn main() {
                     tz
                 }
             };
+
+            // the initial timestamp was computed assuming that the timezone is UTC.
+            // now, compute the actual timestamp taking into account the timezone
+            if ts_requires_offset {
+                initial_ts = Duration::from_secs(
+                    DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
+                        .unwrap()
+                        .naive_utc()
+                        .and_local_timezone(tz_offset)
+                        .unwrap()
+                        .timestamp() as u64,
+                );
+            }
 
             let s0 = stage0::BinBasedGenerator::new(
                 seed,
