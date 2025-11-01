@@ -4,6 +4,18 @@
 
 ### Added
 
+- Better library documentation
+- Option for monothreaded generation
+
+### Changed
+
+- "stage4" module renamed to "inject"
+- Bugfixes
+
+## v0.1.2
+
+### Added
+
 - Windows support through eBPF
 - New stage 0 with daily seasonality
 - Pcap2flow mode

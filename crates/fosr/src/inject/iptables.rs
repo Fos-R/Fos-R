@@ -1,4 +1,4 @@
-use crate::stage4::*;
+use crate::inject::*;
 
 #[derive(Debug, Clone)]
 pub struct IPTablesNetEnabler {
@@ -10,6 +10,10 @@ pub struct IPTablesNetEnabler {
 impl NetEnabler for IPTablesNetEnabler {
     fn is_fast(&self) -> bool {
         self.fast
+    }
+
+    fn get_ttl(&self) -> Option<u8> {
+        Some(65)
     }
 
     fn is_packet_relevant(&self, flags: u8) -> bool {

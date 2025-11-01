@@ -3,15 +3,25 @@ use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct TCPPacketInfo {
+    /// the payload of the packet
     pub payload: Payload,
+    /// the timestamp of the packet
     pub ts: Duration,
+    /// the direction of the packet
     pub direction: PacketDirection,
+    /// whether the packet is a noise
     pub noise: NoiseType,
+    /// SYN flag?
     pub s_flag: bool,
+    /// ACK flag?
     pub a_flag: bool,
+    /// FIN flag?
     pub f_flag: bool,
+    /// RST flag?
     pub r_flag: bool,
+    /// URG flag?
     pub u_flag: bool,
+    /// PSH flag?
     pub p_flag: bool,
 }
 

@@ -1,6 +1,6 @@
 use super::NetEnabler;
 use crate::structs::*;
-use crate::ui::Stats;
+use crate::stats::Stats;
 use crossbeam_channel::Receiver;
 use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::TryRecvError;
@@ -96,7 +96,7 @@ fn send_packets(
     stats: Arc<Stats>,
     rx_s4: Receiver<Packets>,
 ) {
-    log::info!("Start S4-tx");
+    log::info!("Start injection tx");
     let mut heap: BinaryHeap<Elem> = BinaryHeap::with_capacity(10000);
     // Send and receive packets in this thread
     let mut last_sent: Option<Duration> = None;
@@ -215,7 +215,7 @@ pub fn start_fast(
     incoming_flows: HashMap<Protocol, Receiver<Packets>>,
     stats: Arc<Stats>,
 ) {
-    log::trace!("Start S4");
+    log::trace!("Start injection");
     let mut join_handles = Vec::new();
     for (proto, rx_s4) in incoming_flows.into_iter() {
         // for each transport protocol, create a new raw socket
@@ -228,8 +228,7 @@ pub fn start_fast(
             .unwrap();
 
         // iptables hack
-        #[cfg(all(target_os = "linux", feature = "iptables"))]
-        tx.set_ttl(65).unwrap();
+        s4net.get_ttl().map(|ttl| tx.set_ttl(ttl).unwrap());
 
         let builder = thread::Builder::new().name(format!("Stage4-{proto:?}"));
         let stats = stats.clone();
@@ -249,5 +248,5 @@ pub fn start_fast(
         // wait for the TX threads to finish
         handle.join().unwrap();
     }
-    log::trace!("S4 stops");
+    log::trace!("Injection stops");
 }

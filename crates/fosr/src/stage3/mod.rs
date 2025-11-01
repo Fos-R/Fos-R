@@ -3,7 +3,7 @@ use crate::icmp::*;
 use crate::structs::*;
 use crate::tcp::TCPPacketInfo;
 use crate::udp::*;
-use crate::ui::Stats;
+use crate::stats::Stats;
 
 use crossbeam_channel::{Receiver, Sender};
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
@@ -24,8 +24,7 @@ use std::net::Ipv4Addr;
 use std::num::Wrapping;
 use std::sync::Arc;
 
-/// Represents stage 3 of the packet generator.
-/// It contains configuration data and state necessary for generating packets.
+/// Stage 3: generate full packets from packet metadata
 #[derive(Debug, Clone)]
 pub struct Stage3 {
     taint: bool,
@@ -445,12 +444,6 @@ impl Stage3 {
 //     todo!()
 // }
 
-/// Sends packets online based on the local interfaces.
-///
-/// Depending on whether the source, destination, or both IPs exist on local
-/// interfaces, the function sends the packet flow to stage 4 (tx_s3) in one or
-/// two forms. If both IPs are local, a clone is sent, and then the flow is
-/// reversed before sending to ensure stage 4 is always the source.
 pub fn send_online(
     local_interfaces: &[Ipv4Addr],
     mut flow_packets: Packets,
@@ -464,7 +457,7 @@ pub fn send_online(
         log::trace!("Both source and destination IP are local");
         // only copy if we have to
         tx_s3.send(flow_packets.clone()).unwrap();
-        // ensure stage 4 is always the source
+        // ensure this host is always the source
         flow_packets.reverse();
         tx_s3.send(flow_packets).unwrap();
     } else if src_s4 {
@@ -472,7 +465,7 @@ pub fn send_online(
         tx_s3.send(flow_packets).unwrap();
     } else if dst_s4 {
         log::trace!("Destination IP is local");
-        // ensure stage 4 is always the source
+        // ensure this host is always the source
         flow_packets.reverse();
         tx_s3.send(flow_packets).unwrap();
     }
@@ -495,7 +488,7 @@ fn send_pcap(flow_packets: thingbuf::mpsc::blocking::SendRef<Packets>) {
 /// This function receives intermediate packet data from rx_s3, generates complete
 /// packets using the provided generator function, and then sends the generated flows
 /// to appropriate channels based on the configuration (online transmission and/or pcap export).
-pub fn run<T: PacketInfo>(
+pub fn run_channel<T: PacketInfo>(
     generator: impl Fn(&SeededData<PacketsIR<T>>, &mut Packets, &mut [u8; 65536]),
     local_interfaces: Vec<Ipv4Addr>,
     rx_s3: Receiver<SeededData<PacketsIR<T>>>,
@@ -531,6 +524,25 @@ pub fn run<T: PacketInfo>(
     }
     log::trace!("S3 stops");
     Ok(())
+}
+
+/// Complete the packets
+pub fn run_vec<T: PacketInfo>(
+    generator: impl Fn(&SeededData<PacketsIR<T>>, &mut Packets, &mut [u8; 65536]),
+    vec_s3: Vec<SeededData<PacketsIR<T>>>,
+) -> Vec<Packet> {
+    let mut payload_array: [u8; 65536] = [0; 65536]; // to avoid allocating Vec for payloads
+    let mut all_packets: Vec<Packet> = vec![];
+
+    for headers in vec_s3 {
+        let mut flow_packets = Packets::default();
+        generator(&headers, &mut flow_packets, &mut payload_array);
+        for packet in flow_packets.packets.iter() {
+            all_packets.push(packet.clone());
+        }
+    }
+
+    all_packets
 }
 
 /// Runs the pcap export thread.
@@ -600,6 +612,7 @@ pub fn run_export(
     }
 }
 
+/// Simulates a pcap export. It must be called to consume the generated data.
 pub fn run_dummy_export(rx_pcap: thingbuf::mpsc::blocking::Receiver<Packets, PacketsRecycler>) {
     while rx_pcap.recv_ref().is_some() {}
 }

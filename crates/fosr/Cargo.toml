@@ -28,7 +28,7 @@ kd-tree = "0.6.0"
 log = { version = "0.4.22" }
 num_cpus = "1.17.0"
 pcap-file = "2.0.0"
-pnet = "0.35.0"
+pnet = { version = "0.35.0", default-features = false, features = ["pnet_sys", "pnet_transport"] }
 pnet_packet = "0.35.0"
 rand = "0.9.1"
 rand_core = "0.9.3"
@@ -39,26 +39,31 @@ serde-xml-rs = "0.8.1"
 serde_json = "1.0"
 thingbuf = "0.1.6"
 toml = "0.9.2"
+fosr-ebpf = { version = "0.1.1", path = "../fosr-ebpf", optional = true }
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
 aya = { version = "0.13.1", default-features = false, optional = true }
 
 [dev-dependencies]
 assert_cmd = "2.0.14"
-hex-literal = "1.0.0"
+hex = "0.4.3"
 sha2 = "0.10.9"
 
 [features]
 default = ["ebpf"]
-net_injection = []
+net_injection = ["pnet/std"]
 
 # Linux only
 iptables = ["net_injection"]
 
 # Linux & Windows only
-ebpf = ["dep:aya", "net_injection", "dep:aya-build", "dep:fosr-ebpf", "dep:anyhow"]
+ebpf = ["dep:aya", "net_injection", "dep:fosr-ebpf"]
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.build-dependencies]
 anyhow = { version = "1", default-features = false, optional = true }
 aya-build = { version = "0.1.2", default-features = false, optional = true }
 fosr-ebpf = { path = "../fosr-ebpf", optional = true }
+
+[package.metadata.deb]
+section = "science"
+depends = ["$auto", "iptables"]

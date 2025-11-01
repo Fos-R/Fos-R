@@ -1,3 +1,10 @@
+# Related software
+
+The following software have been created for Fos-R:
+
+- [TADAM](https://github.com/Fos-R/TADAM), an automata learner
+- [FlowChronicle](https://github.com/Fos-R/FlowChronicle), a pattern miner
+
 # Related publications
 
 ## Synthetic Network Traffic Generation for Intrusion Detection Systems: a Systematic Literature Review
@@ -28,7 +35,7 @@ Network traffic datasets are regularly criticized, notably for the lack of reali
 
 _Published in 9th International Workshop on Traffic Measurements for Cybersecurity (WTMC 2024), 2024_
 
-Authors: Adrien Schoen, Gregory Blanc, Pierre-François Gimenez, Yufei Han, Frédéric Majorczyk, Ludovic Me
+Authors: Adrien Schoen, Gregory Blanc, Pierre-François Gimenez, Yufei Han, Frédéric Majorczyk, Ludovic Mé
 
 The evaluation of network intrusion detection systems requires a sufficient amount of mixed network traffic, i.e., composed of both malicious and legitimate flows. In particular, obtaining realistic legitimate traffic is hard. Synthetic network traffic is one of the tools to respond to insufficient or incomplete real-world datasets. In this paper, we only focus on synthetically generating high-quality legitimate traffic and we do not delve into malicious traffic generation. For this specific task, recent contributions make use of advanced machine learning-driven approaches, notably through Generative Adversarial Networks (GANs). However, evaluations of GAN-generated data often disregards pivotal attributes, such as protocol adherence. Our study addresses the gap by proposing a comprehensive set of metrics that assess the quality of synthetic legitimate network traffic. To illustrate the value of these metrics, we empirically compare advanced network-oriented GANs with a simple and yet effective probabilistic generative model, Bayesian Networks (BN). According to our proposed evaluation metrics, BN-based network traffic generation outperforms the state-of-the-art GAN-based opponents. In our study, BN yields substantially more realistic and useful synthetic benign traffic and minimizes the computational costs simultaneously.
 
@@ -45,8 +52,12 @@ The evaluation of network intrusion detection systems requires a sufficient amou
 
 - Inria: Pierre-François Gimenez, Adrien Schoen
 - CISPA: Lénaïg Cornanguer, Joscha Cüppers
-- CentraleSupélec: Dorian Bachelot, Evan Morin, Florentin Labelle
+- CentraleSupélec: Dorian Bachelot, Evan Morin, Florentin Labelle, Samuel Cordon, Jean-Baptiste Amade
+
+# Licence
+
+Fos-R is distributed under the [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) (or later) license. This applies to both Fos-R binary and library.
 
 # Contact
 
-You can contain the maintainer at <pierre-francois.gimenez@inria.fr>.
+You can contact the maintainer at <pierre-francois.gimenez@inria.fr>. Feel free to post an issue on [GitHub](https://github.com/Fos-R/Fos-R/issues).
