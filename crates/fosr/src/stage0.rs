@@ -2,10 +2,7 @@ use crate::structs::*;
 use crate::stats::Stats;
 
 use chrono::FixedOffset;
-use chrono::Offset;
-use chrono::TimeZone;
 use chrono::{DateTime, Timelike};
-use chrono_tz::Tz;
 use crossbeam_channel::Sender;
 use rand_core::*;
 use rand_distr::Distribution;
@@ -309,6 +306,7 @@ struct Metadata {
     input_file: String,
 }
 
+/// Generate data and send them progressively to a channel
 pub fn run_channel(
     generator: impl Stage0,
     tx_s0: Sender<SeededData<TimePoint>>,
@@ -330,6 +328,7 @@ pub fn run_channel(
     Ok(())
 }
 
+/// Generate data into a vector
 pub fn run_vec(generator: impl Stage0) -> Vec<SeededData<TimePoint>> {
     log::trace!("Start S0");
     let mut vector = vec![];

@@ -3,10 +3,8 @@ use crate::structs::*;
 use crate::stats::Stats;
 use crossbeam_channel::{Receiver, Sender};
 use rand_core::*;
-use rand_pcg::Pcg32;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
-use std::time::Duration;
 
 /// A implementation of Bayesian networks generation
 pub mod bayesian_networks;
@@ -19,7 +17,7 @@ pub trait Stage1: Clone + std::marker::Send + 'static {
     fn generate_flows(&self, ts: SeededData<TimePoint>) -> impl Iterator<Item = SeededData<Flow>>;
 }
 
-/// Generate flows from timestamps
+/// Generate flows from timestamps and sends them progressively to a channel
 pub fn run_channel(
     generator: impl Stage1,
     rx_s1: Receiver<SeededData<TimePoint>>,
@@ -39,7 +37,7 @@ pub fn run_channel(
     Ok(())
 }
 
-/// Generate flows from timestamps
+/// Generate flows from timestamps and into a vector
 pub fn run_vec(generator: impl Stage1, vec_s1: Vec<SeededData<TimePoint>>) -> Vec<SeededData<Flow>> {
     log::trace!("Start S1");
     let mut vector = vec![];

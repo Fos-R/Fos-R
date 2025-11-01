@@ -14,6 +14,7 @@
 ### Changed
 
 - "stage4" module renamed to "inject"
+- Create the `export` module
 - Bugfixes
 
 ## v0.1.2
