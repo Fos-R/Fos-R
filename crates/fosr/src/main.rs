@@ -110,7 +110,7 @@ fn main() {
             #[cfg(all(target_os = "linux", feature = "iptables"))]
             stealthy,
             seed,
-            profile,
+            // profile,
             outfile,
             order_pcap,
             flow_per_day,
@@ -150,6 +150,7 @@ fn main() {
             log::debug!("IPv4 interfaces: {:?}", &local_ips);
 
             // identify the role of the current host
+            let profile: Option<String> = None;
             let profile = Profile::load(profile.as_deref());
             log::debug!("Configuration: {:?}", profile.config);
             assert!(!local_ips.is_empty());
@@ -233,7 +234,7 @@ fn main() {
         }
         cmd::Command::CreatePcap {
             seed,
-            profile,
+            // profile,
             outfile,
             packets_count,
             monothread,
@@ -245,6 +246,7 @@ fn main() {
             taint,
         } => {
             // load the models
+            let profile: Option<String> = None;
             let profile = Profile::load(profile.as_deref());
             let automata_library = Arc::new(profile.automata);
             let patterns = Arc::new(profile.patterns);
