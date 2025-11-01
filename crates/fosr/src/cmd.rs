@@ -111,7 +111,7 @@ pub enum Command {
         #[arg(
             long,
             default_value_t = false,
-            help = "Do not multithread. Use this option if you have a limited number of cores."
+            help = "Disable multithreading. Use this option if you have a limited number of cores. Must fit the entire dataset in RAM!"
         )]
         monothread: bool,
         // #[arg(
@@ -130,7 +130,7 @@ pub enum Command {
         #[arg(
             long,
             default_value_t = false,
-            help = "Reorder temporally the generated pcap. Must fit the entire dataset in RAM !"
+            help = "Reorder temporally the generated pcap. Must fit the entire dataset in RAM!"
         )]
         order_pcap: bool,
         #[arg(short, long, help = "Seed for random number generation")]
