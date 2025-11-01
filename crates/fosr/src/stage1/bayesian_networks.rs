@@ -2,22 +2,18 @@ use crate::stage1::*;
 use crate::structs::*;
 
 use rand_distr::weighted::WeightedIndex;
-use rand_distr::{Distribution, Uniform};
+use rand_distr::{Distributionè Normal};
 use rand_pcg::Pcg32;
 use serde::Deserialize;
 use serde_xml_rs::{from_str, to_string};
 use std::collections::HashMap;
-use std::fs::File;
 use std::iter;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
 use std::time::Duration;
 
 #[derive(Debug, Clone, Default)]
-struct PartiallyDefinedFlowData {
-    src_ip: Option<Ipv4Addr>,
-    dst_ip: Option<Ipv4Addr>,
-    src_port: Option<u16>,
+struct IntermediateVector {
     dst_port: Option<u16>,
     ttl_client: Option<u8>,
     ttl_server: Option<u8>,
@@ -52,104 +48,72 @@ impl From<PartiallyDefinedFlowData> for Flow {
 
 impl PartiallyDefinedFlowData {
     fn set_value(&mut self, rng: &mut impl RngCore, f: &Feature, index: usize) {
-        match f {
-            Feature::SrcIP(v) => self.src_ip = Some(v.0[index]),
-            Feature::DstIP(v) => self.dst_ip = Some(v.0[index]),
-            Feature::DstPt(v) => self.dst_port = Some(v[index]),
-            Feature::FwdPkt(v) => self.fwd_packets_count = Some(v.0[index].sample(rng) as usize),
-            Feature::BwdPkt(v) => self.bwd_packets_count = Some(v.0[index].sample(rng) as usize),
-            Feature::Duration(_) => (),
-            Feature::L4Proto(v) => self.proto = Some(v[0]),
-            Feature::Flags(_) => (),
-            _ => todo!(),
-        }
+        todo!()
+        // match f {
+        //     Feature::SrcIP(v) => self.src_ip = Some(v.0[index]),
+        //     Feature::DstIP(v) => self.dst_ip = Some(v.0[index]),
+        //     Feature::DstPt(v) => self.dst_port = Some(v[index]),
+        //     Feature::FwdPkt(v) => self.fwd_packets_count = Some(v.0[index].sample(rng) as usize),
+        //     Feature::BwdPkt(v) => self.bwd_packets_count = Some(v.0[index].sample(rng) as usize),
+        //     Feature::Duration(_) => (),
+        //     Feature::L4Proto(v) => self.proto = Some(v[0]),
+        //     Feature::Flags(_) => (),
+        //     _ => todo!(),
+        // }
     }
 }
 
 /// A node of the Bayesian network
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 struct BayesianNetworkNode {
+    index: usize, // overall index, unique across the several BNs
     feature: Feature,
     parents: Vec<usize>, // indices in the Bayesian network’s nodes
-    cpt: CPT,
 }
 
-#[derive(Deserialize, Debug, Clone)]
-#[serde(from = "Vec<String>")]
-struct Ipv4Vector(Vec<Ipv4Addr>);
+enum L7Proto {
+    HTTP,
+    HTTPS,
+    SSH,
+// TODO complete
+}
 
-#[derive(Deserialize, Debug, Clone)]
-#[serde(from = "Vec<(u64,u64)>")]
-struct Intervals(Vec<Uniform<u64>>);
-
-impl From<Vec<(u64, u64)>> for Intervals {
-    fn from(v: Vec<(u64, u64)>) -> Intervals {
-        Intervals(
-            v.into_iter()
-                .map(|(low, high)| Uniform::new(low, high).unwrap()) // TODO: uniform ?
-                .collect(),
-        )
+impl L7Proto {
+    fn default_port(&self) -> u16 {
+        todo!()
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
-// #[serde(from = "Variable")]
+
+#[derive(Debug, Clone)]
 enum Feature {
-    SrcIP(Ipv4Vector),
-    DstIP(Ipv4Vector),
-    DstPt(Vec<u16>),
-    FwdPkt(Intervals),
-    BwdPkt(Intervals),
-    L7Proto(Vec<String>),
-    L4Proto(Vec<Protocol>),
-    Duration(Vec<(f64, f64)>),
-    Flags(Vec<String>),
+    // for each feature, we associate a domain and a discrete probability distribution (when sample
+    // by the bayesian network)
+    TimeBin, // never sampled, so no CPT
+    SrcIpRole(CPT, Vec<String>),
+    DstIpRole(CPT, Vec<String>),
+    SrcIp(CPT, Vec<Ipv4Addr>),  // the IP comes from the config
+    DstIp(CPT, Vec<Ipv4Addr>),  // the IP comes from the config
+    DstPt(CPT, Vec<u16>),    // the port comes from the config (must be chosen after the dest IP)
+    FwdPkt(CPT, Vec<Normal>),  // the exact number is sampled from a Gaussian distribution afterward
+    BwdPkt(CPT, Vec<Normal>), // idem
+    L7Proto(CPT, Vec<String>),
+    L4Proto(CPT, Vec<Protocol>),
+    EndFlags(CPT, Vec<TCPEndFlags>),
 }
 
-// impl From<Variable> for Feature {
 
-//     fn from(v: Variable) -> Feature {
-//         match v.name {
-//             "Src IP Role" => SrcIPRole,
-//             "Dst IP Role" => DstIPRole,
-//             "Application Proto" => AppProto,
-//             "Cat Out Packet" => FwdPkt(),
-//             _ => panic!("Unknown variable!")
-//         }
+
+// impl From<Vec<String>> for Ipv4Vector {
+//     fn from(v: Vec<String>) -> Ipv4Vector {
+//         // ignore non-IPv4, like anonymised public IP addresses
+//         Ipv4Vector(v.into_iter().flat_map(|s| s.parse()).collect())
 //     }
 // }
 
-impl From<Vec<String>> for Ipv4Vector {
-    fn from(v: Vec<String>) -> Ipv4Vector {
-        // ignore non-IPv4, like anonymised public IP addresses
-        Ipv4Vector(v.into_iter().flat_map(|s| s.parse()).collect())
-    }
-}
-
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Deserialize, Debug, Clone)]
-struct CPTJSON {
-    probas: Vec<Vec<f32>>,
-    parents_values: Vec<Vec<usize>>,
-}
-
-#[allow(clippy::upper_case_acronyms)]
-#[derive(Deserialize, Debug, Clone)]
-#[serde(from = "CPTJSON")]
+#[derive(Debug, Clone)]
 struct CPT(HashMap<Vec<usize>, WeightedIndex<f32>>);
-
-impl From<CPTJSON> for CPT {
-    fn from(line: CPTJSON) -> CPT {
-        assert_eq!(line.probas.len(), line.parents_values.len());
-        let mut cpt = HashMap::new();
-        let mut iter_probas = line.probas.into_iter();
-        for v in line.parents_values {
-            cpt.insert(v, WeightedIndex::new(iter_probas.next().unwrap()).unwrap());
-        }
-        CPT(cpt)
-        // TODO projeter les IP sur la configuration ?
-    }
-}
 
 impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
@@ -160,29 +124,23 @@ impl BayesianNetworkNode {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug)]
 struct BayesianNetwork(Vec<BayesianNetworkNode>);
 
 impl BayesianNetwork {
     /// Sample a vector from the Bayesian network
-    fn sample(&self, rng: &mut impl RngCore) -> PartiallyDefinedFlowData {
-        let uniform = Uniform::new(32000, 65535).unwrap();
+    fn sample(&self, rng: &mut impl RngCore, partial_vector: &mut PartiallyDefinedFlowData) {
+        // TODO: use smallvec for indices
         let mut indices = Vec::with_capacity(self.0.len());
-        let mut p = PartiallyDefinedFlowData::default();
+        // let mut p = PartiallyDefinedFlowData::default();
         for v in self.0.iter() {
             let i = v.sample_index(rng, &indices);
             indices.push(i);
-            p.set_value(rng, &v.feature, i);
+            partial_vector.set_value(rng, &v.feature, i);
         }
-        p.src_port = Some(uniform.sample(rng) as u16);
-        p
+        // p.src_port = Some(uniform.sample(rng) as u16);
+        // p
     }
-}
-
-#[derive(Deserialize, Debug)]
-pub struct BayesianModel {
-    bn: BayesianNetwork, // the empty pattern is considered to be a pattern like the others
-    metadata: BNMetaData,
 }
 
 // BIFXML format
@@ -196,9 +154,11 @@ pub struct Bif {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct Network {
-    name: String,
-    property: String,
-    variable: Vec<Variable>,
+    name: String, // TODO paramétrer dans agrum
+    property: String, // learning software
+    variable: Vec<Variable>, // TODO: est-on sûr que c’est dans l’ordre topologique ? est-on sûr
+                             // que les variables sont dans le même ordre entre "variable" et
+                             // "definition" ?
     definition: Vec<Definition>,
 }
 
@@ -215,64 +175,73 @@ pub struct Variable {
 pub struct Definition {
     #[serde(rename = "FOR")]
     variable: String,
-    given: Option<String>,
+    given: Vec<String>,
     table: String,
-}
-
-// TODO: add again when the file is written
-// impl Default for BayesianModel {
-//     #[cfg(debug_assertions)]
-//     fn default() -> Self {
-//         let set: BayesianModel =
-//             serde_json::from_str(include_str!("../../default_models/bayesian_model.json"))
-//                 .unwrap();
-//         set
-//     }
-
-//     #[cfg(not(debug_assertions))]
-//     fn default() -> Self {
-//         let set: BayesianModel = serde_json::from_str(
-//             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-//                 "default_models/bayesian_model.json",
-//                 19
-//             ))
-//             .unwrap(),
-//         )
-//         .unwrap();
-//         set
-//     }
-// }
-
-impl BayesianModel {
-    /// Import patterns from a file
-    pub fn from_file(filename: &str) -> std::io::Result<Self> {
-        log::info!("Loading patterns…");
-        let f = File::open(filename)?;
-        let set: BayesianModel = serde_json::from_reader(f)?;
-        log::info!("Bayesian model loaded from {filename:?}");
-        Ok(set)
-    }
-}
-
-#[derive(Deserialize, Debug, Clone)]
-#[allow(unused)]
-struct BNMetaData {
-    input_file: String,
-    creation_time: String,
 }
 
 /// Stage 1: generates flow descriptions
 #[derive(Clone)]
 #[allow(unused)]
 pub struct BNGenerator {
-    model: Arc<BayesianModel>,
+    // model: Arc<BayesianModel>,
     config: Hosts,
     online: bool, // used to generate the TTL, either initial or at the capture point
 }
 
+#[derive(Deserialize, Debug, Clone)]
+struct AdditionalData {
+    s0_bin_count: u64,
+    ttl: HashMap<String, u64>,
+    tcp_out_pkt_gaussians: GaussianDistribs,
+    tcp_in_pkt_gaussians: GaussianDistribs,
+    udp_out_pkt_gaussians: GaussianDistribs,
+    udp_in_pkt_gaussians: GaussianDistribs,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct GaussianDistribs {
+    mu: Vec<f64>,
+    cov: Vec<f64>,
+}
+
 impl BNGenerator {
     pub fn test() {
-        serde_xml_rs::from_str::<Bif>(include_str!("../../bn_common.bifxml")).unwrap();
+        let bn_common: Bif = serde_xml_rs::from_str(include_str!("../../default_models/bn/bn_common.bifxml")).unwrap();
+        let mut processed_bn_common = BayesianNetwork(vec![]);
+        let mut overall_index: usize = 0; // common index across the BNs
+        let mut name_to_index: HashMap<String, usize> = HashMap::new();
+        for (index,v) in bn_common.network.variable.iter().enumerate() {
+            let def = bn_common.network.definition[index];
+            assert_eq!(v.name, def.variable); // we assume the order is the same between
+                                                // <variable> and <definition>
+            name_to_index.insert(v.name, overall_index);
+            let parents = def.given.into_iter().map(|v| *name_to_index.get(&v).expect("Variable not in topological order!")).collect();
+            let proba: Vec<f64> = def.table.split_ascii_whitespace().into_iter().map(|s| s.parse::<f64>().unwrap()).collect();
+            for line in proba.chunks(v.outcome.len()) {
+                WeightedIndex::new(line);
+
+            }
+            let cpt = todo!();
+            let feature = match &v.name {
+                "Time" => Feature::TimeBin,
+                "Src IP Role" => Feature::SrcIpRole(cpt, v.outcome),
+                "Dst IP Role" => Feature::DstIpRole(cpt, v.outcome),
+                "Applicative Protocol" => Feature::L7Proto(cpt, v.outcome),
+            };
+            let node = BayesianNetworkNode {
+                index: overall_index, // overall index, unique across the several BNs
+                feature,
+                parents, // indices in the Bayesian network’s nodes
+                cpt: CPT,
+            };
+            processed_bn_common.0.push(node);
+            overall_index += 1;
+        }
+
+        let bn_tcp: Bif = serde_xml_rs::from_str::<Bif>(include_str!("../../default_models/bn/bn_tcp.bifxml")).unwrap();
+        let bn_udp: Bif = serde_xml_rs::from_str::<Bif>(include_str!("../../default_models/bn/bn_udp.bifxml")).unwrap();
+
+        let bn_additional_data: AdditionalData = serde_json::from_str(include_str!("../../default_models/bn/bn_additional_data.json")).unwrap();
         log::warn!("Chargement réussi");
     }
 

@@ -67,6 +67,7 @@ def get_network_role(ip, clients, servers):
 bin_count = 24*4
 
 def categorize_time(t):
+    # TODO: formatter la string pour qu’elle ait toujours la même taille, ainsi ordre numérique = ordre alphabétique
     return "bin-"+str(t % (1000000000*60*60*24) // (1000000000*60*60*24 / bin_count))
 
 if __name__ == '__main__':
@@ -163,6 +164,7 @@ if __name__ == '__main__':
     flow.loc[flow['Proto']=="UDP", ["Cat In Packet"]] = labels
 
     # Common variables:
+        # Time
         # Src IP Role
         # Dst IP Role
         # Applicative Protocol
@@ -221,7 +223,7 @@ if __name__ == '__main__':
 
     print(output)
     try:
-        out_file = open("bn-additional-data.json", "w")
+        out_file = open("bn_additional_data.json", "w")
         json.dump(output, out_file)
         print("JSON file successfully created")
     except Exception as e:
