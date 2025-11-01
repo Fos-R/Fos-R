@@ -1,3 +1,4 @@
+use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
@@ -10,6 +11,14 @@ use thingbuf::Recycle;
 pub struct SeededData<T: Clone> {
     pub seed: u64,
     pub data: T,
+}
+
+// Stage 0 structure
+
+#[derive(Debug, Clone)]
+pub struct TimePoint {
+    pub unix_time: Duration,
+    pub date_time: DateTime<FixedOffset>,
 }
 
 // Stage 1 and 2 structures

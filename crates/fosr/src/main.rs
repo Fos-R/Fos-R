@@ -34,7 +34,7 @@ const CHANNEL_SIZE: usize = 50;
 struct Profile {
     automata: stage2::tadam::AutomataLibrary,
     patterns: stage1::flowchronicle::PatternSet,
-    time_bins: stage0::TimeBins,
+    time_bins: stage0::TimeProfile,
     config: config::Hosts,
 }
 
@@ -64,8 +64,8 @@ impl Profile {
                         .unwrap(),
                 )
                 .expect("Cannot load patterns"),
-                time_bins: stage0::TimeBins::from_file(
-                    Path::new(path).join("time_bins.json").to_str().unwrap(),
+                time_bins: stage0::TimeProfile::from_file(
+                    Path::new(path).join("time_profile.json").to_str().unwrap(),
                 )
                 .unwrap(),
             }
@@ -75,7 +75,7 @@ impl Profile {
                 automata: stage2::tadam::AutomataLibrary::default(),
                 config: config::Hosts::default(),
                 patterns: stage1::flowchronicle::PatternSet::default(),
-                time_bins: stage0::TimeBins::default(),
+                time_bins: stage0::TimeProfile::default(),
             }
         }
     }
@@ -86,6 +86,7 @@ impl Profile {
 /// This function prepare the parameter for the function "run" according to the command line
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    stage1::bayesian_networks::BNGenerator::test();
     let args = cmd::Args::parse();
 
     // Extract all IPv4 local interfaces (except loopback)
@@ -443,7 +444,7 @@ fn run<T: stage4::NetEnabler>(
     // block to automatically drop channels before the joins
     {
         // Channels creation
-        let (tx_s0, rx_s1) = bounded::<SeededData<Duration>>(CHANNEL_SIZE);
+        let (tx_s0, rx_s1) = bounded::<SeededData<TimePoint>>(CHANNEL_SIZE);
         let (tx_s1, rx_s2) = bounded::<SeededData<Flow>>(CHANNEL_SIZE);
         let (tx_s2_tcp, rx_s3_tcp) = bounded::<SeededData<PacketsIR<TCPPacketInfo>>>(CHANNEL_SIZE);
         let (tx_s2_udp, rx_s3_udp) = bounded::<SeededData<PacketsIR<UDPPacketInfo>>>(CHANNEL_SIZE);

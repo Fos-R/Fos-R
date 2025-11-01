@@ -15,10 +15,10 @@ if __name__ == '__main__':
     hist = np.bincount(bin_indices)
 
     print(hist[1:])
+    tz = "UTC" # TODO: depends on the dataset!
+    # please do not use a dataset with an inconsistent UTC offset (mix of summer time and winter time, for example)
 
-    data = { "histogram": hist[1:].tolist(), "metadata": { "creation_time": str(datetime.datetime.now()), "input_file": input_file }}
-
-# TODO: identifier les différentes catégories de machine
+    data = { "histogram": hist[1:].tolist(), "timezone": tz, "metadata": { "creation_time": str(datetime.datetime.now()), "input_file": input_file }}
 
     with open('stage0.json', 'w') as f:
         json.dump(data, f)

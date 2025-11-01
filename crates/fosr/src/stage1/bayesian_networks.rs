@@ -1,16 +1,17 @@
 use crate::stage1::*;
+use crate::structs::*;
 
 use rand_distr::weighted::WeightedIndex;
 use rand_distr::{Distribution, Uniform};
 use rand_pcg::Pcg32;
 use serde::Deserialize;
+use serde_xml_rs::{from_str, to_string};
 use std::collections::HashMap;
 use std::fs::File;
+use std::iter;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
 use std::time::Duration;
-use std::iter;
-use serde_xml_rs::{from_str, to_string};
 
 #[derive(Debug, Clone, Default)]
 struct PartiallyDefinedFlowData {
@@ -58,8 +59,9 @@ impl PartiallyDefinedFlowData {
             Feature::FwdPkt(v) => self.fwd_packets_count = Some(v.0[index].sample(rng) as usize),
             Feature::BwdPkt(v) => self.bwd_packets_count = Some(v.0[index].sample(rng) as usize),
             Feature::Duration(_) => (),
-            Feature::Proto(v) => self.proto = Some(v[0]),
+            Feature::L4Proto(v) => self.proto = Some(v[0]),
             Feature::Flags(_) => (),
+            _ => todo!(),
         }
     }
 }
@@ -91,31 +93,31 @@ impl From<Vec<(u64, u64)>> for Intervals {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-#[serde(from = "Variable")]
+// #[serde(from = "Variable")]
 enum Feature {
     SrcIP(Ipv4Vector),
     DstIP(Ipv4Vector),
     DstPt(Vec<u16>),
     FwdPkt(Intervals),
     BwdPkt(Intervals),
-    L7Proto(Vec<String>)
+    L7Proto(Vec<String>),
     L4Proto(Vec<Protocol>),
     Duration(Vec<(f64, f64)>),
     Flags(Vec<String>),
 }
 
-impl From<Variable> for Feature {
+// impl From<Variable> for Feature {
 
-    fn from(v: Variable) -> Feature {
-        match v.name {
-            "Src IP Role" => SrcIPRole,
-            "Dst IP Role" => DstIPRole,
-            "Application Proto" => AppProto,
-            "Cat Out Packet" => FwdPkt(),
-            _ => panic!("Unknown variable!")
-        }
-    }
-}
+//     fn from(v: Variable) -> Feature {
+//         match v.name {
+//             "Src IP Role" => SrcIPRole,
+//             "Dst IP Role" => DstIPRole,
+//             "Application Proto" => AppProto,
+//             "Cat Out Packet" => FwdPkt(),
+//             _ => panic!("Unknown variable!")
+//         }
+//     }
+// }
 
 impl From<Vec<String>> for Ipv4Vector {
     fn from(v: Vec<String>) -> Ipv4Vector {
@@ -123,8 +125,6 @@ impl From<Vec<String>> for Ipv4Vector {
         Ipv4Vector(v.into_iter().flat_map(|s| s.parse()).collect())
     }
 }
-
-
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Deserialize, Debug, Clone)]
@@ -165,10 +165,7 @@ struct BayesianNetwork(Vec<BayesianNetworkNode>);
 
 impl BayesianNetwork {
     /// Sample a vector from the Bayesian network
-    fn sample(
-        &self,
-        rng: &mut impl RngCore,
-    ) -> PartiallyDefinedFlowData {
+    fn sample(&self, rng: &mut impl RngCore) -> PartiallyDefinedFlowData {
         let uniform = Uniform::new(32000, 65535).unwrap();
         let mut indices = Vec::with_capacity(self.0.len());
         let mut p = PartiallyDefinedFlowData::default();
@@ -180,7 +177,6 @@ impl BayesianNetwork {
         p.src_port = Some(uniform.sample(rng) as u16);
         p
     }
-
 }
 
 #[derive(Deserialize, Debug)]
@@ -189,13 +185,12 @@ pub struct BayesianModel {
     metadata: BNMetaData,
 }
 
-
 // BIFXML format
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct Bif {
-    network: Network
+    network: Network,
 }
 
 #[derive(Deserialize, Debug)]
@@ -212,7 +207,7 @@ pub struct Network {
 pub struct Variable {
     name: String,
     property: Vec<String>,
-    outcome: Vec<String>
+    outcome: Vec<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -294,14 +289,15 @@ impl BNGenerator {
 
 impl Stage1 for BNGenerator {
     /// Generates flows
-    fn generate_flows(&self, ts: SeededData<Duration>) -> impl Iterator<Item = SeededData<Flow>> {
+    fn generate_flows(&self, ts: SeededData<TimePoint>) -> impl Iterator<Item = SeededData<Flow>> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
         let mut data: PartiallyDefinedFlowData = self.model.bn.sample(&mut rng);
-        data.timestamp = Some(ts.data);
+        data.timestamp = Some(ts.data.unix_time); // TODO! use date_time
         data.ttl_client = Some(self.config.get_default_ttl(&data.src_ip.unwrap()));
         data.ttl_server = Some(self.config.get_default_ttl(&data.dst_ip.unwrap()));
         iter::once(SeededData {
             seed: rng.next_u64(),
-            data: data.into() })
+            data: data.into(),
+        })
     }
 }
