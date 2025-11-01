@@ -61,13 +61,13 @@ pub enum Command {
             help = "Average number of flows to generate per day. Actual number of generated flows can be lower or higher"
         )]
         flow_per_day: Option<u64>,
-        #[arg(
-            short,
-            long,
-            default_value = None,
-            help = "Path to the profile with the models and the configuration"
-        )]
-        profile: Option<String>,
+        // #[arg(
+        //     short,
+        //     long,
+        //     default_value = None,
+        //     help = "Path to the profile with the models and the configuration"
+        // )]
+        // profile: Option<String>,
         #[arg(short = 'd', long, default_value = None, help = "Automatically stop the generation after this time. You can use human-friendly time, such as \"15days 30min 5s\"")]
         duration: Option<String>,
         #[arg(
@@ -140,13 +140,13 @@ pub enum Command {
         order_pcap: bool,
         #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,
-        #[arg(
-            short,
-            long,
-            default_value = None,
-            help = "Path to the profile with the models and the configuration"
-        )]
-        profile: Option<String>,
+        // #[arg(
+        //     short,
+        //     long,
+        //     default_value = None,
+        //     help = "Path to the profile with the models and the configuration"
+        // )]
+        // profile: Option<String>,
         #[arg(
             long,
             default_value = None,
