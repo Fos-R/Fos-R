@@ -257,7 +257,7 @@ pub struct TimeProfile {
 impl Default for TimeProfile {
     fn default() -> Self {
         if cfg!(debug_assertions) {
-            TimeProfile::import_from_str(include_str!("../../default_models/time_profile.json"))
+            TimeProfile::import_from_str(include_str!("../default_models/time_profile.json"))
                 .unwrap()
         } else {
             TimeProfile::import_from_str(
