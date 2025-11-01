@@ -1,5 +1,6 @@
 # Data to generate: src_ip, dst_ip, src_port, dst_port, ttl_client, ttl_server, fwd_pckets_count, bwd_packets_count, proto
 
+import argparse
 import numpy as np
 import pandas as pd
 import random
@@ -69,12 +70,19 @@ def categorize_time(t):
     return "bin-"+str(t % (1000000000*60*60*24) // (1000000000*60*60*24 / bin_count))
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Learn a time profile for Fos-R.')
+    parser.add_argument('--input', required=True, help="Select the input file. It must a csv.")
+    # parser.add_argument('--output', help="Select the output file to create.")
+    args = parser.parse_args()
+
     random.seed(0)
 
     output = {}
     output["s0_bin_count"] = bin_count
 
-    flow = pd.read_csv("cidds.csv", header = 0, sep = ",")
+    # args.input = "cidds.csv"
+
+    flow = pd.read_csv(args.input, header = 0, sep = ",")
 
     flow["Time"] = flow["Date first seen"].apply(categorize_time)
 
