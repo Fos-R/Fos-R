@@ -4,6 +4,10 @@
 
 ### Added
 
+- New stage 0 with realistic distribution
+- New stage 1 with Bayesian networks
+- New default models for stages 0 and 1
+- Added `--tz` option and timezone support more generally
 - Better library documentation
 - Option for monothreaded generation
 
