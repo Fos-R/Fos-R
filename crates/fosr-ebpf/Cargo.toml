@@ -1,17 +1,25 @@
 [package]
 name = "fosr-ebpf"
-authors = ["Pierre-François Gimenez","Dorian Bachelot"]
-version = "0.1.0"
+version = "0.1.1"
+authors = ["Pierre-François Gimenez <pierre-francois.gimenez@inria.fr>","Dorian Bachelot"]
 edition = "2024"
-publish = false
+description = "An eBPF program used by Fos-R."
+homepage = "https://fosr.inria.fr"
+repository = "https://gitlab.inria.fr/pirat-public/Fos-R"
 license = "MIT OR Apache-2.0"
+categories = ["network-programming","security","science"]
 
 [dependencies]
+
+# eBPF only dependencies
+[target.'cfg(target_os = "none")'.dependencies]
 aya-ebpf = { version = "0.1.1", default-features = false }
 network-types = "0.1.0"
 
 [build-dependencies]
 which = { version = "8.0.0" }
+aya-build = { version = "0.1.2", default-features = false }
+anyhow = { version = "1", default-features = false }
 
 [[bin]]
 name = "fosr-ebpf-prog"

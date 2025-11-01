@@ -1,6 +1,6 @@
 use crate::config::Hosts;
 use crate::structs::*;
-use crate::ui::Stats;
+use crate::stats::Stats;
 use crossbeam_channel::{Receiver, Sender};
 use rand_core::*;
 use rand_pcg::Pcg32;
@@ -8,15 +8,19 @@ use std::net::Ipv4Addr;
 use std::sync::Arc;
 use std::time::Duration;
 
+/// A implementation of Bayesian networks generation
 pub mod bayesian_networks;
+/// A implementation of FlowChronicle’s generation
 pub mod flowchronicle;
 
-/// Stage 1: generates flow descriptions
+/// A trait for Stage 1 that generates flow descriptions
 pub trait Stage1: Clone + std::marker::Send + 'static {
+    /// Generate flow(s) from a starting timestamp
     fn generate_flows(&self, ts: SeededData<TimePoint>) -> impl Iterator<Item = SeededData<Flow>>;
 }
 
-pub fn run(
+/// Generate flows from timestamps
+pub fn run_channel(
     generator: impl Stage1,
     rx_s1: Receiver<SeededData<TimePoint>>,
     tx_s1: Sender<SeededData<Flow>>,
@@ -35,6 +39,20 @@ pub fn run(
     Ok(())
 }
 
+/// Generate flows from timestamps
+pub fn run_vec(generator: impl Stage1, vec_s1: Vec<SeededData<TimePoint>>) -> Vec<SeededData<Flow>> {
+    log::trace!("Start S1");
+    let mut vector = vec![];
+    for ts in vec_s1 {
+        for f in generator.generate_flows(ts) {
+            vector.push(f);
+        }
+    }
+    log::trace!("S1 stops");
+    vector
+}
+
+/// A structure used to drop generated flow that are irrelevant in a network injection scenario
 #[derive(Debug, Clone)]
 pub struct FilterForOnline<T: Stage1> {
     ips_to_keep: Vec<Ipv4Addr>,

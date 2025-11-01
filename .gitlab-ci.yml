@@ -4,14 +4,24 @@ stages:
   - analyze
   - deploy
 
-build:
+# services:
+#   - docker:18.09-dind
+
+# variables:
+#   # the host where the docker instance is running
+#   DOCKER_HOST: tcp://docker:2375/
+#   # use for much faster builds
+#   DOCKER_DRIVER: overlay2
+#   # ensure cross knows it's running remotely
+#   CROSS_REMOTE: 1
+
+build-linux-x86-64:
   tags:
     - ci.inria.fr
     - large
   stage: build
   image: rust
   script:
-    - apt update
     # version without network injection
     - cargo build --no-default-features -p fosr
     # version without ebpf and with iptables
@@ -19,43 +29,123 @@ build:
     # version with ebpf
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
-    - cargo build --features iptables # version with ebpf + iptables
-    - cargo build # version with ebpf only
-    - cargo build --release
-    - cargo doc --no-deps
-    - mv target/doc doc
     - cargo install cargo-deb
+    - cargo build # version with ebpf only
+    - cargo build --features iptables --release # version with ebpf + iptables
     - cargo deb -p fosr
-    # cross-compilation (x86 32 bits)
-    - apt install -y gcc-i686-linux-gnu
-    - rustup target add i686-unknown-linux-gnu
-    # Aya doesn’t compile for some reason
-    - cargo build --target=i686-unknown-linux-gnu --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\" -p fosr -r --no-default-features
-    - cargo deb --target=i686-unknown-linux-gnu -p fosr --no-default-features -- --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\"
-    # cross-compilation (arm 32 bits with musl)
-    - apt install -y gcc-arm-linux-gnueabihf
-    - rustup target add arm-unknown-linux-musleabihf
-    - cargo build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
-    - cargo deb --target=arm-unknown-linux-musleabihf -p fosr -- --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\"
-    # cross-compilation (arm 64 bits with libc)
-    - apt install -y gcc-aarch64-linux-gnu
-    - rustup target add aarch64-unknown-linux-gnu
-    - cargo build --target=aarch64-unknown-linux-gnu --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\" -p fosr -r
-    - cargo deb --target=aarch64-unknown-linux-gnu -p fosr -- --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\"
-    # cross-compilation (windows, WIP)
-    # - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
-    # - rustup target add x86_64-pc-windows-gnu
-    # - cargo build --target=x86_64-pc-windows-gnu -p fosr -r --no-default-features
-    # cross-compilation (FreedBSD, WIP)
-    # - rustup target add x86_64-unknown-freebsd
-    # - cargo build --target=x86_64-unknown-freebsd --config target.x86_64-unknown-freebsd.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
     - mkdir target/x86_64-unknown-linux-gnu
     - mv target/release target/x86_64-unknown-linux-gnu
+    - cargo doc
+    - mv target/doc doc
   artifacts:
     paths:
       - target/*/release/fosr
       - target/debian/*.deb
       - doc
+
+build-linux-x86-32:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: build
+  image: rust
+  script:
+    - cargo install cargo-deb
+    - apt update
+    - apt install -y gcc-i686-linux-gnu
+    - rustup target add i686-unknown-linux-gnu
+    # Aya doesn’t compile for some reason
+    - cargo build --target=i686-unknown-linux-gnu --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\" -p fosr -r --no-default-features --features iptables
+    - cargo deb --target=i686-unknown-linux-gnu -p fosr --no-default-features --features iptables -- --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\"
+  artifacts:
+    paths:
+      - target/*/release/fosr
+      - target/debian/*.deb
+
+build-linux-arm-32:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: build
+  image: rust
+  script:
+    - rustup toolchain install nightly --component rust-src
+    - cargo install bpf-linker
+    - cargo install cargo-deb
+    - apt update
+    - apt install -y gcc-arm-linux-gnueabihf
+    - rustup target add arm-unknown-linux-musleabihf
+    - cargo build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r --features iptables
+    - cargo deb --target=arm-unknown-linux-musleabihf -p fosr --features iptables -- --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\"
+  artifacts:
+    paths:
+      - target/*/release/fosr
+      - target/debian/*.deb
+
+build-linux-arm-64:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: build
+  image: rust
+  script:
+    - rustup toolchain install nightly --component rust-src
+    - cargo install bpf-linker
+    - cargo install cargo-deb
+    - apt update
+    - apt install -y gcc-aarch64-linux-gnu
+    - rustup target add aarch64-unknown-linux-gnu
+    - cargo build --target=aarch64-unknown-linux-gnu --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\" -p fosr -r --features iptables
+    - cargo deb --target=aarch64-unknown-linux-gnu -p fosr --features iptables -- --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\"
+  artifacts:
+    paths:
+      - target/*/release/fosr
+      - target/debian/*.deb
+
+build-win64-x86:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: build
+  image: rust
+  script:
+    - apt update
+    - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
+    - rustup target add x86_64-pc-windows-gnu
+    - cargo build --target=x86_64-pc-windows-gnu -p fosr -r --no-default-features
+  artifacts:
+    paths:
+      - target/*/release/fosr.exe
+
+# build-freebsd-x86-64:
+#   tags:
+#     - ci.inria.fr
+#     - large
+#   stage: build
+#   image: docker:latest
+#   script:
+#     - apk add curl build-base
+#     - curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh -s -- -y
+#     - . "$HOME/.cargo/env"
+#     - cargo install cross --git https://github.com/cross-rs/cross
+#     - rustup toolchain add stable-x86_64-unknown-linux-gnu --force-non-host
+#     - cross build --target x86_64-unknown-freebsd -p fosr -r --no-default-features
+#   artifacts:
+#     paths:
+#       - target/*/release/fosr
+
+test-publish:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: test
+  image: rust
+  script:
+    - rustup toolchain install nightly --component rust-src
+    - cargo install bpf-linker
+    - cargo build --features iptables --release
+    - cargo publish --dry-run
+  allow_failure: true # it can fail on new version update
 
 tests:
   tags:
@@ -71,7 +161,9 @@ tests:
     - cargo test -p fosr --no-default-features -- --nocapture
     - mv crates/fosr/deterministic-test.pcap sample.pcap
   artifacts:
+    when: always
     paths:
+      - crates/fosr/deterministic-test.pcap # in case of an error
       - sample.pcap
 
 eval-zeek:
@@ -83,12 +175,16 @@ eval-zeek:
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
-    - mkdir analysis-zeek
-    - cd analysis-zeek
+    - apt update
+    - apt install -y zip
+    - mkdir analysis
+    - cd analysis
     - zeek -r ../sample.pcap
+    - cd ..
+    - zip -r analysis-zeek.zip analysis
   artifacts:
     paths:
-      - analysis-zeek
+      - analysis-zeek.zip
 
 eval-tshark:
   image: alpine
@@ -99,17 +195,18 @@ eval-tshark:
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
-    - apk add tshark
-    - mkdir analysis-tshark
-    - capinfos sample.pcap > analysis-tshark/capinfos.txt
-    - tshark -r sample.pcap > analysis-tshark/summary_per_pkt.txt
-    - tshark -r sample.pcap -z expert -q > analysis-tshark/expert.txt
-    - tshark -r sample.pcap -z conv,ip -q > analysis-tshark/conv_ip.txt
-    - tshark -r sample.pcap -z conv,udp -q > analysis-tshark/conv_udp.txt
-    - tshark -r sample.pcap -z conv,tcp -q > analysis-tshark/conv_tcp.txt
+    - apk add tshark zip
+    - mkdir analysis
+    - capinfos sample.pcap > analysis/capinfos.txt
+    - tshark -r sample.pcap > analysis/summary_per_pkt.txt
+    - tshark -r sample.pcap -z expert -q > analysis/expert.txt
+    - tshark -r sample.pcap -z conv,ip -q > analysis/conv_ip.txt
+    - tshark -r sample.pcap -z conv,udp -q > analysis/conv_udp.txt
+    - tshark -r sample.pcap -z conv,tcp -q > analysis/conv_tcp.txt
+    - zip -r analysis-tshark.zip analysis
   artifacts:
     paths:
-      - analysis-tshark
+      - analysis-tshark.zip
 
 eval-suricata:
   image: alpine
@@ -120,17 +217,17 @@ eval-suricata:
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
-    - apk add suricata
-    - mkdir analysis-suricata
-    - cd analysis-suricata
-    - suricata -c /etc/suricata/suricata.yaml -r ../sample.pcap > analysis.txt
+    - apk add suricata zip
+    - mkdir analysis
+    - suricata -c /etc/suricata/suricata.yaml -r sample.pcap > analysis/analysis.txt
+    - zip -r analysis-suricata.zip analysis
   artifacts:
     paths:
-      - analysis-suricata
+      - analysis-suricata.zip
 
 
 pages:
-  image: alpine
+  image: debian:bookworm # required to run fosr
   tags:
     - ci.inria.fr
     - small
@@ -140,26 +237,29 @@ pages:
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
-    - apk add pandoc
+    - apt update
+    - apt install -y pandoc
     - mv doc public/
     - mv target public/bin
-    - mv analysis* public/
+    - mv *.zip public/
     - mv sample.pcap public/
-    - cp resources/logo.png public/
     - cd public
-    - echo -e "\n## Binaries\n" > binaries.md
-    - find "bin" -type f -name "fosr" -exec echo "- [{}]({})" \; >> binaries.md
-    - echo -e "\n## .deb packages\n" >> binaries.md
-    - find "bin" -type f -name "*.deb" -exec echo "- [{}]({})" \; >> binaries.md
-    - echo -e "\n## Analyzed pcap sample\n" > analysis.md
-    - find . -type f -name "*.pcap" -exec echo "- [{}]({})" \; >> analysis.md
-    - echo -e "\n## Zeek analysis\n" >> analysis.md
-    - find "analysis-zeek" -type f -exec echo "- [{}]({})" \; >> analysis.md
-    - echo -e "\n## TShark analysis\n" >> analysis.md
-    - find "analysis-tshark" -type f -exec echo "- [{}]({})" \; >> analysis.md
-    - echo -e "\n## Suricata analysis\n" >> analysis.md
-    - find "analysis-suricata" -type f -exec echo "- [{}]({})" \; >> analysis.md
-    - pandoc intro.md binaries.md compile.md howto.md roadmap.md usecases.md analysis-intro.md analysis.md refs.md -o index.html --template template.html --include-after-body footer.html --standalone --no-highlight --toc --toc-depth 1 --mathjax
+    # update the build number
+    - echo -e "\nBuild version $CI_COMMIT_SHORT_SHA, compiled on $(date -I).\n" >> intro.md
+    - chmod +x ./bin/x86_64-unknown-linux-gnu/release/fosr
+    # add the --help output
+    - ./bin/x86_64-unknown-linux-gnu/release/fosr create-pcap --help >> howto-pcap.md
+    - echo "\`\`\`" >> howto-pcap.md
+    - ./bin/x86_64-unknown-linux-gnu/release/fosr inject --help >> howto-inject.md
+    - echo "\`\`\`" >> howto-inject.md
+    - ./bin/x86_64-unknown-linux-gnu/release/fosr pcap2flow --help >> howto-pcap2flow.md
+    - echo "\`\`\`" >> howto-pcap2flow.md
+    - ./bin/x86_64-unknown-linux-gnu/release/fosr untaint --help >> howto-untaint.md
+    - echo "\`\`\`" >> howto-untaint.md
+    # update the deb file paths
+    - sed -i -e "s/FOSR_VERSION/$(./bin/x86_64-unknown-linux-gnu/release/fosr -V | cut -d" " -f 2)/g" compile.md
+    - pandoc intro.md compile.md howto-pcap.md howto-inject.md howto-pcap2flow.md howto-untaint.md other_software.md roadmap.md usecases.md analysis.md refs.md -o index.html --template template.html --include-after-body footer.html --standalone --no-highlight --toc --toc-depth 1 --mathjax
+    - rm *.md
   artifacts:
     paths:
       - public

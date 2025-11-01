@@ -5,8 +5,11 @@ use std::time::Duration;
 pub struct ICMPPacketInfo {
     // we assume no payload
     // we may need to add more fields to correctly generate them
+    /// the timestamp of the packet
     pub ts: Duration,
+    /// the direction of the packet
     pub direction: PacketDirection,
+    /// whether the packet is a noise
     pub noise: NoiseType,
 }
 

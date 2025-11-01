@@ -6,7 +6,7 @@ use std::net::Ipv4Addr;
 use std::time::Duration;
 use thingbuf::Recycle;
 
-// A general wrapper to pass a seed along with actual data
+/// A general wrapper to pass a seed along with actual data
 #[derive(Debug, Clone)]
 pub struct SeededData<T: Clone> {
     pub seed: u64,
@@ -267,11 +267,8 @@ impl Packets {
     }
 }
 
-pub struct PacketsRecycler {}
-
-impl Recycle<Packets> for PacketsRecycler {
-    // Required methods
-    fn new_element(&self) -> Packets {
+impl Default for Packets {
+    fn default() -> Self {
         Packets {
             packets: Vec::with_capacity(150),
             directions: Vec::with_capacity(150),
@@ -288,6 +285,15 @@ impl Recycle<Packets> for PacketsRecycler {
                 timestamp: Duration::new(0, 0),
             }),
         }
+    }
+}
+
+pub struct PacketsRecycler {}
+
+impl Recycle<Packets> for PacketsRecycler {
+    // Required methods
+    fn new_element(&self) -> Packets {
+        Packets::default()
     }
     fn recycle(&self, element: &mut Packets) {
         element.clear();

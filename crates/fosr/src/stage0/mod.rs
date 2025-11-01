@@ -1,5 +1,5 @@
 use crate::structs::*;
-use crate::ui::Stats;
+use crate::stats::Stats;
 
 use chrono::FixedOffset;
 use chrono::Offset;
@@ -309,7 +309,7 @@ struct Metadata {
     input_file: String,
 }
 
-pub fn run(
+pub fn run_channel(
     generator: impl Stage0,
     tx_s0: Sender<SeededData<TimePoint>>,
     stats: Arc<Stats>,
@@ -328,4 +328,14 @@ pub fn run(
     }
     log::trace!("S0 stops");
     Ok(())
+}
+
+pub fn run_vec(generator: impl Stage0) -> Vec<SeededData<TimePoint>> {
+    log::trace!("Start S0");
+    let mut vector = vec![];
+    for ts in generator {
+        vector.push(ts);
+    }
+    log::trace!("S0 stops");
+    vector
 }
