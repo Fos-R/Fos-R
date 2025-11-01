@@ -117,7 +117,7 @@ pub enum Command {
         packets_count: Option<u64>,
         #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\". Generation is deterministic when used with --order-pcap and --seed.")]
         duration: Option<String>,
-        #[arg(short = 't', long, default_value = None, help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use the current time")]
+        #[arg(short = 't', long, default_value = None, help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use the current time. Date time are considered to be in the timezone specified with --tz.")]
         start_time: Option<String>,
         #[arg(
             short,
@@ -143,7 +143,7 @@ pub enum Command {
         #[arg(
             long,
             default_value = None,
-            help = "Timezone of the generated, used for realistic work hours. By default, local timezone is used. Use a IANA time zone (like Europe/Paris) or an abbreviation (like CET). The offset is assumed constant during the generated time range"
+            help = "Timezone of the generated, used for realistic work hours. By default, local timezone is used. Use a IANA time zone (like Europe/Paris) or an abbreviation (like CET). The offset is assumed constant during the generation time range"
         )]
         tz: Option<String>,
     },
