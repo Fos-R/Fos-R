@@ -60,4 +60,4 @@ Fos-R is distributed under the [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.h
 
 # Contact
 
-You can contact the maintainer at <pierre-francois.gimenez@inria.fr>. Feel free to post an issue on [GitHub](https://github.com/Fos-R/Fos-R/issues).
+You can contact the maintainer at <pierre-francois.gimenez@inria.fr>.
