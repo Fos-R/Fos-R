@@ -196,6 +196,8 @@ if __name__ == '__main__':
 
     print("Model learning")
 
+    # TODO: lors de l’apprentissage de paramètre, ne pas utiliser de prior
+
     learner_common = gum.BNLearner(common_data)
     # learner1.addMandatoryArc("Departements", "Proto App")
     # learner1.addMandatoryArc("Localisation", "Proto App")

@@ -1,5 +1,5 @@
-use crate::structs::*;
 use crate::stats::Stats;
+use crate::structs::*;
 
 use chrono::FixedOffset;
 use chrono::{DateTime, Timelike};

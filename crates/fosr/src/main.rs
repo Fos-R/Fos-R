@@ -1,4 +1,5 @@
 // we access the code through the library
+use fosr::export;
 #[cfg(feature = "net_injection")]
 use fosr::inject;
 use fosr::pcap2flow;
@@ -6,9 +7,8 @@ use fosr::stage0;
 use fosr::stage1;
 use fosr::stage2;
 use fosr::stage3;
-use fosr::export;
-use fosr::structs::*;
 use fosr::stats::Target;
+use fosr::structs::*;
 use fosr::*;
 mod cmd; // cmd is not part of the library
 
@@ -347,7 +347,9 @@ fn main() {
             } else {
                 let cpu_count = num_cpus::get();
                 if cpu_count <= 2 {
-                    log::warn!("This host has only {cpu_count} core(s). Consider using the --monothread option.");
+                    log::warn!(
+                        "This host has only {cpu_count} core(s). Consider using the --monothread option."
+                    );
                 }
                 let (s1_count, s2_count, s3_count) = (
                     max(1, cpu_count / 2),

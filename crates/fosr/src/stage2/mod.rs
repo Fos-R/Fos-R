@@ -1,8 +1,8 @@
 use crate::icmp::*;
+use crate::stats::Stats;
 use crate::structs::*;
 use crate::tcp::*;
 use crate::udp::*;
-use crate::stats::Stats;
 use crossbeam_channel::{Receiver, Sender};
 use std::sync::Arc;
 

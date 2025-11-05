@@ -3,10 +3,10 @@
 
 /// Network and host configuration
 pub mod config;
-/// Structures used throughout the library
-pub mod structs;
 /// Generation statistics
 pub mod stats;
+/// Structures used throughout the library
+pub mod structs;
 
 /// ICMP-specific fonctions
 mod icmp;

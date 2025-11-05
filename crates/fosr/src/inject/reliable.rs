@@ -1,6 +1,6 @@
 use super::NetEnabler;
-use crate::structs::*;
 use crate::stats::Stats;
+use crate::structs::*;
 use crossbeam_channel::Receiver;
 use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::TryRecvError;

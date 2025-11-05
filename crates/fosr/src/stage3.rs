@@ -1,9 +1,9 @@
 use crate::config::Hosts;
 use crate::icmp::*;
+use crate::stats::Stats;
 use crate::structs::*;
 use crate::tcp::TCPPacketInfo;
 use crate::udp::*;
-use crate::stats::Stats;
 
 use crossbeam_channel::{Receiver, Sender};
 use pnet::util::MacAddr;
@@ -538,5 +538,3 @@ pub fn run_vec<T: PacketInfo>(
 
     all_packets
 }
-
-

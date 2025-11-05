@@ -1,6 +1,6 @@
 use super::NetEnabler;
-use crate::structs::*;
 use crate::stats::Stats;
+use crate::structs::*;
 use crossbeam_channel::Receiver;
 use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::TryRecvError;
@@ -54,13 +54,18 @@ impl Eq for Elem {}
 
 fn add_flow_to_heap(s4net: &impl NetEnabler, flow: Packets, heap: &mut BinaryHeap<Elem>) {
     let fid = flow.flow.get_flow_id();
-    for (index, p) in flow.packets.into_iter().enumerate() {
-        if flow.directions[index] == PacketDirection::Forward {
+    let last_timestamp = *flow.timestamps.last().unwrap();
+    for (p, (direction, timestamp)) in flow
+        .packets
+        .into_iter()
+        .zip(flow.directions.into_iter().zip(flow.timestamps))
+    {
+        if direction == PacketDirection::Forward {
             // we add them is descending order, which helps the push complexity
             heap.push(Elem::PacketToSend((
                 p,
                 flow.flow.get_data().dst_ip,
-                flow.timestamps[index],
+                timestamp,
             )));
             // log::trace!("{:?}", flow.timestamps[index]);
             // log::trace!("New packet in the heap");
@@ -68,7 +73,7 @@ fn add_flow_to_heap(s4net: &impl NetEnabler, flow: Packets, heap: &mut BinaryHea
     }
     heap.push(Elem::CloseSession((
         fid,
-        *flow.timestamps.last().unwrap() + Duration::from_secs(1),
+        last_timestamp + Duration::from_secs(1),
     ))); // close the session one second after the last packet of the communication
 
     // set up the session as soon as possible
