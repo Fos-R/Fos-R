@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import json
 import datetime
 import argparse
@@ -25,9 +25,9 @@ if __name__ == '__main__':
     bin_indices = np.digitize(dates, bin_edges)
     hist = np.bincount(bin_indices)
 
-    print(hist[1:])
+    # print(hist[1:])
 
-    data = { "histogram": hist[1:].tolist(), "metadata": { "creation_time": str(datetime.datetime.now()), "input_file": input_file }}
+    data = { "histogram": hist[1:].tolist(), "metadata": { "creation_time": str(datetime.datetime.now()), "input_file": args.input }}
 
     with open('stage0.json', 'w') as f:
         json.dump(data, f)
