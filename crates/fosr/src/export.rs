@@ -1,9 +1,9 @@
 use crate::structs::*;
-use std::fs::OpenOptions;
-use pcap_file::pcap::{PcapWriter, PcapPacket};
-use std::io::BufWriter;
-use indicatif::{ProgressBar, ProgressStyle, ProgressState};
+use indicatif::{ProgressBar, ProgressState, ProgressStyle};
+use pcap_file::pcap::{PcapPacket, PcapWriter};
 use std::fmt::Write;
+use std::fs::OpenOptions;
+use std::io::BufWriter;
 
 /// Runs the pcap export thread.
 ///

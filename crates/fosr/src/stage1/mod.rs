@@ -1,6 +1,6 @@
 use crate::config::Hosts;
-use crate::structs::*;
 use crate::stats::Stats;
+use crate::structs::*;
 use crossbeam_channel::{Receiver, Sender};
 use rand_core::*;
 use std::net::Ipv4Addr;
@@ -38,7 +38,10 @@ pub fn run_channel(
 }
 
 /// Generate flows from timestamps and into a vector
-pub fn run_vec(generator: impl Stage1, vec_s1: Vec<SeededData<TimePoint>>) -> Vec<SeededData<Flow>> {
+pub fn run_vec(
+    generator: impl Stage1,
+    vec_s1: Vec<SeededData<TimePoint>>,
+) -> Vec<SeededData<Flow>> {
     log::trace!("Start S1");
     let mut vector = vec![];
     for ts in vec_s1 {
