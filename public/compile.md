@@ -18,7 +18,7 @@ Windows builds can only generate data but cannot inject data into the network.
 
 ## Compile from source
 
-You can also compile Fos-R from source directly. Fos-R is distributed with [crates.io](https://crates.io/crates/fosr). First, install Rust with [rustup](https://rustup.rs/). If you want the `ebpf` features (cf. above), you will need to install a few more dependencies:
+You can also compile Fos-R from source directly. Fos-R is distributed with [crates.io](https://crates.io/crates/fosr). First, install Rust with [rustup](https://rustup.rs/). If you want the `ebpf` features (cf. [above](./index.html#cargo-features), you need to install a few more dependencies:
 
 `rustup toolchain install nightly --component rust-src`
 

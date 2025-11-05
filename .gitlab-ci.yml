@@ -258,7 +258,7 @@ pages:
     - echo "\`\`\`" >> howto-untaint.md
     # update the deb file paths
     - sed -i -e "s/FOSR_VERSION/$(./bin/x86_64-unknown-linux-gnu/release/fosr -V | cut -d" " -f 2)/g" compile.md
-    - pandoc intro.md compile.md howto-pcap.md howto-inject.md howto-pcap2flow.md howto-untaint.md config_doc.md other_software.md roadmap.md usecases.md analysis.md limitations.md refs.md -o index.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1 --mathjax
+    - pandoc intro.md compile.md howto-pcap.md howto-inject.md howto-pcap2flow.md howto-untaint.md config_doc.md other_software.md schema.md roadmap.md usecases.md analysis.md limitations.md refs.md -o index.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
     - rm *.md
   artifacts:
     paths:
