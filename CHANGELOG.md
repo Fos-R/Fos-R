@@ -8,13 +8,14 @@
 - New stage 1 with Bayesian networks
 - New default models for stages 0 and 1
 - Added `--tz` option and timezone support more generally
-- Better library documentation
 - Two generation profiles: fast or efficient
+- Better library documentation
 
 ### Changed
 
 - "stage4" module renamed to "inject"
 - Create the `export` module
+- No network injection by default
 - Bugfixes
 
 ## v0.1.2
