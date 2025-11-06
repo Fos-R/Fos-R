@@ -26,6 +26,7 @@ pub struct Stage3 {
     zero: MacAddr,
 }
 
+#[derive(Debug, Clone)]
 struct TcpPacketData {
     forward: Wrapping<u32>,  // forward SEQ and backward ACK
     backward: Wrapping<u32>, // forward ACK and backward SEQ
@@ -57,13 +58,12 @@ impl Stage3 {
         packet: &mut [u8],
         src_mac: &MacAddr,
         dst_mac: &MacAddr,
-    ) -> Option<()> {
-        let mut eth_packet = MutableEthernetPacket::new(packet)?;
+    ) {
+        // the size is already computed, it cannot fail
+        let mut eth_packet = MutableEthernetPacket::new(packet).unwrap();
         eth_packet.set_ethertype(EtherTypes::Ipv4);
         eth_packet.set_source(*src_mac);
         eth_packet.set_destination(*dst_mac);
-
-        Some(())
     }
 
     /// Sets up the IPv4 packet inside a given buffer.
@@ -76,9 +76,10 @@ impl Stage3 {
         packet: &mut [u8],
         flow: &Flow,
         packet_info: &P,
-    ) -> Option<()> {
+    ) {
         let len = packet.len();
-        let mut ipv4_packet = MutableIpv4Packet::new(packet)?;
+        // cannot fail
+        let mut ipv4_packet = MutableIpv4Packet::new(packet).unwrap();
 
         // Generic fields of the IPv4 Packet
         ipv4_packet.set_version(4);
@@ -111,7 +112,6 @@ impl Stage3 {
         // Compute the checksum
         ipv4_packet.set_checksum(ipv4::checksum(&ipv4_packet.to_immutable()));
 
-        Some(())
     }
 
     /// Configures the TCP packet within a given buffer.
@@ -127,13 +127,11 @@ impl Stage3 {
         packet: &mut [u8],
         flow: &FlowData,
         packet_info: &TCPPacketInfo,
-        tcp_data: TcpPacketData, // Change to take ownership of tcp_data
+        tcp_data: &mut TcpPacketData, // Change to take ownership of tcp_data
         payload_array: &mut [u8; 65536],
-    ) -> Option<TcpPacketData> {
+    ) {
         // Return TcpPacketData and an empty tuple
-        let mut tcp_packet = MutableTcpPacket::new(packet)?;
-
-        let mut new_tcp_data = tcp_data; // Create a new instance of TcpPacketData
+        let mut tcp_packet = MutableTcpPacket::new(packet).unwrap();
 
         match packet_info.get_direction() {
             PacketDirection::Forward => {
@@ -142,16 +140,16 @@ impl Stage3 {
                 tcp_packet.set_destination(flow.dst_port);
 
                 // Set sequence and acknowledgement numbers
-                tcp_packet.set_sequence(new_tcp_data.forward.0);
+                tcp_packet.set_sequence(tcp_data.forward.0);
                 if packet_info.a_flag {
-                    tcp_packet.set_acknowledgement(new_tcp_data.backward.0);
+                    tcp_packet.set_acknowledgement(tcp_data.backward.0);
                 }
 
                 // Increment forward ACK and backward SEQ
                 if packet_info.s_flag {
-                    new_tcp_data.forward += 1;
+                    tcp_data.forward += 1;
                 } else {
-                    new_tcp_data.forward += packet_info.payload.get_payload_size() as u32;
+                    tcp_data.forward += packet_info.payload.get_payload_size() as u32;
                 }
             }
             PacketDirection::Backward => {
@@ -160,15 +158,15 @@ impl Stage3 {
                 tcp_packet.set_destination(flow.src_port);
 
                 // Set sequence and acknowledgement numbers
-                tcp_packet.set_sequence(new_tcp_data.backward.0);
+                tcp_packet.set_sequence(tcp_data.backward.0);
                 if packet_info.a_flag {
-                    tcp_packet.set_acknowledgement(new_tcp_data.forward.0);
+                    tcp_packet.set_acknowledgement(tcp_data.forward.0);
                 }
 
                 if packet_info.s_flag {
-                    new_tcp_data.backward += 1;
+                    tcp_data.backward += 1;
                 } else {
-                    new_tcp_data.backward += packet_info.payload.get_payload_size() as u32;
+                    tcp_data.backward += packet_info.payload.get_payload_size() as u32;
                 }
             }
         }
@@ -199,19 +197,19 @@ impl Stage3 {
         let mut cwr_flag = false;
         if rng.next_u32() % 100 < 5 {
             // 5% chance of congestion
-            new_tcp_data.ssthresh = new_tcp_data.cwnd / 2; // Halve the threshold
-            new_tcp_data.cwnd = new_tcp_data.ssthresh; // Enter congestion avoidance
+            tcp_data.ssthresh = tcp_data.cwnd / 2; // Halve the threshold
+            tcp_data.cwnd = tcp_data.ssthresh; // Enter congestion avoidance
             cwr_flag = true; // Indicate CWR flag should be set
-        } else if new_tcp_data.cwnd < new_tcp_data.ssthresh {
+        } else if tcp_data.cwnd < tcp_data.ssthresh {
             // Slow start: Exponential increase
-            new_tcp_data.cwnd += new_tcp_data.mss;
+            tcp_data.cwnd += tcp_data.mss;
         } else {
             // Congestion avoidance: Linear increase
-            new_tcp_data.cwnd += (new_tcp_data.mss * new_tcp_data.mss) / new_tcp_data.cwnd;
+            tcp_data.cwnd += (tcp_data.mss * tcp_data.mss) / tcp_data.cwnd;
         }
 
         // Set the window size
-        let effective_window = new_tcp_data.cwnd.min(new_tcp_data.rwnd) as u16;
+        let effective_window = tcp_data.cwnd.min(tcp_data.rwnd) as u16;
         tcp_packet.set_window(effective_window); // TODO: Compute the correct window size
 
         // Set the CWR flag if congestion occurred
@@ -234,8 +232,6 @@ impl Stage3 {
                 PacketDirection::Backward => &flow.src_ip,
             },
         ));
-
-        Some(new_tcp_data) // Return the new tcp_data and an empty tuple
     }
 
     /// Configures the UDP packet within a given buffer.
@@ -249,8 +245,8 @@ impl Stage3 {
         flow: &FlowData,
         packet_info: &UDPPacketInfo,
         payload_array: &mut [u8; 65536],
-    ) -> Option<()> {
-        let mut udp_packet = MutableUdpPacket::new(packet)?;
+    ) {
+        let mut udp_packet = MutableUdpPacket::new(packet).unwrap();
 
         // Set the source and destination ports
         match packet_info.get_direction() {
@@ -288,7 +284,6 @@ impl Stage3 {
                 PacketDirection::Backward => &flow.src_ip,
             },
         ));
-        Some(())
     }
 
     pub fn new(taint: bool, config: Hosts) -> Self {
@@ -333,25 +328,22 @@ impl Stage3 {
             if matches!(packet_info.get_direction(), PacketDirection::Backward) {
                 (mac_src, mac_dst) = (mac_dst, mac_src);
             }
-            self.setup_ethernet_frame(&mut packet[..], mac_src, mac_dst)
-                .expect("Incorrect Ethernet frame");
+            self.setup_ethernet_frame(&mut packet[..], mac_src, mac_dst);
             self.setup_ip_packet(
                 &mut rng,
                 &mut packet[ip_start..],
                 &input.data.flow,
                 packet_info,
-            )
-            .expect("Incorrect IP packet");
-            tcp_data = self
+            );
+            self
                 .setup_tcp_packet(
                     &mut rng,
                     &mut packet[tcp_start..],
                     flow,
                     packet_info,
-                    tcp_data,
+                    &mut tcp_data,
                     payload_array,
-                )
-                .expect("Incorrect TCP packet");
+                );
 
             packets.packets.push(Packet {
                 timestamp: packet_info.get_ts(),
@@ -393,23 +385,20 @@ impl Stage3 {
                 &mut packet[..],
                 self.config.get_mac(&flow.src_ip).unwrap_or(&self.zero),
                 self.config.get_mac(&flow.dst_ip).unwrap_or(&self.zero),
-            )
-            .expect("Incorrect Ethernet frame");
+            );
             self.setup_ip_packet(
                 &mut rng,
                 &mut packet[ip_start..],
                 &input.data.flow,
                 packet_info,
-            )
-            .expect("Incorrect IP packet");
+            );
             self.setup_udp_packet(
                 &mut rng,
                 &mut packet[udp_start..],
                 flow,
                 packet_info,
                 payload_array,
-            )
-            .expect("Incorrect UDP packet");
+            );
 
             packets.packets.push(Packet {
                 timestamp: packet_info.get_ts(),
