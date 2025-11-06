@@ -252,6 +252,7 @@ fn main() {
             duration,
             flow_per_day,
             tz,
+            jobs,
             taint,
         } => {
             // load the models
@@ -340,6 +341,7 @@ fn main() {
             let s1 = stage1::flowchronicle::FCGenerator::new(patterns, model.config.clone(), false);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(taint, model.config);
+            let jobs = jobs.unwrap_or(num_cpus::get());
             match profile {
                 cmd::GenerationProfile::Fast => {
                     run_fast(
@@ -351,15 +353,15 @@ fn main() {
                         s1,
                         s2,
                         s3,
+                        jobs
                     );
                     // }
                 }
                 cmd::GenerationProfile::Efficient => {
-                    let cpu_count = num_cpus::get();
                     let (s1_count, s2_count, s3_count) = (
-                        max(1, cpu_count / 4),
-                        max(1, cpu_count / 4),
-                        max(1, cpu_count / 4),
+                        max(1, jobs / 3),
+                        max(1, jobs / 3),
+                        max(1, jobs - (2 * jobs) / 3),
                     );
                     // the total is indeed larger than cpu_count. This has been empirically assessed to be a correct heuristic to maximise the performances
 
@@ -726,14 +728,14 @@ fn run_fast(
     s1: impl stage1::Stage1,
     s2: impl stage2::Stage2,
     s3: stage3::Stage3,
+    jobs: usize,
 ) {
     // TODO: remettre "stats", ctrlc, etc.
     let start = Instant::now();
 
     let vec = stage0::run_vec(s0);
 
-    let cpu_count = num_cpus::get();
-    let chunk_size = ((vec.len() as f64) / (cpu_count as f64).ceil()) as usize;
+    let chunk_size = ((vec.len() as f64) / (jobs as f64).ceil()) as usize;
     let chunk_iter = vec.chunks(chunk_size);
     let (tx, rx) = channel();
 

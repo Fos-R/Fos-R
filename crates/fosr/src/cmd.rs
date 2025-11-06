@@ -145,12 +145,8 @@ pub enum Command {
             help = "Average number of flows to generate per day. Actual number of generated flows can be lower or higher"
         )]
         flow_per_day: Option<u64>,
-        #[arg(
-            long,
-            default_value_t = false,
-            help = "Disable the temporal sorting of the generated pcap"
-        )]
-        no_order_pcap: bool,
+        #[arg(short, long, help = "Number of generation jobs")]
+        jobs: Option<usize>,
         #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,
         // #[arg(
@@ -166,6 +162,12 @@ pub enum Command {
             help = "Timezone of the generated, used for realistic work hours. By default, local timezone is used. Use a IANA time zone (like Europe/Paris) or an abbreviation (like CET). The offset is assumed constant during the generation time range"
         )]
         tz: Option<String>,
+        #[arg(
+            long,
+            default_value_t = false,
+            help = "Disable the temporal sorting of the generated pcap"
+        )]
+        no_order_pcap: bool,
     },
     /// Extract flow statistics from a pcap file to a csv file
     #[command(name = "pcap2flow")]
