@@ -1,4 +1,5 @@
 use crate::config::Hosts;
+use crate::export;
 use crate::icmp::*;
 use crate::stats::Stats;
 use crate::structs::*;
@@ -17,6 +18,8 @@ use rand_pcg::Pcg32;
 use std::net::Ipv4Addr;
 use std::num::Wrapping;
 use std::sync::Arc;
+
+const TEMPORARY_FILE_THRESHOLD: usize = 1_000_000;
 
 /// Stage 3: generate full packets from packet metadata
 #[derive(Debug, Clone)]
@@ -522,4 +525,32 @@ pub fn run_vec<T: PacketInfo>(
     }
 
     all_packets
+}
+
+pub fn run_vec_order_pcap<T: PacketInfo>(
+    generator: impl Fn(&SeededData<PacketsIR<T>>, &mut Packets, &mut [u8; 65536], &mut [u8; 65536]),
+    vec_s3: Vec<SeededData<PacketsIR<T>>>,
+) -> Vec<export::PacketIterator> {
+    let mut payload_array: [u8; 65536] = [0; 65536]; // to avoid allocating Vec for payloads
+    let mut packet: [u8; 65536] = [0; 65536];
+    let mut all_packets: Vec<Packet> =
+        Vec::with_capacity(vec_s3.iter().map(|h| h.data.packets_info.len()).sum());
+
+    let mut iterators = vec![];
+
+    for headers in vec_s3 {
+        let mut flow_packets = Packets::default();
+        generator(&headers, &mut flow_packets, &mut packet, &mut payload_array);
+        all_packets.append(&mut flow_packets.packets);
+        //
+        if all_packets.len() >= TEMPORARY_FILE_THRESHOLD {
+            iterators.push(export::export_into_temporary(&mut all_packets));
+        }
+    }
+
+    if !all_packets.is_empty() {
+        iterators.push(export::export_into_temporary(&mut all_packets));
+    }
+
+    iterators
 }
