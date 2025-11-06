@@ -51,7 +51,7 @@ hex = "0.4.3"
 sha2 = "0.10.9"
 
 [features]
-default = ["ebpf"]
+default = []
 net_injection = ["pnet/std"]
 
 # Linux only
