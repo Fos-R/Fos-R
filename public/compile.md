@@ -26,11 +26,11 @@ You can also compile Fos-R from source directly. Fos-R is distributed with [crat
 
 Then, you can install the stable version of Fos-R with:
 
-`cargo install fosr`
+`cargo install fosr [--features ebpf]`
 
 Alternatively, you can install the experimental version with:
 
-`cargo install --git https://gitlab.inria.fr/pirat-public/Fos-R.git fosr`
+`cargo install --git https://gitlab.inria.fr/pirat-public/Fos-R.git fosr [--features ebpf]`
 
 Once it’s done, you can use Fos-R with the command `fosr`.
 
