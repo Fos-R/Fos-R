@@ -88,9 +88,9 @@ pub fn run_channel(
 pub fn run_vec(generator: impl Stage2, vec_s2: Vec<SeededData<Flow>>) -> S2Vector {
     log::trace!("Start S2");
     let mut vectors = S2Vector {
-        tcp: vec![],
-        udp: vec![],
-        icmp: vec![],
+        tcp: Vec::with_capacity(vec_s2.iter().filter(|f| matches!(f.data, Flow::TCP(_))).count()),
+        udp: Vec::with_capacity(vec_s2.iter().filter(|f| matches!(f.data, Flow::UDP(_))).count()),
+        icmp: Vec::with_capacity(vec_s2.iter().filter(|f| matches!(f.data, Flow::ICMP(_))).count()),
     };
     for flow in vec_s2 {
         log::trace!("Generating packets info");
