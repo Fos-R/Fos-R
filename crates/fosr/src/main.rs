@@ -40,6 +40,14 @@ use std::sync::mpsc::channel;
 
 const CHANNEL_SIZE: usize = 50;
 
+// Use Jemalloc when possible
+#[cfg(not(target_env = "msvc"))]
+use tikv_jemallocator::Jemalloc;
+
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
+
 struct Profile {
     automata: stage2::tadam::AutomataLibrary,
     patterns: stage1::flowchronicle::PatternSet,
