@@ -25,6 +25,7 @@ fosr-ebpf = { version = "0.1.1", path = "../fosr-ebpf", optional = true }
 humantime = "2.2.0"
 include-bytes-zstd = "0.1.0"
 indicatif = "0.18.0"
+itertools = "0.14.0"
 kd-tree = "0.6.0"
 log = { version = "0.4.22" }
 num_cpus = "1.17.0"

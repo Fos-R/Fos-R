@@ -1,3 +1,4 @@
+use assert_cmd::pkg_name;
 use assert_cmd::prelude::*;
 use sha2::Digest;
 use sha2::Sha256;
@@ -8,10 +9,10 @@ use std::process::Command;
 use std::{thread, time};
 
 #[test]
-fn deterministic_generation() -> Result<(), Box<dyn std::error::Error>> {
+fn deterministic_fast_generation() -> Result<(), Box<dyn std::error::Error>> {
     let file_path = "deterministic-test.pcap";
 
-    let mut cmd = Command::cargo_bin("fosr")?;
+    let mut cmd = Command::cargo_bin(pkg_name!())?;
 
     // ensure the generation is deterministic
     cmd.arg("create-pcap")
@@ -19,8 +20,8 @@ fn deterministic_generation() -> Result<(), Box<dyn std::error::Error>> {
         .args(["-s", "0"])
         .args(["-d", "1min"])
         .args(["-t", "0"])
+        .args(["-p", "fast"])
         .args(["--tz", "CET"])
-        .arg("--order-pcap")
         .env("RUST_LOG", "trace")
         .spawn()?;
     cmd.assert().success();
@@ -38,10 +39,10 @@ fn deterministic_generation() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
-fn deterministic_generation_monothread() -> Result<(), Box<dyn std::error::Error>> {
+fn deterministic_efficient_generation() -> Result<(), Box<dyn std::error::Error>> {
     let file_path = "deterministic-test.pcap";
 
-    let mut cmd = Command::cargo_bin("fosr")?;
+    let mut cmd = Command::cargo_bin(pkg_name!())?;
 
     // ensure the generation is deterministic
     cmd.arg("create-pcap")
@@ -49,9 +50,8 @@ fn deterministic_generation_monothread() -> Result<(), Box<dyn std::error::Error
         .args(["-s", "0"])
         .args(["-d", "1min"])
         .args(["-t", "0"])
+        .args(["-p", "efficient"])
         .args(["--tz", "CET"])
-        .arg("--order-pcap")
-        .arg("--monothread")
         .env("RUST_LOG", "trace")
         .spawn()?;
     cmd.assert().success();

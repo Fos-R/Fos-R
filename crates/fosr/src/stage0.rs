@@ -70,7 +70,7 @@ impl Iterator for BinBasedGenerator {
 
             let ok = self.start_new_window();
             if !ok {
-                log::info!("{} generated flows", self.total_flow_count);
+                // log::info!("{} generated flows", self.total_flow_count);
                 return None;
             }
         }

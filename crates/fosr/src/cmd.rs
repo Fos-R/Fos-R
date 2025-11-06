@@ -17,6 +17,18 @@ pub enum NetEnabler {
 }
 
 #[derive(ValueEnum, Debug, Clone)]
+pub enum GenerationProfile {
+    Fast,
+    Efficient,
+}
+
+impl fmt::Display for GenerationProfile {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", format!("{:?}", self).to_lowercase())
+    }
+}
+
+#[derive(ValueEnum, Debug, Clone)]
 pub enum InjectionAlgo {
     Fast,
     Reliable,
@@ -39,9 +51,9 @@ pub enum Command {
         #[arg(
             long,
             default_value_t = false,
-            help = "Reorder temporally the generated pcap. Must fit the entire dataset in RAM! Requires --outfile."
+            help = "Disable the temporal sorting of the generated pcap"
         )]
-        order_pcap: bool,
+        no_order_pcap: bool,
         #[cfg(all(target_os = "linux", feature = "iptables"))]
         #[arg(
             long,
@@ -91,7 +103,7 @@ pub enum Command {
         deterministic: bool,
     },
     /// Create a pcap file. If you require deterministic generation,
-    /// you must specify -d, --order-pcap, -t, --tz and --seed.
+    /// you must specify -d, -t, --tz and --seed.
     #[clap(group(
     clap::ArgGroup::new("target")
         .required(true)
@@ -108,11 +120,12 @@ pub enum Command {
         #[arg(long, default_value_t = false, help = "Taint the packets")]
         taint: bool,
         #[arg(
+            short,
             long,
-            default_value_t = false,
-            help = "Disable multithreading. Use this option if you have a limited number of cores. Must fit the entire dataset in RAM!"
+            default_value_t = GenerationProfile::Efficient,
+            help = "The generation profile to use. Either \"fast\" that optimizes CPU use but the entire dataset must fit in RAM, or \"efficient\" that requires less RAM but is slower"
         )]
-        monothread: bool,
+        profile: GenerationProfile,
         // #[arg(
         //     short,
         //     long,
@@ -120,7 +133,7 @@ pub enum Command {
         //     help = "Add noise in the output file"
         // )]
         // noise: bool,
-        #[arg(short = 'n', long, default_value = None, help = "Minimum number of packets to generate. Beware: generation is not deterministic.")]
+        #[arg(short = 'n', long, default_value = None, help = "Minimum number of packets to generate")]
         packets_count: Option<u64>,
         #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\"")]
         duration: Option<String>,
@@ -135,9 +148,9 @@ pub enum Command {
         #[arg(
             long,
             default_value_t = false,
-            help = "Reorder temporally the generated pcap. Must fit the entire dataset in RAM!"
+            help = "Disable the temporal sorting of the generated pcap"
         )]
-        order_pcap: bool,
+        no_order_pcap: bool,
         #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,
         // #[arg(

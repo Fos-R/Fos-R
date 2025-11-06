@@ -32,9 +32,11 @@ use chrono_tz::Tz;
 use clap::Parser;
 use crossbeam_channel::bounded;
 use indicatif::HumanBytes;
+use itertools::kmerge;
 use pcap_file::pcap::{PcapPacket, PcapWriter};
 #[cfg(feature = "net_injection")]
 use pnet::{datalink, ipnetwork::IpNetwork};
+use std::sync::mpsc::channel;
 
 const CHANNEL_SIZE: usize = 50;
 
@@ -93,7 +95,7 @@ impl Profile {
 /// This function prepare the parameter for the function "run" according to the command line
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-    stage1::bayesian_networks::BNGenerator::test();
+    // stage1::bayesian_networks::BNGenerator::test();
     let args = cmd::Args::parse();
 
     match args.command {
@@ -112,7 +114,7 @@ fn main() {
             seed,
             // profile,
             outfile,
-            order_pcap,
+            no_order_pcap,
             flow_per_day,
             net_enabler,
             duration,
@@ -196,11 +198,11 @@ fn main() {
                         net_enabler: inject::ebpf::EBPFNetEnabler::new(false, &local_interfaces),
                         injection_algo,
                     };
-                    run(
+                    run_efficient(
                         local_ips,
                         outfile.map(|o| ExportParams {
                             outfile: o,
-                            order_pcap,
+                            order_pcap: !no_order_pcap,
                         }),
                         s0,
                         (s1, 1),
@@ -216,11 +218,11 @@ fn main() {
                         net_enabler: inject::iptables::IPTablesNetEnabler::new(!stealthy, false),
                         injection_algo,
                     };
-                    run(
+                    run_efficient(
                         local_ips,
                         outfile.map(|o| ExportParams {
                             outfile: o,
-                            order_pcap,
+                            order_pcap: !no_order_pcap,
                         }),
                         s0,
                         (s1, 1),
@@ -234,11 +236,10 @@ fn main() {
         }
         cmd::Command::CreatePcap {
             seed,
-            // profile,
             outfile,
             packets_count,
-            monothread,
-            order_pcap,
+            profile,
+            no_order_pcap,
             start_time,
             duration,
             flow_per_day,
@@ -246,10 +247,10 @@ fn main() {
             taint,
         } => {
             // load the models
-            let profile: Option<String> = None;
-            let profile = Profile::load(profile.as_deref());
-            let automata_library = Arc::new(profile.automata);
-            let patterns = Arc::new(profile.patterns);
+            let model: Option<String> = None;
+            let model = Profile::load(model.as_deref());
+            let automata_library = Arc::new(model.automata);
+            let patterns = Arc::new(model.patterns);
             // handle the parameters: either there is a packet count target or a duration
             let (target, duration) = match (packets_count, duration) {
                 (None, Some(d)) => {
@@ -323,53 +324,51 @@ fn main() {
                 seed,
                 false,
                 flow_per_day,
-                profile.time_bins,
+                model.time_bins,
                 initial_ts,
                 duration,
                 tz_offset,
             );
-            let s1 =
-                stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
+            let s1 = stage1::flowchronicle::FCGenerator::new(patterns, model.config.clone(), false);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(taint, profile.config);
-            if monothread {
-                log::info!("Monothread generation");
-                run_monothread(
-                    ExportParams {
-                        outfile,
-                        order_pcap,
-                    },
-                    s0,
-                    s1,
-                    s2,
-                    s3,
-                );
-            } else {
-                let cpu_count = num_cpus::get();
-                if cpu_count <= 2 {
-                    log::warn!(
-                        "This host has only {cpu_count} core(s). Consider using the --monothread option."
+            let s3 = stage3::Stage3::new(taint, model.config);
+            match profile {
+                cmd::GenerationProfile::Fast => {
+                    run_fast(
+                        ExportParams {
+                            outfile,
+                            order_pcap: !no_order_pcap,
+                        },
+                        s0,
+                        s1,
+                        s2,
+                        s3,
+                    );
+                    // }
+                }
+                cmd::GenerationProfile::Efficient => {
+                    let cpu_count = num_cpus::get();
+                    let (s1_count, s2_count, s3_count) = (
+                        max(1, cpu_count / 4),
+                        max(1, cpu_count / 4),
+                        max(1, cpu_count / 4),
+                    );
+                    // the total is indeed larger than cpu_count. This has been empirically assessed to be a correct heuristic to maximise the performances
+
+                    run_efficient(
+                        vec![],
+                        Some(ExportParams {
+                            outfile,
+                            order_pcap: !no_order_pcap,
+                        }),
+                        s0,
+                        (s1, s1_count),
+                        (s2, s2_count),
+                        (s3, s3_count),
+                        Arc::new(stats::Stats::new(target)),
+                        None::<InjectParam<inject::DummyNetEnabler>>,
                     );
                 }
-                let (s1_count, s2_count, s3_count) = (
-                    max(1, cpu_count / 2),
-                    max(1, cpu_count / 2),
-                    max(1, cpu_count / 2),
-                ); // the total is indeed larger than cpu_count. This has been empirically assessed to be a correct heuristic to maximise the performances
-
-                run(
-                    vec![],
-                    Some(ExportParams {
-                        outfile,
-                        order_pcap,
-                    }),
-                    s0,
-                    (s1, s1_count),
-                    (s2, s2_count),
-                    (s3, s3_count),
-                    Arc::new(stats::Stats::new(target)),
-                    None::<InjectParam<inject::DummyNetEnabler>>,
-                );
             }
         }
         cmd::Command::Untaint { input, output } => {
@@ -405,7 +404,7 @@ struct ExportParams {
 /// - `stats`: an Arc to a structure containing generation statistics
 /// - `s4net`: an optional network enable
 #[allow(clippy::too_many_arguments)]
-fn run<T: inject::NetEnabler>(
+fn run_efficient<T: inject::NetEnabler>(
     local_interfaces: Vec<Ipv4Addr>,
     export: Option<ExportParams>,
     s0: impl stage0::Stage0,
@@ -647,50 +646,124 @@ fn run<T: inject::NetEnabler>(
     }
 }
 
-/// Run the generation with only one thread
-fn run_monothread(
+// /// Run the generation with only one thread
+// fn run_monothread(
+//     export: ExportParams,
+//     s0: impl stage0::Stage0,
+//     s1: impl stage1::Stage1,
+//     s2: impl stage2::Stage2,
+//     s3: stage3::Stage3,
+// ) {
+//     let start = Instant::now();
+
+//     log::info!("Stage 0 generation");
+//     let vec = stage0::run_vec(s0);
+//     log::info!("Stage 1 generation");
+//     let vec = stage1::run_vec(s1, vec);
+//     log::info!("Stage 2 generation");
+//     let vec = stage2::run_vec(s2, vec);
+
+//     let mut all_packets = vec![];
+
+//     log::info!("Stage 3 generation");
+//     all_packets.append(&mut stage3::run_vec(
+//         |f, p, a| s3.generate_udp_packets(f, p, a),
+//         vec.udp,
+//     ));
+//     all_packets.append(&mut stage3::run_vec(
+//         |f, p, a| s3.generate_tcp_packets(f, p, a),
+//         vec.tcp,
+//     ));
+//     all_packets.append(&mut stage3::run_vec(
+//         |f, p, a| s3.generate_icmp_packets(f, p, a),
+//         vec.icmp,
+//     ));
+
+//     if export.order_pcap {
+//         log::info!("Sorting the packets");
+//         all_packets.sort_unstable();
+//     }
+
+//     let gen_duration = start.elapsed().as_secs_f64();
+//     let total_size = all_packets.iter().map(|p| p.data.len()).sum::<usize>() as u64;
+//     log::info!(
+//         "Generation throughput: {}/s",
+//         HumanBytes(((total_size as f64) / gen_duration) as u64)
+//     );
+
+//     let file_out = OpenOptions::new()
+//         .write(true)
+//         .create(true)
+//         .truncate(true)
+//         .open(&export.outfile)
+//         .expect("Error opening or creating file");
+//     let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
+
+//     log::info!("Pcap export");
+//     for packet in all_packets.iter() {
+//         pcap_writer
+//             .write_packet(&PcapPacket::new(
+//                 packet.timestamp,
+//                 packet.data.len() as u32,
+//                 &packet.data,
+//             ))
+//             .unwrap();
+//     }
+// }
+
+/// Run the generation with very little contention, but the generated dataset must fit in RAM
+fn run_fast(
     export: ExportParams,
     s0: impl stage0::Stage0,
     s1: impl stage1::Stage1,
     s2: impl stage2::Stage2,
     s3: stage3::Stage3,
 ) {
+    // TODO: remettre "stats", ctrlc, etc.
     let start = Instant::now();
 
-    log::info!("Stage 0 generation");
     let vec = stage0::run_vec(s0);
-    log::info!("Stage 1 generation");
-    let vec = stage1::run_vec(s1, vec);
-    log::info!("Stage 2 generation");
-    let vec = stage2::run_vec(s2, vec);
 
-    let mut all_packets = vec![];
+    let cpu_count = num_cpus::get();
+    let chunk_size = ((vec.len() as f64) / (cpu_count as f64).ceil()) as usize;
+    let chunk_iter = vec.chunks(chunk_size);
+    let (tx, rx) = channel();
 
-    log::info!("Stage 3 generation");
-    all_packets.append(&mut stage3::run_vec(
-        |f, p, a| s3.generate_udp_packets(f, p, a),
-        vec.udp,
-    ));
-    all_packets.append(&mut stage3::run_vec(
-        |f, p, a| s3.generate_tcp_packets(f, p, a),
-        vec.tcp,
-    ));
-    all_packets.append(&mut stage3::run_vec(
-        |f, p, a| s3.generate_icmp_packets(f, p, a),
-        vec.icmp,
-    ));
+    let mut threads = vec![];
 
-    let gen_duration = start.elapsed().as_secs_f64();
-    let total_size = all_packets.iter().map(|p| p.data.len()).sum::<usize>() as u64;
-    log::info!(
-        "Generation throughput: {}/s",
-        HumanBytes(((total_size as f64) / gen_duration) as u64)
-    );
+    for chunk in chunk_iter {
+        let tx = tx.clone();
+        let vec = chunk.to_vec();
+        let s1 = s1.clone();
+        let s2 = s2.clone();
+        let s3 = s3.clone();
+        threads.push(thread::spawn(move || {
+            // log::info!("Stage 1 generation");
+            let vec = stage1::run_vec(s1, vec);
+            // log::info!("Stage 2 generation");
+            let vec = stage2::run_vec(s2, vec);
 
-    if export.order_pcap {
-        log::info!("Sorting the packets");
-        all_packets.sort_unstable();
+            let mut packets = vec![];
+
+            // log::info!("Stage 3 generation");
+            packets.append(&mut stage3::run_vec(
+                |f, p, a| s3.generate_udp_packets(f, p, a),
+                vec.udp,
+            ));
+            packets.append(&mut stage3::run_vec(
+                |f, p, a| s3.generate_tcp_packets(f, p, a),
+                vec.tcp,
+            ));
+            packets.append(&mut stage3::run_vec(
+                |f, p, a| s3.generate_icmp_packets(f, p, a),
+                vec.icmp,
+            ));
+
+            packets.sort_unstable();
+            tx.send(packets).unwrap();
+        }));
     }
+    drop(tx); // drop it so we can stop when all threads are over
 
     let file_out = OpenOptions::new()
         .write(true)
@@ -700,14 +773,23 @@ fn run_monothread(
         .expect("Error opening or creating file");
     let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
 
+    for thread in threads {
+        thread.join().unwrap();
+    }
+
+    let gen_duration = start.elapsed().as_secs_f64();
+
+    let mut total_size = 0;
     log::info!("Pcap export");
-    for packet in all_packets.iter() {
+    for packet in kmerge(rx) {
+        let len = packet.data.len();
+        total_size += len;
         pcap_writer
-            .write_packet(&PcapPacket::new(
-                packet.timestamp,
-                packet.data.len() as u32,
-                &packet.data,
-            ))
+            .write_packet(&PcapPacket::new(packet.timestamp, len as u32, &packet.data))
             .unwrap();
     }
+    log::info!(
+        "Generation throughput: {}/s",
+        HumanBytes(((total_size as f64) / gen_duration) as u64)
+    );
 }

@@ -321,7 +321,7 @@ impl BNGenerator {
                 "Time" => Feature::TimeBin(bn_additional_data.s0_bin_count),
                 "Src IP Role" => Feature::SrcIpRole(v.outcome),
                 "Dst IP Role" => Feature::DstIpRole(v.outcome),
-                "Applicative Protocol" => Feature::L7Proto(v.outcome),
+                // "Applicative Protocol" => Feature::L7Proto(v.outcome.into()),
                 _ => unreachable!(),
             };
             let parents_cardinality = vec![];
