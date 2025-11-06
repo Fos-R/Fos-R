@@ -1,12 +1,82 @@
 use crate::structs::*;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
-use pcap_file::pcap::{PcapPacket, PcapWriter};
+use itertools::kmerge;
+use pcap_file::pcap::{PcapPacket, PcapReader, PcapWriter};
 use std::fmt::Write;
+use std::fs::File;
 use std::fs::OpenOptions;
-use std::io::BufWriter;
+use std::io::{BufReader, BufWriter};
+use tempfile::tempfile;
+use std::io::{Seek, SeekFrom};
 
-/// Runs the pcap export thread.
-///
+pub struct PacketIterator {
+    reader: PcapReader<BufReader<File>>,
+}
+
+impl Iterator for PacketIterator {
+    type Item = Packet;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.reader
+            .next_packet()
+            .map(|result| result.unwrap().into())
+    }
+}
+
+pub fn export_into_temporary(packets: &mut Vec<Packet>) -> PacketIterator {
+    // let mut packets: Vec<Packet> = packets.into_iter().flat_map(|p| p.packets).collect();
+    // log::warn!("Export!");
+    packets.sort_unstable();
+    let mut file = tempfile().unwrap();
+    let mut pcap_writer = PcapWriter::new(BufWriter::new(file)).expect("Error writing file");
+
+    for packet in packets.iter() {
+        pcap_writer
+            .write_packet(&PcapPacket::new(
+                packet.timestamp,
+                packet.data.len() as u32,
+                &packet.data,
+            ))
+            .unwrap();
+    }
+    packets.clear();
+
+    let mut file = pcap_writer.into_writer().into_inner().unwrap();
+    file.seek(SeekFrom::Start(0)).unwrap();
+    let reader = PcapReader::new(BufReader::new(
+        file
+    ))
+    .unwrap();
+    PacketIterator { reader }
+}
+
+pub fn run_export_from_temporary(packets: Vec<PacketIterator>, outfile: String) -> usize {
+    log::trace!("Start pcap export thread");
+    let file_out = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&outfile)
+        .expect("Error opening or creating file");
+    let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
+    log::trace!("Saving into {}", &outfile);
+
+    let mut total_size = 0;
+    for packet in kmerge(packets) {
+        let len = packet.data.len();
+        total_size += len;
+        pcap_writer
+            .write_packet(&PcapPacket::new(
+                packet.timestamp,
+                packet.data.len() as u32,
+                &packet.data,
+            ))
+            .unwrap();
+    }
+    total_size
+}
+
+/// Export the packets into a pcap file
 /// The packets are sorted by their header (timestamp), and then written
 /// sequentially to the specified file. If append is true, the packets are
 /// appended to an existing pcap file; otherwise, a new file is created.

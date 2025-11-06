@@ -1,4 +1,5 @@
 use chrono::{DateTime, FixedOffset};
+use pcap_file::pcap;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
@@ -212,6 +213,15 @@ pub struct PacketsIR<T: PacketInfo> {
 pub struct Packet {
     pub timestamp: Duration,
     pub data: Vec<u8>,
+}
+
+impl From<pcap::PcapPacket<'_>> for Packet {
+    fn from(p: pcap::PcapPacket<'_>) -> Packet {
+        Packet {
+            timestamp: p.timestamp,
+            data: p.data.to_vec(),
+        }
+    }
 }
 
 impl Packet {
