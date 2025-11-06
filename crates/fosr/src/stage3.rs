@@ -526,13 +526,13 @@ pub fn run_vec<T: PacketInfo>(
     vec_s3: Vec<SeededData<PacketsIR<T>>>,
 ) -> Vec<Packet> {
     let mut payload_array: [u8; 65536] = [0; 65536]; // to avoid allocating Vec for payloads
-    let mut all_packets: Vec<Packet> = vec![];
+    let mut all_packets: Vec<Packet> = Vec::with_capacity(vec_s3.iter().map(|h| h.data.packets_info.len()).sum());
 
     for headers in vec_s3 {
         let mut flow_packets = Packets::default();
         generator(&headers, &mut flow_packets, &mut payload_array);
-        for packet in flow_packets.packets.iter() {
-            all_packets.push(packet.clone());
+        for packet in flow_packets.packets.into_iter() {
+            all_packets.push(packet);
         }
     }
 

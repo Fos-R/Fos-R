@@ -43,7 +43,7 @@ pub fn run_vec(
     vec_s1: Vec<SeededData<TimePoint>>,
 ) -> Vec<SeededData<Flow>> {
     log::trace!("Start S1");
-    let mut vector = vec![];
+    let mut vector = Vec::with_capacity(vec_s1.len());
     for ts in vec_s1 {
         for f in generator.generate_flows(ts) {
             vector.push(f);
