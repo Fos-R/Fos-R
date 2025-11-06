@@ -9,7 +9,7 @@
 - New default models for stages 0 and 1
 - Added `--tz` option and timezone support more generally
 - Better library documentation
-- Option for monothreaded generation
+- Two generation profiles: fast or efficient
 
 ### Changed
 
