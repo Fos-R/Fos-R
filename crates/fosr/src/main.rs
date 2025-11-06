@@ -353,7 +353,7 @@ fn main() {
                         s1,
                         s2,
                         s3,
-                        jobs
+                        jobs,
                     );
                     // }
                 }
@@ -539,7 +539,7 @@ fn run_efficient<T: inject::NetEnabler>(
                             builder
                                 .spawn(move || {
                                     let _ = stage3::run_channel(
-                                        |f, p, a| s3.generate_tcp_packets(f, p, a),
+                                        |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
                                         local_interfaces,
                                         rx_s3_tcp,
                                         tx,
@@ -557,7 +557,7 @@ fn run_efficient<T: inject::NetEnabler>(
                             builder
                                 .spawn(move || {
                                     let _ = stage3::run_channel(
-                                        |f, p, a| s3.generate_udp_packets(f, p, a),
+                                        |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
                                         local_interfaces,
                                         rx_s3_udp,
                                         tx,
@@ -575,7 +575,7 @@ fn run_efficient<T: inject::NetEnabler>(
                             builder
                                 .spawn(move || {
                                     let _ = stage3::run_channel(
-                                        |f, p, a| s3.generate_icmp_packets(f, p, a),
+                                        |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
                                         local_interfaces,
                                         rx_s3_icmp,
                                         tx,
@@ -757,15 +757,15 @@ fn run_fast(
 
             // log::info!("Stage 3 generation");
             packets.append(&mut stage3::run_vec(
-                |f, p, a| s3.generate_udp_packets(f, p, a),
+                |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
                 vec.udp,
             ));
             packets.append(&mut stage3::run_vec(
-                |f, p, a| s3.generate_tcp_packets(f, p, a),
+                |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
                 vec.tcp,
             ));
             packets.append(&mut stage3::run_vec(
-                |f, p, a| s3.generate_icmp_packets(f, p, a),
+                |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
                 vec.icmp,
             ));
 
