@@ -165,7 +165,7 @@ pub enum Command {
         #[arg(
             long,
             default_value_t = false,
-            help = "Disable the temporal sorting of the generated pcap"
+            help = "Disable the temporal sorting of the generated pcap. Reduce significantly the RAM usage with \"--profile efficient\""
         )]
         no_order_pcap: bool,
     },
