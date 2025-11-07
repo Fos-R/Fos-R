@@ -310,7 +310,6 @@ impl BNGenerator {
             let proba: Vec<f64> = def
                 .table
                 .split_ascii_whitespace()
-                .into_iter()
                 .map(|s| s.parse::<f64>().unwrap())
                 .collect();
             for line in proba.chunks(v.outcome.len()) {

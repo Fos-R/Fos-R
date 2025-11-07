@@ -1,13 +1,9 @@
 use crate::structs::*;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
-use itertools::kmerge;
-use pcap_file::pcap::{PcapPacket, PcapReader, PcapWriter};
+use pcap_file::pcap::{PcapPacket, PcapWriter};
 use std::fmt::Write;
-use std::fs::File;
 use std::fs::OpenOptions;
-use std::io::{BufReader, BufWriter};
-use tempfile::tempfile;
-use std::io::{Seek, SeekFrom};
+use std::io::BufWriter;
 
 // pub struct PacketIterator {
 //     reader: PcapReader<BufReader<File>>,
