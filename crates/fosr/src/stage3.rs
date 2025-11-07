@@ -1,5 +1,4 @@
 use crate::config::Hosts;
-use crate::export;
 use crate::icmp::*;
 use crate::stats::Stats;
 use crate::structs::*;
