@@ -219,7 +219,7 @@ impl From<pcap::PcapPacket<'_>> for Packet {
     fn from(p: pcap::PcapPacket<'_>) -> Packet {
         Packet {
             timestamp: p.timestamp,
-            data: p.data.to_vec(),
+            data: p.data.into_owned(),
         }
     }
 }

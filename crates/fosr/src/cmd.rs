@@ -145,7 +145,7 @@ pub enum Command {
             help = "Average number of flows to generate per day. Actual number of generated flows can be lower or higher"
         )]
         flow_per_day: Option<u64>,
-        #[arg(short, long, help = "Number of generation jobs")]
+        #[arg(short, long, help = "Number of generation jobs. By default, use half the available cores.")]
         jobs: Option<usize>,
         #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,
