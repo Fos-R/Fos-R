@@ -5,6 +5,7 @@ use rand_distr::{Distribution, Normal};
 use rand_pcg::Pcg32;
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::iter;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
@@ -157,9 +158,8 @@ impl Feature {
 // }
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, Clone)]
 /// A conditional probability table
-struct CPT(Vec<WeightedIndex<f32>>);
+type CPT = Vec<WeightedIndex<f64>>;
 
 impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
@@ -170,14 +170,16 @@ impl BayesianNetworkNode {
         }
         match &self.cpt {
             None => panic!("Trying to sample a TimeBin"),
-            Some(cpt) => cpt.0.get(parents_index).unwrap().sample(rng),
+            Some(cpt) => cpt.get(parents_index).unwrap().sample(rng),
         }
     }
 }
 
 #[derive(Debug)]
 /// A Bayesian network, which is simply a collection of nodes
-struct BayesianNetwork(Vec<BayesianNetworkNode>);
+struct BayesianNetwork {
+    nodes: Vec<BayesianNetworkNode>,
+}
 
 impl BayesianNetwork {
     /// Sample a vector from the Bayesian network
@@ -187,8 +189,8 @@ impl BayesianNetwork {
         discrete_vector: &mut Vec<usize>,
         output_vector: &mut IntermediateVector,
     ) {
-        for v in self.0.iter() {
-            let i = v.sample_index(rng, &discrete_vector);
+        for v in self.nodes.iter() {
+            let i = v.sample_index(rng, discrete_vector);
             discrete_vector.push(i);
             match &v.feature {
                 Feature::SrcIpRole(_) => (),
@@ -219,15 +221,13 @@ pub struct Bif {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct Network {
-    name: String,            // TODO paramétrer dans agrum
-    property: String,        // learning software
-    variable: Vec<Variable>, // TODO: est-on sûr que c’est dans l’ordre topologique ? est-on sûr
-    // que les variables sont dans le même ordre entre "variable" et
-    // "definition" ?
+    name: String,     // TODO paramétrer dans agrum
+    property: String, // learning software
+    variable: Vec<Variable>,
     definition: Vec<Definition>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct Variable {
     name: String,
@@ -235,12 +235,12 @@ pub struct Variable {
     outcome: Vec<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct Definition {
     #[serde(rename = "FOR")]
     variable: String,
-    given: Vec<String>,
+    given: Option<Vec<String>>,
     table: String,
 }
 
@@ -263,10 +263,10 @@ pub struct BNGenerator {
 struct AdditionalData {
     s0_bin_count: usize,
     ttl: HashMap<String, u64>,
-    tcp_out_pkt_gaussians: GaussianDistribs,
-    tcp_in_pkt_gaussians: GaussianDistribs,
-    udp_out_pkt_gaussians: GaussianDistribs,
-    udp_in_pkt_gaussians: GaussianDistribs,
+    TCP_out_pkt_gaussians: GaussianDistribs,
+    TCP_in_pkt_gaussians: GaussianDistribs,
+    UDP_out_pkt_gaussians: GaussianDistribs,
+    UDP_in_pkt_gaussians: GaussianDistribs,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -275,47 +275,126 @@ struct GaussianDistribs {
     cov: Vec<f64>,
 }
 
+// Used only for computing the topological order
+struct TopologicalNode {
+    parents: HashSet<String>,
+    children: Vec<String>,
+}
+
 impl BNGenerator {
     pub fn test() {
         let bn_additional_data: AdditionalData = serde_json::from_str(include_str!(
             "../../default_models/bn/bn_additional_data.json"
         ))
         .unwrap();
+        let mut processed_bn_common = BayesianNetwork { nodes: vec![] };
 
-        let bn_common: Bif =
+        // The BIFXML file is read
+        let mut bn_common: Bif =
             serde_xml_rs::from_str(include_str!("../../default_models/bn/bn_common.bifxml"))
                 .unwrap();
-        let mut processed_bn_common = BayesianNetwork(vec![]);
+
+        // The BIFXML Bayesian network is converted to a "BayesianNetwork"
         let mut overall_index: usize = 0; // common index across the BNs
         let mut name_to_index: HashMap<String, usize> = HashMap::new();
+
+        // first, start computing the topological order
+        let mut nodes: HashMap<String, TopologicalNode> = HashMap::new();
+        let mut roots = vec![];
+
+        for def in bn_common.network.definition.iter() {
+            nodes.insert(
+                def.variable.clone(),
+                TopologicalNode {
+                    parents: HashSet::new(),
+                    children: vec![],
+                },
+            );
+            if def.given.is_none() {
+                roots.push(def.variable.clone());
+            }
+        }
+
+        for def in bn_common.network.definition.iter() {
+            if let Some(given) = &def.given {
+                for v in given.iter() {
+                    nodes
+                        .get_mut(&def.variable)
+                        .unwrap()
+                        .parents
+                        .insert(v.clone());
+                    nodes
+                        .get_mut(v)
+                        .unwrap()
+                        .children
+                        .push(def.variable.clone());
+                }
+            }
+        }
+
+        let mut topo_order: Vec<String> = vec![];
+
+        // Kahn’s algorithm
+        while let Some(v) = roots.pop() {
+            let children = nodes.get(&v).unwrap().children.clone();
+            for c in children {
+                let parents = &mut nodes.get_mut(&c.clone()).unwrap().parents;
+                if parents.remove(&v) && parents.is_empty() {
+                    roots.push(c.clone());
+                }
+            }
+            topo_order.push(v);
+        }
+
+        println!("{topo_order:?}");
+
+        let mut sorted_network: Network = Network {
+            name: bn_common.network.name,
+            property: bn_common.network.property,
+            variable: vec![],
+            definition: vec![],
+        };
+
+        for v in topo_order {
+            for (index, var) in bn_common.network.variable.iter().enumerate() {
+                if var.name == v {
+                    sorted_network.variable.push(var.clone());
+                    sorted_network
+                        .definition
+                        .push(bn_common.network.definition[index].clone());
+                }
+            }
+        }
+
+        println!("{sorted_network:?}");
+        bn_common.network = sorted_network;
+
         for (v, def) in bn_common
             .network
             .variable
             .into_iter()
             .zip(bn_common.network.definition)
         {
-            // let def = bn_common.network.definition[index];
             assert_eq!(v.name, def.variable); // we assume the order is the same between
             // <variable> and <definition>
-            name_to_index.insert(v.name, overall_index);
+            name_to_index.insert(v.name.clone(), overall_index);
+
             let parents: Vec<usize> = def
                 .given
+                .unwrap_or(vec![])
                 .into_iter()
-                .map(|v| {
-                    *name_to_index
-                        .get(&v)
-                        .expect("Variable not in topological order!")
-                })
+                .map(|v| *name_to_index.get(&v).unwrap())
                 .collect();
-            let proba: Vec<f64> = def
+            let cpt: CPT = def
                 .table
                 .split_ascii_whitespace()
                 .map(|s| s.parse::<f64>().unwrap())
+                .collect::<Vec<_>>()
+                .chunks(v.outcome.len())
+                .map(|l| WeightedIndex::new(l).unwrap())
                 .collect();
-            for line in proba.chunks(v.outcome.len()) {
-                WeightedIndex::new(line);
-            }
-            let cpt = todo!();
+
+            println!("{} {cpt:?}", def.variable);
             let feature = match v.name.as_str() {
                 "Time" => Feature::TimeBin(bn_additional_data.s0_bin_count),
                 "Src IP Role" => Feature::SrcIpRole(v.outcome),
@@ -323,17 +402,24 @@ impl BNGenerator {
                 // "Applicative Protocol" => Feature::L7Proto(v.outcome.into()),
                 _ => unreachable!(),
             };
-            let parents_cardinality = vec![];
-            for p in parents.iter() {
-                parents_cardinality.push(
+
+            let parents_cardinality = parents
+                .iter()
+                .map(|p| {
                     processed_bn_common
-                        .0
+                        .nodes
                         .get(*p)
                         .expect("Variables in BIFXML not in topological order!")
                         .feature
-                        .get_cardinality(),
-                )
-            }
+                        .get_cardinality()
+                })
+                .collect();
+
+            let cpt = if matches!(feature, Feature::TimeBin(_)) {
+                None
+            } else {
+                Some(cpt)
+            };
             let node = BayesianNetworkNode {
                 index: overall_index, // overall index, unique across the several BNs
                 feature,
@@ -341,7 +427,7 @@ impl BNGenerator {
                 parents_cardinality,
                 cpt,
             };
-            processed_bn_common.0.push(node);
+            processed_bn_common.nodes.push(node);
             overall_index += 1;
         }
 
