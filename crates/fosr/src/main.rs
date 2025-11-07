@@ -341,7 +341,7 @@ fn main() {
             let s1 = stage1::flowchronicle::FCGenerator::new(patterns, model.config.clone(), false);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(taint, model.config);
-            let jobs = jobs.unwrap_or(num_cpus::get());
+            let jobs = jobs.unwrap_or(max(1, num_cpus::get() / 2));
             match profile {
                 cmd::GenerationProfile::Fast => {
                     run_fast(
