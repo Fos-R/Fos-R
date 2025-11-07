@@ -753,23 +753,24 @@ fn run_fast(
             // log::info!("Stage 2 generation");
             let vec = stage2::run_vec(s2, vec);
 
-            let mut iterators = vec![];
+            let mut packets = vec![];
 
             // log::info!("Stage 3 generation");
-            iterators.append(&mut stage3::run_vec_order_pcap(
+            packets.append(&mut stage3::run_vec(
                 |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
                 vec.udp,
             ));
-            iterators.append(&mut stage3::run_vec_order_pcap(
+            packets.append(&mut stage3::run_vec(
                 |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
                 vec.tcp,
             ));
-            iterators.append(&mut stage3::run_vec_order_pcap(
+            packets.append(&mut stage3::run_vec(
                 |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
                 vec.icmp,
             ));
 
-            tx.send(iterators).unwrap();
+            packets.sort_unstable();
+            tx.send(packets).unwrap();
         }));
     }
     drop(tx); // drop it so we can stop when all threads are over
@@ -790,7 +791,7 @@ fn run_fast(
 
     let mut total_size = 0;
     log::info!("Pcap export");
-    for packet in kmerge(rx.into_iter().flatten()) {
+    for packet in kmerge(rx) {
         let len = packet.data.len();
         total_size += len;
         pcap_writer
