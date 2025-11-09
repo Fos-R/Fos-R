@@ -50,7 +50,8 @@ static GLOBAL: Jemalloc = Jemalloc;
 
 struct Profile {
     automata: stage2::tadam::AutomataLibrary,
-    patterns: stage1::flowchronicle::PatternSet,
+    // patterns: stage1::flowchronicle::PatternSet,
+    bn: stage1::bayesian_networks::BayesianModel,
     time_bins: stage0::TimeProfile,
     config: config::Hosts,
 }
@@ -74,13 +75,14 @@ impl Profile {
                     &fs::read_to_string(Path::new(path).join("profile.toml"))
                         .expect("Cannot access the configuration file."),
                 ),
-                patterns: stage1::flowchronicle::PatternSet::from_file(
-                    Path::new(path)
-                        .join("patterns/patterns.json")
-                        .to_str()
-                        .unwrap(),
-                )
-                .expect("Cannot load patterns"),
+                bn: stage1::bayesian_networks::BayesianModel::load(), // TODO
+                // patterns: stage1::flowchronicle::PatternSet::from_file(
+                //     Path::new(path)
+                //         .join("patterns/patterns.json")
+                //         .to_str()
+                //         .unwrap(),
+                // )
+                // .expect("Cannot load patterns"),
                 time_bins: stage0::TimeProfile::from_file(
                     Path::new(path).join("time_profile.json").to_str().unwrap(),
                 )
@@ -91,7 +93,8 @@ impl Profile {
             Profile {
                 automata: stage2::tadam::AutomataLibrary::default(),
                 config: config::Hosts::default(),
-                patterns: stage1::flowchronicle::PatternSet::default(),
+                bn: stage1::bayesian_networks::BayesianModel::load(), // TODO
+                // patterns: stage1::flowchronicle::PatternSet::default(),
                 time_bins: stage0::TimeProfile::default(),
             }
         }
@@ -103,7 +106,6 @@ impl Profile {
 /// This function prepare the parameter for the function "run" according to the command line
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-    // stage1::bayesian_networks::BNGenerator::test();
     let args = cmd::Args::parse();
 
     match args.command {
@@ -189,10 +191,12 @@ fn main() {
             );
 
             let automata_library = Arc::new(profile.automata);
-            let patterns = Arc::new(profile.patterns);
+            // let patterns = Arc::new(profile.patterns);
+            let bn = Arc::new(profile.bn);
 
-            let s1 =
-                stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
+            let s1 = stage1::bayesian_networks::BNGenerator::new(bn, false);
+            // let s1 =
+            // stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
             let s1 = stage1::FilterForOnline::new(local_ips.clone(), s1);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(!stealthy, profile.config);
@@ -259,7 +263,8 @@ fn main() {
             let model: Option<String> = None;
             let model = Profile::load(model.as_deref());
             let automata_library = Arc::new(model.automata);
-            let patterns = Arc::new(model.patterns);
+            // let patterns = Arc::new(model.patterns);
+            let bn = Arc::new(model.bn);
             // handle the parameters: either there is a packet count target or a duration
             let (target, duration) = match (packets_count, duration) {
                 (None, Some(d)) => {
@@ -338,7 +343,8 @@ fn main() {
                 duration,
                 tz_offset,
             );
-            let s1 = stage1::flowchronicle::FCGenerator::new(patterns, model.config.clone(), false);
+            let s1 = stage1::bayesian_networks::BNGenerator::new(bn, false);
+            // let s1 = stage1::flowchronicle::FCGenerator::new(patterns, model.config.clone(), false);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
             let s3 = stage3::Stage3::new(taint, model.config);
             let jobs = jobs.unwrap_or(max(1, num_cpus::get() / 2));

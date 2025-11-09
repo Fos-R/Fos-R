@@ -119,8 +119,8 @@ pub struct FlowData {
     pub dst_port: u16,
     pub ttl_client: u8,
     pub ttl_server: u8,
-    pub fwd_packets_count: Option<usize>,
-    pub bwd_packets_count: Option<usize>,
+    pub fwd_packets_count: usize,
+    pub bwd_packets_count: usize,
     pub timestamp: Duration,
 }
 
@@ -290,8 +290,8 @@ impl Default for Packets {
                 dst_port: 0,
                 ttl_client: 0,
                 ttl_server: 0,
-                fwd_packets_count: None,
-                bwd_packets_count: None,
+                fwd_packets_count: 0,
+                bwd_packets_count: 0,
                 timestamp: Duration::new(0, 0),
             }),
         }

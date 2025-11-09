@@ -9,7 +9,7 @@ use std::sync::Arc;
 /// A implementation of Bayesian networks generation
 pub mod bayesian_networks;
 /// A implementation of FlowChronicle’s generation
-pub mod flowchronicle;
+// pub mod flowchronicle;
 
 /// A trait for Stage 1 that generates flow descriptions
 pub trait Stage1: Clone + std::marker::Send + 'static {
