@@ -17,7 +17,6 @@ name = "fosr"
 [dependencies]
 clap = { version = "4.5.22", features = ["derive"] }
 crossbeam-channel = "0.5.13"
-ctrlc = "3.4.5"
 env_logger = { version = "0.11.6", default-features = false, features = ["auto-color", "humantime"] }
 humantime = "2.2.0"
 include-bytes-zstd = "0.1.0"
@@ -26,7 +25,7 @@ kd-tree = "0.6.0"
 log = { version = "0.4.22" }
 num_cpus = "1.17.0"
 pcap-file = "2.0.0"
-pnet = { version = "0.35.0", default-features = false, features = ["pnet_sys", "pnet_transport"] }
+pnet = { version = "0.35.0", default-features = false }
 pnet_packet = "0.35.0"
 rand = "0.9.1"
 rand_core = "0.9.3"
@@ -36,10 +35,12 @@ serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0"
 thingbuf = "0.1.6"
 toml = "0.9.2"
+getrandom = { version = "0.3.4", features = ["wasm_js"] } # needed to compile to wasm32 target
 fosr-ebpf = { version = "0.1.1", path = "../fosr-ebpf", optional = true }
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
 aya = { version = "0.13.1", default-features = false, optional = true }
+ctrlc = "3.4.5"
 
 [dev-dependencies]
 assert_cmd = "2.0.14"
@@ -48,7 +49,7 @@ sha2 = "0.10.9"
 
 [features]
 default = ["net_injection", "ebpf"]
-net_injection = ["pnet/std"]
+net_injection = ["pnet/std", "pnet/pnet_sys", "pnet/pnet_transport"]
 
 # Linux only
 iptables = ["net_injection"]
