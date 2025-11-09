@@ -25,6 +25,7 @@ native = []
 eframe = "0.33.0"
 log = "0.4.28"
 wasm-bindgen = "0.2.105"
+fosr = { path = "../fosr", default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4.55"

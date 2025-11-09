@@ -1,9 +1,16 @@
-use crate::ui::{show_about_tab_content, show_generation_tab_content, show_injection_tab_content};
+use crate::ui::{
+    GenerationState,
+    show_about_tab_content,
+    show_generation_tab_content,
+};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::ui::show_injection_tab_content;
 use eframe::egui;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum CurrentTab {
     Generation,
+    #[cfg(not(target_arch = "wasm32"))]
     Injection,
     About,
 }
@@ -11,6 +18,7 @@ enum CurrentTab {
 #[derive(Default)]
 pub struct FosrApp {
     current_tab: CurrentTab,
+    generation_state: GenerationState,
 }
 
 impl Default for CurrentTab {
@@ -31,6 +39,7 @@ impl eframe::App for FosrApp {
                 {
                     self.current_tab = CurrentTab::Generation;
                 }
+                #[cfg(not(target_arch = "wasm32"))]
                 if ui
                     .selectable_label(self.current_tab == CurrentTab::Injection, "Injection")
                     .clicked()
@@ -51,8 +60,9 @@ impl eframe::App for FosrApp {
             // Display the tab content depending on the currently select tab
             match self.current_tab {
                 CurrentTab::Generation => {
-                    show_generation_tab_content(ui);
+                    show_generation_tab_content(ui, &mut self.generation_state);
                 }
+                #[cfg(not(target_arch = "wasm32"))]
                 CurrentTab::Injection => {
                     show_injection_tab_content(ui);
                 }
