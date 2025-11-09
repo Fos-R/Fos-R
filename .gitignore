@@ -3,3 +3,5 @@
 .vagrant/
 *.pcap
 learning/tadam_*
+.idea/
+.DS_Store
