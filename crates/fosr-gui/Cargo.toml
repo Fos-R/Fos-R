@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2024"
 description = "A GUI for Fos-R."
 
+[package.metadata.bundle]
+name = "Fos-R"
+identifier = "com.inria.fosr"
+icon = ["../../public/fosr.icns"]
+
 [[bin]]
 name = "fosr-gui"
 path = "src/main.rs"

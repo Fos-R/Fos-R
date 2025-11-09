@@ -10,7 +10,12 @@ fn main() -> eframe::Result {
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([600.0, 500.0])
-            .with_min_inner_size([400.0, 350.0]),
+            .with_min_inner_size([400.0, 350.0])
+            .with_title("Fos-R")
+            .with_icon(
+                eframe::icon_data::from_png_bytes(&include_bytes!("../../../public/fosr.png")[..])
+                    .expect("Failed to load icon"),
+            ),
         ..Default::default()
     };
     eframe::run_native(

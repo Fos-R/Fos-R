@@ -34,6 +34,15 @@ cargo run --release
 ```
 This compiles and launches the native GUI.
 
+#### macOS Bundling
+
+```shell
+# Install `cargo-bundle`
+cargo install cargo-bundle
+# Bundle in a .app
+cargo bundle --release
+```
+
 ### Web (WASM)
 
 #### Step 1: Compile to WASM
