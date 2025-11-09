@@ -178,8 +178,8 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
 pub trait Automaton<T: EdgeType> {
     fn get_initial_state(
         &self,
-        fwd_packets_count: Option<usize>,
-        bwd_packets_count: Option<usize>,
+        fwd_packets_count: usize,
+        bwd_packets_count: usize,
     ) -> usize;
 
     fn is_final(&self, n: usize) -> bool;
@@ -205,14 +205,14 @@ impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
 
     fn get_initial_state(
         &self,
-        fwd_packets_count: Option<usize>,
-        bwd_packets_count: Option<usize>,
+        fwd_packets_count: usize,
+        bwd_packets_count: usize,
     ) -> usize {
         self.accepting_states
             .nearest(
                 &([
-                    fwd_packets_count.unwrap() as i32,
-                    bwd_packets_count.unwrap() as i32,
+                    fwd_packets_count as i32,
+                    bwd_packets_count as i32,
                 ]),
             )
             .unwrap()
@@ -243,7 +243,7 @@ impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
         }
     }
 
-    fn get_initial_state(&self, _f: Option<usize>, _b: Option<usize>) -> usize {
+    fn get_initial_state(&self, _f: usize, _b: usize) -> usize {
         self.initial_state
     }
 
