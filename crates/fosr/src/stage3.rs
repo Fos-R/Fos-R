@@ -1,4 +1,4 @@
-use crate::config::Hosts;
+// use crate::config::Hosts;
 use crate::icmp::*;
 use crate::stats::Stats;
 use crate::structs::*;
@@ -24,7 +24,7 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct Stage3 {
     taint: bool,
-    config: Hosts,
+    // config: Hosts,
     zero: MacAddr,
 }
 
@@ -282,10 +282,10 @@ impl Stage3 {
         ));
     }
 
-    pub fn new(taint: bool, config: Hosts) -> Self {
+    pub fn new(taint: bool /*config: Hosts*/) -> Self {
         Stage3 {
             taint,
-            config,
+            // config,
             zero: MacAddr::zero(),
         }
     }
@@ -318,8 +318,10 @@ impl Stage3 {
                 + MutableTcpPacket::minimum_packet_size()
                 + packet_info.payload.get_payload_size();
 
-            let mut mac_src = self.config.get_mac(&flow.src_ip).unwrap_or(&self.zero);
-            let mut mac_dst = self.config.get_mac(&flow.dst_ip).unwrap_or(&self.zero);
+            let mut mac_src = &self.zero;
+            let mut mac_dst = &self.zero;
+            // let mut mac_src = self.config.get_mac(&flow.src_ip).unwrap_or(&self.zero);
+            // let mut mac_dst = self.config.get_mac(&flow.dst_ip).unwrap_or(&self.zero);
             if matches!(packet_info.get_direction(), PacketDirection::Backward) {
                 (mac_src, mac_dst) = (mac_dst, mac_src);
             }
@@ -376,8 +378,10 @@ impl Stage3 {
 
             self.setup_ethernet_frame(
                 &mut packet[..packet_size],
-                self.config.get_mac(&flow.src_ip).unwrap_or(&self.zero),
-                self.config.get_mac(&flow.dst_ip).unwrap_or(&self.zero),
+                &self.zero,
+                &self.zero,
+                // self.config.get_mac(&flow.src_ip).unwrap_or(&self.zero),
+                // self.config.get_mac(&flow.dst_ip).unwrap_or(&self.zero),
             );
             self.setup_ip_packet(
                 &mut rng,

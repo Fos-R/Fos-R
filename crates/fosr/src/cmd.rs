@@ -77,9 +77,9 @@ pub enum Command {
         //     short,
         //     long,
         //     default_value = None,
-        //     help = "Path to the profile with the models and the configuration"
+        //     help = "Path to the configuration file"
         // )]
-        // profile: Option<String>,
+        // config: Option<String>,
         #[arg(short = 'd', long, default_value = None, help = "Automatically stop the generation after this time. You can use human-friendly time, such as \"15days 30min 5s\"")]
         duration: Option<String>,
         #[arg(
@@ -126,6 +126,13 @@ pub enum Command {
             help = "The generation profile to use. Either \"fast\" that optimizes CPU use but the entire dataset must fit in RAM, or \"efficient\" that requires less RAM but is slower"
         )]
         profile: GenerationProfile,
+        #[arg(
+            short,
+            long,
+            default_value = None,
+            help = "Path to the configuration file"
+        )]
+        config: Option<String>,
         // #[arg(
         //     short,
         //     long,
