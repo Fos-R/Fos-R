@@ -1,8 +1,6 @@
 use crate::stage1::*;
 
-use rand_distr::Distribution;
 use serde::Deserialize;
-use std::net::Ipv4Addr;
 
 // BIFXML format
 
@@ -15,6 +13,7 @@ struct Bif {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "UPPERCASE")]
+#[allow(unused)]
 pub struct Network {
     name: String,     // TODO paramétrer dans agrum
     property: String, // learning software
@@ -23,18 +22,16 @@ pub struct Network {
 }
 
 pub fn from_str(string: &str) -> Network {
-    serde_xml_rs::from_str::<Bif>(include_str!("../../default_models/bn/bn_common.bifxml"))
-            .unwrap().network
+    serde_xml_rs::from_str::<Bif>(string).unwrap().network
 }
 
 impl Network {
-
     /// Apply a suffix to the variables of "other" and merge the two networks
     pub fn merge(&mut self, mut other: Network, proto: Protocol) {
         let outer_variable: Vec<String> = self.variable.iter().map(|v| v.name.clone()).collect();
         let suffix = " ".to_string() + &proto.to_string();
         for v in other.variable.iter_mut() {
-            log::info!("Suffix to {}", &v.name);
+            // log::info!("Suffix to {}", &v.name);
             v.name = v.name.clone() + &suffix;
             v.proto_specific = Some(proto);
         }
@@ -60,11 +57,12 @@ impl Network {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "UPPERCASE")]
+#[allow(unused)]
 pub struct Variable {
     pub name: String,
     property: Vec<String>,
     pub outcome: Vec<String>,
-    pub proto_specific: Option<Protocol>,
+    pub proto_specific: Option<Protocol>, // not present in the format but convenient
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -75,5 +73,3 @@ pub struct Definition {
     pub given: Option<Vec<String>>,
     pub table: String,
 }
-
-

@@ -145,22 +145,22 @@ if __name__ == '__main__':
 
     print("Gaussian mixture for TCP out packet count")
     mu, cov, labels = categorize(TCP_out_pkt_count)
-    output["TCP_out_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
+    output["tcp_out_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
     flow.loc[flow['Proto']=="TCP", ["Cat Out Packet"]] = labels
 
     print("Gaussian mixture for TCP in packet count")
     mu, cov, labels = categorize(TCP_in_pkt_count)
-    output["TCP_in_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
+    output["tcp_in_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
     flow.loc[flow['Proto']=="TCP", ["Cat In Packet"]] = labels
 
     print("Gaussian mixture for UDP out packet count")
     mu, cov, labels = categorize(UDP_out_pkt_count)
-    output["UDP_out_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
+    output["udp_out_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
     flow.loc[flow['Proto']=="UDP", ["Cat Out Packet"]] = labels
 
     print("Gaussian mixture for UDP in packet count")
     mu, cov, labels = categorize(UDP_in_pkt_count)
-    output["UDP_in_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
+    output["udp_in_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
     flow.loc[flow['Proto']=="UDP", ["Cat In Packet"]] = labels
 
     # Common variables:
