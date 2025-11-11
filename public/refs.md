@@ -50,9 +50,11 @@ The evaluation of network intrusion detection systems requires a sufficient amou
 
 ## Software contributors
 
+This list also includes the dependencies of Fos-R, such as TADAM and FlowChronicle.
+
 - Inria: Pierre-François Gimenez, Adrien Schoen
 - CISPA: Lénaïg Cornanguer, Joscha Cüppers
-- CentraleSupélec: Dorian Bachelot, Evan Morin, Florentin Labelle, Samuel Cordon, Jean-Baptiste Amade
+- CentraleSupélec: Dorian Bachelot, Evan Morin, Florentin Labelle, Samuel Cordon, Quentin Blin
 
 # Licence
 
