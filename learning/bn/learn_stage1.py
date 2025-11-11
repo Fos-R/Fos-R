@@ -56,6 +56,17 @@ def group_ip_dst(value):
             return 'Local'
     return 'Internet'
 
+def remove_public_ip(value):
+    if group_ip_dst(value) == "Internet":
+        return "Internet"
+    return value
+
+# specific to CIDDS
+# def deanonymise_ip(value):
+#     if "_" in value:
+#         random.seed(value)
+#         return ".".join(str(random.randint(0, 255)) for _ in range(4))
+
 def get_network_role(ip, clients, servers):
     if ip in clients:
         return "Client"
@@ -63,6 +74,9 @@ def get_network_role(ip, clients, servers):
         return "Server"
     else:
         return "Internet"
+
+def to_string(n):
+    return "port-"+str(int(n))
 
 bin_count = 24*4
 
@@ -93,6 +107,11 @@ if __name__ == '__main__':
 
     flow['End Flags'] = flow['Flags'].apply(group_flags)
     flow['Applicative Proto'] = flow['Dst Pt'].map(Dst_Pt_mapping)
+    flow['Src IP Addr'] = flow['Src IP Addr'].apply(remove_public_ip)
+    flow['Dst IP Addr'] = flow['Dst IP Addr'].apply(remove_public_ip)
+    flow['Dst Pt'] = flow['Dst Pt'].apply(to_string)
+    # flow['Dst Pt'] = flow['Dst Pt'].astype('str')
+    print(flow['Dst Pt'])
 
     # get all the local IP addresses
     ips = set(flow["Src IP Addr"].tolist()).union(set(flow["Dst IP Addr"].tolist()))
@@ -168,7 +187,7 @@ if __name__ == '__main__':
         # Src IP Role
         # Dst IP Role
         # Applicative Protocol
-    common_vars = ["Time", "Src IP Role", "Dst IP Role", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr"]
+    common_vars = ["Time", "Src IP Role", "Dst IP Role", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt"]
     common_data = flow[common_vars]
 
     # TCP-only variables:
@@ -205,6 +224,7 @@ if __name__ == '__main__':
     # Src IP Addr and Dst IP Addr must have no children because we want to modify their CPT with the configuration file
     learner_common.addNoChildrenNode("Src IP Addr") # variable with no children
     learner_common.addNoChildrenNode("Dst IP Addr")
+    learner_common.addNoChildrenNode("Dst Pt")
     learner_common.useMIIC()
     bn_common = learner_common.learnBN()
 
