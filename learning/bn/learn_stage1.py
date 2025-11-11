@@ -48,6 +48,8 @@ Dst_Pt_mapping = {
 
 }
 
+# TODO: generate config file for each dataset
+
 def group_ip_dst(value):
     value = str(value)
     local_net = ['192.168.', '10.', '0.', '127.', '172.', '192.0.0', '198.18', '198.19']
