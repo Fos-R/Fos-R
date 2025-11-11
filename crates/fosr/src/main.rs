@@ -53,7 +53,6 @@ struct Profile {
     // patterns: stage1::flowchronicle::PatternSet,
     bn: stage1::bayesian_networks::BayesianModel,
     time_bins: stage0::TimeProfile,
-    config: config::Hosts,
 }
 
 struct InjectParam<T: inject::NetEnabler> {
@@ -73,11 +72,11 @@ impl Profile {
                         .to_str()
                         .expect("No \"automata\" directory found!"),
                 ),
-                config: config::import_config(
-                    &fs::read_to_string(Path::new(path).join("profile.toml"))
-                        .expect("Cannot access the configuration file."),
-                ),
-                bn: stage1::bayesian_networks::BayesianModel::load(), // TODO
+                // config: config::import_config(
+                //     &fs::read_to_string(Path::new(path).join("profile.toml"))
+                //         .expect("Cannot access the configuration file."),
+                // ),
+                bn: stage1::bayesian_networks::BayesianModel::load(), // TODO indiquer le chemin
                 // patterns: stage1::flowchronicle::PatternSet::from_file(
                 //     Path::new(path)
                 //         .join("patterns/patterns.json")
@@ -94,12 +93,18 @@ impl Profile {
             log::info!("Load default profile");
             Profile {
                 automata: stage2::tadam::AutomataLibrary::default(),
-                config: config::Hosts::default(),
                 bn: stage1::bayesian_networks::BayesianModel::load(), // TODO
                 // patterns: stage1::flowchronicle::PatternSet::default(),
                 time_bins: stage0::TimeProfile::default(),
             }
         }
+    }
+
+    fn load_config(&mut self, path: &str) {
+        let config = config::import_config(
+            &fs::read_to_string(Path::new(path)).expect("Cannot access the configuration file."),
+        );
+        self.bn.apply_config(&config);
     }
 }
 
@@ -259,11 +264,15 @@ fn main() {
             flow_per_day,
             tz,
             jobs,
+            config,
             taint,
         } => {
             // load the models
             let model: Option<String> = None;
-            let model = Profile::load(model.as_deref());
+            let mut model = Profile::load(model.as_deref());
+            if let Some(config) = config {
+                model.load_config(&config);
+            }
             let automata_library = Arc::new(model.automata);
             // let patterns = Arc::new(model.patterns);
             let bn = Arc::new(model.bn);
@@ -348,7 +357,7 @@ fn main() {
             let s1 = stage1::bayesian_networks::BNGenerator::new(bn, false);
             // let s1 = stage1::flowchronicle::FCGenerator::new(patterns, model.config.clone(), false);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(taint, model.config);
+            let s3 = stage3::Stage3::new(taint); //, model.config);
             let jobs = jobs.unwrap_or(max(1, num_cpus::get() / 2));
             match profile {
                 cmd::GenerationProfile::Fast => {
@@ -430,8 +439,7 @@ fn run_efficient<T: inject::NetEnabler>(
     s2: (impl stage2::Stage2, usize),
     s3: (stage3::Stage3, usize),
     stats: Arc<stats::Stats>,
-    #[allow(unused)]
-    s4net: Option<InjectParam<T>>,
+    #[allow(unused)] s4net: Option<InjectParam<T>>,
 ) {
     let (s1, s1_count) = s1;
     let (s2, s2_count) = s2;
