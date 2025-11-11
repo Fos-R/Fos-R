@@ -57,7 +57,9 @@ struct Profile {
 }
 
 struct InjectParam<T: inject::NetEnabler> {
+    #[allow(unused)]
     net_enabler: T,
+    #[allow(unused)]
     injection_algo: cmd::InjectionAlgo,
 }
 
@@ -428,6 +430,7 @@ fn run_efficient<T: inject::NetEnabler>(
     s2: (impl stage2::Stage2, usize),
     s3: (stage3::Stage3, usize),
     stats: Arc<stats::Stats>,
+    #[allow(unused)]
     s4net: Option<InjectParam<T>>,
 ) {
     let (s1, s1_count) = s1;

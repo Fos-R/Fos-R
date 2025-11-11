@@ -13,11 +13,15 @@ use std::iter;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
 use std::time::Duration;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Default)]
 /// This structure holds the flow that is being built. Since we cannot instance all the variables
 /// at the same time, each variable is an Option
 struct IntermediateVector {
+    src_ip_role: Option<IpRole>,
+    dst_ip_role: Option<IpRole>,
+    l7_proto: Option<L7Proto>,
     dst_port: Option<u16>,
     ttl_client: Option<u8>,
     ttl_server: Option<u8>,
@@ -26,8 +30,8 @@ struct IntermediateVector {
     timestamp: Option<Duration>,
     proto: Option<Protocol>,
     tcp_flags: Option<TCPEndFlags>,
-    src_ip: Option<Ipv4Addr>,
-    dst_ip: Option<Ipv4Addr>,
+    src_ip: Option<Ipv4Addr>, // if None, randomly sampled
+    dst_ip: Option<Ipv4Addr>, // if None, randomly sampled
 }
 
 impl From<IntermediateVector> for Flow {
@@ -57,6 +61,26 @@ struct BayesianNetworkNode {
     parents_cardinality: Vec<usize>, // the cardinality of each parents. Used to compute the index
                          // in the cpt
 }
+
+#[derive(Debug, Clone)]
+enum IpRole {
+    Client,
+    Server,
+    Internet,
+}
+
+// TODO: refaire proprement
+impl From<String> for IpRole {
+    fn from(s: String) -> IpRole {
+        match s.as_str() {
+            "Client" => IpRole::Client,
+            "Server" => IpRole::Server,
+            "Internet" => IpRole::Internet,
+            _ => unreachable!(),
+        }
+    }
+}
+
 
 #[derive(Debug, Clone)]
 #[allow(clippy::upper_case_acronyms)]
@@ -145,14 +169,20 @@ impl TCPEndFlags {
 }
 
 #[derive(Debug, Clone)]
+enum AnonymizedIpv4Addr {
+    Public,
+    Local(Ipv4Addr)
+}
+
+#[derive(Debug, Clone)]
 /// The set of random variables that can appear in a Bayesian network
 enum Feature {
     // for each feature, we associate a domain
     TimeBin(usize), // cardinality only
-    SrcIpRole(Vec<String>),
-    DstIpRole(Vec<String>),
-    SrcIp(Vec<Ipv4Addr>),     // the IP comes from the config
-    DstIp(Vec<Ipv4Addr>),     // the IP comes from the config
+    SrcIpRole(Vec<IpRole>),
+    DstIpRole(Vec<IpRole>),
+    SrcIp(Vec<AnonymizedIpv4Addr>),     // the IP comes from the config
+    DstIp(Vec<AnonymizedIpv4Addr>),     // the IP comes from the config
     DstPt(Vec<u16>),          // the port comes from the config (must be chosen after the dest IP)
     FwdPkt(Vec<Normal<f64>>), // the exact number is sampled from a Gaussian distribution afterward
     BwdPkt(Vec<Normal<f64>>), // idem
@@ -210,6 +240,10 @@ struct BayesianNetwork {
     nodes: Vec<BayesianNetworkNode>,
 }
 
+fn sample_random_ip(rng: &mut impl RngCore) -> Ipv4Addr {
+    Ipv4Addr::from_bits(rng.next_u32())
+}
+
 impl BayesianNetwork {
     /// Sample a vector from the Bayesian network
     fn sample(
@@ -218,7 +252,7 @@ impl BayesianNetwork {
         discrete_vector: &mut Vec<Option<usize>>,
     ) -> IntermediateVector {
         let mut domain_vector: IntermediateVector = IntermediateVector::default();
-        for (index, v) in self.nodes.iter().enumerate() {
+        for v in self.nodes.iter() {
             // log::info!("Sampling {:?} (index: {index})", v.feature);
             if !matches!(v.feature, Feature::TimeBin(_)) {
                 // do not sample TCP variables for UDP connections, etc.
@@ -229,13 +263,17 @@ impl BayesianNetwork {
                     // println!("Sampled value for {:?}: {}", v.feature, i);
                     discrete_vector.push(Some(i));
                     match &v.feature {
-                        Feature::SrcIpRole(_) => (),
-                        Feature::DstIpRole(_) => (),
-                        Feature::L7Proto(v) => {
-                            domain_vector.dst_port = Some(v[i].get_default_port())
+                        Feature::SrcIpRole(v) => domain_vector.src_ip_role = Some(v[i].clone()),
+                        Feature::DstIpRole(v) => domain_vector.dst_ip_role = Some(v[i].clone()),
+                        Feature::L7Proto(v) => domain_vector.l7_proto = Some(v[i].clone()),
+                        Feature::SrcIp(v) => match v[i] {
+                            AnonymizedIpv4Addr::Local(p) => domain_vector.src_ip = Some(p),
+                            AnonymizedIpv4Addr::Public => domain_vector.src_ip = Some(sample_random_ip(rng)),
                         }
-                        Feature::SrcIp(v) => domain_vector.src_ip = Some(v[i]),
-                        Feature::DstIp(v) => domain_vector.dst_ip = Some(v[i]),
+                        Feature::DstIp(v) => match v[i] {
+                            AnonymizedIpv4Addr::Local(p) => domain_vector.dst_ip = Some(p),
+                            AnonymizedIpv4Addr::Public => domain_vector.dst_ip = Some(sample_random_ip(rng)),
+                        }
                         Feature::DstPt(v) => domain_vector.dst_port = Some(v[i]),
                         Feature::FwdPkt(v) => {
                             domain_vector.fwd_packets_count = Some(v[i].sample(rng) as usize)
@@ -247,7 +285,7 @@ impl BayesianNetwork {
                         Feature::EndFlags => {
                             domain_vector.tcp_flags = Some(TCPEndFlags::iter()[i].clone())
                         }
-                        Feature::TimeBin(card) => unreachable!(),
+                        Feature::TimeBin(_) => unreachable!(),
                     }
                 } else {
                     discrete_vector.push(None);
@@ -277,7 +315,7 @@ pub struct BNGenerator {
 #[derive(Deserialize, Debug, Clone)]
 struct AdditionalData {
     s0_bin_count: usize,
-    ttl: HashMap<String, u64>,
+    ttl: HashMap<Ipv4Addr, u8>,
     tcp_out_pkt_gaussians: GaussianDistribs,
     tcp_in_pkt_gaussians: GaussianDistribs,
     udp_out_pkt_gaussians: GaussianDistribs,
@@ -307,13 +345,13 @@ impl BayesianModel {
         ))
         .unwrap();
 
-        log::info!("Loading high-level BN");
+        // log::info!("Loading high-level BN");
         let mut bif_common =
             bifxml::from_str(include_str!("../../default_models/bn/bn_common.bifxml"));
-        log::info!("Loading TCP BN");
+        // log::info!("Loading TCP BN");
         let bif_tcp = bifxml::from_str(include_str!("../../default_models/bn/bn_tcp.bifxml"));
         bif_common.merge(bif_tcp, Protocol::TCP);
-        log::info!("Loading UDP BN");
+        // log::info!("Loading UDP BN");
         let bif_udp = bifxml::from_str(include_str!("../../default_models/bn/bn_udp.bifxml"));
         bif_common.merge(bif_udp, Protocol::UDP);
 
@@ -391,7 +429,7 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
     }
 
 
-    println!("Topological order: {topo_order:?}");
+    // println!("Topological order: {topo_order:?}");
 
     // let mut sorted_network: bifxml::Network = bifxml::Network {
     //     name: network.name,
@@ -446,20 +484,26 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
         // println!("{}", def.variable);
         let feature: Option<Feature> = match v.name.as_str() {
             "Time" => Some(Feature::TimeBin(bn_additional_data.s0_bin_count)),
-            "Src IP Role" => Some(Feature::SrcIpRole(v.outcome.clone())),
+            "Src IP Role" => Some(Feature::SrcIpRole(v.outcome.clone().into_iter().map(|s| s.into()).collect())),
             "Src IP Addr" => Some(Feature::SrcIp(
                 v.outcome
                     .clone()
                     .into_iter()
-                    .map(|v| v.parse().unwrap())
+                    .map(|v| match v.parse().ok() {
+                        Some(ip) => AnonymizedIpv4Addr::Local(ip),
+                        None => AnonymizedIpv4Addr::Public,
+                    })
                     .collect(),
             )),
-            "Dst IP Role" => Some(Feature::DstIpRole(v.outcome.clone())),
+            "Dst IP Role" => Some(Feature::DstIpRole(v.outcome.clone().into_iter().map(|s| s.into()).collect())),
             "Dst IP Addr" => Some(Feature::DstIp(
                 v.outcome
                     .clone()
                     .into_iter()
-                    .map(|v| v.parse().ok().unwrap_or(Ipv4Addr::new(1, 2, 3, 4)))
+                    .map(|v| match v.parse().ok() {
+                        Some(ip) => AnonymizedIpv4Addr::Local(ip),
+                        None => AnonymizedIpv4Addr::Public,
+                    })
                     .collect(),
             )),
             "Applicative Proto" => Some(Feature::L7Proto(
@@ -467,6 +511,9 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
             )),
             "Proto" => Some(Feature::L4Proto(
                 v.outcome.clone().into_iter().map(|s| s.into()).collect(),
+            )),
+            "Dst Pt" => Some(Feature::DstPt(
+                v.outcome.clone().into_iter().map(|s| u16::from_str(&s.strip_prefix("port-").unwrap()).unwrap()).collect(),
             )),
 
             "Cat Out Packet TCP" => Some(Feature::FwdPkt(
@@ -552,6 +599,8 @@ impl Stage1 for BNGenerator {
         )));
         let mut domain_vector = self.model.bn.sample(&mut rng, &mut discrete_vector);
         domain_vector.timestamp = Some(ts.data.unix_time);
+        domain_vector.ttl_client = Some(*self.model.bn_additional_data.ttl.get(&domain_vector.src_ip.unwrap()).unwrap_or(&60));
+        domain_vector.ttl_server = Some(42);
         iter::once(SeededData {
             seed: rng.next_u64(),
             data: domain_vector.into(),

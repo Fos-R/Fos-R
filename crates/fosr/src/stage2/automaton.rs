@@ -292,6 +292,7 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
 }
 
 impl<T: EdgeType> CrossProductTimedAutomaton<T> {
+    #[allow(unused)]
     pub fn is_compatible_with(&self, port: u16) -> bool {
         self.metadata.select_dst_ports.contains(&port)
     }
@@ -322,6 +323,7 @@ impl<T: EdgeType> Display for TimedAutomaton<T> {
 
 // TODO: fusionner avec la version "crossproduct"
 impl<T: EdgeType> TimedAutomaton<T> {
+    #[allow(unused)]
     pub fn is_compatible_with(&self, port: u16) -> bool {
         self.metadata.select_dst_ports.contains(&port)
     }
