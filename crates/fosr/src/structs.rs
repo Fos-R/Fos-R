@@ -27,9 +27,22 @@ pub struct TimePoint {
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Protocol {
+    // TODO: renommer en L4Protocol pour éviter toute confusion
     TCP,
     UDP,
     ICMP,
+}
+
+// TODO: refaire proprement
+impl From<String> for Protocol {
+    fn from(s: String) -> Protocol {
+        match s.as_str() {
+            "TCP" => Protocol::TCP,
+            "UDP" => Protocol::UDP,
+            "ICMP" => Protocol::ICMP,
+            _ => todo!(),
+        }
+    }
 }
 
 impl Display for Protocol {

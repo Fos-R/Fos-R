@@ -222,18 +222,14 @@ impl TadamGenerator {
 }
 
 fn update_packet_counts<U: PacketInfo>(packets_info: &mut [U], flow: &mut FlowData) {
-    flow.fwd_packets_count =
-        packets_info
-            .iter()
-            .filter(|p| p.get_direction() == PacketDirection::Forward)
-            .count()
-    ;
-    flow.bwd_packets_count =
-        packets_info
-            .iter()
-            .filter(|p| p.get_direction() == PacketDirection::Backward)
-            .count()
-    ;
+    flow.fwd_packets_count = packets_info
+        .iter()
+        .filter(|p| p.get_direction() == PacketDirection::Forward)
+        .count();
+    flow.bwd_packets_count = packets_info
+        .iter()
+        .filter(|p| p.get_direction() == PacketDirection::Backward)
+        .count();
 }
 
 #[allow(unused)]
@@ -244,11 +240,11 @@ impl Stage2 for TadamGenerator {
     ) -> Option<SeededData<PacketsIR<TCPPacketInfo>>> {
         let mut rng = Pcg32::seed_from_u64(flow.seed);
         let packets_info = self
-                .lib
-                .cons_tcp_automata
-                .iter()
-                .find(|a| a.is_compatible_with(flow.data.dst_port))
-                .map(|a| automaton::sample(&mut rng, a, &flow.data, create_tcp_header));
+            .lib
+            .cons_tcp_automata
+            .iter()
+            .find(|a| a.is_compatible_with(flow.data.dst_port))
+            .map(|a| automaton::sample(&mut rng, a, &flow.data, create_tcp_header));
 
         // let packets_info = match (flow.data.fwd_packets_count, flow.data.bwd_packets_count) {
         //     (Some(_), Some(_)) => self
@@ -287,11 +283,11 @@ impl Stage2 for TadamGenerator {
     ) -> Option<SeededData<PacketsIR<UDPPacketInfo>>> {
         let mut rng = Pcg32::seed_from_u64(flow.seed);
         let packets_info = self
-                .lib
-                .cons_udp_automata
-                .iter()
-                .find(|a| a.is_compatible_with(flow.data.dst_port))
-                .map(|a| automaton::sample(&mut rng, a, &flow.data, create_udp_header));
+            .lib
+            .cons_udp_automata
+            .iter()
+            .find(|a| a.is_compatible_with(flow.data.dst_port))
+            .map(|a| automaton::sample(&mut rng, a, &flow.data, create_udp_header));
 
         // let packets_info = match (flow.data.fwd_packets_count, flow.data.bwd_packets_count) {
         //     (Some(_), Some(_)) => self
