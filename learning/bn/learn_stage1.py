@@ -168,7 +168,7 @@ if __name__ == '__main__':
         # Src IP Role
         # Dst IP Role
         # Applicative Protocol
-    common_vars = ["Time", "Src IP Role", "Dst IP Role", "Applicative Proto"]
+    common_vars = ["Time", "Src IP Role", "Dst IP Role", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr"]
     common_data = flow[common_vars]
 
     # TCP-only variables:
@@ -192,7 +192,6 @@ if __name__ == '__main__':
         # Dst Port
         # Src IP Addr
         # Dst IP Addr
-        # Proto
 
     print("Model learning")
 
@@ -201,7 +200,11 @@ if __name__ == '__main__':
     learner_common = gum.BNLearner(common_data)
     # learner1.addMandatoryArc("Departements", "Proto App")
     # learner1.addMandatoryArc("Localisation", "Proto App")
+    # Time must have no parent because it will be sampled from the stage 0
     learner_common.addNoParentNode("Time") # variable with no parent
+    # Src IP Addr and Dst IP Addr must have no children because we want to modify their CPT with the configuration file
+    learner_common.addNoChildrenNode("Src IP Addr") # variable with no children
+    learner_common.addNoChildrenNode("Dst IP Addr")
     learner_common.useMIIC()
     bn_common = learner_common.learnBN()
 

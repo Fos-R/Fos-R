@@ -1,5 +1,6 @@
 use crate::stage1::*;
 
+use chrono::Timelike;
 use rand_distr::weighted::WeightedIndex;
 use rand_distr::{Distribution, Normal};
 use rand_pcg::Pcg32;
@@ -10,7 +11,6 @@ use std::iter;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
 use std::time::Duration;
-use chrono::Timelike;
 
 #[derive(Debug, Clone, Default)]
 /// This structure holds the flow that is being built. Since we cannot instance all the variables
@@ -24,8 +24,8 @@ struct IntermediateVector {
     timestamp: Option<Duration>,
     proto: Option<Protocol>,
     tcp_flags: Option<TCPEndFlags>,
-    src_ip : Option<Ipv4Addr>,
-    dst_ip : Option<Ipv4Addr>,
+    src_ip: Option<Ipv4Addr>,
+    dst_ip: Option<Ipv4Addr>,
 }
 
 impl From<IntermediateVector> for Flow {
@@ -41,37 +41,13 @@ impl From<IntermediateVector> for Flow {
             bwd_packets_count: p.bwd_packets_count.unwrap(),
             timestamp: p.timestamp.unwrap(),
         };
-        // match p.proto.unwrap() {
-        //     Protocol::TCP => Flow::TCP(d, p.tcp_flags.unwrap()),
-        //     Protocol::UDP => Flow::UDP(d),
-        //     Protocol::ICMP => Flow::ICMP(d),
-        // }
         p.proto.unwrap().wrap(d)
     }
 }
 
-// impl PartiallyDefinedFlowData {
-//     fn set_value(&mut self, rng: &mut impl RngCore, f: &Feature, index: usize) {
-//         todo!()
-//         // match f {
-//         //     Feature::SrcIP(v) => self.src_ip = Some(v.0[index]),
-//         //     Feature::DstIP(v) => self.dst_ip = Some(v.0[index]),
-//         //     Feature::DstPt(v) => self.dst_port = Some(v[index]),
-//         //     Feature::FwdPkt(v) => self.fwd_packets_count = Some(v.0[index].sample(rng) as usize),
-//         //     Feature::BwdPkt(v) => self.bwd_packets_count = Some(v.0[index].sample(rng) as usize),
-//         //     Feature::Duration(_) => (),
-//         //     Feature::L4Proto(v) => self.proto = Some(v[0]),
-//         //     Feature::Flags(_) => (),
-//         //     _ => todo!(),
-//         // }
-//     }
-// }
-
 /// A node of the Bayesian network
 #[derive(Debug, Clone)]
 struct BayesianNetworkNode {
-    index: usize, // overall index, unique across the several BNs
-    ignored_during_generation: bool, // for nodes that are duplicated across BNs
     feature: Feature,
     cpt: Option<CPT>,    // TimeBin has no CPT
     parents: Vec<usize>, // indices in the Bayesian network’s nodes
@@ -154,6 +130,17 @@ enum TCPEndFlags {
     NotFAndNotR,
 }
 
+impl TCPEndFlags {
+    fn iter() -> [TCPEndFlags; 4] {
+        [
+            TCPEndFlags::None,
+            TCPEndFlags::R,
+            TCPEndFlags::FAndNotR,
+            TCPEndFlags::NotFAndNotR,
+        ]
+    }
+}
+
 #[derive(Debug, Clone)]
 /// The set of random variables that can appear in a Bayesian network
 enum Feature {
@@ -171,38 +158,16 @@ enum Feature {
     EndFlags,
 }
 
-impl Feature {
-    fn get_cardinality(&self) -> usize {
-        match &self {
-            Feature::SrcIpRole(v) | Feature::DstIpRole(v) => v.len(),
-            Feature::SrcIp(v) | Feature::DstIp(v) => v.len(),
-            Feature::DstPt(v) => v.len(),
-            Feature::FwdPkt(v) | Feature::BwdPkt(v) => v.len(),
-            Feature::L4Proto(v) => v.len(),
-            Feature::L7Proto(v) => v.len(),
-            Feature::EndFlags => 4, // TODO: déduire de TCPEndFlags
-            Feature::TimeBin(card) => *card,
-        }
-    }
-}
-
-// impl From<Vec<String>> for Ipv4Vector {
-//     fn from(v: Vec<String>) -> Ipv4Vector {
-//         // ignore non-IPv4, like anonymised public IP addresses
-//         Ipv4Vector(v.into_iter().flat_map(|s| s.parse()).collect())
-//     }
-// }
-
 #[allow(clippy::upper_case_acronyms)]
 /// A conditional probability table
 type CPT = Vec<WeightedIndex<f64>>;
 
 impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
-    fn sample_index(&self, rng: &mut impl RngCore, current: &[usize]) -> usize {
+    fn sample_index(&self, rng: &mut impl RngCore, current: &[Option<usize>]) -> usize {
         let mut parents_index = 0;
         for (index, card) in self.parents.iter().zip(self.parents_cardinality.iter()) {
-            parents_index = parents_index * card + current[*index]
+            parents_index = parents_index * card + current[*index].unwrap()
         }
         match &self.cpt {
             None => panic!("Trying to sample a TimeBin"),
@@ -222,71 +187,49 @@ impl BayesianNetwork {
     fn sample(
         &self,
         rng: &mut impl RngCore,
-        discrete_vector: &mut Vec<usize>,
-        output_vector: &mut IntermediateVector,
-    ) {
+        discrete_vector: &mut Vec<Option<usize>>,
+    ) -> IntermediateVector {
+        let mut domain_vector: IntermediateVector = IntermediateVector::default();
         for v in self.nodes.iter() {
-            if !v.ignored_during_generation {
-                let i = v.sample_index(rng, discrete_vector);
-                discrete_vector.push(i);
-                match &v.feature {
-                    Feature::SrcIpRole(_) => (),
-                    Feature::DstIpRole(_) => (),
-                    Feature::L7Proto(v) => output_vector.dst_port = Some(v[i].get_default_port()),
-                    Feature::SrcIp(v) => todo!(),
-                    Feature::DstIp(v) => todo!(),
-                    Feature::DstPt(v) => todo!(),
-                    Feature::FwdPkt(v) => todo!(),
-                    Feature::BwdPkt(v) => todo!(),
-                    Feature::L4Proto(v) => todo!(),
-                    Feature::EndFlags => todo!(),
-                    Feature::TimeBin(card) => todo!(),
+            log::trace!("Sampling {:?}", v.feature);
+            // TODO: do not sample TCP variables for UDP connections, etc.
+            if !matches!(v.feature, Feature::TimeBin(_)) {
+                if true {
+                    let i = v.sample_index(rng, discrete_vector);
+                    discrete_vector.push(Some(i));
+                    match &v.feature {
+                        Feature::SrcIpRole(_) => (),
+                        Feature::DstIpRole(_) => (),
+                        Feature::L7Proto(v) => domain_vector.dst_port = Some(v[i].get_default_port()),
+                        Feature::SrcIp(v) => domain_vector.src_ip = Some(v[i]),
+                        Feature::DstIp(v) => domain_vector.dst_ip = Some(v[i]),
+                        Feature::DstPt(v) => domain_vector.dst_port = Some(v[i]),
+                        Feature::FwdPkt(v) => {
+                            domain_vector.fwd_packets_count = Some(v[i].sample(rng) as usize)
+                        }
+                        Feature::BwdPkt(v) => {
+                            domain_vector.bwd_packets_count = Some(v[i].sample(rng) as usize)
+                        }
+                        Feature::L4Proto(v) => domain_vector.proto = Some(v[i]),
+                        Feature::EndFlags => {
+                            domain_vector.tcp_flags = Some(TCPEndFlags::iter()[i].clone())
+                        }
+                        Feature::TimeBin(card) => unreachable!(),
+                    }
+                } else {
+                    discrete_vector.push(None);
                 }
-            }
+            } // if it’s "Time", do not push any value (it was already done previously)
         }
+        domain_vector
     }
-}
-
-// BIFXML format
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "UPPERCASE")]
-// The root element
-pub struct Bif {
-    network: Network,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "UPPERCASE")]
-pub struct Network {
-    name: String,     // TODO paramétrer dans agrum
-    property: String, // learning software
-    variable: Vec<Variable>,
-    definition: Vec<Definition>,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-#[serde(rename_all = "UPPERCASE")]
-pub struct Variable {
-    name: String,
-    property: Vec<String>,
-    outcome: Vec<String>,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-#[serde(rename_all = "UPPERCASE")]
-pub struct Definition {
-    #[serde(rename = "FOR")]
-    variable: String,
-    given: Option<Vec<String>>,
-    table: String,
 }
 
 /// The model with all the data
 pub struct BayesianModel {
-    bn_common: BayesianNetwork,
-    bn_tcp: BayesianNetwork,
-    bn_udp: BayesianNetwork,
+    bn: BayesianNetwork,
+    // bn_tcp: BayesianNetwork,
+    // bn_udp: BayesianNetwork,
     bn_additional_data: AdditionalData,
 }
 
@@ -340,47 +283,30 @@ impl BayesianModel {
         // The BIFXML Bayesian network is converted to a "BayesianNetwork"
         // let mut overall_index: usize = 0; // common index across the BNs
         // let mut name_to_index: HashMap<String, usize> = HashMap::new();
-        let mut var_names: Vec<String> = vec![];
 
-        // The BIFXML file is read
-        let mut bif_common: Bif =
-            serde_xml_rs::from_str(include_str!("../../default_models/bn/bn_common.bifxml"))
-                .unwrap();
-        log::info!("Loading common BN");
-        let bn_common = bn_from_bif(bif_common, &mut var_names, &bn_additional_data, None);
-
-        let mut bif_tcp: Bif =
-            serde_xml_rs::from_str(include_str!("../../default_models/bn/bn_tcp.bifxml")).unwrap();
+        log::info!("Loading high-level BN");
+        let mut bif_common = bifxml::from_str(include_str!("../../default_models/bn/bn_common.bifxml"));
         log::info!("Loading TCP BN");
-        let bn_tcp = bn_from_bif(
-            bif_tcp,
-            &mut var_names,
-            &bn_additional_data,
-            Some(Protocol::TCP),
-        );
-
-        let mut bif_udp: Bif =
-            serde_xml_rs::from_str(include_str!("../../default_models/bn/bn_udp.bifxml")).unwrap();
+        let mut bif_tcp = bifxml::from_str(include_str!("../../default_models/bn/bn_tcp.bifxml"));
+        bif_common.merge(bif_tcp, Protocol::TCP);
         log::info!("Loading UDP BN");
-        let bn_udp = bn_from_bif(
-            bif_udp,
-            &mut var_names,
-            &bn_additional_data,
-            Some(Protocol::UDP),
-        );
+        let mut bif_udp = bifxml::from_str(include_str!("../../default_models/bn/bn_udp.bifxml"));
+        bif_common.merge(bif_udp, Protocol::UDP);
+
+        // TODO: vérifier la cohérence des cardinalités avec un assert (entre bn_common et chacun
+        // des deux autres)
+
+        let bn_common = bn_from_bif(bif_common, &bn_additional_data, None);
 
         BayesianModel {
-            bn_common,
-            bn_tcp,
-            bn_udp,
+            bn: bn_common,
             bn_additional_data,
         }
     }
 }
 
 fn bn_from_bif(
-    mut bn: Bif,
-    var_names: &mut Vec<String>,
+    mut network: bifxml::Network,
     bn_additional_data: &AdditionalData,
     proto: Option<Protocol>,
 ) -> BayesianNetwork {
@@ -390,9 +316,7 @@ fn bn_from_bif(
     let mut nodes: HashMap<String, TopologicalNode> = HashMap::new();
     let mut roots = vec![];
 
-    let initial_var_names_len = var_names.len();
-
-    for def in bn.network.definition.iter() {
+    for def in network.definition.iter() {
         nodes.insert(
             def.variable.clone(),
             TopologicalNode {
@@ -406,10 +330,10 @@ fn bn_from_bif(
     }
 
     if let Some(p) = roots.iter().position(|s| s.as_str() == "Time") {
-        roots.swap(p,0); // Time must be the first variable if present
+        roots.swap(p, 0); // Time must be the first variable if present
     }
 
-    for def in bn.network.definition.iter() {
+    for def in network.definition.iter() {
         if let Some(given) = &def.given {
             for v in given.iter() {
                 nodes
@@ -440,48 +364,46 @@ fn bn_from_bif(
         topo_order.push(v);
     }
 
-    let mut sorted_network: Network = Network {
-        name: bn.network.name,
-        property: bn.network.property,
-        variable: vec![],
-        definition: vec![],
-    };
+    // let mut sorted_network: bifxml::Network = bifxml::Network {
+    //     name: network.name,
+    //     property: network.property,
+    //     variable: vec![],
+    //     definition: vec![],
+    // };
 
+    let mut variable = vec![];
+    let mut definition = vec![];
     for v in topo_order {
-        for (index, var) in bn.network.variable.iter().enumerate() {
+        for (index, var) in network.variable.iter().enumerate() {
             if var.name == v {
-                sorted_network.variable.push(var.clone());
-                sorted_network
-                    .definition
-                    .push(bn.network.definition[index].clone());
+                variable.push(var.clone());
+                definition
+                    .push(network.definition[index].clone());
             }
         }
     }
 
-    bn.network = sorted_network;
+    // network = sorted_network;
 
-    for (v, def) in bn.network.variable.into_iter().zip(bn.network.definition) {
+    let mut var_names: Vec<String> = vec![];
+
+    for (v, def) in variable.iter().zip(definition) {
         assert_eq!(v.name, def.variable); // we assume the order is the same between
         // <variable> and <definition>
-        let ignored_during_generation = v.name.as_str() == "Time" || var_names.contains(&v.name);
+        // let ignored_during_generation = var_names.contains(&v.name);
+        // dbg!(&v.name);
+        // dbg!(ignored_during_generation);
 
-        var_names.push(v.name.clone());
+        // if !ignored_during_generation {
         // name_to_index.insert(v.name.clone(), overall_index);
 
-        // parents, searching in other BN
-        let global_parents: Vec<usize> = def
+        // global index of parents
+        let parents: Vec<usize> = def
             .given
             .clone()
             .unwrap_or(vec![])
             .into_iter()
-            .map(|v| var_names.iter_mut().position(|s| s.as_str() == &v).unwrap())
-            .collect();
-        // parents, searching in this BN only
-        let local_parents: Vec<usize> = def
-            .given
-            .unwrap_or(vec![])
-            .into_iter()
-            .map(|v| var_names.iter_mut().rposition(|s| s.as_str() == &v).unwrap())
+            .map(|v| var_names.iter_mut().position(|s| s.as_str() == v).unwrap())
             .collect();
 
         let cpt: CPT = def
@@ -494,62 +416,74 @@ fn bn_from_bif(
             .collect();
 
         println!("{}", def.variable);
-        let feature = match v.name.as_str() {
-            "Time" => Feature::TimeBin(bn_additional_data.s0_bin_count),
-            "Src IP Role" => Feature::SrcIpRole(v.outcome),
-            "Dst IP Role" => Feature::DstIpRole(v.outcome),
-            "Applicative Proto" => {
-                Feature::L7Proto(v.outcome.into_iter().map(|s| s.into()).collect())
-            }
-            "Cat Out Packet" => match proto {
-                Some(Protocol::TCP) => {
-                    Feature::FwdPkt(bn_additional_data.TCP_out_pkt_gaussians.to_normals())
-                }
-                Some(Protocol::UDP) => {
-                    Feature::FwdPkt(bn_additional_data.UDP_out_pkt_gaussians.to_normals())
-                }
-                _ => unreachable!(),
-            },
-            "Cat In Packet" => match proto {
-                Some(Protocol::TCP) => {
-                    Feature::FwdPkt(bn_additional_data.TCP_in_pkt_gaussians.to_normals())
-                }
-                Some(Protocol::UDP) => {
-                    Feature::FwdPkt(bn_additional_data.UDP_in_pkt_gaussians.to_normals())
-                }
-                _ => unreachable!(),
-            },
-            "End Flags" => Feature::EndFlags,
-            _ => unreachable!(),
+        let feature: Option<Feature> = match v.name.as_str() {
+            "Time" => Some(Feature::TimeBin(bn_additional_data.s0_bin_count)),
+            "Src IP Role" => Some(Feature::SrcIpRole(v.outcome.clone())),
+            "Src IP" => Some(Feature::SrcIp(v.outcome.clone().into_iter().map(|v| v.parse().unwrap()).collect())),
+            "Dst IP Role" => Some(Feature::DstIpRole(v.outcome.clone())),
+            "Dst IP" => Some(Feature::DstIp(v.outcome.clone().into_iter().map(|v| v.parse().unwrap()).collect())),
+            "Applicative Proto" => Some(Feature::L7Proto(
+                v.outcome.clone().into_iter().map(|s| s.into()).collect(),
+            )),
+            "Proto" => Some(Feature::L4Proto(
+                v.outcome.clone().into_iter().map(|s| s.into()).collect(),
+            )),
+
+            "Cat Out Packet TCP" => Some(Feature::FwdPkt(
+                bn_additional_data.TCP_out_pkt_gaussians.to_normals(),
+            )),
+            "Cat In Packet TCP" => Some(Feature::FwdPkt(
+                bn_additional_data.TCP_in_pkt_gaussians.to_normals(),
+            )),
+            "End Flags TCP" => Some(Feature::EndFlags),
+
+            "Cat Out Packet UDP" => Some(Feature::FwdPkt(
+                bn_additional_data.UDP_out_pkt_gaussians.to_normals(),
+            )),
+            "Cat In Packet UDP" => Some(Feature::FwdPkt(
+                bn_additional_data.UDP_in_pkt_gaussians.to_normals(),
+            )),
+            _ => None,
         };
 
-        let parents_cardinality = local_parents
-            .iter()
-            .map(|p| {
-                println!("Searching for {p:?}");
-                processed_bn
-                    .nodes
-                    .get(*p - initial_var_names_len)
-                    .expect("Variables in BIFXML not in topological order!")
-                    .feature
-                    .get_cardinality()
-            })
-            .collect();
+        // log::info!("Cardinality of {}: {}", def.variable, feature.get_cardinality());
 
-        let cpt = if matches!(feature, Feature::TimeBin(_)) {
-            None
-        } else {
-            Some(cpt)
-        };
-        let node = BayesianNetworkNode {
-            index: var_names.len() - 1, // it was the last pushed name
-            feature,
-            parents: global_parents, // indices in the Bayesian network’s nodes
-            parents_cardinality,
-            cpt,
-            ignored_during_generation,
-        };
-        processed_bn.nodes.push(node);
+        if let Some(feature) = feature {
+            // this feature is duplicated (for example "Time UDP"), so we do not include it
+            var_names.push(v.name.clone());
+            let mut variables = variable.clone();
+            let parents_cardinality = def
+                .given
+                .unwrap_or(vec![])
+                .into_iter()
+                .map(|v| {
+                    variables
+                        .iter_mut()
+                        .find(|s| s.name.as_str() == v)
+                        .unwrap()
+                        .outcome
+                        .len()
+                })
+                .collect();
+
+            println!("{parents_cardinality:?}");
+
+            let cpt = if matches!(feature, Feature::TimeBin(_)) {
+                None
+            } else {
+                Some(cpt)
+            };
+            let node = BayesianNetworkNode {
+                // index: var_names.len() - 1, // it was the last pushed name
+                feature,
+                parents, // indices in the Bayesian network’s nodes
+                parents_cardinality,
+                cpt,
+                // ignored_during_generation,
+            };
+            processed_bn.nodes.push(node);
+        }
+        // }
     }
 
     processed_bn
@@ -566,16 +500,13 @@ impl Stage1 for BNGenerator {
     /// Generates flows
     fn generate_flows(&self, ts: SeededData<TimePoint>) -> impl Iterator<Item = SeededData<Flow>> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
-        let mut discrete_vector: Vec<usize> = vec![];
-        discrete_vector.push((ts.data.date_time.num_seconds_from_midnight() as usize) / self.model.bn_additional_data.s0_bin_count);
-        let mut domain_vector: IntermediateVector = IntermediateVector::default();
+        let mut discrete_vector: Vec<Option<usize>> = vec![];
+        discrete_vector.push(Some(
+            (ts.data.date_time.num_seconds_from_midnight() as usize)
+                / self.model.bn_additional_data.s0_bin_count,
+        ));
+        let mut domain_vector = self.model.bn.sample(&mut rng, &mut discrete_vector);
         domain_vector.timestamp = Some(ts.data.unix_time);
-        self.model.bn_common.sample(&mut rng, &mut discrete_vector, &mut domain_vector);
-        match domain_vector.proto {
-            Some(Protocol::TCP) => self.model.bn_tcp.sample(&mut rng, &mut discrete_vector, &mut domain_vector),
-            Some(Protocol::UDP) => self.model.bn_udp.sample(&mut rng, &mut discrete_vector, &mut domain_vector),
-            _ => unreachable!(),
-        }
         iter::once(SeededData {
             seed: rng.next_u64(),
             data: domain_vector.into(),
