@@ -108,6 +108,15 @@ pub enum OS {
     Windows,
 }
 
+impl OS {
+    fn get_default_ttl(&self) -> u8 {
+        match self {
+            OS::Linux => 64,
+            OS::Windows => 128,
+        }
+    }
+}
+
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, Copy)]
 pub enum Flow {

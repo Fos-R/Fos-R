@@ -175,7 +175,7 @@ fn main() {
             assert!(!local_ips.is_empty());
             let mut has_role = false;
             for ip in local_ips.iter() {
-                if let Some(s) = profile.config.get_name(ip) {
+                if let Some(s) = profile.config.get_os(ip) {
                     log::info!("Computer role: {s}");
                 }
                 if profile.config.exists(ip) {

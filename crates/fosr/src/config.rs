@@ -7,13 +7,31 @@ use crate::structs::*;
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
+/// The configuration file of the network and the hosts
 pub struct Configuration {
     pub metadata: Metadata,
     pub hosts: Vec<Host>,
 }
 
+impl Configuration {
+
+    pub fn get_mac(&self, ip: &Ipv4Addr) -> Option<&MacAddr> {
+        todo!()
+    }
+
+    pub fn get_default_ttl(&self, ip: &Ipv4Addr) -> u8 {
+        todo!()
+    }
+
+    pub fn get_os(&self, ip: &Ipv4Addr) -> OS {
+        todo!()
+    }
+
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
+/// Metadata of the configuration file
 pub struct Metadata {
     pub title: String,
     pub desc: Option<String>,
@@ -38,7 +56,6 @@ pub struct Host {
     pub os: OS,
     pub usage: f64,
     pub client: Vec<L7Proto>,
-    #[serde(rename = "type")]
     pub host_type: HostType,
     pub interfaces: Vec<Interface>,
 }
