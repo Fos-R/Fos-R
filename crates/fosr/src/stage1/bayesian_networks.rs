@@ -7,7 +7,7 @@ use rand_distr::{Distribution, Normal};
 use rand_pcg::Pcg32;
 use serde::Deserialize;
 
-use std::cmp::max;
+use std::cmp::min;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::iter;
@@ -80,27 +80,6 @@ impl From<String> for IpRole {
             _ => unreachable!(),
         }
     }
-}
-
-#[derive(Debug, Clone)]
-#[allow(clippy::upper_case_acronyms)]
-/// A list of application layer protocol
-enum L7Proto {
-    HTTP,
-    HTTPS,
-    SSH,
-    DNS,
-    DHCP,
-    SMTP,
-    Telnet,
-    IMAPS,
-    MQTT,
-    CanonBjmp,
-    KMS,
-    MulticastDNS,
-    NTP,
-    Unknown, // TODO properly
-             // TODO complete
 }
 
 impl L7Proto {
@@ -367,6 +346,8 @@ impl BayesianModel {
         }
     }
 
+    // il faut mettre à jour : SrcIp, DstIp
+
     pub fn apply_config(&mut self, config: &config::Configuration) {
         for node in self.bn.nodes.iter_mut() {
             // match node.feature {
@@ -613,8 +594,7 @@ impl Stage1 for BNGenerator {
     fn generate_flows(&self, ts: SeededData<TimePoint>) -> impl Iterator<Item = SeededData<Flow>> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
         let mut discrete_vector: Vec<Option<usize>> = vec![];
-        // TODO: utiliser un max au cas où ça overflow
-        discrete_vector.push(Some(max(
+        discrete_vector.push(Some(min(
             self.model.bn_additional_data.s0_bin_count - 1,
             (ts.data.date_time.num_seconds_from_midnight() as usize) / 86400
                 * self.model.bn_additional_data.s0_bin_count,

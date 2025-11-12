@@ -102,7 +102,7 @@ impl Profile {
 
     fn load_config(&mut self, path: &str) {
         let config = config::import_config(
-            &fs::read_to_string(Path::new(path)).expect("Cannot access the configuration file."),
+            &fs::read_to_string(Path::new(path)).expect("Cannot access the configuration file"),
         );
         self.bn.apply_config(&config);
     }

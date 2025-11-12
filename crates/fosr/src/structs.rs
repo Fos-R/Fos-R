@@ -78,6 +78,36 @@ impl Protocol {
     }
 }
 
+#[derive(Deserialize, Debug, Clone)]
+#[allow(clippy::upper_case_acronyms)]
+#[serde(rename_all = "lowercase")]
+/// A list of application layer protocol
+pub enum L7Proto {
+    HTTP,
+    HTTPS,
+    SSH,
+    DNS,
+    DHCP,
+    SMTP,
+    Telnet,
+    IMAPS,
+    MQTT,
+    CanonBjmp,
+    KMS,
+    MulticastDNS,
+    NTP,
+    Unknown, // TODO properly
+             // TODO complete
+}
+
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+/// The OS of an host. By default, assume Linux
+pub enum OS {
+    #[default]
+    Linux,
+    Windows,
+}
+
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, Copy)]
 pub enum Flow {

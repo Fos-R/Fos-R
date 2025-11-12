@@ -33,8 +33,12 @@ metadata:
 hosts:
   - hostname: host1 # Optional. The hostname of the host.
     os: Linux # Optional (default value: Linux). The OS of the host
-    activity: 0.8 # Optional (default value: 1.0). The activity level of the host. 1 is the baseline, < 1 means less activity than usual, and > 1 means higher activity
+    usage: 0.8 # Optional (default value: 1.0). The usage intensity of the host. 1 is the baseline, < 1 means less usage than usual, and > 1 means higher usage
     type: server  # Optional (default value: "server" if there is at least one service, "user" otherwise). Whether this host is used by a user and is a server. Can be either "server" or "user"
+    client: # Optional (default value: all available services if type is "user", none otherwise). Specify what services the host is a client of. The protocols must be written in lowercase.
+        - http
+        - https
+        - ssh
     interfaces:
       - mac_addr: 00:14:2A:3F:47:D8 # Optional. The MAC address of that interface
         services: # Optional (default value: empty list). The list of available services
