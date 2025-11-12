@@ -43,7 +43,7 @@ serde_yaml = "0.9.34"
 thingbuf = "0.1.6"
 toml = "0.9.2"
 
-[target.'cfg(not(target_env = "msvc"))'.dependencies]
+[target.'cfg(target_os = "linux")'.dependencies]
 tikv-jemallocator = "0.6.1"
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]

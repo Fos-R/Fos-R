@@ -41,10 +41,10 @@ use std::sync::mpsc::channel;
 const CHANNEL_SIZE: usize = 50;
 
 // Use Jemalloc when possible
-#[cfg(not(target_env = "msvc"))]
+#[cfg(target_os = "linux")]
 use tikv_jemallocator::Jemalloc;
 
-#[cfg(not(target_env = "msvc"))]
+#[cfg(target_os = "linux")]
 #[global_allocator]
 static GLOBAL: Jemalloc = Jemalloc;
 

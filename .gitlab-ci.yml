@@ -74,9 +74,9 @@ build-linux-arm-32:
     - cargo install cargo-deb
     - apt update
     - apt install -y gcc-arm-linux-gnueabihf
-    - rustup target add arm-unknown-linux-musleabihf
-    - cargo build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
-    - cargo deb --target=arm-unknown-linux-musleabihf -p fosr -- --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\"
+    - rustup target add arm-unknown-linux-gnueabihf
+    - cargo build --target=arm-unknown-linux-gnueabihf --config target.arm-unknown-linux-gnueabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
+    - cargo deb --target=arm-unknown-linux-gnueabihf -p fosr -- --config target.arm-unknown-linux-gnueabihf.linker=\"arm-linux-gnueabihf-gcc\"
   artifacts:
     paths:
       - target/*/release/fosr
@@ -116,6 +116,22 @@ build-win64-x86:
   artifacts:
     paths:
       - target/*/release/fosr.exe
+
+build-win32-x86:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: build
+  image: rust
+  script:
+    - apt update
+    - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
+    - rustup target add i686-pc-windows-gnu
+    - cargo build --target=i686-pc-windows-gnu -p fosr -r
+  artifacts:
+    paths:
+      - target/*/release/fosr.exe
+
 
 # build-freebsd-x86-64:
 #   tags:
