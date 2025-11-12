@@ -25,13 +25,13 @@ build-linux-x86-64:
     # version without network injection
     - cargo build -p fosr
     # version without ebpf and with iptables
-    - cargo build --features iptables -p fosr
+    # - cargo build --features iptables -p fosr
     # version with ebpf
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
     - cargo install cargo-deb
-    - cargo build --features ebpf # version with ebpf only
-    - cargo build --features "iptables,ebpf" --release # version with ebpf + iptables
+    # - cargo build --features ebpf # version with ebpf only
+    # - cargo build --features "iptables,ebpf" --release # version with ebpf + iptables
     - cargo deb -p fosr
     - mkdir target/x86_64-unknown-linux-gnu
     - mv target/release target/x86_64-unknown-linux-gnu
@@ -55,8 +55,8 @@ build-linux-x86-32:
     - apt install -y gcc-i686-linux-gnu
     - rustup target add i686-unknown-linux-gnu
     # Aya doesn’t compile for some reason
-    - cargo build --target=i686-unknown-linux-gnu --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\" -p fosr -r --features iptables
-    - cargo deb --target=i686-unknown-linux-gnu -p fosr --features iptables -- --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\"
+    - cargo build --target=i686-unknown-linux-gnu --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\" -p fosr -r
+    - cargo deb --target=i686-unknown-linux-gnu -p fosr -- --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\"
   artifacts:
     paths:
       - target/*/release/fosr
@@ -75,8 +75,8 @@ build-linux-arm-32:
     - apt update
     - apt install -y gcc-arm-linux-gnueabihf
     - rustup target add arm-unknown-linux-musleabihf
-    - cargo build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r --features "iptables,ebpf"
-    - cargo deb --target=arm-unknown-linux-musleabihf -p fosr --features "iptables,ebpf" -- --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\"
+    - cargo build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
+    - cargo deb --target=arm-unknown-linux-musleabihf -p fosr -- --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\"
   artifacts:
     paths:
       - target/*/release/fosr
@@ -95,8 +95,8 @@ build-linux-arm-64:
     - apt update
     - apt install -y gcc-aarch64-linux-gnu
     - rustup target add aarch64-unknown-linux-gnu
-    - cargo build --target=aarch64-unknown-linux-gnu --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\" -p fosr -r --features "iptables,ebpf"
-    - cargo deb --target=aarch64-unknown-linux-gnu -p fosr --features "iptables,ebpf" -- --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\"
+    - cargo build --target=aarch64-unknown-linux-gnu --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\" -p fosr -r
+    - cargo deb --target=aarch64-unknown-linux-gnu -p fosr -- --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\"
   artifacts:
     paths:
       - target/*/release/fosr
