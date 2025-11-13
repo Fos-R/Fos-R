@@ -150,6 +150,17 @@ build-win32-x86:
 #     paths:
 #       - target/*/release/fosr
 
+test-audit:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: test
+  image: rust
+  script:
+    - cargo install cargo-audit
+    - cargo audit -D unsound -D yanked
+  allow_failure: true
+
 test-publish:
   tags:
     - ci.inria.fr
