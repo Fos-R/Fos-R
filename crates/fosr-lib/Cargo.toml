@@ -1,64 +1,50 @@
 [package]
-name = "fosr"
+name = "fosr-lib"
 version = "0.2.0-dev"
-authors = ["Pierre-François Gimenez <pierre-francois.gimenez@inria.fr>"]
+authors = ["Pierre-François Gimenez <pierre-francois.gimenez@inria.fr>","Dorian Bachelot","Florentin Labelle","Evan Morin"]
 edition = "2024"
-description = "Fos-R (Forger Of Security Records) is an AI-based synthetic network traffic generator."
+description = "The library of Fos-R (Forger Of Security Records), the AI-based synthetic network traffic generator."
 homepage = "https://fosr.inria.fr"
 repository = "https://gitlab.inria.fr/pirat-public/Fos-R"
 license = "GPL-3.0"
 rust-version = "1.85.1"
-default-run = "fosr"
 categories = ["network-programming","security","science"]
 
 [dependencies]
 chrono = "0.4.42"
-chrono-tz = "0.10.4"
-clap = { version = "4.5.22", features = ["derive"] }
 crossbeam-channel = "0.5.13"
-ctrlc = "3.4.5"
-env_logger = { version = "0.11.6", default-features = false, features = ["auto-color", "humantime"] }
 fosr-ebpf = { version = "0.1.1", path = "../fosr-ebpf", optional = true }
-fosr-lib = { version = "0.2.0-dev", path = "../fosr-lib" }
-humantime = "2.2.0"
+include-bytes-zstd = "0.1.0"
 indicatif = "0.18.0"
-itertools = "0.14.0"
+kd-tree = "0.6.0"
 log = { version = "0.4.22" }
-num_cpus = "1.17.0"
 pcap-file = "2.0.0"
 pnet = { version = "0.35.0", default-features = false, features = ["pnet_sys", "pnet_transport"] }
 pnet_packet = "0.35.0"
+rand = "0.9.1"
+rand_core = "0.9.3"
+rand_distr = "0.5.1"
+rand_pcg = "0.9.0"
+serde = { version = "1.0.210", features = ["derive"] }
+serde-xml-rs = "0.8.1"
+serde_json = "1.0"
+serde_yaml = "0.9.34"
 thingbuf = "0.1.6"
-
-[target.'cfg(all(target_os = "linux", any(target_env = "", target_env = "gnu")))'.dependencies]
-tikv-jemallocator = "0.6.1"
-
-[target.'cfg(target_env = "musl")'.dependencies]
-mimalloc = "0.1.48"
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
 aya = { version = "0.13.1", default-features = false, optional = true }
 
-[dev-dependencies]
-assert_cmd = "2.0.14"
-hex = "0.4.3"
-sha2 = "0.10.9"
-
 [features]
 default = []
-net_injection = ["pnet/std", "fosr-lib/net_injection"]
+net_injection = ["pnet/std"]
 
 # Linux only
-iptables = ["net_injection", "fosr-lib/iptables"]
+iptables = ["net_injection"]
 
 # Linux & Windows only
-ebpf = ["dep:aya", "net_injection", "dep:fosr-ebpf", "fosr-lib/ebpf"]
+ebpf = ["dep:aya", "net_injection", "dep:fosr-ebpf"]
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.build-dependencies]
 anyhow = { version = "1", default-features = false, optional = true }
 aya-build = { version = "0.1.2", default-features = false, optional = true }
 fosr-ebpf = { path = "../fosr-ebpf", optional = true }
-
-[package.metadata.deb]
-section = "science"
-depends = ["$auto", "iptables"]
