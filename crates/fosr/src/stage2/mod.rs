@@ -26,7 +26,7 @@ pub trait Stage2: Clone + std::marker::Send + 'static {
     ) -> Option<SeededData<PacketsIR<ICMPPacketInfo>>>;
 }
 
-/// A set of Sender used by a Stage 2. Each Sender corresponds to a L4 protocol.
+/// A set of Sender used by a Stage 2. Each Sender corresponds to a L4 protocol
 #[derive(Debug, Clone)]
 pub struct S2Sender {
     pub tcp: Sender<SeededData<PacketsIR<TCPPacketInfo>>>,
@@ -34,6 +34,7 @@ pub struct S2Sender {
     pub icmp: Sender<SeededData<PacketsIR<ICMPPacketInfo>>>,
 }
 
+/// A set of Vector used by a Stage 2. Each Vector corresponds to a L4 protocol
 pub struct S2Vector {
     pub tcp: Vec<SeededData<PacketsIR<TCPPacketInfo>>>,
     pub udp: Vec<SeededData<PacketsIR<UDPPacketInfo>>>,

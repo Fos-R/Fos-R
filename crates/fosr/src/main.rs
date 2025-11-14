@@ -282,7 +282,7 @@ fn main() {
                 (None, Some(d)) => {
                     let d = humantime::parse_duration(&d).expect("Duration could not be parsed.");
                     log::info!("Generating a pcap of {d:?}");
-                    (Target::Duration(d), Some(d))
+                    (Target::GenerationDuration(d), Some(d))
                 }
                 (Some(p), None) => {
                     log::info!("Generation at least {p} packets");
@@ -650,7 +650,7 @@ fn run_efficient<T: inject::NetEnabler>(
     {
         let stats = Arc::clone(&stats);
         let builder = thread::Builder::new().name("Monitoring".into());
-        threads.push(builder.spawn(move || stats::run(stats)).unwrap());
+        threads.push(builder.spawn(move || stats::show_progression(stats)).unwrap());
     }
 
     // Wait for the generation threads to end
