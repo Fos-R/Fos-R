@@ -1,15 +1,15 @@
 // we access the code through the library
-use fosr::export;
+use fosr_lib::export;
 #[cfg(feature = "net_injection")]
-use fosr::inject;
-use fosr::pcap2flow;
-use fosr::stage0;
-use fosr::stage1;
-use fosr::stage2;
-use fosr::stage3;
-use fosr::stats::Target;
-use fosr::structs::*;
-use fosr::*;
+use fosr_lib::inject;
+use fosr_lib::pcap2flow;
+use fosr_lib::stage0;
+use fosr_lib::stage1;
+use fosr_lib::stage2;
+use fosr_lib::stage3;
+use fosr_lib::stats::Target;
+use fosr_lib::structs::*;
+use fosr_lib::*;
 mod cmd; // cmd is not part of the library
 
 use std::cmp::max;
