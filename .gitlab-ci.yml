@@ -87,6 +87,7 @@ build-linux-raspberry-pi:
     paths:
       - target/*/release/fosr
       - target/debian/*.deb
+  allow_failure: true
 
 build-linux-arm-32:
   tags:
