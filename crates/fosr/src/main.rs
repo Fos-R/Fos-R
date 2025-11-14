@@ -41,12 +41,13 @@ use std::sync::mpsc::channel;
 const CHANNEL_SIZE: usize = 50;
 
 // Use Jemalloc when possible
-#[cfg(target_os = "linux")]
-use tikv_jemallocator::Jemalloc;
-
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", any(target_env = "", target_env = "gnu")))]
 #[global_allocator]
-static GLOBAL: Jemalloc = Jemalloc;
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
+#[cfg(target_env = "musl")]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 struct Profile {
     automata: stage2::tadam::AutomataLibrary,

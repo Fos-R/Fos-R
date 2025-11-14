@@ -62,6 +62,30 @@ build-linux-x86-32:
       - target/*/release/fosr
       - target/debian/*.deb
 
+build-linux-raspberry-pi:
+  # a build targeting old rapsberry pi with armv6 processors
+  tags:
+    - ci.inria.fr
+    - large
+  stage: build
+  image: rust
+  script:
+    - rustup toolchain install nightly --component rust-src
+    - cargo install bpf-linker
+    - cargo install cargo-deb
+    - apt update
+    - apt install -y gcc-arm-linux-gnueabihf
+    - rustup target add arm-unknown-linux-musleabihf
+    - cargo build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
+    - cargo deb --target=arm-unknown-linux-musleabihf -p fosr -- --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\"
+    - cd target/debian
+    - debname=$(ls *.deb)
+    - mv $debname rpi_$debname
+  artifacts:
+    paths:
+      - target/*/release/fosr
+      - target/debian/*.deb
+
 build-linux-arm-32:
   tags:
     - ci.inria.fr
