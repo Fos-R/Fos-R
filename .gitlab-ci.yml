@@ -76,9 +76,8 @@ build-linux-raspberry-pi:
     - apt update
     - apt install -y gcc-arm-linux-gnueabihf
     - rustup toolchain install nightly # use nightly for the moment
-    - rustup override set nightly
-    - rustup target add arm-unknown-linux-musleabihf
-    - cargo build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
+    - rustup target add arm-unknown-linux-musleabihf --toolchain nightly
+    - cargo +nightly build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
     - cargo deb --target=arm-unknown-linux-musleabihf -p fosr -- --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\"
     - cd target/debian
     - debname=$(ls *.deb)

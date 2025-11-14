@@ -14,12 +14,13 @@ categories = ["network-programming","security","science"]
 chrono = "0.4.42"
 crossbeam-channel = "0.5.13"
 fosr-ebpf = { version = "0.1.1", path = "../fosr-ebpf", optional = true }
+getrandom = { version = "0.3.4", features = ["wasm_js"] } # needed to compile to wasm32 target
 include-bytes-zstd = "0.1.0"
 indicatif = "0.18.0"
 kd-tree = "0.6.0"
 log = { version = "0.4.22" }
 pcap-file = "2.0.0"
-pnet = { version = "0.35.0", default-features = false, features = ["pnet_sys", "pnet_transport"] }
+pnet = { version = "0.35.0", default-features = false }
 pnet_packet = "0.35.0"
 rand = "0.9.1"
 rand_core = "0.9.3"
