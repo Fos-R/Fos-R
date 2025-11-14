@@ -19,6 +19,7 @@ const DURATION_THRESHOLD: Duration = Duration::from_secs(600);
 // timestamp,duration,protocol,src_ip,dst_ip,dst_port,fwd_packets,bwd_packets,fwd_bytes,bwd_bytes,time_sequence,payloads
 
 #[derive(Debug)]
+/// Flow statistics
 pub struct FlowStats {
     pub timestamp: Duration,
     pub duration: Duration,
@@ -175,6 +176,7 @@ impl From<pcap::PcapPacket<'_>> for PacketInfo {
 }
 
 impl FlowStats {
+    /// Extract flow statistics from a flow
     fn process_packets<T: PacketInfoTrait>(flow_id: FlowId, packets: Vec<T>) -> FlowStats {
         let first_packet = packets.first().unwrap(); // we know there is a least one packet
         let timestamp = first_packet.ts();
@@ -323,6 +325,7 @@ fn flow_id_from_packet(data: &[u8]) -> Option<FlowId> {
     })
 }
 
+/// Export flow statistics to a file
 pub fn export_stats(file: &str, stats: Vec<FlowStats>, include_payloads: bool) {
     let file = File::create(file).expect("Cannot open file");
     let mut output = BufWriter::new(file);
@@ -383,6 +386,7 @@ pub fn export_stats(file: &str, stats: Vec<FlowStats>, include_payloads: bool) {
     }
 }
 
+/// Extract flow statistics from a file
 pub fn process_file(file: &str) -> Vec<FlowStats> {
     let file_in = BufReader::new(File::open(file).expect("Error opening file"));
     let mut pcap_reader = pcap::PcapReader::new(file_in).unwrap();

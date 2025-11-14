@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread;
 use std::time::Duration;
 
+/// Generation statistics 
 pub struct Stats {
     pub packets_target: Option<u64>,
     pub packets_counter: AtomicU64,
@@ -15,7 +16,6 @@ pub struct Stats {
     pub early_stop: AtomicBool,
     pub duration_target: Option<u64>, // in secs
     pub current_duration: AtomicU64,  // in secs
-    pub progress_bar: ProgressBar,
     pub received_packets: AtomicU64,
     pub ignored_packets: AtomicU64,
     pub sent_packets: AtomicU64,
@@ -30,7 +30,6 @@ impl Default for Stats {
             early_stop: AtomicBool::new(false),
             duration_target: None,
             current_duration: AtomicU64::new(0),
-            progress_bar: ProgressBar::new(0),
             received_packets: AtomicU64::new(0),
             ignored_packets: AtomicU64::new(0),
             sent_packets: AtomicU64::new(0),
@@ -38,9 +37,10 @@ impl Default for Stats {
     }
 }
 
+/// The generation target. Used to stop the generation once it is reached.
 pub enum Target {
     PacketCount(u64),
-    Duration(Duration),
+    GenerationDuration(Duration),
     None,
 }
 
@@ -48,10 +48,10 @@ pub enum Target {
 
 impl Stats {
     pub fn new(target: Target) -> Self {
-        let (packets_target, duration_target, target) = match target {
-            Target::PacketCount(p) => (Some(p), None, p),
-            Target::Duration(d) => (None, Some(d.as_secs()), d.as_secs()),
-            Target::None => (None, None, 0),
+        let (packets_target, duration_target) = match target {
+            Target::PacketCount(p) => (Some(p), None),
+            Target::GenerationDuration(d) => (None, Some(d.as_secs())),
+            Target::None => (None, None),
         };
         Stats {
             packets_counter: AtomicU64::new(0),
@@ -60,7 +60,6 @@ impl Stats {
             early_stop: AtomicBool::new(false),
             duration_target,
             current_duration: AtomicU64::new(0),
-            progress_bar: ProgressBar::new(target),
             received_packets: AtomicU64::new(0),
             ignored_packets: AtomicU64::new(0),
             sent_packets: AtomicU64::new(0),
@@ -106,22 +105,30 @@ impl Stats {
     }
 }
 
-fn update_progress_bar(stats: Arc<Stats>, position: &AtomicU64, target: u64) {
+fn update_progress_bar(stats: Arc<Stats>, position: &AtomicU64, target: u64, progress_bar: &mut ProgressBar) {
     loop {
         let c = position.load(Ordering::Relaxed);
-        stats.progress_bar.set_position(c);
+        progress_bar.set_position(c);
         if c >= target || stats.should_stop() {
-            stats.progress_bar.finish();
+            progress_bar.finish();
             break;
         }
         thread::sleep(Duration::from_millis(10));
     }
 }
 
-pub fn run(stats: Arc<Stats>) {
+/// Display the progression of the generation
+pub fn show_progression(stats: Arc<Stats>) {
     if stats.packets_target.is_some() || stats.duration_target.is_some() {
+        let mut progress_bar = if let Some(target) = stats.packets_target {
+            ProgressBar::new(target) 
+        } else if let Some(target) = stats.duration_target {
+            ProgressBar::new(target) 
+        } else {
+            unreachable!()
+        };
         let stats2 = Arc::clone(&stats);
-        stats.progress_bar.set_style(
+        progress_bar.set_style(
             ProgressStyle::with_template(
                 "{spinner:.green} Generation [{throughput}] [{wide_bar}] ({eta})",
             )
@@ -139,9 +146,9 @@ pub fn run(stats: Arc<Stats>) {
         );
 
         if let Some(target) = stats.packets_target {
-            update_progress_bar(stats.clone(), &stats.packets_counter, target);
+            update_progress_bar(stats.clone(), &stats.packets_counter, target, &mut progress_bar);
         } else if let Some(target) = stats.duration_target {
-            update_progress_bar(stats.clone(), &stats.current_duration, target);
+            update_progress_bar(stats.clone(), &stats.current_duration, target, &mut progress_bar);
         }
     } else {
         while !stats.should_stop() {
