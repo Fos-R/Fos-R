@@ -9,6 +9,7 @@ repository = "https://gitlab.inria.fr/pirat-public/Fos-R"
 license = "GPL-3.0"
 rust-version = "1.85.1"
 categories = ["network-programming","security","science"]
+keywords = ["networking", "ai", "security"]
 
 [dependencies]
 chrono = "0.4.42"
