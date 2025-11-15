@@ -5,19 +5,22 @@
 ### Added
 
 - Faster (up to ~5x) generation
-- New stage 0 with realistic distribution
+- New stage 0 with realistic time distribution
 - New stage 1 with Bayesian networks
 - New default models for stages 0 and 1
 - Added `--tz` option and timezone support more generally
 - Added --jobs option
 - Two generation profiles: fast or efficient
-- Better library documentation
 
 ### Changed
 
+- "fosr" crate split into "fosr-lib" and "fosr"
 - "stage4" module renamed to "inject"
 - Create the `export` module
 - No network injection by default
+- Significantly modified the configuration file format
+- Pcap files are now sorted by default
+- Better library documentation
 - Bugfixes
 
 ## v0.1.2
