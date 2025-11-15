@@ -54,10 +54,6 @@ The evaluation of network intrusion detection systems requires a sufficient amou
 - CISPA: Lénaïg Cornanguer, Joscha Cüppers
 - CentraleSupélec: Dorian Bachelot, Evan Morin, Florentin Labelle, Samuel Cordon, Jean-Baptiste Amade
 
-# Licence
-
-Fos-R is distributed under the [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) (or later) license. This applies to both Fos-R binary and library.
-
 # Contact
 
 You can contact the maintainer at <pierre-francois.gimenez@inria.fr>.
