@@ -569,17 +569,13 @@ checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
 name = "fosr"
 version = "0.2.0-dev"
 dependencies = [
- "anyhow",
  "assert_cmd",
- "aya",
- "aya-build",
  "chrono",
  "chrono-tz",
  "clap",
  "crossbeam-channel",
  "ctrlc",
  "env_logger",
- "fosr-ebpf",
  "fosr-lib",
  "hex",
  "humantime",

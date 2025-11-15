@@ -172,17 +172,18 @@ fn main() {
             // identify the role of the current host
             let profile: Option<String> = None;
             let profile = Profile::load(profile.as_deref());
-            log::debug!("Configuration: {:?}", profile.config);
+            // log::debug!("Configuration: {:?}", profile.config);
             assert!(!local_ips.is_empty());
             let mut has_role = false;
-            for ip in local_ips.iter() {
-                if let Some(s) = profile.config.get_os(ip) {
-                    log::info!("Computer role: {s}");
-                }
-                if profile.config.exists(ip) {
-                    has_role = true;
-                }
-            }
+            // TODO
+            // for ip in local_ips.iter() {
+            //     if let Some(s) = profile.config.get_os(ip) {
+            //         log::info!("Computer role: {s}");
+            //     }
+            //     if profile.config.exists(ip) {
+            //         has_role = true;
+            //     }
+            // }
             if !has_role {
                 log::error!("This computer has no traffic to inject in this profile! Exiting.");
                 process::exit(1);
@@ -207,7 +208,7 @@ fn main() {
             // stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
             let s1 = stage1::FilterForOnline::new(local_ips.clone(), s1);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(!stealthy, profile.config);
+            let s3 = stage3::Stage3::new(!stealthy);
 
             // run
             log::info!("Network enabler: {net_enabler:?}");

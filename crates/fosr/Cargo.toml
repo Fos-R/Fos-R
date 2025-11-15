@@ -18,7 +18,6 @@ clap = { version = "4.5.22", features = ["derive"] }
 crossbeam-channel = "0.5.13"
 ctrlc = "3.4.5"
 env_logger = { version = "0.11.6", default-features = false, features = ["auto-color", "humantime"] }
-fosr-ebpf = { version = "0.1.1", path = "../fosr-ebpf", optional = true }
 fosr-lib = { version = "0.2.0-dev", path = "../fosr-lib" }
 humantime = "2.2.0"
 indicatif = "0.18.0"
@@ -26,7 +25,7 @@ itertools = "0.14.0"
 log = { version = "0.4.22" }
 num_cpus = "1.17.0"
 pcap-file = "2.0.0"
-pnet = { version = "0.35.0", default-features = false, features = ["pnet_sys", "pnet_transport"] }
+pnet = { version = "0.35.0", default-features = false }
 pnet_packet = "0.35.0"
 thingbuf = "0.1.6"
 
@@ -35,9 +34,6 @@ tikv-jemallocator = "0.6.1"
 
 [target.'cfg(target_env = "musl")'.dependencies]
 mimalloc = "0.1.48"
-
-[target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
-aya = { version = "0.13.1", default-features = false, optional = true }
 
 [dev-dependencies]
 assert_cmd = "2.0.14"
@@ -52,12 +48,7 @@ net_injection = ["pnet/std", "fosr-lib/net_injection"]
 iptables = ["net_injection", "fosr-lib/iptables"]
 
 # Linux & Windows only
-ebpf = ["dep:aya", "net_injection", "dep:fosr-ebpf", "fosr-lib/ebpf"]
-
-[target.'cfg(any(target_os = "windows", target_os = "linux"))'.build-dependencies]
-anyhow = { version = "1", default-features = false, optional = true }
-aya-build = { version = "0.1.2", default-features = false, optional = true }
-fosr-ebpf = { path = "../fosr-ebpf", optional = true }
+ebpf = ["net_injection", "fosr-lib/ebpf"]
 
 [package.metadata.deb]
 section = "science"
