@@ -7,13 +7,14 @@ description: "A network synthetic traffic generator"
 ![](logo.png)
 
 <center>
-<img style="width: auto" src="https://img.shields.io/crates/v/fosr.svg?color=brightgreen&style=flat-square">
-<img style="width: auto" src="https://img.shields.io/crates/d/fosr?label=downloads%20%28crates.io%29&style=flat-square">
-<img style="width: auto" src="https://img.shields.io/badge/license%2FGPLv3-blue?style=flat-square">
-<img style="width: auto" src="https://gitlab.inria.fr/pirat-public/Fos-R/badges/main/pipeline.svg">
+<img style="width: auto" src="https://img.shields.io/badge/Rust-blue?logo=rust"> <!-- language -->
+<img style="width: auto" src="https://img.shields.io/crates/v/fosr.svg?color=brightgreen"> <!-- version -->
+<img style="width: auto" src="https://img.shields.io/crates/d/fosr?label=downloads%20%28crates.io%29"> <!-- downloads -->
+<img style="width: auto" src="https://img.shields.io/crates/l/fosr"><!-- license -->
+<img style="width: auto" src="https://gitlab.inria.fr/pirat-public/Fos-R/badges/main/pipeline.svg"> <!-- CI status -->
+<img style="width: auto" src="https://img.shields.io/gitlab/last-commit/pirat-public%2FFos-R?gitlab_url=https%3A%2F%2Fgitlab.inria.fr%2F"> <!-- last commit -->
 </center>
 
-[![pipeline status]()](https://gitlab.inria.fr/pirat-public/Fos-R/-/commits/main) 
 Fos-R is a network traffic generator based on AI models. It does not require a GPU and can generate in the order of Gbps of network traffic with a laptop.
 
 # Get Fos-R

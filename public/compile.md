@@ -16,34 +16,3 @@ Windows builds can only generate data but cannot inject data into the network.
 | x86 (64 bits)     |               |               | [link](bin/x86_64-pc-windows-gnu/release/fosr.exe)    |
 | x86 (32 bits)     |               |               | [link](bin/i686-pc-windows-gnu/release/fosr.exe)    |
 
-
-## Compile from source
-
-You can also compile Fos-R from source directly. Fos-R is distributed with [crates.io](https://crates.io/crates/fosr). First, install Rust with [rustup](https://rustup.rs/). If you want the `ebpf` features (cf. [above](./index.html#cargo-features), you need to install a few more dependencies:
-
-`rustup toolchain install nightly --component rust-src`
-
-`cargo install bpf-linker`
-
-Then, you can install the stable version of Fos-R with:
-
-`cargo install fosr [--features ebpf]`
-
-Alternatively, you can install the experimental version with:
-
-`cargo install --git https://gitlab.inria.fr/pirat-public/Fos-R.git fosr [--features ebpf]`
-
-Once it’s done, you can use Fos-R with the command `fosr`.
-
-The sources of Fos-R are located on [Inria’s GitLab](https://gitlab.inria.fr/pirat-public/Fos-R). There is also a [GitHub mirror](https://github.com/Fos-R/Fos-R).
-
-## Use as a library
-
-Fos-R also includes a Rust library that exposes the main parts of the software. Its documentation is [here](doc/fosr/index.html). You can add the stable version of Fos-R to a Rust project with:
-
-`cargo add fosr`
-
-For the experimental version:
-
-`cargo add --git https://gitlab.inria.fr/pirat-public/Fos-R.git fosr`.
-
