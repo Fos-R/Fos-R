@@ -84,7 +84,7 @@ impl From<String> for IpRole {
 
 impl L7Proto {
     /// Default destination port that is used if a configuration file does not override it
-    fn get_default_port(&self) -> u16 {
+    pub fn get_default_port(&self) -> u16 {
         match self {
             L7Proto::HTTP => 80,
             L7Proto::HTTPS => 443,

@@ -109,7 +109,7 @@ pub enum OS {
 }
 
 impl OS {
-    fn get_default_ttl(&self) -> u8 {
+    pub fn get_initial_ttl(&self) -> u8 {
         match self {
             OS::Linux => 64,
             OS::Windows => 128,

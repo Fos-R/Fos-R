@@ -5,7 +5,7 @@ The following software have been created for Fos-R:
 - [TADAM](https://github.com/Fos-R/TADAM), an automata learner
 - [FlowChronicle](https://github.com/Fos-R/FlowChronicle), a pattern miner
 
-# Related publications
+# Publications
 
 ## Synthetic Network Traffic Generation for Intrusion Detection Systems: a Systematic Literature Review
 
