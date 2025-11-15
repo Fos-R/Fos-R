@@ -1,30 +1,75 @@
 use serde::Deserialize;
 use pnet::util::MacAddr;
 
+use std::collections::HashMap;
 use std::net::Ipv4Addr;
 
 use crate::structs::*;
 
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug)]
 /// The configuration file of the network and the hosts
 pub struct Configuration {
     pub metadata: Metadata,
     pub hosts: Vec<Host>,
+    pub mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
+    pub os_map: HashMap<Ipv4Addr, OS>,
+    pub users: Vec<Ipv4Addr>,
+    pub servers: Vec<Ipv4Addr>,
+}
+
+
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+struct ConfigurationYaml {
+    pub metadata: Metadata,
+    pub hosts: Vec<Host>,
+}
+
+impl From<ConfigurationYaml> for Configuration {
+    fn from(c: ConfigurationYaml) -> Self {
+        let users: Vec<Ipv4Addr> = c.hosts.iter().filter_map(|h| match h.host_type {
+            HostType::User => Some(h.get_ip_addr()),
+            HostType::Server => None,
+        }).flatten().collect();
+        let servers: Vec<Ipv4Addr> = c.hosts.iter().filter_map(|h| match h.host_type {
+            HostType::Server => Some(h.get_ip_addr()),
+            HostType::User => None,
+        }).flatten().collect();
+        let mut os_map: HashMap<Ipv4Addr, OS> = HashMap::new();
+        for host in c.hosts.iter() { 
+            for interface in host.interfaces.iter() {
+                os_map.insert(interface.ip_addr, host.os);
+            }
+        }
+        let mut mac_addr_map: HashMap<Ipv4Addr, MacAddr> = HashMap::new();
+        for interface in c.hosts.iter().map(|h| &h.interfaces).flatten() {
+            if let Some(mac_addr) = interface.mac_addr {
+                mac_addr_map.insert(interface.ip_addr, mac_addr);
+            }
+        }
+        Configuration {
+            metadata: c.metadata,
+            hosts: c.hosts,
+            os_map,
+            mac_addr_map,
+            users,
+            servers,
+        }
+    }
 }
 
 impl Configuration {
 
     pub fn get_mac(&self, ip: &Ipv4Addr) -> Option<&MacAddr> {
-        todo!()
+        self.mac_addr_map.get(ip)
     }
 
-    pub fn get_default_ttl(&self, ip: &Ipv4Addr) -> u8 {
-        todo!()
+    pub fn get_initial_ttl(&self, ip: &Ipv4Addr) -> u8 {
+        self.os_map.get(ip).unwrap().get_initial_ttl()
     }
 
     pub fn get_os(&self, ip: &Ipv4Addr) -> OS {
-        todo!()
+        *self.os_map.get(ip).unwrap()
     }
 
 }
@@ -58,6 +103,14 @@ pub struct Host {
     pub client: Vec<L7Proto>,
     pub host_type: HostType,
     pub interfaces: Vec<Interface>,
+}
+
+impl Host {
+
+    pub fn get_ip_addr(&self) -> Vec<Ipv4Addr> {
+        self.interfaces.iter().map(|i| i.ip_addr.clone()).collect()
+    }
+
 }
 
 #[derive(Deserialize, Debug)]
@@ -126,7 +179,7 @@ impl From<InterfaceYaml> for Interface {
 /// Import a configuration from a string. The string can be either in JSON or YAML format.
 pub fn import_config(config_string: &str) -> Configuration {
     let config: Configuration =
-        serde_yaml::from_str(&config_string).expect("Cannot parse the configuration file");
+        serde_yaml::from_str::<ConfigurationYaml>(&config_string).expect("Cannot parse the configuration file").into();
     log::info!("\"{}\" successfully loaded", config.metadata.title);
     log::trace!("Configuration: {config:?}");
     config
