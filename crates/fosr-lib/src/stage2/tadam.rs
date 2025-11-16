@@ -272,7 +272,10 @@ impl Stage2 for TadamGenerator {
                 },
             })
         } else {
-            log::error!("No TCP automaton for destination port {}", flow.data.dst_port);
+            log::error!(
+                "No TCP automaton for destination port {}",
+                flow.data.dst_port
+            );
             None
         }
     }
@@ -315,7 +318,10 @@ impl Stage2 for TadamGenerator {
                 },
             })
         } else {
-            log::error!("No UDP automaton for destination port {}", flow.data.dst_port);
+            log::error!(
+                "No UDP automaton for destination port {}",
+                flow.data.dst_port
+            );
             None
         }
     }
