@@ -1,6 +1,6 @@
 [package]
 name = "fosr-lib"
-version = "0.2.0-dev"
+version = "1.0.0-dev"
 authors = ["Pierre-François Gimenez <pierre-francois.gimenez@inria.fr>","Dorian Bachelot","Florentin Labelle","Evan Morin"]
 edition = "2024"
 description = "The library of Fos-R (Forger Of Security Records), the AI-based synthetic network traffic generator."

@@ -567,7 +567,7 @@ checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
 
 [[package]]
 name = "fosr"
-version = "0.2.0-dev"
+version = "1.0.0-dev"
 dependencies = [
  "assert_cmd",
  "chrono",
@@ -605,7 +605,7 @@ dependencies = [
 
 [[package]]
 name = "fosr-lib"
-version = "0.2.0-dev"
+version = "1.0.0-dev"
 dependencies = [
  "anyhow",
  "aya",
