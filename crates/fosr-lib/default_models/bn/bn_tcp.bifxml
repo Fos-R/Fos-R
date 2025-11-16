@@ -147,20 +147,20 @@
 <VARIABLE TYPE="nature">
 	<NAME>Src IP Role</NAME>
 	<PROPERTY>description = </PROPERTY>
-	<PROPERTY>fast = Src IP Role{Client|Internet}</PROPERTY>
+	<PROPERTY>fast = Src IP Role{Internet|User}</PROPERTY>
 <!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
-	<OUTCOME>Client</OUTCOME>
 	<OUTCOME>Internet</OUTCOME>
+	<OUTCOME>User</OUTCOME>
 </VARIABLE>
 
 <VARIABLE TYPE="nature">
 	<NAME>Dst IP Role</NAME>
 	<PROPERTY>description = </PROPERTY>
-	<PROPERTY>fast = Dst IP Role{Client|Internet|Server}</PROPERTY>
+	<PROPERTY>fast = Dst IP Role{Internet|Server|User}</PROPERTY>
 <!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
-	<OUTCOME>Client</OUTCOME>
 	<OUTCOME>Internet</OUTCOME>
 	<OUTCOME>Server</OUTCOME>
+	<OUTCOME>User</OUTCOME>
 </VARIABLE>
 
 <VARIABLE TYPE="nature">
@@ -503,13 +503,13 @@
 <DEFINITION>
 	<FOR>Src IP Role</FOR>
 	<TABLE>
-		0.999986 1.35176e-05
+		1.35176e-05 0.999986
 	</TABLE>
 </DEFINITION>
 <DEFINITION>
 	<FOR>Dst IP Role</FOR>
 	<TABLE>
-		0.00288376 0.95083 0.0462861
+		0.95083 0.0462861 0.00288376
 	</TABLE>
 </DEFINITION>
 <DEFINITION>

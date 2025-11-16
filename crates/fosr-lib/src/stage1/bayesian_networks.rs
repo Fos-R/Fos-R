@@ -65,7 +65,7 @@ struct BayesianNetworkNode {
 
 #[derive(Debug, Clone)]
 enum IpRole {
-    Client,
+    User,
     Server,
     Internet,
 }
@@ -74,10 +74,10 @@ enum IpRole {
 impl From<String> for IpRole {
     fn from(s: String) -> IpRole {
         match s.as_str() {
-            "Client" => IpRole::Client,
+            "User" => IpRole::User,
             "Server" => IpRole::Server,
             "Internet" => IpRole::Internet,
-            _ => unreachable!(),
+            _ => panic!("Cannot parse IpRole {s}"),
         }
     }
 }
@@ -354,7 +354,7 @@ impl BayesianModel {
                             w.update_weights(&weight_update).unwrap()
                         });
                 }
-                Feature::SrcIp(v) => {
+                Feature::SrcIp(_) => {
                     // we replace the node by a new one
                     let mut all_src_ip = config.users.clone();
                     all_src_ip.append(&mut config.servers.clone());
@@ -362,22 +362,62 @@ impl BayesianModel {
                         .clone()
                         .into_iter()
                         .map(|ip| AnonymizedIpv4Addr::Local(ip))
+                        .chain(iter::once(AnonymizedIpv4Addr::Public))
                         .collect();
                     let mut cpt: Vec<WeightedIndex<f64>> = vec![];
                     for p in protocols.iter() {
-                        for role in src_ip_roles.iter() {
-                            let proto_users = config.get_users_per_service(p);
-                            let proba = all_src_ip
-                                .clone()
-                                .into_iter()
-                                .map(|ip| if proto_users.contains(&ip) {
-                                    // this IP can be sampled
-                                    config.get_usage(&ip)
-                                } else {
-                                    // this IP cannot be sampled
-                                    0.0f64
-                                });
-                            cpt.push(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}"));
+                        if !config.services.contains(p) {
+                            // this protocol will never be sampled with this config
+                            cpt.push(WeightedIndex::new([1.0f64;1]).unwrap());
+                        } else {
+                            for role in src_ip_roles.iter() {
+                                match role {
+                                    IpRole::User => {
+                                        let proto_users = config.get_users_per_service(p);
+                                        assert!(!proto_users.is_empty());
+                                        let proba = all_src_ip
+                                            .clone()
+                                            .into_iter()
+                                            .map(|ip| {
+                                                if proto_users.contains(&ip) {
+                                                    // this IP can be sampled
+                                                    config.get_usage(&ip)
+                                                } else {
+                                                    // this IP cannot be sampled
+                                                    0.0f64
+                                                }
+                                            })
+                                            .chain(iter::once(0.0f64)); // no internet
+                                        cpt.push(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}"));
+                                    }
+                                    IpRole::Server => {
+                                        let proto_servers = config.get_servers_per_service(p);
+                                        assert!(!proto_servers.is_empty());
+                                        let proba = all_src_ip
+                                            .clone()
+                                            .into_iter()
+                                            .map(|ip| {
+                                                if proto_servers.contains(&ip) {
+                                                    // this IP can be sampled
+                                                    config.get_usage(&ip)
+                                                } else {
+                                                    // this IP cannot be sampled
+                                                    0.0f64
+                                                }
+                                            })
+                                            .chain(iter::once(0.0f64)); // no internet
+                                        cpt.push(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}"));
+                                    }
+                                    IpRole::Internet => {
+                                        let mut proba: Vec<f64> = vec![];
+                                        for _ in 0..all_src_ip.len() {
+                                            proba.push(0.0f64);
+                                        }
+                                        proba.push(1.0f64); // always a public IP
+                                        cpt.push(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}"));
+                                    }
+                                }
+                            }
                         }
                     }
                     *node = BayesianNetworkNode {
@@ -387,7 +427,6 @@ impl BayesianModel {
                         parents: vec![l7proto_index, src_ip_role_index],
                         parents_cardinality: vec![protocols.len(), src_ip_roles.len()],
                     };
-                    // for protocols
                 }
                 _ => (),
             }
@@ -461,20 +500,21 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
 
     // If time is present, it should be the first one
     if let Some(p) = topo_order.iter().position(|s| s.as_str() == "Time") {
-        let v = topo_order.remove(p);
-        topo_order.insert(0, v); // insert at the start
+        topo_order.swap(p, 0);
+        // let v = topo_order.remove(p);
+        // topo_order.insert(0, v); // insert at the start
     }
 
     // If "Src IP" (or similar) is present, is must be at the end of the list because its parents may change
     // Since it never has any children, the topological order will still be valid
-    for var_name in ["Src IP Addr", "Dst IP Addr", "Dst Pt"] {
-        if let Some(p) = topo_order.iter().position(|s| s.as_str() == var_name) {
-            let v = topo_order.remove(p);
-            topo_order.push(v); // push at the end
-        }
-    }
+    // for var_name in ["Src IP Addr", "Dst IP Addr", "Dst Pt"] {
+    //     if let Some(p) = topo_order.iter().position(|s| s.as_str() == var_name) {
+    //         let v = topo_order.remove(p);
+    //         topo_order.push(v); // push at the end
+    //     }
+    // }
 
-    // println!("Topological order: {topo_order:?}");
+    log::info!("Topological order: {topo_order:?}");
 
     let mut variable = vec![];
     let mut definition = vec![];
@@ -502,16 +542,21 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
             .clone()
             .unwrap_or(vec![])
             .into_iter()
-            .map(|v| var_names.iter_mut().position(|s| s.as_str() == v).unwrap())
+            .map(|v| {
+                var_names
+                    .iter_mut()
+                    .position(|s| s.as_str() == v)
+                    .expect("Not in topological order!")
+            })
             .collect();
 
         let cpt: CPT = def
             .table
             .split_ascii_whitespace()
-            .map(|s| s.parse::<f64>().unwrap())
+            .map(|s| s.parse::<f64>().expect("Cannot parse the CPT"))
             .collect::<Vec<_>>()
             .chunks(v.outcome.len())
-            .map(|l| WeightedIndex::new(l).unwrap())
+            .map(|l| WeightedIndex::new(l).expect("Invalid probability distribution"))
             .collect();
 
         // println!("{}", def.variable);
