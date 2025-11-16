@@ -142,11 +142,11 @@ impl Feature {
 
 #[allow(clippy::upper_case_acronyms)]
 /// A conditional probability table
-type CPT = Vec<WeightedIndex<f64>>;
+type CPT = Vec<Option<WeightedIndex<f64>>>; // some combination may be impossible
 
 impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
-    fn sample_index(&self, rng: &mut impl RngCore, current: &[Option<usize>]) -> usize {
+    fn sample_index(&self, rng: &mut impl RngCore, current: &[Option<usize>]) -> Option<usize> {
         let mut parents_index = 0;
         // println!("Sample index of {:?}", self.feature);
         for (index, card) in self.parents.iter().zip(self.parents_cardinality.iter()) {
@@ -159,10 +159,14 @@ impl BayesianNetworkNode {
         match &self.cpt {
             None => panic!("No CPT!"),
             Some(cpt) => {
-                let index = cpt.get(parents_index).unwrap().sample(rng);
-                // verify that the index in inside the possible values
-                assert!(index < self.feature.get_cardinality());
-                index
+                if let Some(distrib) = cpt.get(parents_index).unwrap() {
+                    let index = distrib.sample(rng);
+                    // verify that the index in inside the possible values
+                    assert!(index < self.feature.get_cardinality());
+                    Some(index)
+                } else {
+                    None // we cannot sample a value
+                }
             }
         }
     }
@@ -185,51 +189,64 @@ impl BayesianNetwork {
         rng: &mut impl RngCore,
         discrete_vector: &mut Vec<Option<usize>>,
     ) -> IntermediateVector {
+        let mut try_again = false;
         let mut domain_vector: IntermediateVector = IntermediateVector::default();
-        for v in self.nodes.iter() {
-            // log::info!("Sampling {:?} (index: {index})", v.feature);
-            if !matches!(v.feature, Feature::TimeBin(_)) {
-                // do not sample TCP variables for UDP connections, etc.
-                if v.proto_specific
-                    .is_none_or(|p| p == domain_vector.proto.unwrap())
-                {
-                    let i = v.sample_index(rng, discrete_vector);
-                    // println!("Sampled value for {:?}: {}", v.feature, i);
-                    discrete_vector.push(Some(i));
-                    match &v.feature {
-                        Feature::SrcIpRole(v) => domain_vector.src_ip_role = Some(v[i].clone()),
-                        Feature::DstIpRole(v) => domain_vector.dst_ip_role = Some(v[i].clone()),
-                        Feature::L7Proto(v) => domain_vector.l7_proto = Some(v[i].clone()),
-                        Feature::SrcIp(v) => match v[i] {
-                            AnonymizedIpv4Addr::Local(p) => domain_vector.src_ip = Some(p),
-                            AnonymizedIpv4Addr::Public => {
-                                domain_vector.src_ip = Some(sample_random_ip(rng))
+        let mut new_discrete_vector = discrete_vector.clone();
+        while try_again {
+            try_again = false;
+            new_discrete_vector = discrete_vector.clone();
+            domain_vector = IntermediateVector::default();
+            for v in self.nodes.iter() {
+                // log::info!("Sampling {:?} (index: {index})", v.feature);
+                if !matches!(v.feature, Feature::TimeBin(_)) {
+                    // do not sample TCP variables for UDP connections, etc.
+                    if v.proto_specific
+                        .is_none_or(|p| p == domain_vector.proto.unwrap())
+                    {
+                        let index = v.sample_index(rng, &mut new_discrete_vector);
+                        if let Some(i) = index {
+                            // println!("Sampled value for {:?}: {}", v.feature, i);
+                            new_discrete_vector.push(Some(i));
+                            match &v.feature {
+                                Feature::SrcIpRole(v) => domain_vector.src_ip_role = Some(v[i].clone()),
+                                Feature::DstIpRole(v) => domain_vector.dst_ip_role = Some(v[i].clone()),
+                                Feature::L7Proto(v) => domain_vector.l7_proto = Some(v[i].clone()),
+                                Feature::SrcIp(v) => match v[i] {
+                                    AnonymizedIpv4Addr::Local(p) => domain_vector.src_ip = Some(p),
+                                    AnonymizedIpv4Addr::Public => {
+                                        domain_vector.src_ip = Some(sample_random_ip(rng))
+                                    }
+                                },
+                                Feature::DstIp(v) => match v[i] {
+                                    AnonymizedIpv4Addr::Local(p) => domain_vector.dst_ip = Some(p),
+                                    AnonymizedIpv4Addr::Public => {
+                                        domain_vector.dst_ip = Some(sample_random_ip(rng))
+                                    }
+                                },
+                                Feature::DstPt(v) => domain_vector.dst_port = Some(v[i]),
+                                Feature::FwdPkt(v) => {
+                                    domain_vector.fwd_packets_count = Some(v[i].sample(rng) as usize)
+                                }
+                                Feature::BwdPkt(v) => {
+                                    domain_vector.bwd_packets_count = Some(v[i].sample(rng) as usize)
+                                }
+                                Feature::L4Proto(v) => domain_vector.proto = Some(v[i]),
+                                Feature::EndFlags => {
+                                    domain_vector.tcp_flags = Some(TCPEndFlags::iter()[i].clone())
+                                }
+                                Feature::TimeBin(_) => unreachable!(),
                             }
-                        },
-                        Feature::DstIp(v) => match v[i] {
-                            AnonymizedIpv4Addr::Local(p) => domain_vector.dst_ip = Some(p),
-                            AnonymizedIpv4Addr::Public => {
-                                domain_vector.dst_ip = Some(sample_random_ip(rng))
-                            }
-                        },
-                        Feature::DstPt(v) => domain_vector.dst_port = Some(v[i]),
-                        Feature::FwdPkt(v) => {
-                            domain_vector.fwd_packets_count = Some(v[i].sample(rng) as usize)
+                        } else {
+                            try_again = true;
+                            break;
                         }
-                        Feature::BwdPkt(v) => {
-                            domain_vector.bwd_packets_count = Some(v[i].sample(rng) as usize)
-                        }
-                        Feature::L4Proto(v) => domain_vector.proto = Some(v[i]),
-                        Feature::EndFlags => {
-                            domain_vector.tcp_flags = Some(TCPEndFlags::iter()[i].clone())
-                        }
-                        Feature::TimeBin(_) => unreachable!(),
+                    } else {
+                        new_discrete_vector.push(None);
                     }
-                } else {
-                    discrete_vector.push(None);
-                }
-            } // if it’s "Time", do not push any value (it was already done previously)
+                } // if it’s "Time", do not push any value (it was already done previously)
+            }
         }
+        *discrete_vector = new_discrete_vector;
         domain_vector
     }
 }
@@ -346,13 +363,14 @@ impl BayesianModel {
                         })
                         .collect();
                     // modify all the probability distributions
-                    node.cpt
-                        .as_mut()
-                        .unwrap()
-                        .iter_mut()
-                        .for_each(|w: &mut WeightedIndex<f64>| {
-                            w.update_weights(&weight_update).unwrap()
-                        });
+                    for cpt in node.cpt.as_mut().unwrap().iter_mut() {
+                        if let Some(weights) = cpt {
+                            let result = weights.update_weights(&weight_update);
+                            if result.is_err() {
+                                *cpt = None;
+                            }
+                        }
+                    }
                 }
                 Feature::SrcIp(_) => {
                     // we replace the node by a new one
@@ -364,12 +382,12 @@ impl BayesianModel {
                         .map(|ip| AnonymizedIpv4Addr::Local(ip))
                         .chain(iter::once(AnonymizedIpv4Addr::Public))
                         .collect();
-                    let mut cpt: Vec<WeightedIndex<f64>> = vec![];
+                    let mut cpt: Vec<Option<WeightedIndex<f64>>> = vec![];
                     for p in protocols.iter() {
                         if !config.services.contains(p) {
                             // this protocol will never be sampled with this config
                             for _ in src_ip_roles.iter() {
-                                cpt.push(WeightedIndex::new([1.0f64;1]).unwrap());
+                                cpt.push(None);
                             }
                         } else {
                             for role in src_ip_roles.iter() {
@@ -390,7 +408,7 @@ impl BayesianModel {
                                                 }
                                             })
                                             .chain(iter::once(0.0f64)); // no internet
-                                        cpt.push(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}"));
+                                        cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}")));
                                     }
                                     IpRole::Server => {
                                         let proto_servers = config.get_servers_per_service(p);
@@ -408,7 +426,7 @@ impl BayesianModel {
                                                 }
                                             })
                                             .chain(iter::once(0.0f64)); // no internet
-                                        cpt.push(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}"));
+                                        cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}")));
                                     }
                                     IpRole::Internet => {
                                         let mut proba: Vec<f64> = vec![];
@@ -416,7 +434,7 @@ impl BayesianModel {
                                             proba.push(0.0f64);
                                         }
                                         proba.push(1.0f64); // always a public IP
-                                        cpt.push(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}"));
+                                        cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}")));
                                     }
                                 }
                             }
@@ -555,10 +573,14 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
         let cpt: CPT = def
             .table
             .split_ascii_whitespace()
-            .map(|s| s.parse::<f64>().expect("Cannot parse the CPT"))
+            .map(|s| {
+                let n = s.parse::<f64>().expect("Cannot parse the CPT");
+                if n < 1e-9 { 0.0f64 } else { n } // we remove impossible combination with non-zero
+                                                  // probability due to the use of a prior
+            })
             .collect::<Vec<_>>()
             .chunks(v.outcome.len())
-            .map(|l| WeightedIndex::new(l).expect("Invalid probability distribution"))
+            .map(|l| Some(WeightedIndex::new(l).expect("Invalid probability distribution")))
             .collect();
 
         // println!("{}", def.variable);
