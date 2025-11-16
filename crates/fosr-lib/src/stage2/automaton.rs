@@ -67,7 +67,7 @@ impl EdgeDistribution {
 pub struct CrossProductTimedAutomaton<T: EdgeType> {
     graph: Vec<CrossProductTimedNode<T>>,
     initial_state: usize,
-    accepting_states: KdTree<([i32; 2], usize)>, // to quickly find the closest possible accepting
+    accepting_states: KdTree<([i64; 2], usize)>, // to quickly find the closest possible accepting
     // state
     metadata: AutomatonMetaData,
 }
@@ -157,7 +157,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
         let mut accepting_states = Vec::new();
         for (i, node) in closeset.into_iter().enumerate() {
             if node.state == automaton.accepting_state {
-                accepting_states.push(([node.fwd as i32, node.bwd as i32], i));
+                accepting_states.push(([node.fwd as i64, node.bwd as i64], i));
             }
             let in_edges: Option<Vec<TimedEdge<T>>> = predecessors.remove(&node);
             let dist = in_edges
@@ -201,7 +201,7 @@ impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
 
     fn get_initial_state(&self, fwd_packets_count: usize, bwd_packets_count: usize) -> usize {
         self.accepting_states
-            .nearest(&([fwd_packets_count as i32, bwd_packets_count as i32]))
+            .nearest(&([fwd_packets_count as i64, bwd_packets_count as i64]))
             .unwrap()
             .item
             .1
