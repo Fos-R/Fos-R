@@ -157,7 +157,7 @@ impl BayesianNetworkNode {
             parents_index = parents_index * card + current[*index].unwrap()
         }
         match &self.cpt {
-            None => panic!("Trying to sample a TimeBin"),
+            None => panic!("No CPT!"),
             Some(cpt) => {
                 let index = cpt.get(parents_index).unwrap().sample(rng);
                 // verify that the index in inside the possible values
@@ -186,8 +186,8 @@ impl BayesianNetwork {
         discrete_vector: &mut Vec<Option<usize>>,
     ) -> IntermediateVector {
         let mut domain_vector: IntermediateVector = IntermediateVector::default();
-        for v in self.nodes.iter() {
-            // log::info!("Sampling {:?} (index: {index})", v.feature);
+        for (index,v) in self.nodes.iter().enumerate() {
+            log::info!("Sampling {:?} (index: {index})", v.feature);
             if !matches!(v.feature, Feature::TimeBin(_)) {
                 // do not sample TCP variables for UDP connections, etc.
                 if v.proto_specific
@@ -368,7 +368,9 @@ impl BayesianModel {
                     for p in protocols.iter() {
                         if !config.services.contains(p) {
                             // this protocol will never be sampled with this config
-                            cpt.push(WeightedIndex::new([1.0f64;1]).unwrap());
+                            for _ in src_ip_roles.iter() {
+                                cpt.push(WeightedIndex::new([1.0f64;1]).unwrap());
+                            }
                         } else {
                             for role in src_ip_roles.iter() {
                                 match role {
@@ -423,7 +425,7 @@ impl BayesianModel {
                     *node = BayesianNetworkNode {
                         proto_specific: None,
                         feature: Feature::SrcIp(ip),
-                        cpt: None,
+                        cpt: Some(cpt),
                         parents: vec![l7proto_index, src_ip_role_index],
                         parents_cardinality: vec![protocols.len(), src_ip_roles.len()],
                     };
@@ -500,19 +502,19 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
 
     // If time is present, it should be the first one
     if let Some(p) = topo_order.iter().position(|s| s.as_str() == "Time") {
-        topo_order.swap(p, 0);
-        // let v = topo_order.remove(p);
-        // topo_order.insert(0, v); // insert at the start
+        // topo_order.swap(p, 0);
+        let v = topo_order.remove(p);
+        topo_order.insert(0, v); // insert at the start
     }
 
     // If "Src IP" (or similar) is present, is must be at the end of the list because its parents may change
     // Since it never has any children, the topological order will still be valid
-    // for var_name in ["Src IP Addr", "Dst IP Addr", "Dst Pt"] {
-    //     if let Some(p) = topo_order.iter().position(|s| s.as_str() == var_name) {
-    //         let v = topo_order.remove(p);
-    //         topo_order.push(v); // push at the end
-    //     }
-    // }
+    for var_name in ["Src IP Addr", "Dst IP Addr", "Dst Pt"] {
+        if let Some(p) = topo_order.iter().position(|s| s.as_str() == var_name) {
+            let v = topo_order.remove(p);
+            topo_order.push(v); // push at the end
+        }
+    }
 
     log::info!("Topological order: {topo_order:?}");
 
@@ -535,6 +537,8 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
     for (v, def) in variable.iter().zip(definition) {
         assert_eq!(v.name, def.variable); // we assume the order is the same between
         // <variable> and <definition>
+
+        log::info!("{:?}",def.given);
 
         // global index of parents
         let parents: Vec<usize> = def
