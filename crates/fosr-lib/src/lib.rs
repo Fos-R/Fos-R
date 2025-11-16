@@ -5,8 +5,13 @@
 pub mod config;
 /// Generation statistics
 pub mod stats;
+
+#[doc(hidden)]
 /// Structures used throughout the library
 pub mod structs;
+
+#[doc(inline)]
+pub use structs::*;
 
 /// ICMP-specific fonctions
 mod icmp;
