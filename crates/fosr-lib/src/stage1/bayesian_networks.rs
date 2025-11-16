@@ -82,50 +82,6 @@ impl From<String> for IpRole {
     }
 }
 
-impl L7Proto {
-    /// Default destination port that is used if a configuration file does not override it
-    pub fn get_default_port(&self) -> u16 {
-        match self {
-            L7Proto::HTTP => 80,
-            L7Proto::HTTPS => 443,
-            L7Proto::SSH => 22,
-            L7Proto::DNS => 53,
-            L7Proto::DHCP => 67,
-            L7Proto::SMTP => 587,
-            L7Proto::Telnet => 23,
-            L7Proto::IMAPS => 993,
-            L7Proto::MQTT => 1883,
-            L7Proto::CanonBjmp => 8612,
-            L7Proto::KMS => 1688,
-            L7Proto::MulticastDNS => 5353,
-            L7Proto::NTP => 123,
-            L7Proto::Unknown => 9999,
-            // _ => todo!()
-        }
-    }
-}
-
-// TODO: refaire proprement
-impl From<String> for L7Proto {
-    fn from(s: String) -> L7Proto {
-        match s.as_str() {
-            "HTTP" => L7Proto::HTTP,
-            "HTTPS" => L7Proto::HTTPS,
-            "SSH" => L7Proto::SSH,
-            "DNS" => L7Proto::DNS,
-            "DHCP" => L7Proto::DHCP,
-            "SMTP" => L7Proto::SMTP,
-            "Telnet" => L7Proto::Telnet,
-            "IMAPS" => L7Proto::IMAPS,
-            "MQTT" => L7Proto::MQTT,
-            "Canon-bjmp" => L7Proto::CanonBjmp,
-            "KMS" => L7Proto::KMS,
-            "Multicast DNS" => L7Proto::MulticastDNS,
-            "NTP" => L7Proto::NTP,
-            _ => L7Proto::Unknown,
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 /// The TCP end flags
@@ -282,8 +238,6 @@ impl BayesianNetwork {
 /// The model with all the data
 pub struct BayesianModel {
     bn: BayesianNetwork,
-    // bn_tcp: BayesianNetwork,
-    // bn_udp: BayesianNetwork,
     bn_additional_data: AdditionalData,
 }
 
@@ -346,16 +300,35 @@ impl BayesianModel {
         }
     }
 
-    // il faut mettre à jour : SrcIp, DstIp
+    // il faut mettre à jour : SrcIp, DstIp, L7Proto
 
     pub fn apply_config(&mut self, config: &config::Configuration) {
         for node in self.bn.nodes.iter_mut() {
-            // match node.feature {
-            //     Feature::SrcIp(v) => {
-            //         node.feature = Feature::SrcIp()
+            match &mut node.feature {
+                // we set the probability of absent services to 0
+                Feature::L7Proto(v) => {
+                    // TODO: mettre un warning si un service de la config n’est pas présent dans le
+                    // dataset
+                    // get services present in the configuration
+                    let services = config.get_services();
+                    for s in services.iter() {
+                        if !v.contains(s) {
+                            log::warn!("Service {s:?} is not present in the original dataset and will not be generated");
+                        }
+                    }
+                    // create a list of all the indices to set the probability to 0
+                    let weight_update: Vec<(usize, &f64)> = v.iter().enumerate().filter_map(|(index,proto)| if services.contains(proto) { None } else { Some((index, &0.0f64)) }).collect();
+                    // modify all the probability distributions
+                    node.cpt.as_mut().unwrap().iter_mut().for_each(|w: &mut WeightedIndex<f64>| w.update_weights(&weight_update).unwrap());
+                },
+                Feature::SrcIp(v) => {
 
-            //     }
-            // }
+
+                }
+                // Feature::
+                // Feature::SrcIp(v) => (),
+                _ => (),
+            }
         }
     }
 }
