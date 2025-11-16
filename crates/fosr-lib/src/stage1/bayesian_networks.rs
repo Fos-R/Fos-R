@@ -82,7 +82,6 @@ impl From<String> for IpRole {
     }
 }
 
-
 #[derive(Debug, Clone)]
 /// The TCP end flags
 enum TCPEndFlags {
@@ -303,30 +302,93 @@ impl BayesianModel {
     // il faut mettre à jour : SrcIp, DstIp, L7Proto
 
     pub fn apply_config(&mut self, config: &config::Configuration) {
+        // we know L7Proto exists
+        let mut protocols: Vec<L7Proto> = vec![];
+        let mut l7proto_index: usize = 0;
+        for (index, node) in self.bn.nodes.iter().enumerate() {
+            if let Feature::L7Proto(v) = &node.feature {
+                protocols = v.clone();
+                l7proto_index = index;
+            }
+        }
+
+        let mut src_ip_roles: Vec<IpRole> = vec![];
+        let mut src_ip_role_index: usize = 0;
+        for (index, node) in self.bn.nodes.iter().enumerate() {
+            if let Feature::SrcIpRole(v) = &node.feature {
+                src_ip_roles = v.clone();
+                src_ip_role_index = index;
+            }
+        }
+
         for node in self.bn.nodes.iter_mut() {
             match &mut node.feature {
                 // we set the probability of absent services to 0
                 Feature::L7Proto(v) => {
-                    // TODO: mettre un warning si un service de la config n’est pas présent dans le
-                    // dataset
                     // get services present in the configuration
-                    let services = config.get_services();
-                    for s in services.iter() {
+                    for s in config.services.iter() {
                         if !v.contains(s) {
-                            log::warn!("Service {s:?} is not present in the original dataset and will not be generated");
+                            log::warn!(
+                                "Service {s:?} is not present in the original dataset and will not be generated"
+                            );
                         }
                     }
                     // create a list of all the indices to set the probability to 0
-                    let weight_update: Vec<(usize, &f64)> = v.iter().enumerate().filter_map(|(index,proto)| if services.contains(proto) { None } else { Some((index, &0.0f64)) }).collect();
+                    let weight_update: Vec<(usize, &f64)> = v
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(index, proto)| {
+                            if config.services.contains(proto) {
+                                None
+                            } else {
+                                Some((index, &0.0f64))
+                            }
+                        })
+                        .collect();
                     // modify all the probability distributions
-                    node.cpt.as_mut().unwrap().iter_mut().for_each(|w: &mut WeightedIndex<f64>| w.update_weights(&weight_update).unwrap());
-                },
-                Feature::SrcIp(v) => {
-
-
+                    node.cpt
+                        .as_mut()
+                        .unwrap()
+                        .iter_mut()
+                        .for_each(|w: &mut WeightedIndex<f64>| {
+                            w.update_weights(&weight_update).unwrap()
+                        });
                 }
-                // Feature::
-                // Feature::SrcIp(v) => (),
+                Feature::SrcIp(v) => {
+                    // we replace the node by a new one
+                    let mut all_src_ip = config.users.clone();
+                    all_src_ip.append(&mut config.servers.clone());
+                    let ip: Vec<AnonymizedIpv4Addr> = all_src_ip
+                        .clone()
+                        .into_iter()
+                        .map(|ip| AnonymizedIpv4Addr::Local(ip))
+                        .collect();
+                    let mut cpt: Vec<WeightedIndex<f64>> = vec![];
+                    for p in protocols.iter() {
+                        for role in src_ip_roles.iter() {
+                            let proto_users = config.get_users_per_service(p);
+                            let proba = all_src_ip
+                                .clone()
+                                .into_iter()
+                                .map(|ip| if proto_users.contains(&ip) {
+                                    // this IP can be sampled
+                                    config.get_usage(&ip)
+                                } else {
+                                    // this IP cannot be sampled
+                                    0.0f64
+                                });
+                            cpt.push(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}"));
+                        }
+                    }
+                    *node = BayesianNetworkNode {
+                        proto_specific: None,
+                        feature: Feature::SrcIp(ip),
+                        cpt: None,
+                        parents: vec![l7proto_index, src_ip_role_index],
+                        parents_cardinality: vec![protocols.len(), src_ip_roles.len()],
+                    };
+                    // for protocols
+                }
                 _ => (),
             }
         }
@@ -378,6 +440,11 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
         }
     }
 
+    // TODO we verify "Src Ip OR Dst Ip => no children", i.e., "(not Src Ip AND not Dst Ip) OR no children"
+    // if !network.definition.iter().map(|d| (d.variable.as_str() != "Src IP Addr" && d.variable.as_str() != "Dst IP Addr" && d.variable.as_str() != "Dst Pt") || d.children.is_empty()).all() {
+    //     panic!("The variables \"Src IP Addr\", \"Dst IP Addr\" and \"Dst Pt\" must have no children in the Bayesian network");
+    // }
+
     let mut topo_order: Vec<String> = vec![];
 
     // Kahn’s algorithm
@@ -394,17 +461,20 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
 
     // If time is present, it should be the first one
     if let Some(p) = topo_order.iter().position(|s| s.as_str() == "Time") {
-        topo_order.swap(p, 0); // Time must be the first variable if present
+        let v = topo_order.remove(p);
+        topo_order.insert(0, v); // insert at the start
+    }
+
+    // If "Src IP" (or similar) is present, is must be at the end of the list because its parents may change
+    // Since it never has any children, the topological order will still be valid
+    for var_name in ["Src IP Addr", "Dst IP Addr", "Dst Pt"] {
+        if let Some(p) = topo_order.iter().position(|s| s.as_str() == var_name) {
+            let v = topo_order.remove(p);
+            topo_order.push(v); // push at the end
+        }
     }
 
     // println!("Topological order: {topo_order:?}");
-
-    // let mut sorted_network: bifxml::Network = bifxml::Network {
-    //     name: network.name,
-    //     property: network.property,
-    //     variable: vec![],
-    //     definition: vec![],
-    // };
 
     let mut variable = vec![];
     let mut definition = vec![];
@@ -413,6 +483,7 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
             if var.name == v {
                 variable.push(var.clone());
                 definition.push(network.definition[index].clone());
+                continue;
             }
         }
     }
@@ -424,12 +495,6 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
     for (v, def) in variable.iter().zip(definition) {
         assert_eq!(v.name, def.variable); // we assume the order is the same between
         // <variable> and <definition>
-        // let ignored_during_generation = var_names.contains(&v.name);
-        // dbg!(&v.name);
-        // dbg!(ignored_during_generation);
-
-        // if !ignored_during_generation {
-        // name_to_index.insert(v.name.clone(), overall_index);
 
         // global index of parents
         let parents: Vec<usize> = def
@@ -539,13 +604,11 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
                 Some(cpt)
             };
             let node = BayesianNetworkNode {
-                // index: var_names.len() - 1, // it was the last pushed name
                 feature,
                 parents, // indices in the Bayesian network’s nodes
                 parents_cardinality,
                 cpt,
                 proto_specific: v.proto_specific,
-                // ignored_during_generation,
             };
             processed_bn.nodes.push(node);
         }

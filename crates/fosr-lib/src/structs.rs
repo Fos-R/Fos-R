@@ -145,7 +145,6 @@ impl From<String> for L7Proto {
     }
 }
 
-
 #[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 /// The OS of an host. By default, assume Linux
 pub enum OS {
