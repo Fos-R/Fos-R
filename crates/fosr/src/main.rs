@@ -650,7 +650,11 @@ fn run_efficient<T: inject::NetEnabler>(
     {
         let stats = Arc::clone(&stats);
         let builder = thread::Builder::new().name("Monitoring".into());
-        threads.push(builder.spawn(move || stats::show_progression(stats)).unwrap());
+        threads.push(
+            builder
+                .spawn(move || stats::show_progression(stats))
+                .unwrap(),
+        );
     }
 
     // Wait for the generation threads to end

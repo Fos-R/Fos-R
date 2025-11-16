@@ -1,5 +1,5 @@
-use serde::Deserialize;
 use pnet::util::MacAddr;
+use serde::Deserialize;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -10,17 +10,18 @@ use crate::structs::*;
 #[derive(Debug)]
 /// The configuration file of the network and the hosts
 pub struct Configuration {
+    // TODO: faire du tri dans ce qui n’est pas utile
     pub metadata: Metadata,
     pub hosts: Vec<Host>,
     pub mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
-    pub os_map: HashMap<Ipv4Addr, OS>,
+    os_map: HashMap<Ipv4Addr, OS>,
+    usages_map: HashMap<Ipv4Addr, f64>,
     pub users: Vec<Ipv4Addr>,
     pub servers: Vec<Ipv4Addr>,
     pub services: Vec<L7Proto>,
-    pub servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
-    pub users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
+    servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
+    users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
 }
-
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -31,20 +32,33 @@ struct ConfigurationYaml {
 
 impl From<ConfigurationYaml> for Configuration {
     fn from(c: ConfigurationYaml) -> Self {
-        let users: Vec<Ipv4Addr> = c.hosts.iter().filter_map(|h| match h.host_type {
-            HostType::User => Some(h.get_ip_addr()),
-            HostType::Server => None,
-        }).flatten().collect();
-        let servers: Vec<Ipv4Addr> = c.hosts.iter().filter_map(|h| match h.host_type {
-            HostType::Server => Some(h.get_ip_addr()),
-            HostType::User => None,
-        }).flatten().collect();
+        let users: Vec<Ipv4Addr> = c
+            .hosts
+            .iter()
+            .filter_map(|h| match h.host_type {
+                HostType::User => Some(h.get_ip_addr()),
+                HostType::Server => None,
+            })
+            .flatten()
+            .collect();
+        let servers: Vec<Ipv4Addr> = c
+            .hosts
+            .iter()
+            .filter_map(|h| match h.host_type {
+                HostType::Server => Some(h.get_ip_addr()),
+                HostType::User => None,
+            })
+            .flatten()
+            .collect();
         let mut os_map: HashMap<Ipv4Addr, OS> = HashMap::new();
-        for host in c.hosts.iter() { 
+        let mut usages_map: HashMap<Ipv4Addr, f64> = HashMap::new();
+        for host in c.hosts.iter() {
             for interface in host.interfaces.iter() {
                 os_map.insert(interface.ip_addr, host.os);
+                usages_map.insert(interface.ip_addr, host.usage);
             }
         }
+
         let mut mac_addr_map: HashMap<Ipv4Addr, MacAddr> = HashMap::new();
         let mut services: HashSet<L7Proto> = HashSet::new();
         let mut servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
@@ -60,23 +74,31 @@ impl From<ConfigurationYaml> for Configuration {
                 v.push(interface.ip_addr.clone());
             }
         }
-        for host in c.hosts.iter() { 
+        for host in c.hosts.iter() {
             if let Some(client) = &host.client {
                 // if a list is defined, then this host will only use these services
                 for s in client {
                     if services.contains(s) {
                         for interface in host.interfaces.iter() {
-                            users_per_service.entry(s.clone()).or_default().push(interface.ip_addr.clone())
+                            users_per_service
+                                .entry(s.clone())
+                                .or_default()
+                                .push(interface.ip_addr.clone())
                         }
                     } else {
-                        log::warn!("There is a client of {s:?}, but that service is not proposed by any server");
+                        log::warn!(
+                            "There is a client of {s:?}, but that service is not proposed by any server"
+                        );
                     }
                 }
             } else {
                 // otherwise, use all available services
                 for s in services.iter() {
                     for interface in host.interfaces.iter() {
-                        users_per_service.entry(s.clone()).or_default().push(interface.ip_addr.clone())
+                        users_per_service
+                            .entry(s.clone())
+                            .or_default()
+                            .push(interface.ip_addr.clone())
                     }
                 }
             }
@@ -86,6 +108,7 @@ impl From<ConfigurationYaml> for Configuration {
             metadata: c.metadata,
             hosts: c.hosts,
             os_map,
+            usages_map,
             mac_addr_map,
             users,
             servers,
@@ -97,7 +120,6 @@ impl From<ConfigurationYaml> for Configuration {
 }
 
 impl Configuration {
-
     pub fn get_mac(&self, ip: &Ipv4Addr) -> Option<&MacAddr> {
         self.mac_addr_map.get(ip)
     }
@@ -110,18 +132,23 @@ impl Configuration {
         *self.os_map.get(ip).unwrap()
     }
 
-    pub fn get_services(&self) -> Vec<L7Proto> {
-        self.services.clone()
+    pub fn get_usage(&self, ip: &Ipv4Addr) -> f64 {
+        *self.usages_map.get(ip).unwrap()
     }
 
     pub fn get_servers_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
-        self.servers_per_service.get(service).unwrap_or(&vec![]).clone()
+        self.servers_per_service
+            .get(service)
+            .unwrap_or(&vec![])
+            .clone()
     }
 
     pub fn get_users_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
-        self.users_per_service.get(service).unwrap_or(&vec![]).clone()
+        self.users_per_service
+            .get(service)
+            .unwrap_or(&vec![])
+            .clone()
     }
-
 }
 
 #[derive(Deserialize, Debug)]
@@ -151,18 +178,16 @@ pub struct Host {
     pub os: OS,
     pub usage: f64,
     pub client: Option<Vec<L7Proto>>, // we keep the option here, because there is a difference
-                                      // between an empty list (no service is used) and nothing
-                                      // (default services are used)
+    // between an empty list (no service is used) and nothing
+    // (default services are used)
     pub host_type: HostType,
     pub interfaces: Vec<Interface>,
 }
 
 impl Host {
-
     pub fn get_ip_addr(&self) -> Vec<Ipv4Addr> {
         self.interfaces.iter().map(|i| i.ip_addr.clone()).collect()
     }
-
 }
 
 #[derive(Deserialize, Debug)]
@@ -181,10 +206,7 @@ impl From<HostYaml> for Host {
     fn from(h: HostYaml) -> Self {
         let host_type = h.host_type.unwrap_or(
             // if there is at least one service, the type is "server"
-            if h.interfaces
-                .iter()
-                .any(|i| !i.services.is_empty())
-            {
+            if h.interfaces.iter().any(|i| !i.services.is_empty()) {
                 HostType::Server
             } else {
                 HostType::User
@@ -221,7 +243,9 @@ struct InterfaceYaml {
 impl From<InterfaceYaml> for Interface {
     fn from(i: InterfaceYaml) -> Self {
         Interface {
-            mac_addr: i.mac_addr.map(|s| s.parse().expect("Cannot parse MAC address")),
+            mac_addr: i
+                .mac_addr
+                .map(|s| s.parse().expect("Cannot parse MAC address")),
             services: i.services.unwrap_or(vec![]),
             ip_addr: i.ip_addr.parse().expect("Cannot parse IP address"),
         }
@@ -231,8 +255,9 @@ impl From<InterfaceYaml> for Interface {
 /// Import a configuration from a string. The string can be either in JSON or YAML format (the
 /// truth is that YAML is a superset of JSON).
 pub fn import_config(config_string: &str) -> Configuration {
-    let config: Configuration =
-        serde_yaml::from_str::<ConfigurationYaml>(&config_string).expect("Cannot parse the configuration file").into();
+    let config: Configuration = serde_yaml::from_str::<ConfigurationYaml>(&config_string)
+        .expect("Cannot parse the configuration file")
+        .into();
     log::info!("\"{}\" successfully loaded", config.metadata.title);
     log::trace!("Configuration: {config:?}");
     log::info!("Configuration: {config:?}"); // FIXME
@@ -349,5 +374,4 @@ hosts:
         );
         println!("{config:?}");
     }
-
 }
