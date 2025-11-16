@@ -1,5 +1,5 @@
 use crate::stage2::*;
-use indicatif::{ProgressBar, ProgressStyle};
+// use indicatif::{ProgressBar, ProgressStyle};
 use rand_core::*;
 use rand_pcg::Pcg32;
 use std::ffi::OsStr;
@@ -31,13 +31,13 @@ impl Default for AutomataLibrary {
             icmp_automata: vec![],
         };
 
-        let pb = ProgressBar::new(6);
-        pb.set_style(
-            ProgressStyle::with_template(
-                "{spinner:.green} Automata initialization: {pos}/{len} {wide_bar}",
-            )
-            .unwrap(),
-        );
+        // let pb = ProgressBar::new(6);
+        // pb.set_style(
+        //     ProgressStyle::with_template(
+        //         "{spinner:.green} Automata initialization: {pos}/{len} {wide_bar}",
+        //     )
+        //     .unwrap(),
+        // );
 
         #[cfg(debug_assertions)]
         lib.import_from_str(include_str!("../../default_models/automata/mqtt.json"))
@@ -51,7 +51,7 @@ impl Default for AutomataLibrary {
             .unwrap(),
         )
         .unwrap();
-        pb.inc(1);
+        // pb.inc(1);
 
         #[cfg(debug_assertions)]
         lib.import_from_str(include_str!("../../default_models/automata/smtp.json"))
@@ -65,7 +65,7 @@ impl Default for AutomataLibrary {
             .unwrap(),
         )
         .unwrap();
-        pb.inc(1);
+        // pb.inc(1);
 
         #[cfg(debug_assertions)]
         lib.import_from_str(include_str!("../../default_models/automata/ssh.json"))
@@ -79,7 +79,7 @@ impl Default for AutomataLibrary {
             .unwrap(),
         )
         .unwrap();
-        pb.inc(1);
+        // pb.inc(1);
 
         #[cfg(debug_assertions)]
         lib.import_from_str(include_str!("../../default_models/automata/https.json"))
@@ -93,7 +93,7 @@ impl Default for AutomataLibrary {
             .unwrap(),
         )
         .unwrap();
-        pb.inc(1);
+        // pb.inc(1);
 
         #[cfg(debug_assertions)]
         lib.import_from_str(include_str!("../../default_models/automata/dns.json"))
@@ -107,7 +107,7 @@ impl Default for AutomataLibrary {
             .unwrap(),
         )
         .unwrap();
-        pb.inc(1);
+        // pb.inc(1);
 
         #[cfg(debug_assertions)]
         lib.import_from_str(include_str!("../../default_models/automata/ntp.json"))
@@ -121,7 +121,7 @@ impl Default for AutomataLibrary {
             .unwrap(),
         )
         .unwrap();
-        pb.inc(1);
+        // pb.inc(1);
 
         lib
     }
@@ -140,14 +140,14 @@ impl AutomataLibrary {
             icmp_automata: vec![],
         };
 
-        let paths = fs::read_dir(directory_name).expect("Cannot read directory");
-        let pb = ProgressBar::new(paths.count() as u64);
-        pb.set_style(
-            ProgressStyle::with_template(
-                "{spinner:.green} Automata initialization: {pos}/{len} {wide_bar}",
-            )
-            .unwrap(),
-        );
+        // let paths = fs::read_dir(directory_name).expect("Cannot read directory");
+        // let pb = ProgressBar::new(paths.count() as u64);
+        // pb.set_style(
+        //     ProgressStyle::with_template(
+        //         "{spinner:.green} Automata initialization: {pos}/{len} {wide_bar}",
+        //     )
+        //     .unwrap(),
+        // );
         let paths = fs::read_dir(directory_name).expect("Cannot read directory");
         for p in paths {
             let p = p.expect("Cannot open path").path();
@@ -164,7 +164,7 @@ impl AutomataLibrary {
                     ),
                 }
             }
-            pb.inc(1);
+            // pb.inc(1);
         }
         log::info!("{nb} automata have been loaded");
         lib
@@ -272,7 +272,7 @@ impl Stage2 for TadamGenerator {
                 },
             })
         } else {
-            log::error!("No automaton for destination port {}", flow.data.dst_port);
+            log::error!("No TCP automaton for destination port {}", flow.data.dst_port);
             None
         }
     }
@@ -315,7 +315,7 @@ impl Stage2 for TadamGenerator {
                 },
             })
         } else {
-            log::error!("No automaton for destination port {}", flow.data.dst_port);
+            log::error!("No UDP automaton for destination port {}", flow.data.dst_port);
             None
         }
     }

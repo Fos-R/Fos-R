@@ -186,8 +186,8 @@ impl BayesianNetwork {
         discrete_vector: &mut Vec<Option<usize>>,
     ) -> IntermediateVector {
         let mut domain_vector: IntermediateVector = IntermediateVector::default();
-        for (index,v) in self.nodes.iter().enumerate() {
-            log::info!("Sampling {:?} (index: {index})", v.feature);
+        for v in self.nodes.iter() {
+            // log::info!("Sampling {:?} (index: {index})", v.feature);
             if !matches!(v.feature, Feature::TimeBin(_)) {
                 // do not sample TCP variables for UDP connections, etc.
                 if v.proto_specific
@@ -516,7 +516,7 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
         }
     }
 
-    log::info!("Topological order: {topo_order:?}");
+    // log::info!("Topological order: {topo_order:?}");
 
     let mut variable = vec![];
     let mut definition = vec![];
@@ -537,8 +537,6 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
     for (v, def) in variable.iter().zip(definition) {
         assert_eq!(v.name, def.variable); // we assume the order is the same between
         // <variable> and <definition>
-
-        log::info!("{:?}",def.given);
 
         // global index of parents
         let parents: Vec<usize> = def

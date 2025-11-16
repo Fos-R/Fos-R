@@ -115,6 +115,9 @@ if __name__ == '__main__':
     # flow['Dst Pt'] = flow['Dst Pt'].astype('str')
     # print(flow['Dst Pt'])
 
+    # Only keep the most common protocols (TODO: lift that restriction)
+    flow = flow[flow['Applicative Proto'].isin(["DNS", "HTTP", "HTTPS", "SMTP", "DHCP", "IMAPS", "SSH", "NTP"])]
+
     # get all the local IP addresses
     ips = set(flow["Src IP Addr"].tolist()).union(set(flow["Dst IP Addr"].tolist()))
     ips = [ip for ip in ips if group_ip_dst(ip) == "Local"]
@@ -231,6 +234,7 @@ if __name__ == '__main__':
 
     learner_common.useMIIC()
     bn_common = learner_common.learnBN()
+    learner_common.useNoPrior().fitParameters(bn_common, take_into_account_score=False)
 
     learner_udp = gum.BNLearner(udp_data)
     for var in common_vars:
@@ -240,6 +244,7 @@ if __name__ == '__main__':
 
     learner_udp.useMIIC()
     bn_udp = learner_udp.learnBN()
+    learner_udp.useNoPrior().fitParameters(bn_udp, take_into_account_score=False)
 
     learner_tcp = gum.BNLearner(tcp_data)
     for var in common_vars:
@@ -249,6 +254,7 @@ if __name__ == '__main__':
 
     learner_tcp.useMIIC()
     bn_tcp = learner_tcp.learnBN()
+    learner_tcp.useNoPrior().fitParameters(bn_tcp, take_into_account_score=False)
 
     print("Model export")
 
