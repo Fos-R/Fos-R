@@ -8,7 +8,6 @@ use fosr_lib::stage1;
 use fosr_lib::stage2;
 use fosr_lib::stage3;
 use fosr_lib::stats::Target;
-use fosr_lib::structs::*;
 use fosr_lib::*;
 mod cmd; // cmd is not part of the library
 
