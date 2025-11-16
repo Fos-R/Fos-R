@@ -265,7 +265,6 @@ pub fn import_config(config_string: &str) -> Configuration {
         .into();
     log::info!("\"{}\" successfully loaded", config.metadata.title);
     log::trace!("Configuration: {config:?}");
-    log::info!("Configuration: {config:?}"); // FIXME
     config
 }
 
