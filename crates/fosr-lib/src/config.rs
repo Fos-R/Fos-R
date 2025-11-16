@@ -2,6 +2,7 @@ use serde::Deserialize;
 use pnet::util::MacAddr;
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::net::Ipv4Addr;
 
 use crate::structs::*;
@@ -15,6 +16,9 @@ pub struct Configuration {
     pub os_map: HashMap<Ipv4Addr, OS>,
     pub users: Vec<Ipv4Addr>,
     pub servers: Vec<Ipv4Addr>,
+    pub services: Vec<L7Proto>,
+    pub servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
+    pub users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
 }
 
 
@@ -42,11 +46,42 @@ impl From<ConfigurationYaml> for Configuration {
             }
         }
         let mut mac_addr_map: HashMap<Ipv4Addr, MacAddr> = HashMap::new();
+        let mut services: HashSet<L7Proto> = HashSet::new();
+        let mut servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
+        let mut users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
+
         for interface in c.hosts.iter().map(|h| &h.interfaces).flatten() {
             if let Some(mac_addr) = interface.mac_addr {
                 mac_addr_map.insert(interface.ip_addr, mac_addr);
             }
+            for s in interface.services.iter() {
+                services.insert(s.clone());
+                let v = servers_per_service.entry(s.clone()).or_default();
+                v.push(interface.ip_addr.clone());
+            }
         }
+        for host in c.hosts.iter() { 
+            if let Some(client) = &host.client {
+                // if a list is defined, then this host will only use these services
+                for s in client {
+                    if services.contains(s) {
+                        for interface in host.interfaces.iter() {
+                            users_per_service.entry(s.clone()).or_default().push(interface.ip_addr.clone())
+                        }
+                    } else {
+                        log::warn!("There is a client of {s:?}, but that service is not proposed by any server");
+                    }
+                }
+            } else {
+                // otherwise, use all available services
+                for s in services.iter() {
+                    for interface in host.interfaces.iter() {
+                        users_per_service.entry(s.clone()).or_default().push(interface.ip_addr.clone())
+                    }
+                }
+            }
+        }
+
         Configuration {
             metadata: c.metadata,
             hosts: c.hosts,
@@ -54,6 +89,9 @@ impl From<ConfigurationYaml> for Configuration {
             mac_addr_map,
             users,
             servers,
+            services: services.into_iter().collect(),
+            servers_per_service,
+            users_per_service,
         }
     }
 }
@@ -70,6 +108,18 @@ impl Configuration {
 
     pub fn get_os(&self, ip: &Ipv4Addr) -> OS {
         *self.os_map.get(ip).unwrap()
+    }
+
+    pub fn get_services(&self) -> Vec<L7Proto> {
+        self.services.clone()
+    }
+
+    pub fn get_servers_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
+        self.servers_per_service.get(service).unwrap_or(&vec![]).clone()
+    }
+
+    pub fn get_users_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
+        self.users_per_service.get(service).unwrap_or(&vec![]).clone()
     }
 
 }
@@ -100,7 +150,9 @@ pub struct Host {
     pub hostname: Option<String>,
     pub os: OS,
     pub usage: f64,
-    pub client: Vec<L7Proto>,
+    pub client: Option<Vec<L7Proto>>, // we keep the option here, because there is a difference
+                                      // between an empty list (no service is used) and nothing
+                                      // (default services are used)
     pub host_type: HostType,
     pub interfaces: Vec<Interface>,
 }
@@ -144,7 +196,7 @@ impl From<HostYaml> for Host {
             usage: h.usage.unwrap_or(1.0),
             host_type,
             interfaces: h.interfaces,
-            client: h.client.unwrap_or(vec![]),
+            client: h.client,
         }
     }
 }
@@ -176,12 +228,14 @@ impl From<InterfaceYaml> for Interface {
     }
 }
 
-/// Import a configuration from a string. The string can be either in JSON or YAML format.
+/// Import a configuration from a string. The string can be either in JSON or YAML format (the
+/// truth is that YAML is a superset of JSON).
 pub fn import_config(config_string: &str) -> Configuration {
     let config: Configuration =
         serde_yaml::from_str::<ConfigurationYaml>(&config_string).expect("Cannot parse the configuration file").into();
     log::info!("\"{}\" successfully loaded", config.metadata.title);
     log::trace!("Configuration: {config:?}");
+    log::info!("Configuration: {config:?}"); // FIXME
     config
 }
 

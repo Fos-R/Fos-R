@@ -78,7 +78,7 @@ impl Protocol {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Eq, Hash, PartialEq)]
 #[allow(clippy::upper_case_acronyms)]
 #[serde(rename_all = "lowercase")]
 /// A list of application layer protocol
@@ -99,6 +99,52 @@ pub enum L7Proto {
     Unknown, // TODO properly
              // TODO complete
 }
+
+impl L7Proto {
+    /// Default destination port that is used if a configuration file does not override it
+    pub fn get_default_port(&self) -> u16 {
+        match self {
+            L7Proto::HTTP => 80,
+            L7Proto::HTTPS => 443,
+            L7Proto::SSH => 22,
+            L7Proto::DNS => 53,
+            L7Proto::DHCP => 67,
+            L7Proto::SMTP => 587,
+            L7Proto::Telnet => 23,
+            L7Proto::IMAPS => 993,
+            L7Proto::MQTT => 1883,
+            L7Proto::CanonBjmp => 8612,
+            L7Proto::KMS => 1688,
+            L7Proto::MulticastDNS => 5353,
+            L7Proto::NTP => 123,
+            L7Proto::Unknown => 9999,
+            // _ => todo!()
+        }
+    }
+}
+
+// TODO: refaire proprement
+impl From<String> for L7Proto {
+    fn from(s: String) -> L7Proto {
+        match s.as_str() {
+            "HTTP" => L7Proto::HTTP,
+            "HTTPS" => L7Proto::HTTPS,
+            "SSH" => L7Proto::SSH,
+            "DNS" => L7Proto::DNS,
+            "DHCP" => L7Proto::DHCP,
+            "SMTP" => L7Proto::SMTP,
+            "Telnet" => L7Proto::Telnet,
+            "IMAPS" => L7Proto::IMAPS,
+            "MQTT" => L7Proto::MQTT,
+            "Canon-bjmp" => L7Proto::CanonBjmp,
+            "KMS" => L7Proto::KMS,
+            "Multicast DNS" => L7Proto::MulticastDNS,
+            "NTP" => L7Proto::NTP,
+            _ => L7Proto::Unknown,
+        }
+    }
+}
+
 
 #[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 /// The OS of an host. By default, assume Linux
