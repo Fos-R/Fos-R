@@ -192,6 +192,8 @@ if __name__ == '__main__':
     common_vars = ["Time", "Src IP Role", "Dst IP Role", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt"]
     common_data = flow[common_vars]
 
+    vars_without_children = ["Src IP Addr", "Dst IP Addr", "Dst Pt"]
+
     # TCP-only variables:
         # In Pkt Count
         # Out Pkt Count
@@ -224,21 +226,27 @@ if __name__ == '__main__':
     # Time must have no parent because it will be sampled from the stage 0
     learner_common.addNoParentNode("Time") # variable with no parent
     # Src IP Addr and Dst IP Addr must have no children because we want to modify their CPT with the configuration file
-    learner_common.addNoChildrenNode("Src IP Addr") # variable with no children
-    learner_common.addNoChildrenNode("Dst IP Addr")
-    learner_common.addNoChildrenNode("Dst Pt")
+    for var in vars_without_children:
+        learner_common.addNoChildrenNode(var) # variable with no children
+
     learner_common.useMIIC()
     bn_common = learner_common.learnBN()
 
     learner_udp = gum.BNLearner(udp_data)
     for var in common_vars:
         learner_udp.addNoParentNode(var) # variable with no parent
+    for var in vars_without_children:
+        learner_udp.addNoChildrenNode(var) # variable with no children
+
     learner_udp.useMIIC()
     bn_udp = learner_udp.learnBN()
 
     learner_tcp = gum.BNLearner(tcp_data)
     for var in common_vars:
         learner_tcp.addNoParentNode(var) # variable with no parent
+    for var in vars_without_children:
+        learner_tcp.addNoChildrenNode(var) # variable with no children
+
     learner_tcp.useMIIC()
     bn_tcp = learner_tcp.learnBN()
 
