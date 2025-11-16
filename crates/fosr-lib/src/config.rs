@@ -104,6 +104,11 @@ impl From<ConfigurationYaml> for Configuration {
             }
         }
 
+        for service in services.iter() {
+            assert!(servers_per_service.get(service).is_some());
+            assert!(users_per_service.get(service).is_some());
+        }
+
         Configuration {
             metadata: c.metadata,
             hosts: c.hosts,

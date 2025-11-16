@@ -71,7 +71,7 @@ def remove_public_ip(value):
 
 def get_network_role(ip, clients, servers):
     if ip in clients:
-        return "Client"
+        return "User"
     elif ip in servers:
         return "Server"
     else:
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     flow['Dst IP Addr'] = flow['Dst IP Addr'].apply(remove_public_ip)
     flow['Dst Pt'] = flow['Dst Pt'].apply(to_string)
     # flow['Dst Pt'] = flow['Dst Pt'].astype('str')
-    print(flow['Dst Pt'])
+    # print(flow['Dst Pt'])
 
     # get all the local IP addresses
     ips = set(flow["Src IP Addr"].tolist()).union(set(flow["Dst IP Addr"].tolist()))
