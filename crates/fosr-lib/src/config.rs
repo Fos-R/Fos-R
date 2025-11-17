@@ -64,14 +64,14 @@ impl From<ConfigurationYaml> for Configuration {
         let mut servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
         let mut users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
 
-        for interface in c.hosts.iter().map(|h| &h.interfaces).flatten() {
+        for interface in c.hosts.iter().flat_map(|h| &h.interfaces) {
             if let Some(mac_addr) = interface.mac_addr {
                 mac_addr_map.insert(interface.ip_addr, mac_addr);
             }
             for s in interface.services.iter() {
                 services.insert(s.clone());
                 let v = servers_per_service.entry(s.clone()).or_default();
-                v.push(interface.ip_addr.clone());
+                v.push(interface.ip_addr);
             }
         }
         for host in c.hosts.iter() {
@@ -83,7 +83,7 @@ impl From<ConfigurationYaml> for Configuration {
                             users_per_service
                                 .entry(s.clone())
                                 .or_default()
-                                .push(interface.ip_addr.clone())
+                                .push(interface.ip_addr)
                         }
                     } else {
                         log::warn!(
@@ -98,15 +98,15 @@ impl From<ConfigurationYaml> for Configuration {
                         users_per_service
                             .entry(s.clone())
                             .or_default()
-                            .push(interface.ip_addr.clone())
+                            .push(interface.ip_addr)
                     }
                 }
             }
         }
 
         for service in services.iter() {
-            assert!(servers_per_service.get(service).is_some());
-            assert!(users_per_service.get(service).is_some());
+            assert!(servers_per_service.contains_key(service));
+            assert!(users_per_service.contains_key(service));
         }
 
         Configuration {
@@ -191,7 +191,7 @@ pub struct Host {
 
 impl Host {
     pub fn get_ip_addr(&self) -> Vec<Ipv4Addr> {
-        self.interfaces.iter().map(|i| i.ip_addr.clone()).collect()
+        self.interfaces.iter().map(|i| i.ip_addr).collect()
     }
 }
 
@@ -251,7 +251,7 @@ impl From<InterfaceYaml> for Interface {
             mac_addr: i
                 .mac_addr
                 .map(|s| s.parse().expect("Cannot parse MAC address")),
-            services: i.services.unwrap_or(vec![]),
+            services: i.services.unwrap_or_default(),
             ip_addr: i.ip_addr.parse().expect("Cannot parse IP address"),
         }
     }
@@ -260,7 +260,7 @@ impl From<InterfaceYaml> for Interface {
 /// Import a configuration from a string. The string can be either in JSON or YAML format (the
 /// truth is that YAML is a superset of JSON).
 pub fn import_config(config_string: &str) -> Configuration {
-    let config: Configuration = serde_yaml::from_str::<ConfigurationYaml>(&config_string)
+    let config: Configuration = serde_yaml::from_str::<ConfigurationYaml>(config_string)
         .expect("Cannot parse the configuration file")
         .into();
     log::info!("\"{}\" successfully loaded", config.metadata.title);
