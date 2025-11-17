@@ -3,7 +3,7 @@ use crate::stage1::*;
 
 use chrono::Timelike;
 use rand_distr::weighted::WeightedIndex;
-use rand_distr::{Distribution, Normal};
+use rand_distr::{Distribution, Normal, Uniform};
 use rand_pcg::Pcg32;
 use serde::Deserialize;
 
@@ -24,6 +24,7 @@ struct IntermediateVector {
     dst_ip_role: Option<IpRole>,
     l7_proto: Option<L7Proto>,
     dst_port: Option<u16>,
+    src_port: Option<u16>,
     ttl_client: Option<u8>,
     ttl_server: Option<u8>,
     fwd_packets_count: Option<usize>,
@@ -40,7 +41,7 @@ impl From<IntermediateVector> for Flow {
         let d = FlowData {
             src_ip: p.src_ip.unwrap(),
             dst_ip: p.dst_ip.unwrap(),
-            src_port: 0,
+            src_port: p.src_port.unwrap(),
             dst_port: p.dst_port.unwrap(),
             ttl_client: p.ttl_client.unwrap(),
             ttl_server: p.ttl_server.unwrap(),
@@ -152,23 +153,22 @@ impl BayesianNetworkNode {
         for (index, card) in self.parents.iter().zip(self.parents_cardinality.iter()) {
             // println!(
             //     "Parent {}. Value: {:?}. Cpt len: {}.",
-            //     index, current[*index], self.cpt.as_ref().unwrap().len()
+            //     index,
+            //     current[*index],
+            //     self.cpt.as_ref().unwrap().len()
             // );
             parents_index = parents_index * card + current[*index].unwrap()
         }
+        println!("CPT: {:?}", self.cpt);
         match &self.cpt {
             None => panic!("No CPT!"),
-            Some(cpt) => cpt
-                .get(parents_index)
-                .unwrap()
-                .as_ref()
-                .map(|w| w.sample(rng)),
+            Some(cpt) => cpt[parents_index].as_ref().map(|w| w.sample(rng)),
         }
     }
 }
 
 #[derive(Debug)]
-/// A Bayesian network, which is simply a collection of nodes
+/// A Bayesian network, which is simply a collection of nodes in topological order
 struct BayesianNetwork {
     nodes: Vec<BayesianNetworkNode>,
 }
@@ -184,15 +184,17 @@ impl BayesianNetwork {
         rng: &mut impl RngCore,
         discrete_vector: &mut Vec<Option<usize>>,
     ) -> IntermediateVector {
-        let mut try_again = false;
+        println!("{self:?}");
+        let mut try_again = true;
+        // let mut rejected: u64 = 0;
         let mut domain_vector: IntermediateVector = IntermediateVector::default();
         let mut new_discrete_vector = discrete_vector.clone();
         while try_again {
             try_again = false;
             new_discrete_vector = discrete_vector.clone();
             domain_vector = IntermediateVector::default();
-            for v in self.nodes.iter() {
-                // log::info!("Sampling {:?} (index: {index})", v.feature);
+            for (index, v) in self.nodes.iter().enumerate() {
+                log::info!("Sampling {:?} (index: {index})", v.feature);
                 if !matches!(v.feature, Feature::TimeBin(_)) {
                     // do not sample TCP variables for UDP connections, etc.
                     if v.proto_specific
@@ -201,7 +203,7 @@ impl BayesianNetwork {
                         let index = v.sample_index(rng, &new_discrete_vector);
                         if let Some(i) = index {
                             assert!(i < v.feature.get_cardinality());
-                            // println!("Sampled value for {:?}: {}", v.feature, i);
+                            println!("Sampled value for {:?}: {}", v.feature, i);
                             new_discrete_vector.push(Some(i));
                             match &v.feature {
                                 Feature::SrcIpRole(v) => {
@@ -239,7 +241,11 @@ impl BayesianNetwork {
                                 Feature::TimeBin(_) => unreachable!(),
                             }
                         } else {
-                            log::info!("Rejected sample");
+                            // rejected += 1;
+                            panic!("rejected");
+                            // if rejected > 1 && (rejected as f64).log10().fract() == 0.0 {
+                            //     log::warn!("Rejected sample ({rejected} times)");
+                            // }
                             try_again = true;
                             break;
                         }
@@ -249,6 +255,9 @@ impl BayesianNetwork {
                 } // if it’s "Time", do not push any value (it was already done previously)
             }
         }
+        // if rejected >= 10 {
+        //     log::info!("Accepted sample ({rejected} times)");
+        // }
         *discrete_vector = new_discrete_vector;
         domain_vector
     }
@@ -294,6 +303,18 @@ struct GaussianDistribs {
     cov: Vec<f64>,
 }
 
+// remove a value from variable
+fn remove_value(node: &mut BayesianNetworkNode, index: usize) {
+    for cpt in node.cpt.as_mut().unwrap().iter_mut() {
+        if let Some(weights) = cpt {
+            let result = weights.update_weights(&[(index, &0.0f64)]);
+            if result.is_err() {
+                *cpt = None;
+            }
+        }
+    }
+}
+
 impl BayesianModel {
     pub fn load() -> Self {
         let bn_additional_data: AdditionalData = serde_json::from_str(include_str!(
@@ -313,13 +334,73 @@ impl BayesianModel {
 
         let bn_common = bn_from_bif(bif_common, &bn_additional_data);
 
-        BayesianModel {
+        let mut model = BayesianModel {
             bn: bn_common,
             bn_additional_data,
-        }
+        };
+
+        model.remove_impossible_values();
+
+        model
     }
 
-    // il faut mettre à jour : SrcIp, DstIp, L7Proto
+    fn condition_cpt(&self, node: usize, index_parent: usize, parent_val: usize) -> CPT {
+        let mut output: Vec<Option<WeightedIndex<f64>>> = vec![];
+        assert!(
+            self.bn.nodes[node].parents_cardinality[index_parent] > parent_val,
+            "Parent val is too large: {parent_val}"
+        );
+        for (mut index_cpt, cpt) in self.bn.nodes[node].cpt.as_ref().unwrap().iter().enumerate() {
+            for (index, card) in self.bn.nodes[node]
+                .parents_cardinality
+                .iter()
+                .enumerate()
+                .rev()
+            {
+                if index == index_parent {
+                    if index_cpt % card == parent_val {
+                        output.push(cpt.clone());
+                    }
+                    break;
+                }
+                index_cpt /= card;
+            }
+        }
+        // log::info!("Initial CPT: {:?}", self.bn.nodes[node].cpt.as_ref().unwrap());
+        // log::info!("Conditioned CPT: {output:?}");
+        assert_eq!(
+            self.bn.nodes[node].cpt.as_ref().unwrap().len() / output.len(),
+            self.bn.nodes[node].parents_cardinality[index_parent]
+        );
+        output
+    }
+
+    // find the values of parents that only lead to "None" CPTs
+    fn remove_impossible_values(&mut self) {
+        log::info!("Remove impossible values");
+        // traverse the network in reverse topological order
+        // indeed, children can modify their parents’ CPT
+        for index in (0..self.bn.nodes.len()).rev() {
+            let node = &self.bn.nodes[index];
+            // log::info!("{:?}", node.feature);
+            let parents = node.parents.clone();
+            let parents_card = node.parents_cardinality.clone();
+            for (index_parent, parent) in parents.iter().enumerate() {
+                for v in 0..parents_card[index_parent] {
+                    // check each value of each parent
+                    if self
+                        .condition_cpt(index, index_parent, v)
+                        .iter()
+                        .all(|w| w.is_none())
+                    // is there only None? Then we delete that value
+                    {
+                        log::warn!("Remove a value of {:?}", self.bn.nodes[*parent]);
+                        remove_value(self.bn.nodes.get_mut(*parent).unwrap(), v);
+                    }
+                }
+            }
+        }
+    }
 
     pub fn apply_config(&mut self, config: &config::Configuration) {
         // we know L7Proto exists
@@ -338,6 +419,15 @@ impl BayesianModel {
             if let Feature::SrcIpRole(v) = &node.feature {
                 src_ip_roles = v.clone();
                 src_ip_role_index = index;
+            }
+        }
+
+        let mut dst_ip_roles: Vec<IpRole> = vec![];
+        let mut dst_ip_role_index: usize = 0;
+        for (index, node) in self.bn.nodes.iter().enumerate() {
+            if let Feature::DstIpRole(v) = &node.feature {
+                dst_ip_roles = v.clone();
+                dst_ip_role_index = index;
             }
         }
 
@@ -369,12 +459,14 @@ impl BayesianModel {
                     for cpt in node.cpt.as_mut().unwrap().iter_mut() {
                         if let Some(weights) = cpt {
                             let result = weights.update_weights(&weight_update);
+                            // log::error!("Valeur impossible après mise à jour des distributions");
                             if result.is_err() {
                                 *cpt = None;
                             }
                         }
                     }
                 }
+                // TODO: trop de copier-coller !
                 Feature::SrcIp(_) => {
                     // we replace the node by a new one
                     let mut all_src_ip = config.users.clone();
@@ -434,9 +526,6 @@ impl BayesianModel {
                                     IpRole::Internet => {
                                         let mut proba: Vec<f64> = vec![];
                                         proba.extend(std::iter::repeat_n(0.0f64, all_src_ip.len()));
-                                        // for _ in 0..all_src_ip.len() {
-                                        //     proba.push(0.0f64);
-                                        // }
                                         proba.push(1.0f64); // always a public IP
                                         cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}")));
                                     }
@@ -452,6 +541,81 @@ impl BayesianModel {
                         parents_cardinality: vec![protocols.len(), src_ip_roles.len()],
                     };
                 }
+                Feature::DstIp(_) => {
+                    // we replace the node by a new one
+                    let mut all_dst_ip = config.users.clone();
+                    all_dst_ip.append(&mut config.servers.clone());
+                    let ip: Vec<AnonymizedIpv4Addr> = all_dst_ip
+                        .clone()
+                        .into_iter()
+                        .map(AnonymizedIpv4Addr::Local)
+                        .chain(iter::once(AnonymizedIpv4Addr::Public))
+                        .collect();
+                    let mut cpt: Vec<Option<WeightedIndex<f64>>> = vec![];
+                    for p in protocols.iter() {
+                        if !config.services.contains(p) {
+                            // this protocol will never be sampled with this config
+                            for _ in dst_ip_roles.iter() {
+                                cpt.push(None);
+                            }
+                        } else {
+                            for role in dst_ip_roles.iter() {
+                                match role {
+                                    IpRole::User => {
+                                        let proto_users = config.get_users_per_service(p);
+                                        assert!(!proto_users.is_empty());
+                                        let proba = all_dst_ip
+                                            .clone()
+                                            .into_iter()
+                                            .map(|ip| {
+                                                if proto_users.contains(&ip) {
+                                                    // this IP can be sampled
+                                                    config.get_usage(&ip)
+                                                } else {
+                                                    // this IP cannot be sampled
+                                                    0.0f64
+                                                }
+                                            })
+                                            .chain(iter::once(0.0f64)); // no internet
+                                        cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of DstIp for {p} and {role}")));
+                                    }
+                                    IpRole::Server => {
+                                        let proto_servers = config.get_servers_per_service(p);
+                                        assert!(!proto_servers.is_empty());
+                                        let proba = all_dst_ip
+                                            .clone()
+                                            .into_iter()
+                                            .map(|ip| {
+                                                if proto_servers.contains(&ip) {
+                                                    // this IP can be sampled
+                                                    config.get_usage(&ip)
+                                                } else {
+                                                    // this IP cannot be sampled
+                                                    0.0f64
+                                                }
+                                            })
+                                            .chain(iter::once(0.0f64)); // no internet
+                                        cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of DstIp for {p} and {role}")));
+                                    }
+                                    IpRole::Internet => {
+                                        let mut proba: Vec<f64> = vec![];
+                                        proba.extend(std::iter::repeat_n(0.0f64, all_dst_ip.len()));
+                                        proba.push(1.0f64); // always a public IP
+                                        cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of DstIp for {p} and {role}")));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    *node = BayesianNetworkNode {
+                        proto_specific: None,
+                        feature: Feature::DstIp(ip),
+                        cpt: Some(cpt),
+                        parents: vec![l7proto_index, dst_ip_role_index],
+                        parents_cardinality: vec![protocols.len(), dst_ip_roles.len()],
+                    };
+                }
+
                 _ => (),
             }
         }
@@ -512,7 +676,7 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
 
     // Kahn’s algorithm
     while let Some(v) = roots.pop() {
-        let children = nodes.get(&v).unwrap().children.clone();
+        let children = nodes[&v].children.clone();
         for c in children {
             let parents = &mut nodes.get_mut(&c.clone()).unwrap().parents;
             if parents.remove(&v) && parents.is_empty() {
@@ -677,6 +841,9 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
             } else {
                 Some(cpt)
             };
+            // if matches!(feature, Feature::L7Proto(_)) {
+            //     println!("{cpt:?}");
+            // }
             let node = BayesianNetworkNode {
                 feature,
                 parents, // indices in the Bayesian network’s nodes
@@ -711,6 +878,8 @@ impl Stage1 for BNGenerator {
         )));
         let mut domain_vector = self.model.bn.sample(&mut rng, &mut discrete_vector);
         domain_vector.timestamp = Some(ts.data.unix_time);
+        let uniform = Uniform::new(32000, 65535).unwrap();
+        domain_vector.src_port = Some(uniform.sample(&mut rng) as u16);
         domain_vector.ttl_client = Some(
             *self
                 .model
