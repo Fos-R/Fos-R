@@ -127,6 +127,22 @@ enum Feature {
 }
 
 impl Feature {
+
+    fn get_value_string(&self, index: usize) -> String {
+        match &self {
+            Feature::SrcIpRole(v) | Feature::DstIpRole(v) => format!("{:?}", v[index]),
+            Feature::SrcIp(v) | Feature::DstIp(v) => format!("{:?}", v[index]),
+            Feature::DstPt(v) => format!("{:?}", v[index]),
+            Feature::FwdPkt(v) | Feature::BwdPkt(v) => format!("{:?}", v[index]),
+            Feature::L4Proto(v) => format!("{:?}", v[index]),
+            Feature::L7Proto(v) => format!("{:?}", v[index]),
+            Feature::EndFlags => format!("{:?}", TCPEndFlags::iter()[index]),
+            Feature::TimeBin(_) => format!("Time bin {index}"),
+        }
+
+
+    }
+
     fn get_cardinality(&self) -> usize {
         match &self {
             Feature::SrcIpRole(v) | Feature::DstIpRole(v) => v.len(),
@@ -159,7 +175,7 @@ impl BayesianNetworkNode {
             // );
             parents_index = parents_index * card + current[*index].unwrap()
         }
-        println!("CPT: {:?}", self.cpt);
+        // println!("CPT: {:?}", self.cpt);
         match &self.cpt {
             None => panic!("No CPT!"),
             Some(cpt) => cpt[parents_index].as_ref().map(|w| w.sample(rng)),
@@ -184,7 +200,7 @@ impl BayesianNetwork {
         rng: &mut impl RngCore,
         discrete_vector: &mut Vec<Option<usize>>,
     ) -> IntermediateVector {
-        println!("{self:?}");
+        // println!("{self:?}");
         let mut try_again = true;
         // let mut rejected: u64 = 0;
         let mut domain_vector: IntermediateVector = IntermediateVector::default();
@@ -193,8 +209,8 @@ impl BayesianNetwork {
             try_again = false;
             new_discrete_vector = discrete_vector.clone();
             domain_vector = IntermediateVector::default();
-            for (index, v) in self.nodes.iter().enumerate() {
-                log::info!("Sampling {:?} (index: {index})", v.feature);
+            for v in self.nodes.iter() {
+                // log::info!("Sampling {:?} (index: {index})", v.feature);
                 if !matches!(v.feature, Feature::TimeBin(_)) {
                     // do not sample TCP variables for UDP connections, etc.
                     if v.proto_specific
@@ -203,7 +219,7 @@ impl BayesianNetwork {
                         let index = v.sample_index(rng, &new_discrete_vector);
                         if let Some(i) = index {
                             assert!(i < v.feature.get_cardinality());
-                            println!("Sampled value for {:?}: {}", v.feature, i);
+                            // println!("Sampled value for {:?}: {}", v.feature, i);
                             new_discrete_vector.push(Some(i));
                             match &v.feature {
                                 Feature::SrcIpRole(v) => {
@@ -242,7 +258,7 @@ impl BayesianNetwork {
                             }
                         } else {
                             // rejected += 1;
-                            panic!("rejected");
+                            // panic!("rejected");
                             // if rejected > 1 && (rejected as f64).log10().fract() == 0.0 {
                             //     log::warn!("Rejected sample ({rejected} times)");
                             // }
@@ -377,7 +393,7 @@ impl BayesianModel {
 
     // find the values of parents that only lead to "None" CPTs
     fn remove_impossible_values(&mut self) {
-        log::info!("Remove impossible values");
+        // log::info!("Remove impossible values");
         // traverse the network in reverse topological order
         // indeed, children can modify their parents’ CPT
         for index in (0..self.bn.nodes.len()).rev() {
@@ -386,6 +402,7 @@ impl BayesianModel {
             let parents = node.parents.clone();
             let parents_card = node.parents_cardinality.clone();
             for (index_parent, parent) in parents.iter().enumerate() {
+                let mut removed: Vec<String> = vec![];
                 for v in 0..parents_card[index_parent] {
                     // check each value of each parent
                     if self
@@ -394,9 +411,12 @@ impl BayesianModel {
                         .all(|w| w.is_none())
                     // is there only None? Then we delete that value
                     {
-                        log::warn!("Remove a value of {:?}", self.bn.nodes[*parent]);
+                        removed.push(self.bn.nodes[*parent].feature.get_value_string(v));
                         remove_value(self.bn.nodes.get_mut(*parent).unwrap(), v);
                     }
+                }
+                if !removed.is_empty() {
+                    log::info!("Removed unnecessary values {:?} of {:?}", removed, self.bn.nodes[*parent].feature);
                 }
             }
         }
@@ -619,6 +639,7 @@ impl BayesianModel {
                 _ => (),
             }
         }
+        self.remove_impossible_values();
     }
 }
 
