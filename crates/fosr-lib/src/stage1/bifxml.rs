@@ -23,6 +23,13 @@ pub struct Network {
 
 pub fn from_str(string: &str) -> Network {
     serde_xml_rs::from_str::<Bif>(string).unwrap().network
+    // let mut network = serde_xml_rs::from_str::<Bif>(string).unwrap().network;
+    // for def in network.definition.iter_mut() {
+    //     if let Some(mut given) = def.given.as_mut() {
+    //         given.reverse();
+    //     }
+    // }
+    // network
 }
 
 impl Network {
