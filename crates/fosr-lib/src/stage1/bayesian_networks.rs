@@ -158,16 +158,11 @@ impl BayesianNetworkNode {
         }
         match &self.cpt {
             None => panic!("No CPT!"),
-            Some(cpt) => {
-                if let Some(distrib) = cpt.get(parents_index).unwrap() {
-                    let index = distrib.sample(rng);
-                    // verify that the index in inside the possible values
-                    assert!(index < self.feature.get_cardinality());
-                    Some(index)
-                } else {
-                    None // we cannot sample a value
-                }
-            }
+            Some(cpt) => cpt
+                .get(parents_index)
+                .unwrap()
+                .as_ref()
+                .map(|w| w.sample(rng)),
         }
     }
 }
@@ -203,13 +198,18 @@ impl BayesianNetwork {
                     if v.proto_specific
                         .is_none_or(|p| p == domain_vector.proto.unwrap())
                     {
-                        let index = v.sample_index(rng, &mut new_discrete_vector);
+                        let index = v.sample_index(rng, &new_discrete_vector);
                         if let Some(i) = index {
+                            assert!(i < v.feature.get_cardinality());
                             // println!("Sampled value for {:?}: {}", v.feature, i);
                             new_discrete_vector.push(Some(i));
                             match &v.feature {
-                                Feature::SrcIpRole(v) => domain_vector.src_ip_role = Some(v[i].clone()),
-                                Feature::DstIpRole(v) => domain_vector.dst_ip_role = Some(v[i].clone()),
+                                Feature::SrcIpRole(v) => {
+                                    domain_vector.src_ip_role = Some(v[i].clone())
+                                }
+                                Feature::DstIpRole(v) => {
+                                    domain_vector.dst_ip_role = Some(v[i].clone())
+                                }
                                 Feature::L7Proto(v) => domain_vector.l7_proto = Some(v[i].clone()),
                                 Feature::SrcIp(v) => match v[i] {
                                     AnonymizedIpv4Addr::Local(p) => domain_vector.src_ip = Some(p),
@@ -225,10 +225,12 @@ impl BayesianNetwork {
                                 },
                                 Feature::DstPt(v) => domain_vector.dst_port = Some(v[i]),
                                 Feature::FwdPkt(v) => {
-                                    domain_vector.fwd_packets_count = Some(v[i].sample(rng) as usize)
+                                    domain_vector.fwd_packets_count =
+                                        Some(v[i].sample(rng) as usize)
                                 }
                                 Feature::BwdPkt(v) => {
-                                    domain_vector.bwd_packets_count = Some(v[i].sample(rng) as usize)
+                                    domain_vector.bwd_packets_count =
+                                        Some(v[i].sample(rng) as usize)
                                 }
                                 Feature::L4Proto(v) => domain_vector.proto = Some(v[i]),
                                 Feature::EndFlags => {
@@ -237,6 +239,7 @@ impl BayesianNetwork {
                                 Feature::TimeBin(_) => unreachable!(),
                             }
                         } else {
+                            log::info!("Rejected sample");
                             try_again = true;
                             break;
                         }
@@ -379,7 +382,7 @@ impl BayesianModel {
                     let ip: Vec<AnonymizedIpv4Addr> = all_src_ip
                         .clone()
                         .into_iter()
-                        .map(|ip| AnonymizedIpv4Addr::Local(ip))
+                        .map(AnonymizedIpv4Addr::Local)
                         .chain(iter::once(AnonymizedIpv4Addr::Public))
                         .collect();
                     let mut cpt: Vec<Option<WeightedIndex<f64>>> = vec![];
@@ -430,9 +433,10 @@ impl BayesianModel {
                                     }
                                     IpRole::Internet => {
                                         let mut proba: Vec<f64> = vec![];
-                                        for _ in 0..all_src_ip.len() {
-                                            proba.push(0.0f64);
-                                        }
+                                        proba.extend(std::iter::repeat_n(0.0f64, all_src_ip.len()));
+                                        // for _ in 0..all_src_ip.len() {
+                                        //     proba.push(0.0f64);
+                                        // }
                                         proba.push(1.0f64); // always a public IP
                                         cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}")));
                                     }
@@ -576,11 +580,12 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
             .map(|s| {
                 let n = s.parse::<f64>().expect("Cannot parse the CPT");
                 if n < 1e-9 { 0.0f64 } else { n } // we remove impossible combination with non-zero
-                                                  // probability due to the use of a prior
+                // probability due to the use of a prior
             })
             .collect::<Vec<_>>()
             .chunks(v.outcome.len())
-            .map(|l| Some(WeightedIndex::new(l).expect("Invalid probability distribution")))
+            .map(|l| WeightedIndex::new(l).ok()) // some lines are only 0. In that case, insert a
+            // None.
             .collect();
 
         // println!("{}", def.variable);
@@ -622,7 +627,7 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
                 v.outcome
                     .clone()
                     .into_iter()
-                    .map(|s| u16::from_str(&s.strip_prefix("port-").unwrap()).unwrap())
+                    .map(|s| u16::from_str(s.strip_prefix("port-").unwrap()).unwrap())
                     .collect(),
             )),
 

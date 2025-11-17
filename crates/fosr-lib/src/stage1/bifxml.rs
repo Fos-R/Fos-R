@@ -41,7 +41,7 @@ impl Network {
             // otherwise, apply the suffix
             if d.given.is_some() {
                 for v in d.given.as_mut().unwrap().iter_mut() {
-                    if !outer_variable.contains(&v) {
+                    if !outer_variable.contains(v) {
                         *v = v.clone() + &suffix;
                     }
                 }

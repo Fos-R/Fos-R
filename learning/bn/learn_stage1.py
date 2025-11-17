@@ -86,6 +86,34 @@ def categorize_time(t):
     # TODO: formatter la string pour qu’elle ait toujours la même taille, ainsi ordre numérique = ordre alphabétique
     return "bin-"+str(t % (1000000000*60*60*24) // (1000000000*60*60*24 / bin_count))
 
+# Adapted from https://pyagrum.readthedocs.io/en/1.13.0/notebooks/17-Examples_parametersLearningWithPandas.html#A-global-method-for-estimating-Bayesian-network-parameters-from-CSV-file-using-PANDAS
+def computeCPTfromDF(bn,df,name):
+    """
+    Compute the CPT of variable "name" in the BN bn from the database df
+    """
+    id=bn.idFromName(name)
+    parents=list(reversed(bn.cpt(id).names))
+    domains=[bn[name].domainSize()
+             for name in parents]
+    parents.pop()
+
+    if (len(parents)>0):
+        c=pd.crosstab(df[name],[df[parent] for parent in parents], dropna=False)
+        s=c/c.sum().apply(np.float32)
+    else:
+        s=df[name].value_counts(normalize=True)
+
+    s.fillna(0, inplace=True)
+    bn.cpt(id)[:]=np.array((s).transpose()).reshape(*domains)
+
+def ParametersLearning(bn,df):
+    """
+    Compute the CPTs of every varaible in the BN bn from the database df
+    Use no prior and replace NaN with 0.
+    """
+    for name in bn.names():
+        computeCPTfromDF(bn,df,name)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Learn a time profile for Fos-R.')
     parser.add_argument('--input', required=True, help="Select the input file. It must a csv.")
@@ -234,7 +262,7 @@ if __name__ == '__main__':
 
     learner_common.useMIIC()
     bn_common = learner_common.learnBN()
-    learner_common.useSmoothingPrior(1e-9).fitParameters(bn_common, take_into_account_score=False)
+    ParametersLearning(bn_common, common_data)
 
     learner_udp = gum.BNLearner(udp_data)
     for var in common_vars:
@@ -244,7 +272,7 @@ if __name__ == '__main__':
 
     learner_udp.useMIIC()
     bn_udp = learner_udp.learnBN()
-    learner_udp.useSmoothingPrior(1e-9).fitParameters(bn_udp, take_into_account_score=False)
+    ParametersLearning(bn_udp, udp_data)
 
     learner_tcp = gum.BNLearner(tcp_data)
     for var in common_vars:
@@ -254,7 +282,7 @@ if __name__ == '__main__':
 
     learner_tcp.useMIIC()
     bn_tcp = learner_tcp.learnBN()
-    learner_tcp.useSmoothingPrior(1e-9).fitParameters(bn_tcp, take_into_account_score=False)
+    ParametersLearning(bn_tcp, tcp_data)
 
     print("Model export")
 
