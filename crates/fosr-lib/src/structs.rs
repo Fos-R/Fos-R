@@ -78,7 +78,7 @@ impl Protocol {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, Eq, Hash, PartialEq)]
+#[derive(Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq)]
 #[allow(clippy::upper_case_acronyms)]
 #[serde(rename_all = "lowercase")]
 /// A list of application layer protocol
@@ -219,6 +219,7 @@ pub struct FlowData {
     pub fwd_packets_count: usize,
     pub bwd_packets_count: usize,
     pub timestamp: Duration,
+    pub l7_proto: L7Proto,
 }
 
 impl From<Flow> for FlowData {
@@ -390,6 +391,7 @@ impl Default for Packets {
                 fwd_packets_count: 0,
                 bwd_packets_count: 0,
                 timestamp: Duration::new(0, 0),
+                l7_proto: L7Proto::SSH,
             }),
         }
     }
