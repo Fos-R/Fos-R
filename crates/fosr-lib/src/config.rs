@@ -69,8 +69,8 @@ impl From<ConfigurationYaml> for Configuration {
                 mac_addr_map.insert(interface.ip_addr, mac_addr);
             }
             for s in interface.services.iter() {
-                services.insert(s.clone());
-                let v = servers_per_service.entry(s.clone()).or_default();
+                services.insert(*s);
+                let v = servers_per_service.entry(*s).or_default();
                 v.push(interface.ip_addr);
             }
         }
@@ -81,7 +81,7 @@ impl From<ConfigurationYaml> for Configuration {
                     if services.contains(s) {
                         for interface in host.interfaces.iter() {
                             users_per_service
-                                .entry(s.clone())
+                                .entry(*s)
                                 .or_default()
                                 .push(interface.ip_addr)
                         }
@@ -96,7 +96,7 @@ impl From<ConfigurationYaml> for Configuration {
                 for s in services.iter() {
                     for interface in host.interfaces.iter() {
                         users_per_service
-                            .entry(s.clone())
+                            .entry(*s)
                             .or_default()
                             .push(interface.ip_addr)
                     }

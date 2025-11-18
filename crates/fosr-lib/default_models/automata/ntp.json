@@ -1325,6 +1325,7 @@
     "initial_state": 0,
     "accepting_state": 3,
     "protocol": "UDP",
+    "l7protocol": "ntp",
     "metadata": {
         "select_dst_ports": [
             123

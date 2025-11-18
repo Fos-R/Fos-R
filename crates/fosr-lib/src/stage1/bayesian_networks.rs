@@ -48,6 +48,7 @@ impl From<IntermediateVector> for Flow {
             fwd_packets_count: p.fwd_packets_count.unwrap(),
             bwd_packets_count: p.bwd_packets_count.unwrap(),
             timestamp: p.timestamp.unwrap(),
+            l7_proto: p.l7_proto.unwrap(),
         };
         p.proto.unwrap().wrap(d)
     }
@@ -127,7 +128,6 @@ enum Feature {
 }
 
 impl Feature {
-
     fn get_value_string(&self, index: usize) -> String {
         match &self {
             Feature::SrcIpRole(v) | Feature::DstIpRole(v) => format!("{:?}", v[index]),
@@ -139,8 +139,6 @@ impl Feature {
             Feature::EndFlags => format!("{:?}", TCPEndFlags::iter()[index]),
             Feature::TimeBin(_) => format!("Time bin {index}"),
         }
-
-
     }
 
     fn get_cardinality(&self) -> usize {
@@ -228,7 +226,7 @@ impl BayesianNetwork {
                                 Feature::DstIpRole(v) => {
                                     domain_vector.dst_ip_role = Some(v[i].clone())
                                 }
-                                Feature::L7Proto(v) => domain_vector.l7_proto = Some(v[i].clone()),
+                                Feature::L7Proto(v) => domain_vector.l7_proto = Some(v[i]),
                                 Feature::SrcIp(v) => match v[i] {
                                     AnonymizedIpv4Addr::Local(p) => domain_vector.src_ip = Some(p),
                                     AnonymizedIpv4Addr::Public => {
@@ -416,7 +414,11 @@ impl BayesianModel {
                     }
                 }
                 if !removed.is_empty() {
-                    log::info!("Removed unnecessary values {:?} of {:?}", removed, self.bn.nodes[*parent].feature);
+                    log::info!(
+                        "Removed unnecessary values {:?} of {:?}",
+                        removed,
+                        self.bn.nodes[*parent].feature
+                    );
                 }
             }
         }

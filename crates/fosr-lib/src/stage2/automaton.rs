@@ -359,6 +359,7 @@ pub struct JsonAutomaton {
     initial_state: usize,
     accepting_state: usize,
     pub protocol: Protocol,
+    pub l7protocol: L7Proto,
     metadata: AutomatonMetaData,
 }
 
