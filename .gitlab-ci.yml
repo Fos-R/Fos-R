@@ -297,8 +297,8 @@ pages:
     - apt install -y pandoc
     - mv doc public/
     - mv target public/bin
-    - mv *.zip public/
-    - mv sample.pcap public/
+    # - mv *.zip public/
+    # - mv sample.pcap public/
     - cd public
     # update the build number
     - echo -e "\nBuild version $CI_COMMIT_SHORT_SHA, compiled on $(date -I).\n" >> intro.md
