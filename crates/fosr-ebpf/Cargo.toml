@@ -8,6 +8,7 @@ homepage = "https://fosr.inria.fr"
 repository = "https://gitlab.inria.fr/pirat-public/Fos-R"
 license = "MIT OR Apache-2.0"
 categories = ["network-programming","security","science"]
+keywords = ["networking", "security"]
 
 [dependencies]
 

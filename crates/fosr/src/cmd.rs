@@ -17,6 +17,18 @@ pub enum NetEnabler {
 }
 
 #[derive(ValueEnum, Debug, Clone)]
+pub enum GenerationProfile {
+    Fast,
+    Efficient,
+}
+
+impl fmt::Display for GenerationProfile {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", format!("{:?}", self).to_lowercase())
+    }
+}
+
+#[derive(ValueEnum, Debug, Clone)]
 pub enum InjectionAlgo {
     Fast,
     Reliable,
@@ -34,14 +46,14 @@ pub enum Command {
     /// This mode requires the `iptables` or `ebpf` feature. In this mode, Fos-R generates and injects network traffic between different computers in the same network.
     /// Fos-R needs to be executed on each computer and provided a configuration file.
     Inject {
-        #[arg(short, long, default_value = None, help = "Output pcap file of generated packets")]
+        #[arg(short, long, default_value = None, help = "Output pcap file of the generated packets")]
         outfile: Option<String>,
         #[arg(
             long,
             default_value_t = false,
-            help = "Reorder temporally the generated pcap. Must fit the entire dataset in RAM ! Requires --outfile."
+            help = "Disable the temporal sorting of the generated pcap"
         )]
-        order_pcap: bool,
+        no_order_pcap: bool,
         #[cfg(all(target_os = "linux", feature = "iptables"))]
         #[arg(
             long,
@@ -58,17 +70,16 @@ pub enum Command {
         #[arg(
             short,
             long,
-            default_value_t = 10,
-            help = "Overall number of flows to generate per second"
+            help = "Average number of flows to generate per day. Actual number of generated flows can be lower or higher"
         )]
-        flow_per_second: u64,
-        #[arg(
-            short,
-            long,
-            default_value = None,
-            help = "Path to the profile with the models and the configuration"
-        )]
-        profile: Option<String>,
+        flow_per_day: Option<u64>,
+        // #[arg(
+        //     short,
+        //     long,
+        //     default_value = None,
+        //     help = "Path to the configuration file"
+        // )]
+        // config: Option<String>,
         #[arg(short = 'd', long, default_value = None, help = "Automatically stop the generation after this time. You can use human-friendly time, such as \"15days 30min 5s\"")]
         duration: Option<String>,
         #[arg(
@@ -87,12 +98,12 @@ pub enum Command {
         #[arg(
             long,
             default_value_t = false,
-            help = "Ensure the generated traffic is always the same. It makes Fos-R less robust to staggered process starts, so avoid unless for testing"
+            help = "Ensure the generated traffic is always the same. It makes Fos-R less robust to staggered process starts, so avoid it unless for testing"
         )]
         deterministic: bool,
     },
-    /// Extend a pcap file. You should use your own models that have been
-    /// fitted on that pcap file.
+    /// Create a pcap file. If you require deterministic generation,
+    /// you must specify -d, -t, --tz and --seed.
     #[clap(group(
     clap::ArgGroup::new("target")
         .required(true)
@@ -109,11 +120,19 @@ pub enum Command {
         #[arg(long, default_value_t = false, help = "Taint the packets")]
         taint: bool,
         #[arg(
+            short,
             long,
-            default_value_t = false,
-            help = "Disable multithreading. Use this option if you have a limited number of cores. Must fit the entire dataset in RAM!"
+            default_value_t = GenerationProfile::Efficient,
+            help = "The generation profile to use. Either \"fast\" that optimizes CPU use but the entire dataset must fit in RAM, or \"efficient\" that requires less RAM but is slower"
         )]
-        monothread: bool,
+        profile: GenerationProfile,
+        #[arg(
+            short,
+            long,
+            default_value = None,
+            help = "Path to the configuration file"
+        )]
+        config: Option<String>,
         // #[arg(
         //     short,
         //     long,
@@ -121,39 +140,57 @@ pub enum Command {
         //     help = "Add noise in the output file"
         // )]
         // noise: bool,
-        #[arg(short = 'n', long, default_value = None, help = "Minimum number of packets to generate. Beware: generation is not deterministic.")]
+        #[arg(short = 'n', long, default_value = None, help = "Minimum number of packets to generate")]
         packets_count: Option<u64>,
-        #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\". Generation is deterministic when used with --order-pcap and --seed.")]
+        #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\"")]
         duration: Option<String>,
-        #[arg(short = 't', long, default_value = None, help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use current time")]
+        #[arg(short = 't', long, default_value = None, help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use the current time. Date time is considered to be in the timezone specified with --tz")]
         start_time: Option<String>,
-        #[arg(
-            long,
-            default_value_t = false,
-            help = "Reorder temporally the generated pcap. Must fit the entire dataset in RAM!"
-        )]
-        order_pcap: bool,
-        #[arg(short, long, help = "Seed for random number generation")]
-        seed: Option<u64>,
         #[arg(
             short,
             long,
-            default_value = None,
-            help = "Path to the profile with the models and the configuration"
+            help = "Average number of flows to generate per day. Actual number of generated flows can be lower or higher"
         )]
-        profile: Option<String>,
+        flow_per_day: Option<u64>,
+        #[arg(
+            short,
+            long,
+            help = "Number of generation jobs. By default, use half the available cores."
+        )]
+        jobs: Option<usize>,
+        #[arg(short, long, help = "Seed for random number generation")]
+        seed: Option<u64>,
+        // #[arg(
+        //     short,
+        //     long,
+        //     default_value = None,
+        //     help = "Path to the profile with the models and the configuration"
+        // )]
+        // profile: Option<String>,
+        #[arg(
+            long,
+            default_value = None,
+            help = "Timezone of the generated, used for realistic work hours. By default, local timezone is used. Use a IANA time zone (like Europe/Paris) or an abbreviation (like CET). The offset is assumed constant during the generation time range"
+        )]
+        tz: Option<String>,
+        #[arg(
+            long,
+            default_value_t = false,
+            help = "Disable the temporal sorting of the generated pcap. Reduce significantly the RAM usage with \"--profile efficient\""
+        )]
+        no_order_pcap: bool,
     },
     /// Extract flow statistics from a pcap file to a csv file
     #[command(name = "pcap2flow")]
     Pcap2Flow {
         #[arg(short, long, required = true, help = "Pcap file to extract flows from")]
         input_pcap: String,
-        #[arg(short, long, required = true, help = "Csv file to export flow into")]
+        #[arg(short, long, required = true, help = "CSV file to export flow into")]
         output_csv: String,
         #[arg(
             short = 'p',
             long,
-            help = "Include the payloads into the csv file",
+            help = "Include the payloads in the CSV file",
             default_value_t = false
         )]
         include_payloads: bool,

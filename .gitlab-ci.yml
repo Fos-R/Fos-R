@@ -23,15 +23,15 @@ build-linux-x86-64:
   image: rust
   script:
     # version without network injection
-    - cargo build --no-default-features -p fosr
+    - cargo build -p fosr
     # version without ebpf and with iptables
-    - cargo build --no-default-features --features iptables -p fosr
+    # - cargo build --features iptables -p fosr
     # version with ebpf
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
     - cargo install cargo-deb
-    - cargo build # version with ebpf only
-    - cargo build --features iptables --release # version with ebpf + iptables
+    # - cargo build --features ebpf # version with ebpf only
+    # - cargo build --features "iptables,ebpf" --release # version with ebpf + iptables
     - cargo deb -p fosr
     - mkdir target/x86_64-unknown-linux-gnu
     - mv target/release target/x86_64-unknown-linux-gnu
@@ -55,12 +55,38 @@ build-linux-x86-32:
     - apt install -y gcc-i686-linux-gnu
     - rustup target add i686-unknown-linux-gnu
     # Aya doesn’t compile for some reason
-    - cargo build --target=i686-unknown-linux-gnu --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\" -p fosr -r --no-default-features --features iptables
-    - cargo deb --target=i686-unknown-linux-gnu -p fosr --no-default-features --features iptables -- --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\"
+    - cargo build --target=i686-unknown-linux-gnu --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\" -p fosr -r
+    - cargo deb --target=i686-unknown-linux-gnu -p fosr -- --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\"
   artifacts:
     paths:
       - target/*/release/fosr
       - target/debian/*.deb
+
+build-linux-raspberry-pi:
+  # a build targeting old rapsberry pi with armv6 processors
+  tags:
+    - ci.inria.fr
+    - large
+  stage: build
+  image: rust
+  script:
+    - rustup toolchain install nightly --component rust-src
+    - cargo install bpf-linker
+    - cargo install cargo-deb
+    - apt update
+    - apt install -y gcc-arm-linux-gnueabihf
+    - rustup toolchain install nightly # use nightly for the moment
+    - rustup target add arm-unknown-linux-musleabihf --toolchain nightly
+    - cargo +nightly build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
+    - cargo deb --target=arm-unknown-linux-musleabihf -p fosr -- --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\"
+    - cd target/debian
+    - debname=$(ls *.deb)
+    - mv $debname rpi_$debname
+  artifacts:
+    paths:
+      - target/*/release/fosr
+      - target/debian/*.deb
+  allow_failure: true
 
 build-linux-arm-32:
   tags:
@@ -74,9 +100,9 @@ build-linux-arm-32:
     - cargo install cargo-deb
     - apt update
     - apt install -y gcc-arm-linux-gnueabihf
-    - rustup target add arm-unknown-linux-musleabihf
-    - cargo build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r --features iptables
-    - cargo deb --target=arm-unknown-linux-musleabihf -p fosr --features iptables -- --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\"
+    - rustup target add arm-unknown-linux-gnueabihf
+    - cargo build --target=arm-unknown-linux-gnueabihf --config target.arm-unknown-linux-gnueabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
+    - cargo deb --target=arm-unknown-linux-gnueabihf -p fosr -- --config target.arm-unknown-linux-gnueabihf.linker=\"arm-linux-gnueabihf-gcc\"
   artifacts:
     paths:
       - target/*/release/fosr
@@ -95,8 +121,8 @@ build-linux-arm-64:
     - apt update
     - apt install -y gcc-aarch64-linux-gnu
     - rustup target add aarch64-unknown-linux-gnu
-    - cargo build --target=aarch64-unknown-linux-gnu --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\" -p fosr -r --features iptables
-    - cargo deb --target=aarch64-unknown-linux-gnu -p fosr --features iptables -- --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\"
+    - cargo build --target=aarch64-unknown-linux-gnu --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\" -p fosr -r
+    - cargo deb --target=aarch64-unknown-linux-gnu -p fosr -- --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\"
   artifacts:
     paths:
       - target/*/release/fosr
@@ -112,10 +138,26 @@ build-win64-x86:
     - apt update
     - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
     - rustup target add x86_64-pc-windows-gnu
-    - cargo build --target=x86_64-pc-windows-gnu -p fosr -r --no-default-features
+    - cargo build --target=x86_64-pc-windows-gnu -p fosr -r
   artifacts:
     paths:
       - target/*/release/fosr.exe
+
+build-win32-x86:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: build
+  image: rust
+  script:
+    - apt update
+    - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
+    - rustup target add i686-pc-windows-gnu
+    - cargo build --target=i686-pc-windows-gnu -p fosr -r
+  artifacts:
+    paths:
+      - target/*/release/fosr.exe
+
 
 # build-freebsd-x86-64:
 #   tags:
@@ -134,6 +176,17 @@ build-win64-x86:
 #     paths:
 #       - target/*/release/fosr
 
+test-audit:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: test
+  image: rust
+  script:
+    - cargo install cargo-audit
+    - cargo audit -D unsound -D yanked
+  allow_failure: true
+
 test-publish:
   tags:
     - ci.inria.fr
@@ -143,7 +196,7 @@ test-publish:
   script:
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
-    - cargo build --features iptables --release
+    - cargo build --release
     - cargo publish --dry-run
   allow_failure: true # it can fail on new version update
 
@@ -153,9 +206,12 @@ tests:
     - large
   stage: test
   image: rust
+  rules:
+    # other branch may have outdated tests
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
     # generation only, so no need for ebpf
-    - cargo test -p fosr --no-default-features -- --nocapture
+    - cargo test -p fosr -- --nocapture
     - mv crates/fosr/deterministic-test.pcap sample.pcap
   artifacts:
     when: always
@@ -169,6 +225,8 @@ eval-zeek:
     - ci.inria.fr
     - small
   stage: analyze
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
     - apt update
     - apt install -y zip
@@ -187,6 +245,8 @@ eval-tshark:
     - ci.inria.fr
     - small
   stage: analyze
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
     - apk add tshark zip
     - mkdir analysis
@@ -207,6 +267,8 @@ eval-suricata:
     - ci.inria.fr
     - small
   stage: analyze
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
     - apk add suricata zip
     - mkdir analysis
@@ -249,7 +311,7 @@ pages:
     - echo "\`\`\`" >> howto-untaint.md
     # update the deb file paths
     - sed -i -e "s/FOSR_VERSION/$(./bin/x86_64-unknown-linux-gnu/release/fosr -V | cut -d" " -f 2)/g" compile.md
-    - pandoc intro.md compile.md howto-pcap.md howto-inject.md howto-pcap2flow.md howto-untaint.md other_software.md roadmap.md usecases.md analysis.md refs.md -o index.html --template template.html --include-after-body footer.html --standalone --no-highlight --toc --toc-depth 1 --mathjax
+    - pandoc intro.md compile.md howto-pcap.md howto-inject.md howto-pcap2flow.md howto-untaint.md config_doc.md other_software.md schema.md lib.md roadmap.md usecases.md analysis.md limitations.md refs.md -o index.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
     - rm *.md
   artifacts:
     paths:
