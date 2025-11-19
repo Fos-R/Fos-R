@@ -22,6 +22,7 @@ fn deterministic_fast_generation() -> Result<(), Box<dyn std::error::Error>> {
         .args(["-t", "0"])
         .args(["-p", "fast"])
         .args(["--tz", "CET"])
+        .args(["-c", "tests/test_config.yaml"])
         .env("RUST_LOG", "trace")
         .spawn()?;
     cmd.assert().success();
@@ -33,7 +34,7 @@ fn deterministic_fast_generation() -> Result<(), Box<dyn std::error::Error>> {
     let hash = sha256.finalize();
     assert_eq!(
         hex::encode(hash),
-        "98a61cf7d0743ff30d8ae086b51c706b8b13a1c0dc18d3bd5d8479391ba952ce"
+        "f1cb102529f124af8eddf1caa3fd50952da0edd14d3feebef4806ccac7c30ceb"
     );
     Ok(())
 }
@@ -52,6 +53,7 @@ fn deterministic_efficient_generation() -> Result<(), Box<dyn std::error::Error>
         .args(["-t", "0"])
         .args(["-p", "efficient"])
         .args(["--tz", "CET"])
+        .args(["-c", "tests/test_config.yaml"])
         .env("RUST_LOG", "trace")
         .spawn()?;
     cmd.assert().success();
@@ -63,7 +65,7 @@ fn deterministic_efficient_generation() -> Result<(), Box<dyn std::error::Error>
     let hash = sha256.finalize();
     assert_eq!(
         hex::encode(hash),
-        "98a61cf7d0743ff30d8ae086b51c706b8b13a1c0dc18d3bd5d8479391ba952ce"
+        "f1cb102529f124af8eddf1caa3fd50952da0edd14d3feebef4806ccac7c30ceb"
     );
     Ok(())
 }
