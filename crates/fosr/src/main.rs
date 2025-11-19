@@ -1,14 +1,14 @@
 // we access the code through the library
+use fosr_lib::export;
 #[cfg(feature = "net_injection")]
-use fosr::inject;
-use fosr::pcap2flow;
-use fosr::stage0;
-use fosr::stage1;
-use fosr::stage2;
-use fosr::stage3;
-use fosr::structs::*;
-use fosr::stats::Target;
-use fosr::*;
+use fosr_lib::inject;
+use fosr_lib::pcap2flow;
+use fosr_lib::stage0;
+use fosr_lib::stage1;
+use fosr_lib::stage2;
+use fosr_lib::stage3;
+use fosr_lib::stats::Target;
+use fosr_lib::*;
 mod cmd; // cmd is not part of the library
 
 use std::cmp::max;
@@ -24,23 +24,41 @@ use std::thread;
 use std::time::Instant;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use chrono::DateTime;
+use chrono::Offset;
+use chrono::TimeZone;
+use chrono_tz::Tz;
 use clap::Parser;
 use crossbeam_channel::bounded;
 use indicatif::HumanBytes;
+use itertools::kmerge;
 use pcap_file::pcap::{PcapPacket, PcapWriter};
 #[cfg(feature = "net_injection")]
 use pnet::{datalink, ipnetwork::IpNetwork};
+use std::sync::mpsc::channel;
 
 const CHANNEL_SIZE: usize = 50;
 
+// Use Jemalloc when possible
+#[cfg(all(target_os = "linux", any(target_env = "", target_env = "gnu")))]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
+#[cfg(target_env = "musl")]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 struct Profile {
     automata: stage2::tadam::AutomataLibrary,
-    patterns: stage1::flowchronicle::PatternSet,
-    config: config::Hosts,
+    // patterns: stage1::flowchronicle::PatternSet,
+    bn: stage1::bayesian_networks::BayesianModel,
+    time_bins: stage0::TimeProfile,
 }
 
 struct InjectParam<T: inject::NetEnabler> {
+    #[allow(unused)]
     net_enabler: T,
+    #[allow(unused)]
     injection_algo: cmd::InjectionAlgo,
 }
 
@@ -54,26 +72,39 @@ impl Profile {
                         .to_str()
                         .expect("No \"automata\" directory found!"),
                 ),
-                config: config::import_config(
-                    &fs::read_to_string(Path::new(path).join("profile.toml"))
-                        .expect("Cannot access the configuration file."),
-                ),
-                patterns: stage1::flowchronicle::PatternSet::from_file(
-                    Path::new(path)
-                        .join("patterns/patterns.json")
-                        .to_str()
-                        .unwrap(),
+                // config: config::import_config(
+                //     &fs::read_to_string(Path::new(path).join("profile.toml"))
+                //         .expect("Cannot access the configuration file."),
+                // ),
+                bn: stage1::bayesian_networks::BayesianModel::load(), // TODO indiquer le chemin
+                // patterns: stage1::flowchronicle::PatternSet::from_file(
+                //     Path::new(path)
+                //         .join("patterns/patterns.json")
+                //         .to_str()
+                //         .unwrap(),
+                // )
+                // .expect("Cannot load patterns"),
+                time_bins: stage0::TimeProfile::from_file(
+                    Path::new(path).join("time_profile.json").to_str().unwrap(),
                 )
-                .expect("Cannot load patterns"),
+                .unwrap(),
             }
         } else {
             log::info!("Load default profile");
             Profile {
                 automata: stage2::tadam::AutomataLibrary::default(),
-                config: config::Hosts::default(),
-                patterns: stage1::flowchronicle::PatternSet::default(),
+                bn: stage1::bayesian_networks::BayesianModel::load(), // TODO
+                // patterns: stage1::flowchronicle::PatternSet::default(),
+                time_bins: stage0::TimeProfile::default(),
             }
         }
+    }
+
+    fn load_config(&mut self, path: &str) {
+        let config = config::import_config(
+            &fs::read_to_string(Path::new(path)).expect("Cannot access the configuration file"),
+        );
+        self.bn.apply_config(&config);
     }
 }
 
@@ -98,10 +129,10 @@ fn main() {
             #[cfg(all(target_os = "linux", feature = "iptables"))]
             stealthy,
             seed,
-            profile,
+            // profile,
             outfile,
-            order_pcap,
-            flow_per_second,
+            no_order_pcap,
+            flow_per_day,
             net_enabler,
             duration,
             deterministic,
@@ -138,40 +169,45 @@ fn main() {
             log::debug!("IPv4 interfaces: {:?}", &local_ips);
 
             // identify the role of the current host
+            let profile: Option<String> = None;
             let profile = Profile::load(profile.as_deref());
-            log::debug!("Configuration: {:?}", profile.config);
+            // log::debug!("Configuration: {:?}", profile.config);
             assert!(!local_ips.is_empty());
             let mut has_role = false;
-            for ip in local_ips.iter() {
-                if let Some(s) = profile.config.get_name(ip) {
-                    log::info!("Computer role: {s}");
-                }
-                if profile.config.exists(ip) {
-                    has_role = true;
-                }
-            }
+            // TODO
+            // for ip in local_ips.iter() {
+            //     if let Some(s) = profile.config.get_os(ip) {
+            //         log::info!("Computer role: {s}");
+            //     }
+            //     if profile.config.exists(ip) {
+            //         has_role = true;
+            //     }
+            // }
             if !has_role {
                 log::error!("This computer has no traffic to inject in this profile! Exiting.");
                 process::exit(1);
             }
 
             // load the models
-            let s0 = stage0::UniformGenerator::new_for_injection(
+            let s0 = stage0::BinBasedGenerator::new_for_injection(
                 seed,
                 duration
                     .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed.")),
-                flow_per_second,
+                flow_per_day,
+                profile.time_bins,
                 deterministic,
             );
 
             let automata_library = Arc::new(profile.automata);
-            let patterns = Arc::new(profile.patterns);
+            // let patterns = Arc::new(profile.patterns);
+            let bn = Arc::new(profile.bn);
 
-            let s1 =
-                stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
+            let s1 = stage1::bayesian_networks::BNGenerator::new(bn, false);
+            // let s1 =
+            // stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
             let s1 = stage1::FilterForOnline::new(local_ips.clone(), s1);
             let s2 = stage2::tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(!stealthy, profile.config);
+            let s3 = stage3::Stage3::new(!stealthy);
 
             // run
             log::info!("Network enabler: {net_enabler:?}");
@@ -182,11 +218,11 @@ fn main() {
                         net_enabler: inject::ebpf::EBPFNetEnabler::new(false, &local_interfaces),
                         injection_algo,
                     };
-                    run(
+                    run_efficient(
                         local_ips,
                         outfile.map(|o| ExportParams {
                             outfile: o,
-                            order_pcap,
+                            order_pcap: !no_order_pcap,
                         }),
                         s0,
                         (s1, 1),
@@ -202,11 +238,11 @@ fn main() {
                         net_enabler: inject::iptables::IPTablesNetEnabler::new(!stealthy, false),
                         injection_algo,
                     };
-                    run(
+                    run_efficient(
                         local_ips,
                         outfile.map(|o| ExportParams {
                             outfile: o,
-                            order_pcap,
+                            order_pcap: !no_order_pcap,
                         }),
                         s0,
                         (s1, 1),
@@ -220,25 +256,33 @@ fn main() {
         }
         cmd::Command::CreatePcap {
             seed,
-            profile,
             outfile,
             packets_count,
-            monothread,
-            order_pcap,
+            profile,
+            no_order_pcap,
             start_time,
             duration,
+            flow_per_day,
+            tz,
+            jobs,
+            config,
             taint,
         } => {
             // load the models
-            let profile = Profile::load(profile.as_deref());
-            let automata_library = Arc::new(profile.automata);
-            let patterns = Arc::new(profile.patterns);
+            let model: Option<String> = None;
+            let mut model = Profile::load(model.as_deref());
+            if let Some(config) = config {
+                model.load_config(&config);
+            }
+            let automata_library = Arc::new(model.automata);
+            // let patterns = Arc::new(model.patterns);
+            let bn = Arc::new(model.bn);
             // handle the parameters: either there is a packet count target or a duration
             let (target, duration) = match (packets_count, duration) {
                 (None, Some(d)) => {
                     let d = humantime::parse_duration(&d).expect("Duration could not be parsed.");
                     log::info!("Generating a pcap of {d:?}");
-                    (Target::Duration(d), Some(d))
+                    (Target::GenerationDuration(d), Some(d))
                 }
                 (Some(p), None) => {
                     log::info!("Generation at least {p} packets");
@@ -249,60 +293,110 @@ fn main() {
             if let Some(s) = seed {
                 log::info!("Generating with seed {s}");
             }
-            let initial_ts: Duration = if let Some(start_time) = start_time {
-                // try to parse a date
-                if let Ok(d) = humantime::parse_rfc3339_weak(&start_time) {
-                    d.duration_since(UNIX_EPOCH).unwrap()
-                } else if let Ok(n) = start_time.parse::<u64>() {
-                    Duration::from_secs(n)
+
+            let (mut initial_ts, ts_requires_offset): (Duration, bool) =
+                if let Some(start_time) = start_time {
+                    // try to parse a date
+                    if let Ok(d) = humantime::parse_rfc3339_weak(&start_time) {
+                        (d.duration_since(UNIX_EPOCH).unwrap(), true)
+                    } else if let Ok(n) = start_time.parse::<u64>() {
+                        (Duration::from_secs(n), false)
+                    } else {
+                        panic!("Could not parse start time");
+                    }
                 } else {
-                    panic!("Could not parse start time");
+                    (SystemTime::now().duration_since(UNIX_EPOCH).unwrap(), false)
+                };
+
+            let tz_offset = match tz {
+                Some(tz_str) => {
+                    let tz: Tz = tz_str.parse().expect("Could not parse the timezone");
+                    let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
+                        .unwrap()
+                        .naive_utc();
+                    let tz = tz.offset_from_utc_datetime(&date).fix();
+                    log::info!("Using {tz_str} timezone (UTC{tz})");
+                    tz
                 }
-            } else {
-                SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
+                None => {
+                    let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
+                        .unwrap()
+                        .naive_utc();
+                    let tz = chrono::Local::now()
+                        .timezone()
+                        .offset_from_local_datetime(&date)
+                        .single()
+                        .expect("Ambiguous local date from timestamp")
+                        .fix();
+                    log::info!("Using local timezone (UTC{tz})");
+                    tz
+                }
             };
 
-            let s0 = stage0::UniformGenerator::new(seed, false, 2, initial_ts, duration);
-            let s1 =
-                stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
-            let s2 = stage2::tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(taint, profile.config);
-            if monothread {
-                log::info!("Monothread generation");
-                run_monothread(
-                    ExportParams {
-                        outfile,
-                        order_pcap,
-                    },
-                    s0,
-                    s1,
-                    s2,
-                    s3,
+            // the initial timestamp was computed assuming that the timezone is UTC.
+            // now, compute the actual timestamp taking into account the timezone
+            if ts_requires_offset {
+                initial_ts = Duration::from_secs(
+                    DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
+                        .unwrap()
+                        .naive_utc()
+                        .and_local_timezone(tz_offset)
+                        .unwrap()
+                        .timestamp() as u64,
                 );
-            } else {
-                let cpu_count = num_cpus::get();
-                if cpu_count <= 2 {
-                    log::warn!("This host has only {cpu_count} core(s). Consider using the --monothread option.");
-                }
-                let (s1_count, s2_count, s3_count) = (
-                    max(1, cpu_count / 2),
-                    max(1, cpu_count / 2),
-                    max(1, cpu_count / 2),
-                ); // the total is indeed larger than cpu_count. This has been empirically assessed to be a correct heuristic to maximise the performances
+            }
 
-                run(
-                    vec![],
-                    Some(ExportParams {
-                        outfile,
-                        order_pcap,
-                    }),
-                    s0,
-                    (s1, s1_count),
-                    (s2, s2_count),
-                    (s3, s3_count),
-                    Arc::new(stats::Stats::new(target)),
-                    None::<InjectParam<inject::DummyNetEnabler>>,
-                );
+            let s0 = stage0::BinBasedGenerator::new(
+                seed,
+                false,
+                flow_per_day,
+                model.time_bins,
+                initial_ts,
+                duration,
+                tz_offset,
+            );
+            let s1 = stage1::bayesian_networks::BNGenerator::new(bn, false);
+            // let s1 = stage1::flowchronicle::FCGenerator::new(patterns, model.config.clone(), false);
+            let s2 = stage2::tadam::TadamGenerator::new(automata_library);
+            let s3 = stage3::Stage3::new(taint); //, model.config);
+            let jobs = jobs.unwrap_or(max(1, num_cpus::get() / 2));
+            match profile {
+                cmd::GenerationProfile::Fast => {
+                    run_fast(
+                        ExportParams {
+                            outfile,
+                            order_pcap: !no_order_pcap,
+                        },
+                        s0,
+                        s1,
+                        s2,
+                        s3,
+                        jobs,
+                    );
+                    // }
+                }
+                cmd::GenerationProfile::Efficient => {
+                    let (s1_count, s2_count, s3_count) = (
+                        max(1, jobs / 3),
+                        max(1, jobs / 3),
+                        max(1, jobs - (2 * jobs) / 3),
+                    );
+                    // the total is indeed larger than cpu_count. This has been empirically assessed to be a correct heuristic to maximise the performances
+
+                    run_efficient(
+                        vec![],
+                        Some(ExportParams {
+                            outfile,
+                            order_pcap: !no_order_pcap,
+                        }),
+                        s0,
+                        (s1, s1_count),
+                        (s2, s2_count),
+                        (s3, s3_count),
+                        Arc::new(stats::Stats::new(target)),
+                        None::<InjectParam<inject::DummyNetEnabler>>,
+                    );
+                }
             }
         }
         cmd::Command::Untaint { input, output } => {
@@ -338,7 +432,7 @@ struct ExportParams {
 /// - `stats`: an Arc to a structure containing generation statistics
 /// - `s4net`: an optional network enable
 #[allow(clippy::too_many_arguments)]
-fn run<T: inject::NetEnabler>(
+fn run_efficient<T: inject::NetEnabler>(
     local_interfaces: Vec<Ipv4Addr>,
     export: Option<ExportParams>,
     s0: impl stage0::Stage0,
@@ -346,7 +440,7 @@ fn run<T: inject::NetEnabler>(
     s2: (impl stage2::Stage2, usize),
     s3: (stage3::Stage3, usize),
     stats: Arc<stats::Stats>,
-    s4net: Option<InjectParam<T>>,
+    #[allow(unused)] s4net: Option<InjectParam<T>>,
 ) {
     let (s1, s1_count) = s1;
     let (s2, s2_count) = s2;
@@ -359,7 +453,7 @@ fn run<T: inject::NetEnabler>(
     // block to automatically drop channels before the joins
     {
         // Channels creation
-        let (tx_s0, rx_s1) = bounded::<SeededData<Duration>>(CHANNEL_SIZE);
+        let (tx_s0, rx_s1) = bounded::<SeededData<TimePoint>>(CHANNEL_SIZE);
         let (tx_s1, rx_s2) = bounded::<SeededData<Flow>>(CHANNEL_SIZE);
         let (tx_s2_tcp, rx_s3_tcp) = bounded::<SeededData<PacketsIR<TCPPacketInfo>>>(CHANNEL_SIZE);
         let (tx_s2_udp, rx_s3_udp) = bounded::<SeededData<PacketsIR<UDPPacketInfo>>>(CHANNEL_SIZE);
@@ -463,7 +557,7 @@ fn run<T: inject::NetEnabler>(
                             builder
                                 .spawn(move || {
                                     let _ = stage3::run_channel(
-                                        |f, p, a| s3.generate_tcp_packets(f, p, a),
+                                        |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
                                         local_interfaces,
                                         rx_s3_tcp,
                                         tx,
@@ -481,7 +575,7 @@ fn run<T: inject::NetEnabler>(
                             builder
                                 .spawn(move || {
                                     let _ = stage3::run_channel(
-                                        |f, p, a| s3.generate_udp_packets(f, p, a),
+                                        |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
                                         local_interfaces,
                                         rx_s3_udp,
                                         tx,
@@ -499,7 +593,7 @@ fn run<T: inject::NetEnabler>(
                             builder
                                 .spawn(move || {
                                     let _ = stage3::run_channel(
-                                        |f, p, a| s3.generate_icmp_packets(f, p, a),
+                                        |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
                                         local_interfaces,
                                         rx_s3_icmp,
                                         tx,
@@ -521,14 +615,14 @@ fn run<T: inject::NetEnabler>(
         export_threads.push(if let Some(export) = export {
             builder
                 .spawn(move || {
-                    stage3::run_export(rx_pcap, export.outfile, export.order_pcap);
+                    export::run_export(rx_pcap, export.outfile, export.order_pcap);
                 })
                 .unwrap()
         } else {
             // if there is no export, we still need to consume the packets
             builder
                 .spawn(move || {
-                    stage3::run_dummy_export(rx_pcap);
+                    export::run_dummy_export(rx_pcap);
                 })
                 .unwrap()
         });
@@ -556,7 +650,11 @@ fn run<T: inject::NetEnabler>(
     {
         let stats = Arc::clone(&stats);
         let builder = thread::Builder::new().name("Monitoring".into());
-        threads.push(builder.spawn(move || stats::run(stats)).unwrap());
+        threads.push(
+            builder
+                .spawn(move || stats::show_progression(stats))
+                .unwrap(),
+        );
     }
 
     // Wait for the generation threads to end
@@ -580,50 +678,124 @@ fn run<T: inject::NetEnabler>(
     }
 }
 
-/// Run the generation with only one thread
-fn run_monothread(
+// /// Run the generation with only one thread
+// fn run_monothread(
+//     export: ExportParams,
+//     s0: impl stage0::Stage0,
+//     s1: impl stage1::Stage1,
+//     s2: impl stage2::Stage2,
+//     s3: stage3::Stage3,
+// ) {
+//     let start = Instant::now();
+
+//     log::info!("Stage 0 generation");
+//     let vec = stage0::run_vec(s0);
+//     log::info!("Stage 1 generation");
+//     let vec = stage1::run_vec(s1, vec);
+//     log::info!("Stage 2 generation");
+//     let vec = stage2::run_vec(s2, vec);
+
+//     let mut all_packets = vec![];
+
+//     log::info!("Stage 3 generation");
+//     all_packets.append(&mut stage3::run_vec(
+//         |f, p, a| s3.generate_udp_packets(f, p, a),
+//         vec.udp,
+//     ));
+//     all_packets.append(&mut stage3::run_vec(
+//         |f, p, a| s3.generate_tcp_packets(f, p, a),
+//         vec.tcp,
+//     ));
+//     all_packets.append(&mut stage3::run_vec(
+//         |f, p, a| s3.generate_icmp_packets(f, p, a),
+//         vec.icmp,
+//     ));
+
+//     if export.order_pcap {
+//         log::info!("Sorting the packets");
+//         all_packets.sort_unstable();
+//     }
+
+//     let gen_duration = start.elapsed().as_secs_f64();
+//     let total_size = all_packets.iter().map(|p| p.data.len()).sum::<usize>() as u64;
+//     log::info!(
+//         "Generation throughput: {}/s",
+//         HumanBytes(((total_size as f64) / gen_duration) as u64)
+//     );
+
+//     let file_out = OpenOptions::new()
+//         .write(true)
+//         .create(true)
+//         .truncate(true)
+//         .open(&export.outfile)
+//         .expect("Error opening or creating file");
+//     let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
+
+//     log::info!("Pcap export");
+//     for packet in all_packets.iter() {
+//         pcap_writer
+//             .write_packet(&PcapPacket::new(
+//                 packet.timestamp,
+//                 packet.data.len() as u32,
+//                 &packet.data,
+//             ))
+//             .unwrap();
+//     }
+// }
+
+/// Run the generation with very little contention, but the generated dataset must fit in RAM
+fn run_fast(
     export: ExportParams,
     s0: impl stage0::Stage0,
     s1: impl stage1::Stage1,
     s2: impl stage2::Stage2,
     s3: stage3::Stage3,
+    jobs: usize,
 ) {
+    // TODO: remettre "stats", ctrlc, etc.
     let start = Instant::now();
 
-    log::info!("Stage 0 generation");
     let vec = stage0::run_vec(s0);
-    log::info!("Stage 1 generation");
-    let vec = stage1::run_vec(s1, vec);
-    log::info!("Stage 2 generation");
-    let vec = stage2::run_vec(s2, vec);
 
-    let mut all_packets = vec![];
+    let chunk_size = ((vec.len() as f64) / (jobs as f64).ceil()) as usize;
+    let chunk_iter = vec.chunks(chunk_size);
+    let (tx, rx) = channel();
 
-    log::info!("Stage 3 generation");
-    all_packets.append(&mut stage3::run_vec(
-        |f, p, a| s3.generate_udp_packets(f, p, a),
-        vec.udp,
-    ));
-    all_packets.append(&mut stage3::run_vec(
-        |f, p, a| s3.generate_tcp_packets(f, p, a),
-        vec.tcp,
-    ));
-    all_packets.append(&mut stage3::run_vec(
-        |f, p, a| s3.generate_icmp_packets(f, p, a),
-        vec.icmp,
-    ));
+    let mut threads = vec![];
 
-    let gen_duration = start.elapsed().as_secs_f64();
-    let total_size = all_packets.iter().map(|p| p.data.len()).sum::<usize>() as u64;
-    log::info!(
-        "Generation throughput: {}/s",
-        HumanBytes(((total_size as f64) / gen_duration) as u64)
-    );
+    for chunk in chunk_iter {
+        let tx = tx.clone();
+        let vec = chunk.to_vec();
+        let s1 = s1.clone();
+        let s2 = s2.clone();
+        let s3 = s3.clone();
+        threads.push(thread::spawn(move || {
+            // log::info!("Stage 1 generation");
+            let vec = stage1::run_vec(s1, vec);
+            // log::info!("Stage 2 generation");
+            let vec = stage2::run_vec(s2, vec);
 
-    if export.order_pcap {
-        log::info!("Sorting the packets");
-        all_packets.sort_unstable();
+            let mut packets = vec![];
+
+            // log::info!("Stage 3 generation");
+            packets.append(&mut stage3::run_vec(
+                |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
+                vec.udp,
+            ));
+            packets.append(&mut stage3::run_vec(
+                |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
+                vec.tcp,
+            ));
+            packets.append(&mut stage3::run_vec(
+                |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
+                vec.icmp,
+            ));
+
+            packets.sort_unstable();
+            tx.send(packets).unwrap();
+        }));
     }
+    drop(tx); // drop it so we can stop when all threads are over
 
     let file_out = OpenOptions::new()
         .write(true)
@@ -633,14 +805,23 @@ fn run_monothread(
         .expect("Error opening or creating file");
     let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
 
+    for thread in threads {
+        thread.join().unwrap();
+    }
+
+    let gen_duration = start.elapsed().as_secs_f64();
+
+    let mut total_size = 0;
     log::info!("Pcap export");
-    for packet in all_packets.iter() {
+    for packet in kmerge(rx) {
+        let len = packet.data.len();
+        total_size += len;
         pcap_writer
-            .write_packet(&PcapPacket::new(
-                packet.timestamp,
-                packet.data.len() as u32,
-                &packet.data,
-            ))
+            .write_packet(&PcapPacket::new(packet.timestamp, len as u32, &packet.data))
             .unwrap();
     }
+    log::info!(
+        "Generation throughput: {}/s",
+        HumanBytes(((total_size as f64) / gen_duration) as u64)
+    );
 }

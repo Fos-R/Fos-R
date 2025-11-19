@@ -26,3 +26,4 @@ Goal: High-throughput network injection
 - A new network enabler for reliable and high-throughput network injection
 - Injection mode on Windows
 - New injection modes
+- New taint options
