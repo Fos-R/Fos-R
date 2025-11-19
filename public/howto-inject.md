@@ -3,6 +3,6 @@ If you need a deterministic generation, make sure to specify a seed with `-s`, t
 
 Example: `fosr create-pcap -o example.pcap -d 1day --order-pcap`.
 
-## Network injection
+<!-- ## Network injection -->
 
-```console
+<!-- ```console -->

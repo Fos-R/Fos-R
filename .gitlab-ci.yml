@@ -306,8 +306,8 @@ pages:
     # add the --help output
     - ./bin/x86_64-unknown-linux-gnu/release/fosr create-pcap --help >> howto-pcap.md
     - echo "\`\`\`" >> howto-pcap.md
-    - ./bin/x86_64-unknown-linux-gnu/release/fosr inject --help >> howto-inject.md
-    - echo "\`\`\`" >> howto-inject.md
+    # - ./bin/x86_64-unknown-linux-gnu/release/fosr inject --help >> howto-inject.md
+    # - echo "\`\`\`" >> howto-inject.md
     - ./bin/x86_64-unknown-linux-gnu/release/fosr pcap2flow --help >> howto-pcap2flow.md
     - echo "\`\`\`" >> howto-pcap2flow.md
     - ./bin/x86_64-unknown-linux-gnu/release/fosr untaint --help >> howto-untaint.md
