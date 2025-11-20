@@ -34,7 +34,7 @@ fn deterministic_fast_generation() -> Result<(), Box<dyn std::error::Error>> {
     let hash = sha256.finalize();
     assert_eq!(
         hex::encode(hash),
-        "f1cb102529f124af8eddf1caa3fd50952da0edd14d3feebef4806ccac7c30ceb"
+        "0a65b8b452470029a74cce0e6ebe1b4b544e4d9b6ee069571364b6934b3dd607"
     );
     Ok(())
 }
@@ -65,7 +65,7 @@ fn deterministic_efficient_generation() -> Result<(), Box<dyn std::error::Error>
     let hash = sha256.finalize();
     assert_eq!(
         hex::encode(hash),
-        "f1cb102529f124af8eddf1caa3fd50952da0edd14d3feebef4806ccac7c30ceb"
+        "0a65b8b452470029a74cce0e6ebe1b4b544e4d9b6ee069571364b6934b3dd607"
     );
     Ok(())
 }

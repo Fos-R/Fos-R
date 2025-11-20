@@ -123,7 +123,7 @@ impl Stage3 {
         packet: &mut [u8],
         flow: &FlowData,
         packet_info: &TCPPacketInfo,
-        tcp_data: &mut TcpPacketData, // Change to take ownership of tcp_data
+        tcp_data: &mut TcpPacketData, // TODO Change to take ownership of tcp_data
         payload_array: &mut [u8; 65536],
     ) {
         // Return TcpPacketData and an empty tuple
@@ -325,6 +325,8 @@ impl Stage3 {
             if matches!(packet_info.get_direction(), PacketDirection::Backward) {
                 (mac_src, mac_dst) = (mac_dst, mac_src);
             }
+
+            packet.fill(0);
             self.setup_ethernet_frame(&mut packet[..packet_size], mac_src, mac_dst);
             self.setup_ip_packet(
                 &mut rng,
@@ -376,6 +378,7 @@ impl Stage3 {
                 + MutableUdpPacket::minimum_packet_size()
                 + packet_info.payload.get_payload_size();
 
+            packet.fill(0);
             self.setup_ethernet_frame(
                 &mut packet[..packet_size],
                 &self.zero,
