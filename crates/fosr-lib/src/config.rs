@@ -11,13 +11,21 @@ use crate::structs::*;
 /// The configuration file of the network and the hosts
 pub struct Configuration {
     // TODO: faire du tri dans ce qui n’est pas utile
+    /// The metadata of the configuration
     pub metadata: Metadata,
+    /// The list of hosts
     pub hosts: Vec<Host>,
+    /// A hashmap that maps an IP to a MAC address (if it is defined in the config file)
     pub mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
-    os_map: HashMap<Ipv4Addr, OS>,
-    usages_map: HashMap<Ipv4Addr, f64>,
+    /// A hashmap that maps an IP to an OS (if it is defined in the config file)
+    pub os_map: HashMap<Ipv4Addr, OS>,
+    /// The usages of each IP address
+    pub usages_map: HashMap<Ipv4Addr, f64>,
+    /// The list of "users" IPs
     pub users: Vec<Ipv4Addr>,
+    /// The list of "servers" IPs
     pub servers: Vec<Ipv4Addr>,
+    /// The list of services proposed in the configuration
     pub services: Vec<L7Proto>,
     servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
     users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
@@ -125,22 +133,7 @@ impl From<ConfigurationYaml> for Configuration {
 }
 
 impl Configuration {
-    pub fn get_mac(&self, ip: &Ipv4Addr) -> Option<&MacAddr> {
-        self.mac_addr_map.get(ip)
-    }
-
-    pub fn get_initial_ttl(&self, ip: &Ipv4Addr) -> u8 {
-        self.os_map.get(ip).unwrap().get_initial_ttl()
-    }
-
-    pub fn get_os(&self, ip: &Ipv4Addr) -> OS {
-        *self.os_map.get(ip).unwrap()
-    }
-
-    pub fn get_usage(&self, ip: &Ipv4Addr) -> f64 {
-        *self.usages_map.get(ip).unwrap()
-    }
-
+    /// Get the list of servers that provide a service
     pub fn get_servers_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
         self.servers_per_service
             .get(service)
@@ -148,6 +141,7 @@ impl Configuration {
             .clone()
     }
 
+    /// Get the list of users that uses a service
     pub fn get_users_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
         self.users_per_service
             .get(service)
@@ -160,17 +154,23 @@ impl Configuration {
 #[serde(deny_unknown_fields)]
 /// Metadata of the configuration file
 pub struct Metadata {
+    /// The title of the config file
     pub title: String,
+    /// The description of the config file
     pub desc: Option<String>,
+    /// The author of the config file
     pub author: Option<String>,
+    /// The "last modified" date of the config file
     pub date: Option<String>,
+    /// The user-defined version of the config file
     pub version: Option<String>,
+    /// The lib-defined format version of the config file
     pub format: Option<u64>,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
-pub enum HostType {
+enum HostType {
     Server,
     User,
 }
@@ -178,18 +178,24 @@ pub enum HostType {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 #[serde(from = "HostYaml")]
+/// A host in the network
 pub struct Host {
+    /// Its hostname
     pub hostname: Option<String>,
+    /// Its OS
     pub os: OS,
+    /// Its usage. 1 is standard, less than 1 is less usage than standard, more than 1 is more usage than standrad
     pub usage: f64,
-    pub client: Option<Vec<L7Proto>>, // we keep the option here, because there is a difference
+    client: Option<Vec<L7Proto>>, // we keep the option here, because there is a difference
     // between an empty list (no service is used) and nothing
     // (default services are used)
-    pub host_type: HostType,
+    host_type: HostType,
+    /// Its interfaces
     pub interfaces: Vec<Interface>,
 }
 
 impl Host {
+    /// Get the list of IP addresses of an host. Cannot be empty.
     pub fn get_ip_addr(&self) -> Vec<Ipv4Addr> {
         self.interfaces.iter().map(|i| i.ip_addr).collect()
     }
@@ -231,9 +237,13 @@ impl From<HostYaml> for Host {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 #[serde(from = "InterfaceYaml")]
+/// A network interface
 pub struct Interface {
+    /// Its MAC address
     pub mac_addr: Option<MacAddr>,
+    /// The services it provides (may be empty)
     pub services: Vec<L7Proto>,
+    /// Its IP address
     pub ip_addr: Ipv4Addr,
 }
 

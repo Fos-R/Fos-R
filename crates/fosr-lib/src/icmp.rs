@@ -2,6 +2,7 @@ use crate::structs::*;
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
+/// Some information about an ICMP packet
 pub struct ICMPPacketInfo {
     // we assume no payload
     // we may need to add more fields to correctly generate them

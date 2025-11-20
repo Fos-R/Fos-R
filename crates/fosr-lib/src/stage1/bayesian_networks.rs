@@ -518,7 +518,7 @@ impl BayesianModel {
                                             .map(|ip| {
                                                 if proto_users.contains(&ip) {
                                                     // this IP can be sampled
-                                                    config.get_usage(&ip)
+                                                    *config.usages_map.get(&ip).unwrap()
                                                 } else {
                                                     // this IP cannot be sampled
                                                     0.0f64
@@ -536,7 +536,7 @@ impl BayesianModel {
                                             .map(|ip| {
                                                 if proto_servers.contains(&ip) {
                                                     // this IP can be sampled
-                                                    config.get_usage(&ip)
+                                                    *config.usages_map.get(&ip).unwrap()
                                                 } else {
                                                     // this IP cannot be sampled
                                                     0.0f64
@@ -592,7 +592,7 @@ impl BayesianModel {
                                             .map(|ip| {
                                                 if proto_users.contains(&ip) {
                                                     // this IP can be sampled
-                                                    config.get_usage(&ip)
+                                                    *config.usages_map.get(&ip).unwrap()
                                                 } else {
                                                     // this IP cannot be sampled
                                                     0.0f64
@@ -610,7 +610,7 @@ impl BayesianModel {
                                             .map(|ip| {
                                                 if proto_servers.contains(&ip) {
                                                     // this IP can be sampled
-                                                    config.get_usage(&ip)
+                                                    *config.usages_map.get(&ip).unwrap()
                                                 } else {
                                                     // this IP cannot be sampled
                                                     0.0f64

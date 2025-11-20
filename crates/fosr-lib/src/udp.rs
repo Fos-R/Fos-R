@@ -2,6 +2,7 @@ use crate::structs::*;
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
+/// Some information about a UDP packet
 pub struct UDPPacketInfo {
     /// the payload of the packet
     pub payload: Payload,
