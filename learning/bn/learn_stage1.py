@@ -121,6 +121,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     random.seed(0)
+    gum.initRandom(seed=42)
 
     output = {}
     output["s0_bin_count"] = bin_count
@@ -147,7 +148,8 @@ if __name__ == '__main__':
     flow = flow[flow['Applicative Proto'].isin(["DNS", "HTTP", "HTTPS", "SMTP", "DHCP", "IMAPS", "SSH", "NTP"])]
 
     # get all the local IP addresses
-    ips = set(flow["Src IP Addr"].tolist()).union(set(flow["Dst IP Addr"].tolist()))
+    ips = list(set(flow["Src IP Addr"].tolist()).union(set(flow["Dst IP Addr"].tolist())))
+    ips.sort()
     ips = [ip for ip in ips if group_ip_dst(ip) == "Local"]
 
     clients = []
