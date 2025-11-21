@@ -200,7 +200,7 @@ impl BayesianNetwork {
     ) -> IntermediateVector {
         // println!("{self:?}");
         let mut try_again = true;
-        // let mut rejected: u64 = 0;
+        let mut rejected: u64 = 0;
         let mut domain_vector: IntermediateVector = IntermediateVector::default();
         let mut new_discrete_vector = discrete_vector.clone();
         while try_again {
@@ -255,11 +255,13 @@ impl BayesianNetwork {
                                 Feature::TimeBin(_) => unreachable!(),
                             }
                         } else {
-                            // rejected += 1;
-                            // panic!("rejected");
-                            // if rejected > 1 && (rejected as f64).log10().fract() == 0.0 {
-                            //     log::warn!("Rejected sample ({rejected} times)");
-                            // }
+                            rejected += 1;
+                            if rejected > 10000 {
+                                panic!("Too many rejections during sampling. Maybe the configuration file is not compatible with the model learned.");
+                            }
+                            if rejected > 10 && (rejected as f64).log10().fract() == 0.0 {
+                                log::warn!("Rejected sample ({rejected} times)");
+                            }
                             try_again = true;
                             break;
                         }
