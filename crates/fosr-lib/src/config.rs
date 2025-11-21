@@ -27,6 +27,8 @@ pub struct Configuration {
     pub servers: Vec<Ipv4Addr>,
     /// The list of services proposed in the configuration
     pub services: Vec<L7Proto>,
+    /// Overridden listening ports
+    pub open_ports: HashMap<(Ipv4Addr, L7Proto), u16>,
     servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
     users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
 }
@@ -71,10 +73,14 @@ impl From<ConfigurationYaml> for Configuration {
         let mut services: HashSet<L7Proto> = HashSet::new();
         let mut servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
         let mut users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
+        let mut open_ports: HashMap<(Ipv4Addr, L7Proto), u16> = HashMap::new();
 
         for interface in c.hosts.iter().flat_map(|h| &h.interfaces) {
             if let Some(mac_addr) = interface.mac_addr {
                 mac_addr_map.insert(interface.ip_addr, mac_addr);
+            }
+            for k in interface.open_ports.keys() {
+                open_ports.insert((interface.ip_addr, *k), *interface.open_ports.get(k).unwrap());
             }
             for s in interface.services.iter() {
                 services.insert(*s);
@@ -128,6 +134,7 @@ impl From<ConfigurationYaml> for Configuration {
             services: services.into_iter().collect(),
             servers_per_service,
             users_per_service,
+            open_ports,
         }
     }
 }
@@ -245,24 +252,39 @@ pub struct Interface {
     pub services: Vec<L7Proto>,
     /// Its IP address
     pub ip_addr: Ipv4Addr,
+    /// The open ports of services, if they are not the default one
+    pub open_ports: HashMap<L7Proto, u16>,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct InterfaceYaml {
     mac_addr: Option<String>,
-    services: Option<Vec<L7Proto>>,
+    services: Option<Vec<String>>,
     ip_addr: String,
 }
 
 impl From<InterfaceYaml> for Interface {
     fn from(i: InterfaceYaml) -> Self {
+        let mut open_ports: HashMap<L7Proto, u16> = HashMap::new();
+        let mut services = vec![];
+        for s in i.services.unwrap_or_default() {
+            let v: Vec<String> = s.as_str().split(':').map(|s| s.to_string()).collect();
+            assert!(v.len() >= 1 && v.len() <= 2);
+            let service: L7Proto = v[0].clone().into();
+            if v.len() == 2 {
+                open_ports.insert(service, v[1].parse::<u16>().expect("Cannot parse the port in {s}"));
+            }
+            services.push(service);
+        }
+
         Interface {
             mac_addr: i
                 .mac_addr
                 .map(|s| s.parse().expect("Cannot parse MAC address")),
-            services: i.services.unwrap_or_default(),
             ip_addr: i.ip_addr.parse().expect("Cannot parse IP address"),
+            services,
+            open_ports,
         }
     }
 }
