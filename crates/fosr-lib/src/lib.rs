@@ -1,5 +1,6 @@
 //! Library for high-quality, high-throughput synthetic network traffic generation
 //! This library is notably used by the binary Fos-R, but can be used freely.
+// #![warn(missing_docs)]
 
 /// Network and host configuration
 pub mod config;
