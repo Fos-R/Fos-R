@@ -283,6 +283,7 @@ impl BayesianNetwork {
 pub struct BayesianModel {
     bn: BayesianNetwork,
     bn_additional_data: AdditionalData,
+    open_ports: HashMap<(Ipv4Addr, L7Proto), u16>,
 }
 
 /// Stage 1: generates flow descriptions
@@ -353,6 +354,7 @@ impl BayesianModel {
         let mut model = BayesianModel {
             bn: bn_common,
             bn_additional_data,
+            open_ports: HashMap::new(),
         };
 
         model.remove_impossible_values();
@@ -436,6 +438,8 @@ impl BayesianModel {
                 l7proto_index = index;
             }
         }
+
+        self.open_ports = config.open_ports.clone();
 
         let mut src_ip_roles: Vec<IpRole> = vec![];
         let mut src_ip_role_index: usize = 0;
@@ -905,6 +909,9 @@ impl Stage1 for BNGenerator {
         domain_vector.timestamp = Some(ts.data.unix_time);
         let uniform = Uniform::new(32000, 65535).unwrap();
         domain_vector.src_port = Some(uniform.sample(&mut rng) as u16);
+        if let Some(port) = self.model.open_ports.get(&(domain_vector.src_ip.unwrap(), domain_vector.l7_proto.unwrap())) {
+            domain_vector.dst_port = Some(*port);
+        }
         domain_vector.ttl_client = Some(
             *self
                 .model
