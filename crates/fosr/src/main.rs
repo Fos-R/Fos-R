@@ -1,4 +1,3 @@
-// we access the code through the library
 use fosr_lib::export;
 #[cfg(feature = "net_injection")]
 use fosr_lib::inject;
@@ -9,7 +8,7 @@ use fosr_lib::stage2;
 use fosr_lib::stage3;
 use fosr_lib::stats::Target;
 use fosr_lib::*;
-mod cmd; // cmd is not part of the library
+mod cmd;
 
 use std::cmp::max;
 use std::collections::HashMap;
@@ -76,7 +75,7 @@ impl Profile {
                 //     &fs::read_to_string(Path::new(path).join("profile.toml"))
                 //         .expect("Cannot access the configuration file."),
                 // ),
-                bn: stage1::bayesian_networks::BayesianModel::load(), // TODO indiquer le chemin
+                bn: stage1::bayesian_networks::BayesianModel::load().unwrap(), // TODO indiquer le chemin
                 // patterns: stage1::flowchronicle::PatternSet::from_file(
                 //     Path::new(path)
                 //         .join("patterns/patterns.json")
@@ -93,7 +92,7 @@ impl Profile {
             log::info!("Load default profile");
             Profile {
                 automata: stage2::tadam::AutomataLibrary::default(),
-                bn: stage1::bayesian_networks::BayesianModel::load(), // TODO
+                bn: stage1::bayesian_networks::BayesianModel::load().unwrap(), // TODO
                 // patterns: stage1::flowchronicle::PatternSet::default(),
                 time_bins: stage0::TimeProfile::default(),
             }
@@ -771,7 +770,7 @@ fn run_fast(
         let s3 = s3.clone();
         threads.push(thread::spawn(move || {
             // log::info!("Stage 1 generation");
-            let vec = stage1::run_vec(s1, vec);
+            let vec = stage1::run_vec(s1, vec).unwrap();
             // log::info!("Stage 2 generation");
             let vec = stage2::run_vec(s2, vec);
 

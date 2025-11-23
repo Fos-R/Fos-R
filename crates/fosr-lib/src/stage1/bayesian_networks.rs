@@ -73,13 +73,15 @@ enum IpRole {
 }
 
 // TODO: refaire proprement
-impl From<String> for IpRole {
-    fn from(s: String) -> IpRole {
+impl TryFrom<String> for IpRole {
+    type Error = String;
+
+    fn try_from(s: String) -> Result<IpRole,Self::Error> {
         match s.as_str() {
-            "User" => IpRole::User,
-            "Server" => IpRole::Server,
-            "Internet" => IpRole::Internet,
-            _ => panic!("Cannot parse IpRole {s}"),
+            "User" => Ok(IpRole::User),
+            "Server" => Ok(IpRole::Server),
+            "Internet" => Ok(IpRole::Internet),
+            _ => Err("Cannot parse IpRole {s}".to_string()),
         }
     }
 }
@@ -161,7 +163,7 @@ type CPT = Vec<Option<WeightedIndex<f64>>>; // some combination may be impossibl
 
 impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
-    fn sample_index(&self, rng: &mut impl RngCore, current: &[Option<usize>]) -> Option<usize> {
+    fn sample_index(&self, rng: &mut impl RngCore, current: &[Option<usize>]) -> Result<Option<usize>,String> {
         let mut parents_index = 0;
         // println!("Sample index of {:?}", self.feature);
         for (index, card) in self.parents.iter().zip(self.parents_cardinality.iter()) {
@@ -175,8 +177,8 @@ impl BayesianNetworkNode {
         }
         // println!("CPT: {:?}", self.cpt);
         match &self.cpt {
-            None => panic!("No CPT!"),
-            Some(cpt) => cpt[parents_index].as_ref().map(|w| w.sample(rng)),
+            None => Err("No CPT!".to_string()),
+            Some(cpt) => Ok(cpt[parents_index].as_ref().map(|w| w.sample(rng))),
         }
     }
 }
@@ -197,7 +199,7 @@ impl BayesianNetwork {
         &self,
         rng: &mut impl RngCore,
         discrete_vector: &mut Vec<Option<usize>>,
-    ) -> IntermediateVector {
+    ) -> Result<IntermediateVector,String> {
         // println!("{self:?}");
         let mut try_again = true;
         let mut rejected: u64 = 0;
@@ -214,7 +216,7 @@ impl BayesianNetwork {
                     if v.proto_specific
                         .is_none_or(|p| p == domain_vector.proto.unwrap())
                     {
-                        let index = v.sample_index(rng, &new_discrete_vector);
+                        let index = v.sample_index(rng, &new_discrete_vector)?;
                         if let Some(i) = index {
                             assert!(i < v.feature.get_cardinality());
                             // println!("Sampled value for {:?}: {}", v.feature, i);
@@ -257,7 +259,7 @@ impl BayesianNetwork {
                         } else {
                             rejected += 1;
                             if rejected > 10000 {
-                                panic!("Too many rejections during sampling. Maybe the configuration file is not compatible with the model learned.");
+                                return Err("Too many rejections during sampling. Maybe the configuration file is not compatible with the model learned.".to_string());
                             }
                             if rejected > 10 && (rejected as f64).log10().fract() == 0.0 {
                                 log::warn!("Rejected sample ({rejected} times)");
@@ -275,7 +277,7 @@ impl BayesianNetwork {
         //     log::info!("Accepted sample ({rejected} times)");
         // }
         *discrete_vector = new_discrete_vector;
-        domain_vector
+        Ok(domain_vector)
     }
 }
 
@@ -333,7 +335,7 @@ fn remove_value(node: &mut BayesianNetworkNode, index: usize) {
 }
 
 impl BayesianModel {
-    pub fn load() -> Self {
+    pub fn load() -> Result<Self,String> {
         let bn_additional_data: AdditionalData = serde_json::from_str(include_str!(
             "../../default_models/bn/bn_additional_data.json"
         ))
@@ -349,7 +351,7 @@ impl BayesianModel {
         let bif_udp = bifxml::from_str(include_str!("../../default_models/bn/bn_udp.bifxml"));
         bif_common.merge(bif_udp, Protocol::UDP);
 
-        let bn_common = bn_from_bif(bif_common, &bn_additional_data);
+        let bn_common = bn_from_bif(bif_common, &bn_additional_data)?;
 
         let mut model = BayesianModel {
             bn: bn_common,
@@ -359,7 +361,7 @@ impl BayesianModel {
 
         model.remove_impossible_values();
 
-        model
+        Ok(model)
     }
 
     fn condition_cpt(&self, node: usize, index_parent: usize, parent_val: usize) -> CPT {
@@ -651,7 +653,7 @@ impl BayesianModel {
     }
 }
 
-fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) -> BayesianNetwork {
+fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) -> Result<BayesianNetwork,String> {
     // Used only for computing the topological order
     struct TopologicalNode {
         parents: HashSet<String>,
@@ -785,7 +787,7 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
         let feature: Option<Feature> = match v.name.as_str() {
             "Time" => Some(Feature::TimeBin(bn_additional_data.s0_bin_count)),
             "Src IP Role" => Some(Feature::SrcIpRole(
-                v.outcome.clone().into_iter().map(|s| s.into()).collect(),
+                v.outcome.clone().into_iter().map(|s| <std::string::String as TryInto<IpRole>>::try_into(s)).collect::<Result<Vec<IpRole>,String>>()?,
             )),
             "Src IP Addr" => Some(Feature::SrcIp(
                 v.outcome
@@ -798,7 +800,7 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
                     .collect(),
             )),
             "Dst IP Role" => Some(Feature::DstIpRole(
-                v.outcome.clone().into_iter().map(|s| s.into()).collect(),
+                v.outcome.clone().into_iter().map(|s| <std::string::String as TryInto<IpRole>>::try_into(s)).collect::<Result<Vec<IpRole>,String>>()?,
             )),
             "Dst IP Addr" => Some(Feature::DstIp(
                 v.outcome
@@ -885,7 +887,7 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
         // }
     }
 
-    processed_bn
+    Ok(processed_bn)
 }
 
 impl BNGenerator {
@@ -897,7 +899,7 @@ impl BNGenerator {
 
 impl Stage1 for BNGenerator {
     /// Generates flows
-    fn generate_flows(&self, ts: SeededData<TimePoint>) -> impl Iterator<Item = SeededData<Flow>> {
+    fn generate_flows(&self, ts: SeededData<TimePoint>) -> Result<impl Iterator<Item = SeededData<Flow>>,String> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
         let mut discrete_vector: Vec<Option<usize>> = vec![];
         discrete_vector.push(Some(min(
@@ -905,7 +907,7 @@ impl Stage1 for BNGenerator {
             (ts.data.date_time.num_seconds_from_midnight() as usize) / 86400
                 * self.model.bn_additional_data.s0_bin_count,
         )));
-        let mut domain_vector = self.model.bn.sample(&mut rng, &mut discrete_vector);
+        let mut domain_vector = self.model.bn.sample(&mut rng, &mut discrete_vector)?;
         domain_vector.timestamp = Some(ts.data.unix_time);
         let uniform = Uniform::new(32000, 65535).unwrap();
         domain_vector.src_port = Some(uniform.sample(&mut rng) as u16);
@@ -928,9 +930,9 @@ impl Stage1 for BNGenerator {
                 .get(&domain_vector.dst_ip.unwrap())
                 .unwrap_or(&60),
         );
-        iter::once(SeededData {
+        Ok(iter::once(SeededData {
             seed: rng.next_u64(),
             data: domain_vector.into(),
-        })
+        }))
     }
 }

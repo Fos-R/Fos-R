@@ -15,7 +15,7 @@ mod bifxml;
 /// A trait for Stage 1 that generates flow descriptions
 pub trait Stage1: Clone + std::marker::Send + 'static {
     /// Generate flow(s) from a starting timestamp
-    fn generate_flows(&self, ts: SeededData<TimePoint>) -> impl Iterator<Item = SeededData<Flow>>;
+    fn generate_flows(&self, ts: SeededData<TimePoint>) -> Result<impl Iterator<Item = SeededData<Flow>>,String>;
 }
 
 /// Generate flows from timestamps and sends them progressively to a channel
@@ -30,7 +30,7 @@ pub fn run_channel(
         if stats.should_stop() {
             break;
         }
-        for f in generator.generate_flows(ts) {
+        for f in generator.generate_flows(ts)? {
             tx_s1.send(f)?;
         }
     }
@@ -42,16 +42,16 @@ pub fn run_channel(
 pub fn run_vec(
     generator: impl Stage1,
     vec_s1: Vec<SeededData<TimePoint>>,
-) -> Vec<SeededData<Flow>> {
+) -> Result<Vec<SeededData<Flow>>,String> {
     log::trace!("Start S1");
     let mut vector = Vec::with_capacity(vec_s1.len());
     for ts in vec_s1 {
-        for f in generator.generate_flows(ts) {
+        for f in generator.generate_flows(ts)? {
             vector.push(f);
         }
     }
     log::trace!("S1 stops");
-    vector
+    Ok(vector)
 }
 
 /// A structure used to drop generated flow that are irrelevant in a network injection scenario
@@ -68,8 +68,8 @@ impl<T: Stage1> FilterForOnline<T> {
 }
 
 impl<T: Stage1> Stage1 for FilterForOnline<T> {
-    fn generate_flows(&self, ts: SeededData<TimePoint>) -> impl Iterator<Item = SeededData<Flow>> {
-        self.s1.generate_flows(ts).filter(|f| {
+    fn generate_flows(&self, ts: SeededData<TimePoint>) -> Result<impl Iterator<Item = SeededData<Flow>>,String> {
+        Ok(self.s1.generate_flows(ts)?.filter(|f| {
             let data = f.data.get_data();
             let kept =
                 self.ips_to_keep.contains(&data.src_ip) || self.ips_to_keep.contains(&data.dst_ip);
@@ -79,7 +79,7 @@ impl<T: Stage1> Stage1 for FilterForOnline<T> {
                 log::trace!("{} -> {} (dropped)", data.src_ip, data.dst_ip);
             }
             kept
-        })
+        }))
     }
 }
 
