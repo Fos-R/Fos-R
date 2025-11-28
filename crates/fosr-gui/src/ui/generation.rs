@@ -5,7 +5,7 @@ use rfd::FileHandle;
 use std::sync::mpsc::{channel, Receiver};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures;
-
+use crate::ui::generate::{Params, generate};
 
 #[derive(Default)]
 pub struct GenerationState {
@@ -22,6 +22,7 @@ pub struct GenerationState {
      */
     pub duration_input: String,
     pub duration_slider_value: f32,
+    pub params: Params,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -145,8 +146,35 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
     ui.horizontal(|ui| {
         if ui.button("Generate").clicked() {
             println!(
-                "Generate button clicked with duration: {}",
-                state.duration_input
+                     "Generate button clicked with duration: {}",
+                      state.duration_input
+                );
+
+            state.duration_input = "1h".to_string();
+            state.order_temporally = false;
+            state.start_time = "2025-01-01T00:00:00Z".to_string();
+            state.taint_packets = false;
+
+           state.params = Params {
+                seed: None,
+                profile: None,
+                outfile: "output.pcap".to_string(),
+                packets_count: None,
+                order_pcap: state.order_temporally,
+                start_time: Some(state.start_time.clone()),
+                duration: Some(state.duration_input.clone()),
+                taint: state.taint_packets,
+            };
+
+            generate(
+                state.params.seed,
+                state.params.profile.clone(),
+                state.params.outfile.clone(),
+                state.params.packets_count,
+                state.params.order_pcap,
+                state.params.start_time.clone(),
+                state.params.duration.clone(),
+                state.params.taint,
             );
         }
 

@@ -1606,7 +1606,10 @@ version = "0.1.0"
 dependencies = [
  "eframe",
  "fosr",
+ "humantime",
+ "indicatif",
  "log",
+ "pcap-file",
  "rfd",
  "wasm-bindgen",
  "wasm-bindgen-futures",
