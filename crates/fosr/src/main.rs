@@ -103,7 +103,7 @@ impl Profile {
         let config = config::import_config(
             &fs::read_to_string(Path::new(path)).expect("Cannot access the configuration file"),
         );
-        self.bn.apply_config(&config);
+        self.bn.apply_config(&config).expect("Fatal error");
     }
 }
 

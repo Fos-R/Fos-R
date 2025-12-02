@@ -15,6 +15,7 @@ use std::net::Ipv4Addr;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
+use std::fmt::{Formatter, Display, Error};
 
 #[derive(Debug, Clone, Default)]
 /// This structure holds the flow that is being built. Since we cannot instance all the variables
@@ -59,6 +60,7 @@ impl From<IntermediateVector> for Flow {
 struct BayesianNetworkNode {
     proto_specific: Option<Protocol>,
     feature: Feature,
+    removed_values: HashSet<usize>,
     cpt: Option<CPT>,    // TimeBin has no CPT
     parents: Vec<usize>, // indices in the Bayesian network’s nodes
     parents_cardinality: Vec<usize>, // the cardinality of each parents. Used to compute the index
@@ -193,6 +195,23 @@ fn sample_random_ip(rng: &mut impl RngCore) -> Ipv4Addr {
     Ipv4Addr::from_bits(rng.next_u32())
 }
 
+
+impl Display for BayesianNetwork {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        for (index,n) in self.nodes.iter().enumerate() {
+            if n.parents.is_empty() {
+                writeln!(f, "Node {index}: {:?}", n.feature)?;
+            } else {
+                writeln!(f, "Node {index}: {:?}, parents:", n.feature)?;
+            }
+            for p in n.parents.iter() {
+                writeln!(f, "   Node {p}: {:?}", self.nodes[*p].feature)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 impl BayesianNetwork {
     /// Sample a vector from the Bayesian network
     fn sample(
@@ -322,15 +341,21 @@ struct GaussianDistribs {
     cov: Vec<f64>,
 }
 
-// remove a value from variable
-fn remove_value(node: &mut BayesianNetworkNode, index: usize) {
-    for cpt in node.cpt.as_mut().unwrap().iter_mut() {
-        if let Some(weights) = cpt {
-            let result = weights.update_weights(&[(index, &0.0f64)]);
-            if result.is_err() {
-                *cpt = None;
+// remove a value from variable by setting its probability to zero
+fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), String> {
+    node.removed_values.insert(index);
+    if node.removed_values.len() == node.feature.get_cardinality() {
+        Err(format!("No value of {:?} can lead to a flow compatible with the configuration", node.feature))
+    } else {
+        for cpt in node.cpt.as_mut().unwrap().iter_mut() {
+            if let Some(weights) = cpt {
+                let result = weights.update_weights(&[(index, &0.0f64)]);
+                if result.is_err() {
+                    *cpt = None;
+                }
             }
         }
+        Ok(())
     }
 }
 
@@ -353,14 +378,14 @@ impl BayesianModel {
 
         let bn_common = bn_from_bif(bif_common, &bn_additional_data)?;
 
+        // log::info!("{bn_common}");
         let mut model = BayesianModel {
             bn: bn_common,
             bn_additional_data,
             open_ports: HashMap::new(),
         };
 
-        model.remove_impossible_values();
-
+        model.remove_impossible_values()?;
         Ok(model)
     }
 
@@ -396,7 +421,7 @@ impl BayesianModel {
     }
 
     // find the values of parents that only lead to "None" CPTs
-    fn remove_impossible_values(&mut self) {
+    fn remove_impossible_values(&mut self) -> Result<(), String> {
         // log::info!("Remove impossible values");
         // traverse the network in reverse topological order
         // indeed, children can modify their parents’ CPT
@@ -406,7 +431,7 @@ impl BayesianModel {
             let parents = node.parents.clone();
             let parents_card = node.parents_cardinality.clone();
             for (index_parent, parent) in parents.iter().enumerate() {
-                let mut removed: Vec<String> = vec![];
+                // let mut removed: Vec<String> = vec![]; // only used for log
                 for v in 0..parents_card[index_parent] {
                     // check each value of each parent
                     if self
@@ -415,22 +440,29 @@ impl BayesianModel {
                         .all(|w| w.is_none())
                     // is there only None? Then we delete that value
                     {
-                        removed.push(self.bn.nodes[*parent].feature.get_value_string(v));
-                        remove_value(self.bn.nodes.get_mut(*parent).unwrap(), v);
+                        // removed.push(self.bn.nodes[*parent].feature.get_value_string(v));
+                        let parent = self.bn.nodes.get_mut(*parent).unwrap();
+                        if !parent.removed_values.contains(&v) {
+                            remove_value(parent, v)?;
+                        }
                     }
-                }
-                if !removed.is_empty() {
-                    log::info!(
-                        "Removed unnecessary values {:?} of {:?}",
-                        removed,
-                        self.bn.nodes[*parent].feature
-                    );
                 }
             }
         }
+        for index in (0..self.bn.nodes.len()).rev() {
+            let node = &self.bn.nodes[index];
+            if !node.removed_values.is_empty() {
+                log::info!(
+                    "Removed unnecessary values {:?} of {:?}",
+                    node.removed_values.iter().map(|v| node.feature.get_value_string(*v)).collect::<Vec<String>>(),
+                    node.feature
+                );
+            }
+        }
+        Ok(())
     }
 
-    pub fn apply_config(&mut self, config: &config::Configuration) {
+    pub fn apply_config(&mut self, config: &config::Configuration) -> Result<(), String> {
         // we know L7Proto exists
         let mut protocols: Vec<L7Proto> = vec![];
         let mut l7proto_index: usize = 0;
@@ -567,6 +599,7 @@ impl BayesianModel {
                         proto_specific: None,
                         feature: Feature::SrcIp(ip),
                         cpt: Some(cpt),
+                        removed_values: HashSet::new(),
                         parents: vec![l7proto_index, src_ip_role_index],
                         parents_cardinality: vec![protocols.len(), src_ip_roles.len()],
                     };
@@ -641,6 +674,7 @@ impl BayesianModel {
                         proto_specific: None,
                         feature: Feature::DstIp(ip),
                         cpt: Some(cpt),
+                        removed_values: HashSet::new(),
                         parents: vec![l7proto_index, dst_ip_role_index],
                         parents_cardinality: vec![protocols.len(), dst_ip_roles.len()],
                     };
@@ -649,7 +683,8 @@ impl BayesianModel {
                 _ => (),
             }
         }
-        self.remove_impossible_values();
+        self.remove_impossible_values()?;
+        Ok(())
     }
 }
 
@@ -880,6 +915,7 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
                 parents, // indices in the Bayesian network’s nodes
                 parents_cardinality,
                 cpt,
+                removed_values: HashSet::new(),
                 proto_specific: v.proto_specific,
             };
             processed_bn.nodes.push(node);
