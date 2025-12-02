@@ -92,7 +92,6 @@ pub enum L7Proto {
     Telnet,
     IMAPS,
     MQTT,
-    CanonBjmp,
     KMS,
     MulticastDNS,
     NTP,
@@ -113,7 +112,6 @@ impl L7Proto {
             L7Proto::Telnet => 23,
             L7Proto::IMAPS => 993,
             L7Proto::MQTT => 1883,
-            L7Proto::CanonBjmp => 8612,
             L7Proto::KMS => 1688,
             L7Proto::MulticastDNS => 5353,
             L7Proto::NTP => 123,
@@ -126,19 +124,18 @@ impl L7Proto {
 // TODO: refaire proprement
 impl From<String> for L7Proto {
     fn from(s: String) -> L7Proto {
-        match s.as_str() {
+        match s.to_uppercase().as_str() {
             "HTTP" => L7Proto::HTTP,
             "HTTPS" => L7Proto::HTTPS,
             "SSH" => L7Proto::SSH,
             "DNS" => L7Proto::DNS,
             "DHCP" => L7Proto::DHCP,
             "SMTP" => L7Proto::SMTP,
-            "Telnet" => L7Proto::Telnet,
+            "TELNET" => L7Proto::Telnet,
             "IMAPS" => L7Proto::IMAPS,
             "MQTT" => L7Proto::MQTT,
-            "Canon-bjmp" => L7Proto::CanonBjmp,
             "KMS" => L7Proto::KMS,
-            "Multicast DNS" => L7Proto::MulticastDNS,
+            "MULTICAST DNS" => L7Proto::MulticastDNS,
             "NTP" => L7Proto::NTP,
             _ => L7Proto::Unknown,
         }
