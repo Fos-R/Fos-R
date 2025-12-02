@@ -755,72 +755,75 @@ fn run_fast(
     let start = Instant::now();
 
     let vec = stage0::run_vec(s0);
+    if vec.is_empty() {
+        log::error!("No generated data: duration is too small");
+    } else {
+        let chunk_size = (((vec.len() as f64) / (jobs as f64).ceil()) as usize).max(1);
+        let chunk_iter = vec.chunks(chunk_size);
+        let (tx, rx) = channel();
 
-    let chunk_size = ((vec.len() as f64) / (jobs as f64).ceil()) as usize;
-    let chunk_iter = vec.chunks(chunk_size);
-    let (tx, rx) = channel();
+        let mut threads = vec![];
 
-    let mut threads = vec![];
+        for chunk in chunk_iter {
+            let tx = tx.clone();
+            let vec = chunk.to_vec();
+            let s1 = s1.clone();
+            let s2 = s2.clone();
+            let s3 = s3.clone();
+            threads.push(thread::spawn(move || {
+                // log::info!("Stage 1 generation");
+                let vec = stage1::run_vec(s1, vec).unwrap();
+                // log::info!("Stage 2 generation");
+                let vec = stage2::run_vec(s2, vec);
 
-    for chunk in chunk_iter {
-        let tx = tx.clone();
-        let vec = chunk.to_vec();
-        let s1 = s1.clone();
-        let s2 = s2.clone();
-        let s3 = s3.clone();
-        threads.push(thread::spawn(move || {
-            // log::info!("Stage 1 generation");
-            let vec = stage1::run_vec(s1, vec).unwrap();
-            // log::info!("Stage 2 generation");
-            let vec = stage2::run_vec(s2, vec);
+                let mut packets = vec![];
 
-            let mut packets = vec![];
+                // log::info!("Stage 3 generation");
+                packets.append(&mut stage3::run_vec(
+                    |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
+                    vec.udp,
+                ));
+                packets.append(&mut stage3::run_vec(
+                    |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
+                    vec.tcp,
+                ));
+                packets.append(&mut stage3::run_vec(
+                    |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
+                    vec.icmp,
+                ));
 
-            // log::info!("Stage 3 generation");
-            packets.append(&mut stage3::run_vec(
-                |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
-                vec.udp,
-            ));
-            packets.append(&mut stage3::run_vec(
-                |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
-                vec.tcp,
-            ));
-            packets.append(&mut stage3::run_vec(
-                |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
-                vec.icmp,
-            ));
+                packets.sort_unstable();
+                tx.send(packets).unwrap();
+            }));
+        }
+        drop(tx); // drop it so we can stop when all threads are over
 
-            packets.sort_unstable();
-            tx.send(packets).unwrap();
-        }));
+        let file_out = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(&export.outfile)
+            .expect("Error opening or creating file");
+        let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
+
+        for thread in threads {
+            thread.join().unwrap();
+        }
+
+        let gen_duration = start.elapsed().as_secs_f64();
+
+        let mut total_size = 0;
+        log::info!("Pcap export");
+        for packet in kmerge(rx) {
+            let len = packet.data.len();
+            total_size += len;
+            pcap_writer
+                .write_packet(&PcapPacket::new(packet.timestamp, len as u32, &packet.data))
+                .unwrap();
+        }
+        log::info!(
+            "Generation throughput: {}/s",
+            HumanBytes(((total_size as f64) / gen_duration) as u64)
+        );
     }
-    drop(tx); // drop it so we can stop when all threads are over
-
-    let file_out = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(&export.outfile)
-        .expect("Error opening or creating file");
-    let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
-
-    for thread in threads {
-        thread.join().unwrap();
-    }
-
-    let gen_duration = start.elapsed().as_secs_f64();
-
-    let mut total_size = 0;
-    log::info!("Pcap export");
-    for packet in kmerge(rx) {
-        let len = packet.data.len();
-        total_size += len;
-        pcap_writer
-            .write_packet(&PcapPacket::new(packet.timestamp, len as u32, &packet.data))
-            .unwrap();
-    }
-    log::info!(
-        "Generation throughput: {}/s",
-        HumanBytes(((total_size as f64) / gen_duration) as u64)
-    );
 }

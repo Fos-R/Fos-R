@@ -227,10 +227,10 @@ impl BinBasedGenerator {
     fn start_new_window(&mut self) -> bool {
         self.flow_rng = Pcg32::seed_from_u64(self.window_rng.next_u64());
         if let Some(ref mut r) = self.remaining_windows {
-            *r -= 1;
             if *r == 0 {
                 return false;
             }
+            *r -= 1;
         }
 
         self.current_distrib = get_poisson(&self.lambdas, self.dest_tz_offset, self.next_ts);
