@@ -343,12 +343,12 @@ impl BayesianModel {
 
         // log::info!("Loading high-level BN");
         let mut bif_common =
-            bifxml::from_str(include_str!("../../default_models/bn/bn_common.bifxml"));
+            bifxml::from_str(include_str!("../../default_models/bn/bn_common.bifxml"))?;
         // log::info!("Loading TCP BN");
-        let bif_tcp = bifxml::from_str(include_str!("../../default_models/bn/bn_tcp.bifxml"));
+        let bif_tcp = bifxml::from_str(include_str!("../../default_models/bn/bn_tcp.bifxml"))?;
         bif_common.merge(bif_tcp, Protocol::TCP);
         // log::info!("Loading UDP BN");
-        let bif_udp = bifxml::from_str(include_str!("../../default_models/bn/bn_udp.bifxml"));
+        let bif_udp = bifxml::from_str(include_str!("../../default_models/bn/bn_udp.bifxml"))?;
         bif_common.merge(bif_udp, Protocol::UDP);
 
         let bn_common = bn_from_bif(bif_common, &bn_additional_data)?;

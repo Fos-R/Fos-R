@@ -21,8 +21,8 @@ pub struct Network {
     pub definition: Vec<Definition>,
 }
 
-pub fn from_str(string: &str) -> Network {
-    serde_xml_rs::from_str::<Bif>(string).unwrap().network
+pub fn from_str(string: &str) -> Result<Network,String> {
+    Ok(serde_xml_rs::from_str::<Bif>(string).map_err(|_| "Cannot parse the BIF file".to_string())?.network)
     // let mut network = serde_xml_rs::from_str::<Bif>(string).unwrap().network;
     // for def in network.definition.iter_mut() {
     //     if let Some(mut given) = def.given.as_mut() {
