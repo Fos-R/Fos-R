@@ -43,10 +43,6 @@ const CHANNEL_SIZE: usize = 50;
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
-#[cfg(target_env = "musl")]
-#[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
-
 struct Profile {
     automata: stage2::tadam::AutomataLibrary,
     // patterns: stage1::flowchronicle::PatternSet,
