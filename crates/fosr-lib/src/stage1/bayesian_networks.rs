@@ -848,7 +848,7 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
                     .collect(),
             )),
             "Applicative Proto" => Some(Feature::L7Proto(
-                v.outcome.clone().into_iter().map(|s| s.into()).collect(),
+                v.outcome.clone().into_iter().map(|s| <std::string::String as TryInto<L7Proto>>::try_into(s)).collect::<Result<Vec<L7Proto>,String>>()?,
             )),
             "Proto" => Some(Feature::L4Proto(
                 v.outcome.clone().into_iter().map(|s| s.into()).collect(),
