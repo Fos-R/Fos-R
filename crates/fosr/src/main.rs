@@ -804,7 +804,8 @@ fn run_fast(
             .truncate(true)
             .open(&export.outfile)
             .expect("Error opening or creating file");
-        let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
+        let mut pcap_writer =
+            PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
 
         for thread in threads {
             thread.join().unwrap();

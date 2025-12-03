@@ -80,7 +80,10 @@ impl From<ConfigurationYaml> for Configuration {
                 mac_addr_map.insert(interface.ip_addr, mac_addr);
             }
             for k in interface.open_ports.keys() {
-                open_ports.insert((interface.ip_addr, *k), *interface.open_ports.get(k).unwrap());
+                open_ports.insert(
+                    (interface.ip_addr, *k),
+                    *interface.open_ports.get(k).unwrap(),
+                );
             }
             for s in interface.services.iter() {
                 services.insert(*s);
@@ -272,10 +275,13 @@ impl TryFrom<InterfaceYaml> for Interface {
         let mut services = vec![];
         for s in i.services.unwrap_or_default() {
             let v: Vec<String> = s.as_str().split(':').map(|s| s.to_string()).collect();
-            assert!(v.len() >= 1 && v.len() <= 2);
+            assert!(!v.is_empty() && v.len() <= 2);
             let service: L7Proto = v[0].clone().try_into()?;
             if v.len() == 2 {
-                open_ports.insert(service, v[1].parse::<u16>().expect("Cannot parse the port in {s}"));
+                open_ports.insert(
+                    service,
+                    v[1].parse::<u16>().expect("Cannot parse the port in {s}"),
+                );
             }
             services.push(service);
         }
