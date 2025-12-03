@@ -70,14 +70,11 @@ build-linux-raspberry-pi:
   stage: build
   image: rust
   script:
-    - rustup toolchain install nightly --component rust-src
-    - cargo install bpf-linker
     - cargo install cargo-deb
     - apt update
     - apt install -y gcc-arm-linux-gnueabihf
-    - rustup toolchain install nightly # use nightly for the moment
-    - rustup target add arm-unknown-linux-musleabihf --toolchain nightly
-    - cargo +nightly build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
+    - rustup target add arm-unknown-linux-musleabihf
+    - cargo build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
     - cargo deb --target=arm-unknown-linux-musleabihf -p fosr -- --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\"
     - cd target/debian
     - debname=$(ls *.deb)
@@ -86,7 +83,6 @@ build-linux-raspberry-pi:
     paths:
       - target/*/release/fosr
       - target/debian/*.deb
-  allow_failure: true
 
 build-linux-arm-32:
   tags:
