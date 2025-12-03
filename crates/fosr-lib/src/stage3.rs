@@ -326,7 +326,7 @@ impl Stage3 {
                 (mac_src, mac_dst) = (mac_dst, mac_src);
             }
 
-            packet.fill(0);
+            packet[..packet_size].fill(0);
             self.setup_ethernet_frame(&mut packet[..packet_size], mac_src, mac_dst);
             self.setup_ip_packet(
                 &mut rng,
@@ -378,7 +378,7 @@ impl Stage3 {
                 + MutableUdpPacket::minimum_packet_size()
                 + packet_info.payload.get_payload_size();
 
-            packet.fill(0);
+            packet[..packet_size].fill(0);
             self.setup_ethernet_frame(
                 &mut packet[..packet_size],
                 &self.zero,
