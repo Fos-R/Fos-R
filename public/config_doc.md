@@ -2,17 +2,17 @@
 
 By default, Fos-R generates traffic that is similar to its learning data. The main way to customize the generated data is through a configuration file. This configuration file allows to describe the hosts of a network.
 
-Here is a minimal configuration file with a user (IP address: 192.168.0.9) and a server (IP address: 192.168.0.8) which provides two services: an SSH server and an HTTPS server.
+Here is a minimal configuration file with a user (IP address: 192.168.0.9) and a server (IP address: 192.168.0.8) which provides two services: an SSH server (on port 2222) and an HTTPS server.
 
 ```yaml
 metadata:
   title: Sample configuration
 hosts:
   - interfaces:
-      - services:
+      - ip_addr: 192.168.0.8
+        services:
           - https
-          - ssh
-        ip_addr: 192.168.0.8
+          - ssh:2222
   - interfaces:
       - ip_addr: 192.168.0.9
 ```
@@ -42,9 +42,9 @@ hosts:
     interfaces:
       - mac_addr: 00:14:2A:3F:47:D8 # Optional. The MAC address of that interface
         services: # Optional (default value: empty list). The list of available services
-          - http  # an HTTP server
-          - https # an HTTPS server
-          - ssh   # an SSH server
+          - http:8080 # an HTTP server on port 8080
+          - https     # an HTTPS server
+          - ssh       # an SSH server
         ip_addr: 192.168.0.8 # Mandatory. The IP address of this interface.
       - ip_addr: 192.168.0.9 # This host has another interface that does not provide any service
   - interfaces:

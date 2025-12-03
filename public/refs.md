@@ -22,15 +22,9 @@ The following software have been created for Fos-R:
 
 # Contributors
 
-- Scientific contributors
-    - Inria: Pierre-François Gimenez, Yufei Han, Ludovic Mé, Adrien Schoen
-    - CISPA: Lénaïg Cornanguer, Joscha Cüppers
-    - Télécom SudParis: Grégory Blanc
-    - DGA: Frédéric Majorczyk
-- Software contributors (including TADAM and FlowChronicle)
-    - Inria: Pierre-François Gimenez, Adrien Schoen
-    - CISPA: Lénaïg Cornanguer, Joscha Cüppers
-    - CentraleSupélec: Dorian Bachelot, Evan Morin, Florentin Labelle, Samuel Cordon, Quentin Blin
+- Inria: Pierre-François Gimenez, Adrien Schoen
+- CISPA: Lénaïg Cornanguer, Joscha Cüppers
+- CentraleSupélec: Dorian Bachelot, Evan Morin, Florentin Labelle, Samuel Cordon, Quentin Blin
 
 # Contact
 
