@@ -94,9 +94,7 @@ pub enum L7Proto {
     MQTT,
     KMS,
     MulticastDNS,
-    NTP,
-    Unknown, // TODO properly
-             // TODO complete
+    NTP,     // TODO complete properly
 }
 
 impl L7Proto {
@@ -115,29 +113,30 @@ impl L7Proto {
             L7Proto::KMS => 1688,
             L7Proto::MulticastDNS => 5353,
             L7Proto::NTP => 123,
-            L7Proto::Unknown => 9999,
             // _ => todo!()
         }
     }
 }
 
 // TODO: refaire proprement
-impl From<String> for L7Proto {
-    fn from(s: String) -> L7Proto {
+impl TryFrom<String> for L7Proto {
+    type Error = String;
+
+    fn try_from(s: String) -> Result<L7Proto, String> {
         match s.to_uppercase().as_str() {
-            "HTTP" => L7Proto::HTTP,
-            "HTTPS" => L7Proto::HTTPS,
-            "SSH" => L7Proto::SSH,
-            "DNS" => L7Proto::DNS,
-            "DHCP" => L7Proto::DHCP,
-            "SMTP" => L7Proto::SMTP,
-            "TELNET" => L7Proto::Telnet,
-            "IMAPS" => L7Proto::IMAPS,
-            "MQTT" => L7Proto::MQTT,
-            "KMS" => L7Proto::KMS,
-            "MULTICAST DNS" => L7Proto::MulticastDNS,
-            "NTP" => L7Proto::NTP,
-            _ => L7Proto::Unknown,
+            "HTTP" => Ok(L7Proto::HTTP),
+            "HTTPS" => Ok(L7Proto::HTTPS),
+            "SSH" => Ok(L7Proto::SSH),
+            "DNS" => Ok(L7Proto::DNS),
+            "DHCP" => Ok(L7Proto::DHCP),
+            "SMTP" => Ok(L7Proto::SMTP),
+            "TELNET" => Ok(L7Proto::Telnet),
+            "IMAPS" => Ok(L7Proto::IMAPS),
+            "MQTT" => Ok(L7Proto::MQTT),
+            "KMS" => Ok(L7Proto::KMS),
+            "MULTICAST DNS" => Ok(L7Proto::MulticastDNS),
+            "NTP" => Ok(L7Proto::NTP),
+            _ => Err(format!("Unknown protocol: {s}")),
         }
     }
 }

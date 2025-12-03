@@ -243,7 +243,7 @@ impl From<HostYaml> for Host {
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-#[serde(from = "InterfaceYaml")]
+#[serde(try_from = "InterfaceYaml")]
 /// A network interface
 pub struct Interface {
     /// Its MAC address
@@ -264,28 +264,30 @@ struct InterfaceYaml {
     ip_addr: String,
 }
 
-impl From<InterfaceYaml> for Interface {
-    fn from(i: InterfaceYaml) -> Self {
+impl TryFrom<InterfaceYaml> for Interface {
+    type Error = String;
+
+    fn try_from(i: InterfaceYaml) -> Result<Self, String> {
         let mut open_ports: HashMap<L7Proto, u16> = HashMap::new();
         let mut services = vec![];
         for s in i.services.unwrap_or_default() {
             let v: Vec<String> = s.as_str().split(':').map(|s| s.to_string()).collect();
             assert!(v.len() >= 1 && v.len() <= 2);
-            let service: L7Proto = v[0].clone().into();
+            let service: L7Proto = v[0].clone().try_into()?;
             if v.len() == 2 {
                 open_ports.insert(service, v[1].parse::<u16>().expect("Cannot parse the port in {s}"));
             }
             services.push(service);
         }
 
-        Interface {
+        Ok(Interface {
             mac_addr: i
                 .mac_addr
                 .map(|s| s.parse().expect("Cannot parse MAC address")),
             ip_addr: i.ip_addr.parse().expect("Cannot parse IP address"),
             services,
             open_ports,
-        }
+        })
     }
 }
 
