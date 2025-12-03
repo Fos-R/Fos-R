@@ -452,7 +452,7 @@ impl BayesianModel {
         for index in (0..self.bn.nodes.len()).rev() {
             let node = &self.bn.nodes[index];
             if !node.removed_values.is_empty() {
-                log::info!(
+                log::debug!(
                     "Removed unnecessary values {:?} of {:?}",
                     node.removed_values.iter().map(|v| node.feature.get_value_string(*v)).collect::<Vec<String>>(),
                     node.feature
@@ -947,7 +947,7 @@ impl Stage1 for BNGenerator {
         domain_vector.timestamp = Some(ts.data.unix_time);
         let uniform = Uniform::new(32000, 65535).unwrap();
         domain_vector.src_port = Some(uniform.sample(&mut rng) as u16);
-        if let Some(port) = self.model.open_ports.get(&(domain_vector.src_ip.unwrap(), domain_vector.l7_proto.unwrap())) {
+        if let Some(port) = self.model.open_ports.get(&(domain_vector.dst_ip.unwrap(), domain_vector.l7_proto.unwrap())) {
             domain_vector.dst_port = Some(*port);
         }
         domain_vector.ttl_client = Some(

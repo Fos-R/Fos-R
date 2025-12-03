@@ -123,7 +123,7 @@ impl TryFrom<String> for L7Proto {
     type Error = String;
 
     fn try_from(s: String) -> Result<L7Proto, String> {
-        match s.to_uppercase().as_str() {
+        match s.to_uppercase().replace(" ","").as_str().trim() {
             "HTTP" => Ok(L7Proto::HTTP),
             "HTTPS" => Ok(L7Proto::HTTPS),
             "SSH" => Ok(L7Proto::SSH),

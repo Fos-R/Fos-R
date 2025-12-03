@@ -258,6 +258,7 @@ if __name__ == '__main__':
     # learner1.addMandatoryArc("Localisation", "Proto App")
     # Time must have no parent because it will be sampled from the stage 0
     learner_common.addNoParentNode("Time") # variable with no parent
+    learner_common.addForbiddenArc("Dst IP Role", "Dst Pt")
     # Src IP Addr and Dst IP Addr must have no children because we want to modify their CPT with the configuration file
     for var in vars_without_children:
         learner_common.addNoChildrenNode(var) # variable with no children
