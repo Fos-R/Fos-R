@@ -274,13 +274,19 @@ impl TimeProfile {
     pub fn from_file(filename: &str) -> std::io::Result<Self> {
         let f = File::open(filename)?;
         let profile: TimeProfile = serde_json::from_reader(f)?;
-        log::info!("Load time profile learned on {}", profile.metadata.input_file);
+        log::info!(
+            "Load time profile learned on {}",
+            profile.metadata.input_file
+        );
         Ok(profile)
     }
 
     pub fn import_from_str(string: &str) -> std::io::Result<Self> {
         let profile: TimeProfile = serde_json::from_str(string)?;
-        log::info!("Load time profile learned on {}", profile.metadata.input_file);
+        log::info!(
+            "Load time profile learned on {}",
+            profile.metadata.input_file
+        );
         Ok(profile)
     }
 }

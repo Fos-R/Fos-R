@@ -15,7 +15,10 @@ mod bifxml;
 /// A trait for Stage 1 that generates flow descriptions
 pub trait Stage1: Clone + std::marker::Send + 'static {
     /// Generate flow(s) from a starting timestamp
-    fn generate_flows(&self, ts: SeededData<TimePoint>) -> Result<impl Iterator<Item = SeededData<Flow>>,String>;
+    fn generate_flows(
+        &self,
+        ts: SeededData<TimePoint>,
+    ) -> Result<impl Iterator<Item = SeededData<Flow>>, String>;
 }
 
 /// Generate flows from timestamps and sends them progressively to a channel
@@ -42,7 +45,7 @@ pub fn run_channel(
 pub fn run_vec(
     generator: impl Stage1,
     vec_s1: Vec<SeededData<TimePoint>>,
-) -> Result<Vec<SeededData<Flow>>,String> {
+) -> Result<Vec<SeededData<Flow>>, String> {
     log::trace!("Start S1");
     let mut vector = Vec::with_capacity(vec_s1.len());
     for ts in vec_s1 {
@@ -68,7 +71,10 @@ impl<T: Stage1> FilterForOnline<T> {
 }
 
 impl<T: Stage1> Stage1 for FilterForOnline<T> {
-    fn generate_flows(&self, ts: SeededData<TimePoint>) -> Result<impl Iterator<Item = SeededData<Flow>>,String> {
+    fn generate_flows(
+        &self,
+        ts: SeededData<TimePoint>,
+    ) -> Result<impl Iterator<Item = SeededData<Flow>>, String> {
         Ok(self.s1.generate_flows(ts)?.filter(|f| {
             let data = f.data.get_data();
             let kept =

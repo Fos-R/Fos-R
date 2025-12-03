@@ -21,7 +21,7 @@ pub struct Stats {
     /// The target duration of the pcapt file (in secs)
     pub duration_target: Option<u64>, // in secs
     /// The current generated duration (in secs)
-    pub current_duration: AtomicU64,  // in secs
+    pub current_duration: AtomicU64, // in secs
     /// The number of received packets from the network interface
     pub received_packets: AtomicU64,
     /// The number of received but ignored packets from the network interface

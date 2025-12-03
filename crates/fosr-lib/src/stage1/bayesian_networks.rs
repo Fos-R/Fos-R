@@ -10,12 +10,12 @@ use serde::Deserialize;
 use std::cmp::min;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt::{Display, Error, Formatter};
 use std::iter;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
-use std::fmt::{Formatter, Display, Error};
 
 #[derive(Debug, Clone, Default)]
 /// This structure holds the flow that is being built. Since we cannot instance all the variables
@@ -78,7 +78,7 @@ enum IpRole {
 impl TryFrom<String> for IpRole {
     type Error = String;
 
-    fn try_from(s: String) -> Result<IpRole,Self::Error> {
+    fn try_from(s: String) -> Result<IpRole, Self::Error> {
         match s.as_str() {
             "User" => Ok(IpRole::User),
             "Server" => Ok(IpRole::Server),
@@ -165,7 +165,11 @@ type CPT = Vec<Option<WeightedIndex<f64>>>; // some combination may be impossibl
 
 impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
-    fn sample_index(&self, rng: &mut impl RngCore, current: &[Option<usize>]) -> Result<Option<usize>,String> {
+    fn sample_index(
+        &self,
+        rng: &mut impl RngCore,
+        current: &[Option<usize>],
+    ) -> Result<Option<usize>, String> {
         let mut parents_index = 0;
         // println!("Sample index of {:?}", self.feature);
         for (index, card) in self.parents.iter().zip(self.parents_cardinality.iter()) {
@@ -195,10 +199,9 @@ fn sample_random_ip(rng: &mut impl RngCore) -> Ipv4Addr {
     Ipv4Addr::from_bits(rng.next_u32())
 }
 
-
 impl Display for BayesianNetwork {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        for (index,n) in self.nodes.iter().enumerate() {
+        for (index, n) in self.nodes.iter().enumerate() {
             if n.parents.is_empty() {
                 writeln!(f, "Node {index}: {:?}", n.feature)?;
             } else {
@@ -218,7 +221,7 @@ impl BayesianNetwork {
         &self,
         rng: &mut impl RngCore,
         discrete_vector: &mut Vec<Option<usize>>,
-    ) -> Result<IntermediateVector,String> {
+    ) -> Result<IntermediateVector, String> {
         // println!("{self:?}");
         let mut try_again = true;
         let mut rejected: u64 = 0;
@@ -345,7 +348,10 @@ struct GaussianDistribs {
 fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), String> {
     node.removed_values.insert(index);
     if node.removed_values.len() == node.feature.get_cardinality() {
-        Err(format!("No value of {:?} can lead to a flow compatible with the configuration", node.feature))
+        Err(format!(
+            "No value of {:?} can lead to a flow compatible with the configuration",
+            node.feature
+        ))
     } else {
         for cpt in node.cpt.as_mut().unwrap().iter_mut() {
             if let Some(weights) = cpt {
@@ -360,7 +366,7 @@ fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), Stri
 }
 
 impl BayesianModel {
-    pub fn load() -> Result<Self,String> {
+    pub fn load() -> Result<Self, String> {
         let bn_additional_data: AdditionalData = serde_json::from_str(include_str!(
             "../../default_models/bn/bn_additional_data.json"
         ))
@@ -454,7 +460,10 @@ impl BayesianModel {
             if !node.removed_values.is_empty() {
                 log::debug!(
                     "Removed unnecessary values {:?} of {:?}",
-                    node.removed_values.iter().map(|v| node.feature.get_value_string(*v)).collect::<Vec<String>>(),
+                    node.removed_values
+                        .iter()
+                        .map(|v| node.feature.get_value_string(*v))
+                        .collect::<Vec<String>>(),
                     node.feature
                 );
             }
@@ -688,7 +697,10 @@ impl BayesianModel {
     }
 }
 
-fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) -> Result<BayesianNetwork,String> {
+fn bn_from_bif(
+    network: bifxml::Network,
+    bn_additional_data: &AdditionalData,
+) -> Result<BayesianNetwork, String> {
     // Used only for computing the topological order
     struct TopologicalNode {
         parents: HashSet<String>,
@@ -822,7 +834,11 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
         let feature: Option<Feature> = match v.name.as_str() {
             "Time" => Some(Feature::TimeBin(bn_additional_data.s0_bin_count)),
             "Src IP Role" => Some(Feature::SrcIpRole(
-                v.outcome.clone().into_iter().map(|s| <std::string::String as TryInto<IpRole>>::try_into(s)).collect::<Result<Vec<IpRole>,String>>()?,
+                v.outcome
+                    .clone()
+                    .into_iter()
+                    .map(<std::string::String as TryInto<IpRole>>::try_into)
+                    .collect::<Result<Vec<IpRole>, String>>()?,
             )),
             "Src IP Addr" => Some(Feature::SrcIp(
                 v.outcome
@@ -835,7 +851,11 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
                     .collect(),
             )),
             "Dst IP Role" => Some(Feature::DstIpRole(
-                v.outcome.clone().into_iter().map(|s| <std::string::String as TryInto<IpRole>>::try_into(s)).collect::<Result<Vec<IpRole>,String>>()?,
+                v.outcome
+                    .clone()
+                    .into_iter()
+                    .map(<std::string::String as TryInto<IpRole>>::try_into)
+                    .collect::<Result<Vec<IpRole>, String>>()?,
             )),
             "Dst IP Addr" => Some(Feature::DstIp(
                 v.outcome
@@ -848,7 +868,11 @@ fn bn_from_bif(network: bifxml::Network, bn_additional_data: &AdditionalData) ->
                     .collect(),
             )),
             "Applicative Proto" => Some(Feature::L7Proto(
-                v.outcome.clone().into_iter().map(|s| <std::string::String as TryInto<L7Proto>>::try_into(s)).collect::<Result<Vec<L7Proto>,String>>()?,
+                v.outcome
+                    .clone()
+                    .into_iter()
+                    .map(<std::string::String as TryInto<L7Proto>>::try_into)
+                    .collect::<Result<Vec<L7Proto>, String>>()?,
             )),
             "Proto" => Some(Feature::L4Proto(
                 v.outcome.clone().into_iter().map(|s| s.into()).collect(),
@@ -935,7 +959,10 @@ impl BNGenerator {
 
 impl Stage1 for BNGenerator {
     /// Generates flows
-    fn generate_flows(&self, ts: SeededData<TimePoint>) -> Result<impl Iterator<Item = SeededData<Flow>>,String> {
+    fn generate_flows(
+        &self,
+        ts: SeededData<TimePoint>,
+    ) -> Result<impl Iterator<Item = SeededData<Flow>>, String> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
         let mut discrete_vector: Vec<Option<usize>> = vec![];
         discrete_vector.push(Some(min(
@@ -947,7 +974,10 @@ impl Stage1 for BNGenerator {
         domain_vector.timestamp = Some(ts.data.unix_time);
         let uniform = Uniform::new(32000, 65535).unwrap();
         domain_vector.src_port = Some(uniform.sample(&mut rng) as u16);
-        if let Some(port) = self.model.open_ports.get(&(domain_vector.dst_ip.unwrap(), domain_vector.l7_proto.unwrap())) {
+        if let Some(port) = self.model.open_ports.get(&(
+            domain_vector.dst_ip.unwrap(),
+            domain_vector.l7_proto.unwrap(),
+        )) {
             domain_vector.dst_port = Some(*port);
         }
         domain_vector.ttl_client = Some(
