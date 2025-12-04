@@ -63,7 +63,7 @@ event zeek_init() {
     Log::create_stream(LOG_TCP, [ $columns = InfoTCP, $path = "fosr_tcp" ]);
 }
 
-# Get TTL
+# Extract TTL from the first packets sent in that connection
 event new_packet(c : connection,
                  p : pkt_hdr) {
     if (p?$ip) { # IPv4 packet

@@ -8,47 +8,24 @@ from sklearn.mixture import GaussianMixture
 import json
 import pyagrum as gum
 
-def group_flags(value):
+def parse_conn_state(value):
     value = str(value)
-    if '......'==value:
+    if value == "-":
         return 'None'
-    elif 'R' in value:
-        return 'R'
-    elif 'F' in value:
-        return 'F and not R'
+    elif 'RST' in value:
+        return 'RST'
+    elif value == "SF":
+        return 'SF'
+    elif value == "SH":
+        return 'SH'
+    elif value == "S0":
+        return 'S0'
+    elif value == "OTH": # removed from the dataset afterward
+        return 'OTH'
+    elif value == "REJ":
+        return 'REJ'
     else:
-        return 'not F and not R'
-
-# TODO: find a more complete list online
-Dst_Pt_mapping = {
-    53.0: 'DNS',
-    443.0: 'HTTPS',
-    80.0: 'HTTP',
-    137.0: 'Netbios',
-    138.0: 'Netbios',
-    8082.0: 'HTTP',
-    8000.0: 'HTTP',
-    5353.0: 'Multicast DNS',
-    1900.0: 'SSDP',
-    25.0: 'SMTP',
-    67.0: 'DHCP',
-    993.0: 'IMAPS',
-    587.0: 'SMTP',
-    445.0: 'SMB',
-    0.0: 'Local',
-    3544.0: 'Teredo',
-    8088:'HTTP',
-    8612.0: 'Canon-bjmp',
-    22.0: 'SSH',
-    3702.0: 'WSD',
-    123.0: 'NTP',
-    8080.0: 'HTTP',
-    8081.0: 'HTTP',
-    1688.0: 'KMS',
-
-}
-
-# TODO: generate config file for each dataset
+        return 'other'
 
 def group_ip_dst(value):
     value = str(value)
@@ -83,8 +60,8 @@ def to_string(n):
 bin_count = 24*4
 
 def categorize_time(t):
-    # TODO: formatter la string pour qu’elle ait toujours la même taille, ainsi ordre numérique = ordre alphabétique
-    return "bin-"+str(t % (1000000000*60*60*24) // (1000000000*60*60*24 / bin_count))
+    n = int(t % (60*60*24) // (60*60*24 / bin_count))
+    return "bin-"+f'{n:03}'
 
 # Adapted from https://pyagrum.readthedocs.io/en/1.13.0/notebooks/17-Examples_parametersLearningWithPandas.html#A-global-method-for-estimating-Bayesian-network-parameters-from-CSV-file-using-PANDAS
 def computeCPTfromDF(bn,df,name):
@@ -126,26 +103,29 @@ if __name__ == '__main__':
     output = {}
     output["s0_bin_count"] = bin_count
 
-    # args.input = "cidds.csv"
+    flow = pd.read_csv(args.input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
 
-    flow = pd.read_csv(args.input, header = 0, sep = ",")
+    flow["Time"] = flow["ts"].apply(categorize_time)
 
-    flow["Time"] = flow["Date first seen"].apply(categorize_time)
+    flow["Proto"] = flow["proto"].str.upper()
 
-    flow["Proto"] = flow["Proto"].str.strip()
     # Remove non-UDP and non-TCP flows
     flow = flow[(flow["Proto"]=="TCP") | (flow["Proto"]=="UDP")]
+    flow['Connection State'] = flow['conn_state'].apply(parse_conn_state)
+    flow = flow[(flow["Connection State"]!="OTH")]
+    flow['Applicative Proto'] = flow['service']
+    flow['Src IP Addr'] = flow['id.orig_h'].apply(remove_public_ip)
+    flow['Dst IP Addr'] = flow['id.resp_h'].apply(remove_public_ip)
+    flow['Dst Pt'] = flow['id.resp_p'].apply(to_string)
 
-    flow['End Flags'] = flow['Flags'].apply(group_flags)
-    flow['Applicative Proto'] = flow['Dst Pt'].map(Dst_Pt_mapping)
-    flow['Src IP Addr'] = flow['Src IP Addr'].apply(remove_public_ip)
-    flow['Dst IP Addr'] = flow['Dst IP Addr'].apply(remove_public_ip)
-    flow['Dst Pt'] = flow['Dst Pt'].apply(to_string)
-    # flow['Dst Pt'] = flow['Dst Pt'].astype('str')
-    # print(flow['Dst Pt'])
+    # import matplotlib.pyplot as plt
+    # counts = flow['conn_state'].value_counts()
+
+    # plt.bar(counts.index, counts.values, color='skyblue', edgecolor='black')
+    # plt.show()
 
     # Only keep the most common protocols (TODO: lift that restriction)
-    flow = flow[flow['Applicative Proto'].isin(["DNS", "HTTP", "HTTPS", "SMTP", "DHCP", "IMAPS", "SSH", "NTP"])]
+    # flow = flow[flow['Applicative Proto'].isin(["DNS", "HTTP", "HTTPS", "SMTP", "DHCP", "IMAPS", "SSH", "NTP"])]
 
     # get all the local IP addresses
     ips = list(set(flow["Src IP Addr"].tolist()).union(set(flow["Dst IP Addr"].tolist())))
@@ -155,7 +135,7 @@ if __name__ == '__main__':
     clients = []
     servers = []
 
-    ttl = {}
+    # ttl = {}
 
     for ip in ips:
         occurrences_dst = sum(flow["Dst IP Addr"]==ip)
@@ -166,9 +146,9 @@ if __name__ == '__main__':
         else:
             # print(ip,"is a server")
             servers.append(ip)
-        ttl[ip] = 64 - random.randint(1,4) # TODO should be measured !
+        # ttl[ip] = 64 - random.randint(1,4) # TODO should be measured !
 
-    output["ttl"] = ttl
+    # output["ttl"] = ttl
     print("Local clients:",list(clients))
     print("Local servers:",list(servers))
 
@@ -177,10 +157,10 @@ if __name__ == '__main__':
     flow['Src IP Role'] = flow['Src IP Addr'].apply(get_network_role, clients=clients, servers=servers)
     flow['Dst IP Role'] = flow['Dst IP Addr'].apply(get_network_role, clients=clients, servers=servers)
 
-    TCP_out_pkt_count = np.array(flow[flow['Proto']=="TCP"]["Out Packet"]).reshape(-1,1)
-    TCP_in_pkt_count = np.array(flow[flow['Proto']=="TCP"]["In Packet"]).reshape(-1,1)
-    UDP_out_pkt_count = np.array(flow[flow['Proto']=="UDP"]["Out Packet"]).reshape(-1,1)
-    UDP_in_pkt_count = np.array(flow[flow['Proto']=="UDP"]["In Packet"]).reshape(-1,1)
+    TCP_out_pkt_count = np.array(flow[flow['Proto']=="TCP"]["orig_pkts"]).reshape(-1,1)
+    TCP_in_pkt_count = np.array(flow[flow['Proto']=="TCP"]["resp_pkts"]).reshape(-1,1)
+    UDP_out_pkt_count = np.array(flow[flow['Proto']=="UDP"]["orig_pkts"]).reshape(-1,1)
+    UDP_in_pkt_count = np.array(flow[flow['Proto']=="UDP"]["resp_pkts"]).reshape(-1,1)
 
     def categorize(pkt_count):
         best_bic = None
@@ -217,6 +197,8 @@ if __name__ == '__main__':
     output["udp_in_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
     flow.loc[flow['Proto']=="UDP", ["Cat In Packet"]] = labels
 
+    flow = flow.replace("-", "none") # "-" causes pyagrum to parse the value as a number, leading to an exception
+
     # Common variables:
         # Time
         # Src IP Role
@@ -230,9 +212,9 @@ if __name__ == '__main__':
     # TCP-only variables:
         # In Pkt Count
         # Out Pkt Count
-        # End flags
+        # Connection State
 
-    tcp_vars = ["Cat Out Packet", "Cat In Packet", "End Flags"]
+    tcp_vars = ["Cat Out Packet", "Cat In Packet", "Connection State"]
     tcp_data = flow[flow['Proto']=="TCP"]
     tcp_data = flow[tcp_vars + common_vars]
 
@@ -251,14 +233,9 @@ if __name__ == '__main__':
 
     print("Model learning")
 
-    # TODO: lors de l’apprentissage de paramètre, ne pas utiliser de prior
-
     learner_common = gum.BNLearner(common_data)
-    # learner1.addMandatoryArc("Departements", "Proto App")
-    # learner1.addMandatoryArc("Localisation", "Proto App")
     # Time must have no parent because it will be sampled from the stage 0
     learner_common.addNoParentNode("Time") # variable with no parent
-    learner_common.addForbiddenArc("Dst IP Role", "Dst Pt")
     # Src IP Addr and Dst IP Addr must have no children because we want to modify their CPT with the configuration file
     for var in vars_without_children:
         learner_common.addNoChildrenNode(var) # variable with no children
