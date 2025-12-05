@@ -40,8 +40,7 @@ fn duration_to_slider(d: Duration) -> f32 {
     }
 }
 
-// Produces a human-readable duration string for the given slider position,
-// using humantime::format_duration so the result remains parseable.
+// Produces a human-readable duration string for the given slider position
 fn duration_string_from_slider(value: f32) -> String {
     let secs = slider_to_duration(value).as_secs();
 
