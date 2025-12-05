@@ -6,6 +6,8 @@ use crate::tcp::TCPPacketInfo;
 use crate::udp::*;
 
 use crossbeam_channel::{Receiver, Sender};
+use pcap_file::PcapError;
+use pcap_file::pcap::{PcapPacket, PcapWriter};
 use pnet::util::MacAddr;
 use pnet_packet::ethernet::{EtherTypes, MutableEthernetPacket};
 use pnet_packet::ip::IpNextHeaderProtocol;
@@ -14,6 +16,7 @@ use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
 use pnet_packet::udp::MutableUdpPacket;
 use rand_core::*;
 use rand_pcg::Pcg32;
+use std::io::BufWriter;
 use std::net::Ipv4Addr;
 use std::num::Wrapping;
 use std::sync::Arc;
@@ -533,29 +536,17 @@ pub fn run_vec<T: PacketInfo>(
     all_packets
 }
 
-// pub fn run_vec_order_pcap<T: PacketInfo>(
-//     generator: impl Fn(&SeededData<PacketsIR<T>>, &mut Packets, &mut [u8; 65536], &mut [u8; 65536]),
-//     vec_s3: Vec<SeededData<PacketsIR<T>>>,
-// ) -> Vec<export::PacketIterator> {
-//     let mut payload_array: [u8; 65536] = [0; 65536]; // to avoid allocating Vec for payloads
-//     let mut packet: [u8; 65536] = [0; 65536];
-//     let mut all_packets: Vec<Packet> = Vec::with_capacity(1_000_000);
-
-//     let mut iterators = vec![];
-
-//     for headers in vec_s3 {
-//         let mut flow_packets = Packets::default();
-//         generator(&headers, &mut flow_packets, &mut packet, &mut payload_array);
-//         all_packets.append(&mut flow_packets.packets);
-//         //
-//         if all_packets.len() >= TEMPORARY_FILE_THRESHOLD {
-//             iterators.push(export::export_into_temporary(&mut all_packets));
-//         }
-//     }
-
-//     if !all_packets.is_empty() {
-//         iterators.push(export::export_into_temporary(&mut all_packets));
-//     }
-
-//     iterators
-// }
+/// Convert a Vec<Packet> into a Vec<u8> containing the bytes of a pcap file
+pub fn to_pcap_vec(vec: &Vec<Packet>) -> Result<Vec<u8>, PcapError> {
+    let mut pcap_writer = PcapWriter::new(BufWriter::new(Vec::new()))?;
+    for packet in vec {
+        pcap_writer
+            .write_packet(&PcapPacket::new(
+                packet.timestamp,
+                packet.data.len() as u32,
+                &packet.data,
+            ))
+            .unwrap();
+    }
+    Ok(pcap_writer.into_writer().into_inner().unwrap())
+}
