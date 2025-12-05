@@ -170,6 +170,7 @@ impl BinBasedGenerator {
         generator
     }
 
+    #[cfg(feature = "net_injection")]
     pub fn new_for_injection(
         seed: Option<u64>,
         total_duration: Option<Duration>,
