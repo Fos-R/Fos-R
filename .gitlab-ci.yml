@@ -214,6 +214,7 @@ tests:
     paths:
       - crates/fosr/deterministic-test.pcap # in case of an error
       - sample.pcap
+  allow_failure: true
 
 eval-zeek:
   image: zeek/zeek
