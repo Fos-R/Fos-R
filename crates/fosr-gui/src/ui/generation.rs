@@ -1,13 +1,12 @@
+use crate::ui::generate::{Params, generate};
 use eframe::egui;
 use eframe::egui::{SliderClamping, Widget};
 use rfd::FileHandle;
 #[cfg(target_arch = "wasm32")]
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::{Receiver, channel};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures;
-use crate::ui::generate::{Params, generate};
 
-#[derive(Default)]
 pub struct GenerationState {
     pub picked_config_file: Option<FileHandle>,
     #[cfg(target_arch = "wasm32")]
@@ -16,13 +15,46 @@ pub struct GenerationState {
     pub order_temporally: bool,
     pub start_time: String,
     /*
-        Those two should be linked: if we edit the duration text input, it should be
-        parsed as a timestamp, and update the slider value; if we move the slider,
-        we should convert it to a String representation and update the text input.
-     */
+       Those two should be linked: if we edit the duration text input, it should be
+       parsed as a timestamp, and update the slider value; if we move the slider,
+       we should convert it to a String representation and update the text input.
+    */
     pub duration_input: String,
+    pub seed_input: String,
+    pub packets_count_input: String,
+    pub outfile: String,
     pub duration_slider_value: f32,
     pub params: Params,
+}
+
+impl Default for GenerationState {
+    fn default() -> Self {
+        let default_duration = "1h".to_string();
+        let default_start_time = "2025-01-01T00:00:00Z".to_string();
+        let default_outfile = "output.pcap".to_string();
+
+        let mut params = Params::default();
+        params.outfile = default_outfile.clone();
+        params.order_pcap = false;
+        params.start_time = Some(default_start_time.clone());
+        params.duration = Some(default_duration.clone());
+        params.taint = false;
+
+        Self {
+            picked_config_file: None,
+            #[cfg(target_arch = "wasm32")]
+            file_receiver: None,
+            taint_packets: false,
+            order_temporally: false,
+            start_time: default_start_time,
+            duration_input: default_duration,
+            outfile: default_outfile,
+            seed_input: String::new(),
+            packets_count_input: String::new(),
+            duration_slider_value: 0.5, // milieu du slider
+            params,
+        }
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -88,7 +120,8 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
         }
 
         // Display the filename of the picked file, or a placeholder
-        let filename = state.picked_config_file
+        let filename = state
+            .picked_config_file
             .as_ref()
             .map(|file| file.file_name())
             .unwrap_or("No file selected".to_string());
@@ -96,7 +129,8 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
         // On desktop: filename with full path on hover, on WASM: just the filename
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let path_text = state.picked_config_file
+            let path_text = state
+                .picked_config_file
                 .as_ref()
                 .map(|file| file.path().to_string_lossy().to_string())
                 .unwrap_or("Select a configuration file".to_string());
@@ -136,6 +170,38 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
             .ui(ui);
     });
 
+    ui.add_space(10.0);
+
+    ui.horizontal(|ui| {
+        ui.label("Output file");
+
+        egui::TextEdit::singleline(&mut state.outfile)
+            .desired_width(200.0)
+            .ui(ui);
+    });
+
+    ui.add_space(10.0);
+
+    ui.horizontal(|ui| {
+        ui.label("Seed (optionnel)");
+
+        egui::TextEdit::singleline(&mut state.seed_input)
+            .hint_text("laisser vide pour aléatoire")
+            .desired_width(120.0)
+            .ui(ui);
+    });
+
+    ui.add_space(10.0);
+
+    ui.horizontal(|ui| {
+        ui.label("Packets count (optionnel)");
+
+        egui::TextEdit::singleline(&mut state.packets_count_input)
+            .hint_text("laisser vide pour défaut")
+            .desired_width(120.0)
+            .ui(ui);
+    });
+
     ui.add_space(15.0);
 
     ui.checkbox(&mut state.taint_packets, "Taint the packets");
@@ -146,36 +212,64 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
     ui.horizontal(|ui| {
         if ui.button("Generate").clicked() {
             println!(
-                     "Generate button clicked with duration: {}",
-                      state.duration_input
-                );
-
-            state.duration_input = "1h".to_string();
-            state.order_temporally = false;
-            state.start_time = "2025-01-01T00:00:00Z".to_string();
-            state.taint_packets = false;
-
-           state.params = Params {
-                seed: None,
-                profile: None,
-                outfile: "output.pcap".to_string(),
-                packets_count: None,
-                order_pcap: state.order_temporally,
-                start_time: Some(state.start_time.clone()),
-                duration: Some(state.duration_input.clone()),
-                taint: state.taint_packets,
-            };
-
-            generate(
-                state.params.seed,
-                state.params.profile.clone(),
-                state.params.outfile.clone(),
-                state.params.packets_count,
-                state.params.order_pcap,
-                state.params.start_time.clone(),
-                state.params.duration.clone(),
-                state.params.taint,
+                "Generate button clicked with duration: {}",
+                state.duration_input
             );
+
+            'generate: {
+                // seed string to seed u64
+                let seed = if state.seed_input.trim().is_empty() {
+                    None
+                } else {
+                    match state.seed_input.trim().parse::<u64>() {
+                        Ok(value) => Some(value),
+                        Err(e) => {
+                            eprintln!("Invalid seed '{}': {}", state.seed_input, e);
+                            // stop execution if wrong seed
+                            break 'generate;
+                        }
+                    }
+                };
+
+                // packets_count string to seed u64
+                let packets_count = if state.packets_count_input.trim().is_empty() {
+                    None
+                } else {
+                    match state.packets_count_input.trim().parse::<u64>() {
+                        Ok(value) => Some(value),
+                        Err(e) => {
+                            eprintln!(
+                                "Invalid packets_count '{}': {}",
+                                state.packets_count_input, e
+                            );
+                            // stop execution if wrong packets count
+                            break 'generate;
+                        }
+                    }
+                };
+                state.params = Params {
+                    seed: seed,
+                    profile: None,
+                    outfile: state.outfile.clone(),
+                    packets_count: packets_count,
+                    order_pcap: state.order_temporally,
+                    start_time: Some(state.start_time.clone()),
+                    duration: Some(state.duration_input.clone()),
+                    taint: state.taint_packets,
+                };
+
+                generate(
+                    state.params.seed,
+                    state.params.profile.clone(),
+                    state.params.outfile.clone(),
+                    state.params.packets_count,
+                    state.params.order_pcap,
+                    state.params.start_time.clone(),
+                    state.params.duration.clone(),
+                    state.params.taint,
+                );
+                println!("File generated : {}", state.outfile);
+            }
         }
 
         if ui.button("Download").clicked() {
