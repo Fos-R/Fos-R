@@ -1,11 +1,80 @@
 use crate::ui::generate::{Params, generate};
 use eframe::egui;
 use eframe::egui::{SliderClamping, Widget};
+use humantime::{format_duration, parse_duration};
 use rfd::FileHandle;
 #[cfg(target_arch = "wasm32")]
 use std::sync::mpsc::{Receiver, channel};
+use std::time::Duration;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures;
+
+// Time interval for the slider.
+const DURATION_MIN: Duration = Duration::from_secs(60); // 1 min
+const DURATION_MAX: Duration = Duration::from_secs(3 * 24 * 3600); // 3 days
+
+// Returns the minimum and maximum durations, expressed in seconds (f64),
+// used as bounds when converting between a duration and the slider position.
+fn duration_range_secs() -> (f64, f64) {
+    (DURATION_MIN.as_secs_f64(), DURATION_MAX.as_secs_f64())
+}
+
+// Converts the slider position (between 0.0 and 1.0) into an actual Duration,
+// by linearly interpolating between DURATION_MIN and DURATION_MAX.
+fn slider_to_duration(value: f32) -> Duration {
+    let (min, max) = duration_range_secs();
+    let v = value.clamp(0.0, 1.0) as f64;
+    let secs = min + (max - min) * v;
+    Duration::from_secs_f64(secs)
+}
+
+// Converts a real Duration into a slider position (between 0.0 and 1.0),
+// based on its proportion within the [DURATION_MIN, DURATION_MAX] interval.
+fn duration_to_slider(d: Duration) -> f32 {
+    let (min, max) = duration_range_secs();
+    let secs = d.as_secs_f64().clamp(min, max);
+    if max == min {
+        0.0
+    } else {
+        ((secs - min) / (max - min)) as f32
+    }
+}
+
+// Produces a human-readable duration string for the given slider position,
+// using humantime::format_duration so the result remains parseable.
+fn duration_string_from_slider(value: f32) -> String {
+    let secs = slider_to_duration(value).as_secs();
+
+    let days = secs / 86400;
+    let hours = (secs % 86400) / 3600;
+    let minutes = (secs % 3600) / 60;
+    let seconds = secs % 60;
+
+    let mut s = String::new();
+    if days > 0 {
+        s.push_str(&format!("{}d", days));
+    }
+    if hours > 0 {
+        s.push_str(&format!("{}h", hours));
+    }
+    if minutes > 0 {
+        s.push_str(&format!("{}m", minutes));
+    }
+    if seconds > 0 || s.is_empty() {
+        s.push_str(&format!("{}s", seconds));
+    }
+
+    s
+}
+
+// Attempts to parse a duration string (e.g. "1h 30m") and,
+// if successful, returns the corresponding slider position.
+fn slider_from_duration_str(s: &str) -> Option<f32> {
+    match parse_duration(s) {
+        Ok(d) => Some(duration_to_slider(d)),
+        Err(_) => None,
+    }
+}
 
 pub struct GenerationState {
     pub picked_config_file: Option<FileHandle>,
@@ -39,7 +108,7 @@ impl Default for GenerationState {
         params.start_time = Some(default_start_time.clone());
         params.duration = Some(default_duration.clone());
         params.taint = false;
-
+        let duration_slider_value = slider_from_duration_str(&default_duration).unwrap_or(0.5);
         Self {
             picked_config_file: None,
             #[cfg(target_arch = "wasm32")]
@@ -51,7 +120,7 @@ impl Default for GenerationState {
             outfile: default_outfile,
             seed_input: String::new(),
             packets_count_input: String::new(),
-            duration_slider_value: 0.5, // milieu du slider
+            duration_slider_value: duration_slider_value,
             params,
         }
     }
@@ -146,18 +215,29 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
     ui.horizontal(|ui| {
         ui.label("Duration");
 
-        egui::TextEdit::singleline(&mut state.duration_input)
+        let response = egui::TextEdit::singleline(&mut state.duration_input)
             .desired_width(120.0)
+            .hint_text("ex: 30s, 5m, 2h, 3d")
             .ui(ui);
+
+        if response.changed() {
+            if let Some(v) = slider_from_duration_str(&state.duration_input) {
+                state.duration_slider_value = v;
+            }
+        }
     });
 
     ui.horizontal(|ui| {
         ui.set_width(300.0);
-        ui.add(
+        let response = ui.add(
             egui::Slider::new(&mut state.duration_slider_value, 0.0..=1.0)
                 .show_value(false)
                 .clamping(SliderClamping::Never),
         );
+
+        if response.changed() {
+            state.duration_input = duration_string_from_slider(state.duration_slider_value);
+        }
     });
 
     ui.add_space(10.0);
