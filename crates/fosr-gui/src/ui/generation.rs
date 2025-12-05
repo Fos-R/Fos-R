@@ -82,11 +82,6 @@ pub struct GenerationState {
     pub taint_packets: bool,
     pub order_temporally: bool,
     pub start_time: String,
-    /*
-       Those two should be linked: if we edit the duration text input, it should be
-       parsed as a timestamp, and update the slider value; if we move the slider,
-       we should convert it to a String representation and update the text input.
-    */
     pub duration_input: String,
     pub seed_input: String,
     pub packets_count_input: String,
