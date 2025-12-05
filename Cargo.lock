@@ -1630,6 +1630,8 @@ dependencies = [
 name = "fosr-gui"
 version = "0.1.0"
 dependencies = [
+ "chrono",
+ "chrono-tz",
  "eframe",
  "fosr-lib",
  "humantime",
