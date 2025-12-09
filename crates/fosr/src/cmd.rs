@@ -213,21 +213,21 @@ pub enum Command {
         )]
         no_order_pcap: bool,
     },
-    /// Extract flow statistics from a pcap file to a csv file
-    #[command(name = "pcap2flow")]
-    Pcap2Flow {
-        #[arg(short, long, required = true, help = "Pcap file to extract flows from")]
-        input_pcap: String,
-        #[arg(short, long, required = true, help = "CSV file to export flow into")]
-        output_csv: String,
-        #[arg(
-            short = 'p',
-            long,
-            help = "Include the payloads in the CSV file",
-            default_value_t = false
-        )]
-        include_payloads: bool,
-    },
+    // /// Extract flow statistics from a pcap file to a csv file
+    // #[command(name = "pcap2flow")]
+    // Pcap2Flow {
+    //     #[arg(short, long, required = true, help = "Pcap file to extract flows from")]
+    //     input_pcap: String,
+    //     #[arg(short, long, required = true, help = "CSV file to export flow into")]
+    //     output_csv: String,
+    //     #[arg(
+    //         short = 'p',
+    //         long,
+    //         help = "Include the payloads in the CSV file",
+    //         default_value_t = false
+    //     )]
+    //     include_payloads: bool,
+    // },
     /// Remove the Fos-R taint from a pcap file
     Untaint {
         #[arg(short, long, required = true, help = "Pcap file to untaint")]
