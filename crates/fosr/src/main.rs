@@ -1,22 +1,21 @@
 use fosr_lib::export;
 #[cfg(feature = "net_injection")]
 use fosr_lib::inject;
+use fosr_lib::models;
 use fosr_lib::pcap2flow;
 use fosr_lib::stage0;
 use fosr_lib::stage1;
 use fosr_lib::stage2;
 use fosr_lib::stage3;
-use fosr_lib::stats::Target;
+use fosr_lib::stats;
 use fosr_lib::*;
 mod cmd;
 
 use std::cmp::max;
 use std::collections::HashMap;
-use std::fs;
 use std::fs::OpenOptions;
 use std::io::BufWriter;
 use std::net::Ipv4Addr;
-use std::path::Path;
 use std::process;
 use std::sync::Arc;
 use std::thread;
@@ -43,64 +42,11 @@ const CHANNEL_SIZE: usize = 50;
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
-struct Profile {
-    automata: stage2::tadam::AutomataLibrary,
-    // patterns: stage1::flowchronicle::PatternSet,
-    bn: stage1::bayesian_networks::BayesianModel,
-    time_bins: stage0::TimeProfile,
-}
-
 struct InjectParam<T: inject::NetEnabler> {
     #[allow(unused)]
     net_enabler: T,
     #[allow(unused)]
     injection_algo: cmd::InjectionAlgo,
-}
-
-impl Profile {
-    fn load(profile: Option<&str>) -> Self {
-        if let Some(path) = profile {
-            Profile {
-                automata: stage2::tadam::AutomataLibrary::from_dir(
-                    Path::new(path)
-                        .join("automata")
-                        .to_str()
-                        .expect("No \"automata\" directory found!"),
-                ),
-                // config: config::import_config(
-                //     &fs::read_to_string(Path::new(path).join("profile.toml"))
-                //         .expect("Cannot access the configuration file."),
-                // ),
-                bn: stage1::bayesian_networks::BayesianModel::load().unwrap(), // TODO indiquer le chemin
-                // patterns: stage1::flowchronicle::PatternSet::from_file(
-                //     Path::new(path)
-                //         .join("patterns/patterns.json")
-                //         .to_str()
-                //         .unwrap(),
-                // )
-                // .expect("Cannot load patterns"),
-                time_bins: stage0::TimeProfile::from_file(
-                    Path::new(path).join("time_profile.json").to_str().unwrap(),
-                )
-                .unwrap(),
-            }
-        } else {
-            log::info!("Load default profile");
-            Profile {
-                automata: stage2::tadam::AutomataLibrary::default(),
-                bn: stage1::bayesian_networks::BayesianModel::load().unwrap(), // TODO
-                // patterns: stage1::flowchronicle::PatternSet::default(),
-                time_bins: stage0::TimeProfile::default(),
-            }
-        }
-    }
-
-    fn load_config(&mut self, path: &str) {
-        let config = config::import_config(
-            &fs::read_to_string(Path::new(path)).expect("Cannot access the configuration file"),
-        );
-        self.bn.apply_config(&config).expect("Fatal error");
-    }
 }
 
 /// The entry point of the application.
@@ -164,8 +110,8 @@ fn main() {
             log::debug!("IPv4 interfaces: {:?}", &local_ips);
 
             // identify the role of the current host
-            let profile: Option<String> = None;
-            let profile = Profile::load(profile.as_deref());
+            let profile: ModelsSource::Legacy; //Option<String> = None;
+            let profile = Profile::load(profile).expect("Cannot load the models");
             // log::debug!("Configuration: {:?}", profile.config);
             assert!(!local_ips.is_empty());
             let mut has_role = false;
@@ -262,12 +208,12 @@ fn main() {
             jobs,
             config,
             taint,
+            default_models,
         } => {
             // load the models
-            let model: Option<String> = None;
-            let mut model = Profile::load(model.as_deref());
+            let mut model = models::Models::from_source(default_models.get_source()).unwrap();
             if let Some(config) = config {
-                model.load_config(&config);
+                model = model.with_config(&config).unwrap();
             }
             let automata_library = Arc::new(model.automata);
             // let patterns = Arc::new(model.patterns);
@@ -277,11 +223,11 @@ fn main() {
                 (None, Some(d)) => {
                     let d = humantime::parse_duration(&d).expect("Duration could not be parsed.");
                     log::info!("Generating a pcap of {d:?}");
-                    (Target::GenerationDuration(d), Some(d))
+                    (stats::Target::GenerationDuration(d), Some(d))
                 }
                 (Some(p), None) => {
                     log::info!("Generation at least {p} packets");
-                    (Target::PacketCount(p), None)
+                    (stats::Target::PacketCount(p), None)
                 }
                 _ => unreachable!(),
             };

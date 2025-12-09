@@ -82,8 +82,7 @@ event new_packet(c : connection,
                 src_ttl_result[c$uid] = ttl;
             }
         } else if (p$ip$src == c$id$resp_h) { # backward packet
-            local exists_dst = c$uid in dst_ttl_result;
-            if (!exists_dst) {
+            if (!(c$uid in dst_ttl_result)) {
                 dst_ttl_result[c$uid] = ttl;
             }
         } else {

@@ -14,6 +14,8 @@ pub mod structs;
 #[doc(inline)]
 pub use structs::*;
 
+pub mod models;
+
 /// ICMP-specific fonctions
 mod icmp;
 /// TCP-specific fonctions

@@ -238,7 +238,7 @@ pub enum PayloadType {
     Random(Vec<usize>),
 }
 
-pub trait EdgeType: Debug + Clone {
+pub(crate) trait EdgeType: Debug + Clone {
     fn get_payload_type(&self) -> &PayloadType;
     fn get_direction(&self) -> PacketDirection;
 }
