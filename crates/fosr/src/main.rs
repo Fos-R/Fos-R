@@ -1,22 +1,21 @@
 use fosr_lib::export;
 #[cfg(feature = "net_injection")]
 use fosr_lib::inject;
-use fosr_lib::pcap2flow;
+use fosr_lib::models;
 use fosr_lib::stage0;
 use fosr_lib::stage1;
 use fosr_lib::stage2;
 use fosr_lib::stage3;
-use fosr_lib::stats::Target;
+use fosr_lib::stats;
+use fosr_lib::utils;
 use fosr_lib::*;
 mod cmd;
 
 use std::cmp::max;
 use std::collections::HashMap;
-use std::fs;
 use std::fs::OpenOptions;
 use std::io::BufWriter;
 use std::net::Ipv4Addr;
-use std::path::Path;
 use std::process;
 use std::sync::Arc;
 use std::thread;
@@ -43,64 +42,11 @@ const CHANNEL_SIZE: usize = 50;
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
-struct Profile {
-    automata: stage2::tadam::AutomataLibrary,
-    // patterns: stage1::flowchronicle::PatternSet,
-    bn: stage1::bayesian_networks::BayesianModel,
-    time_bins: stage0::TimeProfile,
-}
-
 struct InjectParam<T: inject::NetEnabler> {
     #[allow(unused)]
     net_enabler: T,
     #[allow(unused)]
     injection_algo: cmd::InjectionAlgo,
-}
-
-impl Profile {
-    fn load(profile: Option<&str>) -> Self {
-        if let Some(path) = profile {
-            Profile {
-                automata: stage2::tadam::AutomataLibrary::from_dir(
-                    Path::new(path)
-                        .join("automata")
-                        .to_str()
-                        .expect("No \"automata\" directory found!"),
-                ),
-                // config: config::import_config(
-                //     &fs::read_to_string(Path::new(path).join("profile.toml"))
-                //         .expect("Cannot access the configuration file."),
-                // ),
-                bn: stage1::bayesian_networks::BayesianModel::load().unwrap(), // TODO indiquer le chemin
-                // patterns: stage1::flowchronicle::PatternSet::from_file(
-                //     Path::new(path)
-                //         .join("patterns/patterns.json")
-                //         .to_str()
-                //         .unwrap(),
-                // )
-                // .expect("Cannot load patterns"),
-                time_bins: stage0::TimeProfile::from_file(
-                    Path::new(path).join("time_profile.json").to_str().unwrap(),
-                )
-                .unwrap(),
-            }
-        } else {
-            log::info!("Load default profile");
-            Profile {
-                automata: stage2::tadam::AutomataLibrary::default(),
-                bn: stage1::bayesian_networks::BayesianModel::load().unwrap(), // TODO
-                // patterns: stage1::flowchronicle::PatternSet::default(),
-                time_bins: stage0::TimeProfile::default(),
-            }
-        }
-    }
-
-    fn load_config(&mut self, path: &str) {
-        let config = config::import_config(
-            &fs::read_to_string(Path::new(path)).expect("Cannot access the configuration file"),
-        );
-        self.bn.apply_config(&config).expect("Fatal error");
-    }
 }
 
 /// The entry point of the application.
@@ -111,144 +57,6 @@ fn main() {
     let args = cmd::Args::parse();
 
     match args.command {
-        cmd::Command::Pcap2Flow {
-            input_pcap,
-            output_csv,
-            include_payloads,
-        } => {
-            let flows = pcap2flow::process_file(&input_pcap);
-            pcap2flow::export_stats(&output_csv, flows, include_payloads);
-        }
-        #[cfg(feature = "net_injection")]
-        cmd::Command::Inject {
-            #[cfg(all(target_os = "linux", feature = "iptables"))]
-            stealthy,
-            seed,
-            // profile,
-            outfile,
-            no_order_pcap,
-            flow_per_day,
-            net_enabler,
-            duration,
-            deterministic,
-            injection_algo,
-        } => {
-            #[cfg(not(all(target_os = "linux", feature = "iptables")))]
-            let stealthy = false;
-
-            // Extract all IPv4 local interfaces (except loopback)
-            let extract_addr = |iface: datalink::NetworkInterface| {
-                iface
-                    .ips
-                    .into_iter()
-                    .filter(IpNetwork::is_ipv4)
-                    .map(|i| match i {
-                        IpNetwork::V4(data) => data.ip(),
-                        _ => unreachable!(),
-                    })
-            };
-            // the local interfaces are used by the inject module and used to identify local IPs
-            // we do not include loopback interfaces or interfaces without an IPv4 address
-            let local_interfaces: Vec<datalink::NetworkInterface> = datalink::interfaces()
-                .into_iter()
-                .filter(|iface| !iface.is_loopback() && iface.ips.iter().any(IpNetwork::is_ipv4))
-                .collect();
-
-            // for each interface, we extract its addresses
-            let local_ips: Vec<Ipv4Addr> = local_interfaces
-                .clone()
-                .into_iter()
-                .flat_map(extract_addr)
-                .filter(|i| !i.is_loopback())
-                .collect();
-            log::debug!("IPv4 interfaces: {:?}", &local_ips);
-
-            // identify the role of the current host
-            let profile: Option<String> = None;
-            let profile = Profile::load(profile.as_deref());
-            // log::debug!("Configuration: {:?}", profile.config);
-            assert!(!local_ips.is_empty());
-            let mut has_role = false;
-            // TODO
-            // for ip in local_ips.iter() {
-            //     if let Some(s) = profile.config.get_os(ip) {
-            //         log::info!("Computer role: {s}");
-            //     }
-            //     if profile.config.exists(ip) {
-            //         has_role = true;
-            //     }
-            // }
-            if !has_role {
-                log::error!("This computer has no traffic to inject in this profile! Exiting.");
-                process::exit(1);
-            }
-
-            // load the models
-            let s0 = stage0::BinBasedGenerator::new_for_injection(
-                seed,
-                duration
-                    .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed.")),
-                flow_per_day,
-                profile.time_bins,
-                deterministic,
-            );
-
-            let automata_library = Arc::new(profile.automata);
-            // let patterns = Arc::new(profile.patterns);
-            let bn = Arc::new(profile.bn);
-
-            let s1 = stage1::bayesian_networks::BNGenerator::new(bn, false);
-            // let s1 =
-            // stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
-            let s1 = stage1::FilterForOnline::new(local_ips.clone(), s1);
-            let s2 = stage2::tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(!stealthy);
-
-            // run
-            log::info!("Network enabler: {net_enabler:?}");
-            match net_enabler {
-                #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
-                cmd::NetEnabler::Ebpf => {
-                    let s4net = InjectParam {
-                        net_enabler: inject::ebpf::EBPFNetEnabler::new(false, &local_interfaces),
-                        injection_algo,
-                    };
-                    run_efficient(
-                        local_ips,
-                        outfile.map(|o| ExportParams {
-                            outfile: o,
-                            order_pcap: !no_order_pcap,
-                        }),
-                        s0,
-                        (s1, 1),
-                        (s2, 1),
-                        (s3, 1),
-                        Arc::new(stats::Stats::default()),
-                        Some(s4net),
-                    );
-                }
-                #[cfg(all(target_os = "linux", feature = "iptables"))]
-                cmd::NetEnabler::Iptables => {
-                    let s4net = InjectParam {
-                        net_enabler: inject::iptables::IPTablesNetEnabler::new(!stealthy, false),
-                        injection_algo,
-                    };
-                    run_efficient(
-                        local_ips,
-                        outfile.map(|o| ExportParams {
-                            outfile: o,
-                            order_pcap: !no_order_pcap,
-                        }),
-                        s0,
-                        (s1, 1),
-                        (s2, 1),
-                        (s3, 1),
-                        Arc::new(stats::Stats::default()),
-                        Some(s4net),
-                    );
-                }
-            };
-        }
         cmd::Command::CreatePcap {
             seed,
             outfile,
@@ -262,12 +70,12 @@ fn main() {
             jobs,
             config,
             taint,
+            default_models,
         } => {
             // load the models
-            let model: Option<String> = None;
-            let mut model = Profile::load(model.as_deref());
+            let mut model = models::Models::from_source(default_models.get_source()).unwrap();
             if let Some(config) = config {
-                model.load_config(&config);
+                model = model.with_config(&config).unwrap();
             }
             let automata_library = Arc::new(model.automata);
             // let patterns = Arc::new(model.patterns);
@@ -277,11 +85,11 @@ fn main() {
                 (None, Some(d)) => {
                     let d = humantime::parse_duration(&d).expect("Duration could not be parsed.");
                     log::info!("Generating a pcap of {d:?}");
-                    (Target::GenerationDuration(d), Some(d))
+                    (stats::Target::GenerationDuration(d), Some(d))
                 }
                 (Some(p), None) => {
                     log::info!("Generation at least {p} packets");
-                    (Target::PacketCount(p), None)
+                    (stats::Target::PacketCount(p), None)
                 }
                 _ => unreachable!(),
             };
@@ -395,7 +203,7 @@ fn main() {
             }
         }
         cmd::Command::Untaint { input, output } => {
-            pcap2flow::untaint_file(&input, &output);
+            utils::untaint_file(&input, &output);
         }
     };
 }
@@ -672,71 +480,6 @@ fn run_efficient<T: inject::NetEnabler>(
         thread.join().unwrap();
     }
 }
-
-// /// Run the generation with only one thread
-// fn run_monothread(
-//     export: ExportParams,
-//     s0: impl stage0::Stage0,
-//     s1: impl stage1::Stage1,
-//     s2: impl stage2::Stage2,
-//     s3: stage3::Stage3,
-// ) {
-//     let start = Instant::now();
-
-//     log::info!("Stage 0 generation");
-//     let vec = stage0::run_vec(s0);
-//     log::info!("Stage 1 generation");
-//     let vec = stage1::run_vec(s1, vec);
-//     log::info!("Stage 2 generation");
-//     let vec = stage2::run_vec(s2, vec);
-
-//     let mut all_packets = vec![];
-
-//     log::info!("Stage 3 generation");
-//     all_packets.append(&mut stage3::run_vec(
-//         |f, p, a| s3.generate_udp_packets(f, p, a),
-//         vec.udp,
-//     ));
-//     all_packets.append(&mut stage3::run_vec(
-//         |f, p, a| s3.generate_tcp_packets(f, p, a),
-//         vec.tcp,
-//     ));
-//     all_packets.append(&mut stage3::run_vec(
-//         |f, p, a| s3.generate_icmp_packets(f, p, a),
-//         vec.icmp,
-//     ));
-
-//     if export.order_pcap {
-//         log::info!("Sorting the packets");
-//         all_packets.sort_unstable();
-//     }
-
-//     let gen_duration = start.elapsed().as_secs_f64();
-//     let total_size = all_packets.iter().map(|p| p.data.len()).sum::<usize>() as u64;
-//     log::info!(
-//         "Generation throughput: {}/s",
-//         HumanBytes(((total_size as f64) / gen_duration) as u64)
-//     );
-
-//     let file_out = OpenOptions::new()
-//         .write(true)
-//         .create(true)
-//         .truncate(true)
-//         .open(&export.outfile)
-//         .expect("Error opening or creating file");
-//     let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
-
-//     log::info!("Pcap export");
-//     for packet in all_packets.iter() {
-//         pcap_writer
-//             .write_packet(&PcapPacket::new(
-//                 packet.timestamp,
-//                 packet.data.len() as u32,
-//                 &packet.data,
-//             ))
-//             .unwrap();
-//     }
-// }
 
 /// Run the generation with very little contention, but the generated dataset must fit in RAM
 fn run_fast(

@@ -14,6 +14,8 @@ pub mod structs;
 #[doc(inline)]
 pub use structs::*;
 
+pub mod models;
+
 /// ICMP-specific fonctions
 mod icmp;
 /// TCP-specific fonctions
@@ -28,8 +30,8 @@ pub use tcp::TCPPacketInfo;
 /// Metadata of UDP packet
 pub use udp::UDPPacketInfo;
 
-/// Extraction flow statistics from pcap
-pub mod pcap2flow;
+/// Utilities
+pub mod utils;
 
 /// Timestamp generation
 pub mod stage0;

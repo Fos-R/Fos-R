@@ -11,6 +11,7 @@
 - Added `--tz` option and timezone support more generally
 - Added --jobs option
 - Two generation profiles: fast or efficient
+- A Zeek script to extract features
 
 ### Changed
 
@@ -22,6 +23,10 @@
 - Pcap files are now sorted by default
 - Better library documentation
 - Bugfixes
+
+### Removed
+
+- Pcap2flow mode
 
 ## v0.1.2
 

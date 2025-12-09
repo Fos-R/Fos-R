@@ -1,4 +1,5 @@
 use crate::config;
+use crate::models;
 use crate::stage1::*;
 
 use chrono::Timelike;
@@ -6,7 +7,6 @@ use rand_distr::weighted::WeightedIndex;
 use rand_distr::{Distribution, Normal, Uniform};
 use rand_pcg::Pcg32;
 use serde::Deserialize;
-
 use std::cmp::min;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -321,7 +321,7 @@ pub struct BNGenerator {
 #[derive(Deserialize, Debug, Clone)]
 struct AdditionalData {
     s0_bin_count: usize,
-    ttl: HashMap<Ipv4Addr, u8>,
+    // ttl: HashMap<Ipv4Addr, u8>,
     tcp_out_pkt_gaussians: GaussianDistribs,
     tcp_in_pkt_gaussians: GaussianDistribs,
     udp_out_pkt_gaussians: GaussianDistribs,
@@ -366,20 +366,20 @@ fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), Stri
 }
 
 impl BayesianModel {
-    pub fn load() -> Result<Self, String> {
-        let bn_additional_data: AdditionalData = serde_json::from_str(include_str!(
-            "../../default_models/bn/bn_additional_data.json"
-        ))
-        .unwrap();
+    pub fn from_source(m: &models::ModelsSource) -> Result<Self, String> {
+        let bn_strings: Vec<String> = m
+            .get_bn()
+            .map_err(|_| "Cannot find the Bayesian networks".to_string())?;
+        let bn_additional_data: AdditionalData = serde_json::from_str(&bn_strings[3])
+            .map_err(|_| "Cannot parse the additional_data file".to_string())?;
 
         // log::info!("Loading high-level BN");
-        let mut bif_common =
-            bifxml::from_str(include_str!("../../default_models/bn/bn_common.bifxml"))?;
+        let mut bif_common = bifxml::from_str(&bn_strings[0])?;
         // log::info!("Loading TCP BN");
-        let bif_tcp = bifxml::from_str(include_str!("../../default_models/bn/bn_tcp.bifxml"))?;
+        let bif_tcp = bifxml::from_str(&bn_strings[1])?;
         bif_common.merge(bif_tcp, Protocol::TCP);
         // log::info!("Loading UDP BN");
-        let bif_udp = bifxml::from_str(include_str!("../../default_models/bn/bn_udp.bifxml"))?;
+        let bif_udp = bifxml::from_str(&bn_strings[2])?;
         bif_common.merge(bif_udp, Protocol::UDP);
 
         let bn_common = bn_from_bif(bif_common, &bn_additional_data)?;
@@ -980,22 +980,24 @@ impl Stage1 for BNGenerator {
         )) {
             domain_vector.dst_port = Some(*port);
         }
-        domain_vector.ttl_client = Some(
-            *self
-                .model
-                .bn_additional_data
-                .ttl
-                .get(&domain_vector.src_ip.unwrap())
-                .unwrap_or(&60),
-        );
-        domain_vector.ttl_server = Some(
-            *self
-                .model
-                .bn_additional_data
-                .ttl
-                .get(&domain_vector.dst_ip.unwrap())
-                .unwrap_or(&60),
-        );
+        domain_vector.ttl_client = Some(64);
+        // Some(
+        // *self
+        //     .model
+        //     .bn_additional_data
+        //     .ttl
+        //     .get(&domain_vector.src_ip.unwrap())
+        //     .unwrap_or(&60),
+        // );
+        domain_vector.ttl_server = Some(64);
+        // Some(
+        //     *self
+        //         .model
+        //         .bn_additional_data
+        //         .ttl
+        //         .get(&domain_vector.dst_ip.unwrap())
+        //         .unwrap_or(&60),
+        // );
         Ok(iter::once(SeededData {
             seed: rng.next_u64(),
             data: domain_vector.into(),
