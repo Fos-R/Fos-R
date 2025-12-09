@@ -52,32 +52,32 @@ impl ModelsSource {
                     vec![
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/legacy/automata/mqtt.json",
-                            0
+                            1
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/legacy/automata/smtp.json",
-                            0
+                            1
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/legacy/automata/ssh.json",
-                            0
+                            1
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/legacy/automata/https.json",
-                            0
+                            1
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/legacy/automata/dns.json",
-                            0
+                            1
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/legacy/automata/ntp.json",
-                            0
+                            1
                         ))
                         .unwrap(),
                     ]
@@ -87,32 +87,32 @@ impl ModelsSource {
                     vec![
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/legacy/automata/mqtt.json",
-                            19
+                            22
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/legacy/automata/smtp.json",
-                            19
+                            22
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/legacy/automata/ssh.json",
-                            19
+                            22
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/legacy/automata/https.json",
-                            19
+                            22
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/legacy/automata/dns.json",
-                            19
+                            22
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/legacy/automata/ntp.json",
-                            19
+                            22
                         ))
                         .unwrap(),
                     ]
@@ -135,53 +135,58 @@ impl ModelsSource {
 
     pub(crate) fn get_bn(&self) -> std::io::Result<Vec<String>> {
         match &self {
-            ModelsSource::Legacy => Ok(if cfg!(debug_assertions) {
-                vec![
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/legacy/bn/bn_common.bifxml",
-                        0
-                    ))
-                    .unwrap(),
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/legacy/bn/bn_tcp.bifxml",
-                        0
-                    ))
-                    .unwrap(),
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/legacy/bn/bn_udp.bifxml",
-                        0
-                    ))
-                    .unwrap(),
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/legacy/bn/bn_additional_data.json",
-                        0
-                    ))
-                    .unwrap(),
-                ]
-            } else {
-                vec![
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/legacy/bn/bn_common.bifxml",
-                        19
-                    ))
-                    .unwrap(),
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/legacy/bn/bn_tcp.bifxml",
-                        19
-                    ))
-                    .unwrap(),
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/legacy/bn/bn_udp.bifxml",
-                        19
-                    ))
-                    .unwrap(),
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/legacy/bn/bn_additional_data.json",
-                        19
-                    ))
-                    .unwrap(),
-                ]
-            }),
+            ModelsSource::Legacy => Ok(
+                #[cfg(debug_assertions)]
+                {
+                    vec![
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/legacy/bn/bn_common.bifxml",
+                            1
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/legacy/bn/bn_tcp.bifxml",
+                            1
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/legacy/bn/bn_udp.bifxml",
+                            1
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/legacy/bn/bn_additional_data.json",
+                            1
+                        ))
+                        .unwrap(),
+                    ]
+                },
+                #[cfg(not(debug_assertions))]
+                {
+                    vec![
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/legacy/bn/bn_common.bifxml",
+                            22
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/legacy/bn/bn_tcp.bifxml",
+                            22
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/legacy/bn/bn_udp.bifxml",
+                            22
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/legacy/bn/bn_additional_data.json",
+                            22
+                        ))
+                        .unwrap(),
+                    ]
+                },
+            ),
             ModelsSource::UserDefined(path) => {
                 let p = Path::new(path);
                 Ok(vec![
@@ -196,11 +201,24 @@ impl ModelsSource {
 
     pub(crate) fn get_time_profile(&self) -> Result<String, String> {
         match &self {
-            ModelsSource::Legacy => Ok(String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "default_models/legacy/time_profile.json",
-                19
-            ))
-            .unwrap()),
+            ModelsSource::Legacy => Ok(
+                #[cfg(debug_assertions)]
+                {
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/legacy/time_profile.json",
+                        1
+                    ))
+                    .unwrap()
+                },
+                #[cfg(not(debug_assertions))]
+                {
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/legacy/time_profile.json",
+                        22
+                    ))
+                    .unwrap()
+                },
+            ),
             ModelsSource::UserDefined(path) => Ok(fs::read_to_string(
                 Path::new(path).join("time_profile.json").to_str().unwrap(),
             )
