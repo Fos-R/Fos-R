@@ -1,3 +1,5 @@
+use fosr_lib::models;
+
 use clap::{Parser, Subcommand, ValueEnum};
 use std::fmt;
 
@@ -35,6 +37,25 @@ pub enum InjectionAlgo {
 }
 
 impl fmt::Display for InjectionAlgo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", format!("{:?}", self).to_lowercase())
+    }
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+pub enum DefaultModels {
+    Legacy,
+}
+
+impl DefaultModels {
+    pub fn get_source(&self) -> models::ModelsSource {
+        match &self {
+            DefaultModels::Legacy => models::ModelsSource::Legacy,
+        }
+    }
+}
+
+impl fmt::Display for DefaultModels {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", format!("{:?}", self).to_lowercase())
     }
@@ -160,6 +181,18 @@ pub enum Command {
         jobs: Option<usize>,
         #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,
+        #[arg(
+            long,
+            default_value_t = DefaultModels::Legacy,
+            help = "Use a default model"
+        )]
+        default_models: DefaultModels,
+        // #[arg(
+        //     long,
+        //     help = "Use a custom model"
+        // )]
+        // custom_models: Option<String>,
+
         // #[arg(
         //     short,
         //     long,

@@ -1,11 +1,10 @@
+use crate::structs::*;
+
 use pnet::util::MacAddr;
 use serde::Deserialize;
-
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::net::Ipv4Addr;
-
-use crate::structs::*;
 
 #[derive(Debug)]
 /// The configuration file of the network and the hosts

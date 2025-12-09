@@ -1,3 +1,4 @@
+use crate::models;
 use crate::stats::Stats;
 use crate::structs::*;
 
@@ -10,7 +11,6 @@ use rand_distr::Poisson;
 use rand_distr::Uniform;
 use rand_pcg::Pcg32;
 use serde::Deserialize;
-use std::fs::File;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -130,7 +130,7 @@ impl BinBasedGenerator {
         seed: Option<u64>,
         net_injection: bool,
         flow_per_day: Option<u64>,
-        profile: TimeProfile,
+        profile: TimeModel,
         initial_ts: Duration,
         total_duration: Option<Duration>,
         dest_tz_offset: FixedOffset,
@@ -175,7 +175,7 @@ impl BinBasedGenerator {
         seed: Option<u64>,
         total_duration: Option<Duration>,
         flow_per_day: Option<u64>,
-        profile: TimeProfile,
+        profile: TimeModel,
         deterministic: bool,
     ) -> Self {
         let current_date = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
@@ -248,42 +248,15 @@ impl BinBasedGenerator {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(from = "Config")]
-pub struct TimeProfile {
+pub struct TimeModel {
     bins: Vec<u64>, // we assume the bins start at midnight (in the local dataset timezone)
     metadata: Metadata,
 }
 
-impl Default for TimeProfile {
-    fn default() -> Self {
-        if cfg!(debug_assertions) {
-            TimeProfile::import_from_str(include_str!("../default_models/time_profile.json"))
-                .unwrap()
-        } else {
-            TimeProfile::import_from_str(
-                &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                    "default_models/time_profile.json",
-                    19
-                ))
-                .unwrap(),
-            )
-            .unwrap()
-        }
-    }
-}
-
-impl TimeProfile {
-    pub fn from_file(filename: &str) -> std::io::Result<Self> {
-        let f = File::open(filename)?;
-        let profile: TimeProfile = serde_json::from_reader(f)?;
-        log::info!(
-            "Load time profile learned on {}",
-            profile.metadata.input_file
-        );
-        Ok(profile)
-    }
-
-    pub fn import_from_str(string: &str) -> std::io::Result<Self> {
-        let profile: TimeProfile = serde_json::from_str(string)?;
+impl TimeModel {
+    pub fn from_source(m: &models::ModelsSource) -> Result<Self, String> {
+        let profile: TimeModel = serde_json::from_str(&m.get_time_profile()?)
+            .map_err(|_| "Cannot parse the time model".to_string())?;
         log::info!(
             "Load time profile learned on {}",
             profile.metadata.input_file
@@ -292,9 +265,9 @@ impl TimeProfile {
     }
 }
 
-impl From<Config> for TimeProfile {
-    fn from(c: Config) -> TimeProfile {
-        TimeProfile {
+impl From<Config> for TimeModel {
+    fn from(c: Config) -> TimeModel {
+        TimeModel {
             bins: c.histogram,
             metadata: c.metadata,
         }

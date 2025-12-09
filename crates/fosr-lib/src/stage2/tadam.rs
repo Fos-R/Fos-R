@@ -1,11 +1,10 @@
+use crate::models;
 use crate::stage2::*;
+
 // use indicatif::{ProgressBar, ProgressStyle};
 use rand_core::*;
 use rand_pcg::Pcg32;
 use std::collections::HashMap;
-use std::ffi::OsStr;
-use std::fs;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 pub struct AutomataLibrary {
@@ -19,116 +18,131 @@ pub struct AutomataLibrary {
     icmp_automata: HashMap<L7Proto, automaton::TimedAutomaton<ICMPEdgeTuple>>,
 }
 
-impl Default for AutomataLibrary {
-    fn default() -> Self {
-        let mut lib = AutomataLibrary {
-            cons_tcp_automata: HashMap::new(),
-            cons_udp_automata: HashMap::new(),
-            cons_icmp_automata: HashMap::new(),
+// impl Default for AutomataLibrary {
+//     fn default() -> Self {
+//         let mut lib = AutomataLibrary {
+//             cons_tcp_automata: HashMap::new(),
+//             cons_udp_automata: HashMap::new(),
+//             cons_icmp_automata: HashMap::new(),
 
-            tcp_automata: HashMap::new(),
-            udp_automata: HashMap::new(),
-            icmp_automata: HashMap::new(),
-        };
+//             tcp_automata: HashMap::new(),
+//             udp_automata: HashMap::new(),
+//             icmp_automata: HashMap::new(),
+//         };
 
-        // let pb = ProgressBar::new(6);
-        // pb.set_style(
-        //     ProgressStyle::with_template(
-        //         "{spinner:.green} Automata initialization: {pos}/{len} {wide_bar}",
-        //     )
-        //     .unwrap(),
-        // );
+//         // let pb = ProgressBar::new(6);
+//         // pb.set_style(
+//         //     ProgressStyle::with_template(
+//         //         "{spinner:.green} Automata initialization: {pos}/{len} {wide_bar}",
+//         //     )
+//         //     .unwrap(),
+//         // );
 
-        #[cfg(debug_assertions)]
-        lib.import_from_str(include_str!("../../default_models/automata/mqtt.json"))
-            .unwrap();
-        #[cfg(not(debug_assertions))]
-        lib.import_from_str(
-            &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "default_models/automata/mqtt.json",
-                19
-            ))
-            .unwrap(),
-        )
-        .unwrap();
-        // pb.inc(1);
+//         #[cfg(debug_assertions)]
+//         lib.import_from_str(include_str!(
+//             "../../default_models/legacy/automata/mqtt.json"
+//         ))
+//         .unwrap();
+//         #[cfg(not(debug_assertions))]
+//         lib.import_from_str(
+//             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+//                 "default_models/automata/mqtt.json",
+//                 19
+//             ))
+//             .unwrap(),
+//         )
+//         .unwrap();
+//         // pb.inc(1);
 
-        #[cfg(debug_assertions)]
-        lib.import_from_str(include_str!("../../default_models/automata/smtp.json"))
-            .unwrap();
-        #[cfg(not(debug_assertions))]
-        lib.import_from_str(
-            &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "default_models/automata/smtp.json",
-                19
-            ))
-            .unwrap(),
-        )
-        .unwrap();
-        // pb.inc(1);
+//         #[cfg(debug_assertions)]
+//         lib.import_from_str(include_str!(
+//             "../../default_models/legacy/automata/smtp.json"
+//         ))
+//         .unwrap();
+//         #[cfg(not(debug_assertions))]
+//         lib.import_from_str(
+//             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+//                 "default_models/automata/smtp.json",
+//                 19
+//             ))
+//             .unwrap(),
+//         )
+//         .unwrap();
+//         // pb.inc(1);
 
-        #[cfg(debug_assertions)]
-        lib.import_from_str(include_str!("../../default_models/automata/ssh.json"))
-            .unwrap();
-        #[cfg(not(debug_assertions))]
-        lib.import_from_str(
-            &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "default_models/automata/ssh.json",
-                19
-            ))
-            .unwrap(),
-        )
-        .unwrap();
-        // pb.inc(1);
+//         #[cfg(debug_assertions)]
+//         lib.import_from_str(include_str!(
+//             "../../default_models/legacy/automata/ssh.json"
+//         ))
+//         .unwrap();
+//         #[cfg(not(debug_assertions))]
+//         lib.import_from_str(
+//             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+//                 "default_models/automata/ssh.json",
+//                 19
+//             ))
+//             .unwrap(),
+//         )
+//         .unwrap();
+//         // pb.inc(1);
 
-        #[cfg(debug_assertions)]
-        lib.import_from_str(include_str!("../../default_models/automata/https.json"))
-            .unwrap();
-        #[cfg(not(debug_assertions))]
-        lib.import_from_str(
-            &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "default_models/automata/https.json",
-                19
-            ))
-            .unwrap(),
-        )
-        .unwrap();
-        // pb.inc(1);
+//         #[cfg(debug_assertions)]
+//         lib.import_from_str(include_str!(
+//             "../../default_models/legacy/automata/https.json"
+//         ))
+//         .unwrap();
+//         #[cfg(not(debug_assertions))]
+//         lib.import_from_str(
+//             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+//                 "default_models/automata/https.json",
+//                 19
+//             ))
+//             .unwrap(),
+//         )
+//         .unwrap();
+//         // pb.inc(1);
 
-        #[cfg(debug_assertions)]
-        lib.import_from_str(include_str!("../../default_models/automata/dns.json"))
-            .unwrap();
-        #[cfg(not(debug_assertions))]
-        lib.import_from_str(
-            &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "default_models/automata/dns.json",
-                19
-            ))
-            .unwrap(),
-        )
-        .unwrap();
-        // pb.inc(1);
+//         #[cfg(debug_assertions)]
+//         lib.import_from_str(include_str!(
+//             "../../default_models/legacy/automata/dns.json"
+//         ))
+//         .unwrap();
+//         #[cfg(not(debug_assertions))]
+//         lib.import_from_str(
+//             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+//                 "default_models/automata/dns.json",
+//                 19
+//             ))
+//             .unwrap(),
+//         )
+//         .unwrap();
+//         // pb.inc(1);
 
-        #[cfg(debug_assertions)]
-        lib.import_from_str(include_str!("../../default_models/automata/ntp.json"))
-            .unwrap();
-        #[cfg(not(debug_assertions))]
-        lib.import_from_str(
-            &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                "default_models/automata/ntp.json",
-                19
-            ))
-            .unwrap(),
-        )
-        .unwrap();
-        // pb.inc(1);
+//         #[cfg(debug_assertions)]
+//         lib.import_from_str(include_str!(
+//             "../../default_models/legacy/automata/ntp.json"
+//         ))
+//         .unwrap();
+//         #[cfg(not(debug_assertions))]
+//         lib.import_from_str(
+//             &String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+//                 "default_models/automata/ntp.json",
+//                 19
+//             ))
+//             .unwrap(),
+//         )
+//         .unwrap();
+//         // pb.inc(1);
 
-        lib
-    }
-}
+//         lib
+//     }
+// }
 
 impl AutomataLibrary {
-    pub fn from_dir(directory_name: &str) -> Self {
+    pub fn from_source(models: &models::ModelsSource) -> Result<Self, String> {
+        let strings = models
+            .get_automata()
+            .map_err(|_| "Cannot open the automata files".to_string())?;
         let mut nb = 0;
         let mut lib = AutomataLibrary {
             cons_tcp_automata: HashMap::new(),
@@ -148,34 +162,21 @@ impl AutomataLibrary {
         //     )
         //     .unwrap(),
         // );
-        let paths = fs::read_dir(directory_name).expect("Cannot read directory");
-        for p in paths {
-            let p = p.expect("Cannot open path").path();
-            if !p.is_dir() && p.extension() == Some(OsStr::new("json")) {
-                match lib.import_from_file(&p) {
-                    Ok(()) => {
-                        log::debug!("Automaton {:?} is loaded", p.file_name().unwrap());
-                        nb += 1
-                    }
-                    Err(s) => log::error!(
-                        "Could not load automaton {:?} ({})",
-                        p.file_name().unwrap(),
-                        s
-                    ),
+        for s in strings {
+            match lib.import_from_str(&s) {
+                Ok(proto) => {
+                    log::debug!("Automaton {proto:?} is loaded");
+                    nb += 1
                 }
+                Err(s) => log::error!("Could not load automaton ({})", s),
             }
             // pb.inc(1);
         }
         log::info!("{nb} automata have been loaded");
-        lib
+        Ok(lib)
     }
 
-    pub fn import_from_file(&mut self, filename: &PathBuf) -> std::io::Result<()> {
-        let string = fs::read_to_string(filename)?;
-        self.import_from_str(&string)
-    }
-
-    pub fn import_from_str(&mut self, string: &str) -> std::io::Result<()> {
+    pub fn import_from_str(&mut self, string: &str) -> std::io::Result<L7Proto> {
         let a: automaton::JsonAutomaton = serde_json::from_str(string)?;
         let l7proto = a.l7protocol;
         match a.protocol {
@@ -207,7 +208,7 @@ impl AutomataLibrary {
                 self.cons_icmp_automata.insert(l7proto, a.into());
             }
         }
-        Ok(())
+        Ok(l7proto)
     }
 }
 
