@@ -8,6 +8,7 @@ use fosr_lib::stats::Target;
 use std::time::Duration;
 use std::time::UNIX_EPOCH;
 use fosr_lib::stage2::tadam::TadamGenerator;
+use fosr_lib::models;
 use fosr_lib::stage3;
 use fosr_lib::stage0;
 use fosr_lib::stage1;
@@ -23,57 +24,6 @@ use chrono::Offset;
 use chrono::TimeZone;
 use chrono_tz::Tz;
 use indicatif::HumanBytes;
-
-struct Profile {
-    automata: stage2::tadam::AutomataLibrary,
-    // patterns: stage1::flowchronicle::PatternSet,
-    bn: stage1::bayesian_networks::BayesianModel,
-    time_bins: stage0::TimeProfile,
-}
-
-impl Profile {
-    fn load(profile: Option<&str>) -> Self {
-        if let Some(path) = profile {
-            Profile {
-                automata: stage2::tadam::AutomataLibrary::from_dir(
-                    Path::new(path)
-                        .join("automata")
-                        .to_str()
-                        .expect("No \"automata\" directory found!"),
-                ),
-                // config: config::import_config(
-                //     &fs::read_to_string(Path::new(path).join("profile.toml"))
-                //         .expect("Cannot access the configuration file."),
-                // ),
-                bn: stage1::bayesian_networks::BayesianModel::load().unwrap(), // TODO indiquer le chemin
-                // patterns: stage1::flowchronicle::PatternSet::from_file(
-                //     Path::new(path)
-                //         .join("patterns/patterns.json")
-                //         .to_str()
-                //         .unwrap(),
-                // )
-                // .expect("Cannot load patterns"),
-                time_bins: stage0::TimeProfile::from_file(
-                    Path::new(path).join("time_profile.json").to_str().unwrap(),
-                )
-                .unwrap(),
-            }
-        } else {
-            log::info!("Load default profile");
-            Profile {
-                automata: stage2::tadam::AutomataLibrary::default(),
-                bn: stage1::bayesian_networks::BayesianModel::load().unwrap(), // TODO
-                // patterns: stage1::flowchronicle::PatternSet::default(),
-                time_bins: stage0::TimeProfile::default(),
-            }
-        }
-    }
-
-    fn load_config(&mut self, content: &str) {
-        let config = config::import_config(content);
-        self.bn.apply_config(&config).expect("Fatal error");
-    }
-}
 
 struct ExportParams {
     /// the output file path
@@ -103,12 +53,14 @@ pub fn generate(seed: Option<u64>,
                 duration: Option<String>,
                 taint: bool,
 ) {
+
     // load the models
-    let model: Option<String> = None;
-    let mut model = Profile::load(model.as_deref());
+    let source = models::ModelsSource::Legacy;
+    let mut model = models::Models::from_source(source).unwrap();
     if let Some(config) = profile {
-        model.load_config(&config);
+        model = model.with_config(&config).unwrap();
     }
+
     let automata_library = Arc::new(model.automata);
     // let patterns = Arc::new(model.patterns);
     let bn = Arc::new(model.bn);
