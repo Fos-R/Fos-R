@@ -24,6 +24,10 @@
 - Better library documentation
 - Bugfixes
 
+### Removed
+
+- Pcap2flow mode
+
 ## v0.1.2
 
 ### Added
