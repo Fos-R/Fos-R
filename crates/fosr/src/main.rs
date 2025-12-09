@@ -1,7 +1,7 @@
 use fosr_lib::export;
 #[cfg(feature = "net_injection")]
 use fosr_lib::inject;
-use fosr_lib::pcap2flow;
+use fosr_lib::utils;
 use fosr_lib::stage0;
 use fosr_lib::stage1;
 use fosr_lib::stage2;
@@ -111,144 +111,144 @@ fn main() {
     let args = cmd::Args::parse();
 
     match args.command {
-        cmd::Command::Pcap2Flow {
-            input_pcap,
-            output_csv,
-            include_payloads,
-        } => {
-            let flows = pcap2flow::process_file(&input_pcap);
-            pcap2flow::export_stats(&output_csv, flows, include_payloads);
-        }
-        #[cfg(feature = "net_injection")]
-        cmd::Command::Inject {
-            #[cfg(all(target_os = "linux", feature = "iptables"))]
-            stealthy,
-            seed,
-            // profile,
-            outfile,
-            no_order_pcap,
-            flow_per_day,
-            net_enabler,
-            duration,
-            deterministic,
-            injection_algo,
-        } => {
-            #[cfg(not(all(target_os = "linux", feature = "iptables")))]
-            let stealthy = false;
+        // cmd::Command::Pcap2Flow {
+        //     input_pcap,
+        //     output_csv,
+        //     include_payloads,
+        // } => {
+        //     let flows = pcap2flow::process_file(&input_pcap);
+        //     pcap2flow::export_stats(&output_csv, flows, include_payloads);
+        // }
+        // #[cfg(feature = "net_injection")]
+        // cmd::Command::Inject {
+        //     #[cfg(all(target_os = "linux", feature = "iptables"))]
+        //     stealthy,
+        //     seed,
+        //     // profile,
+        //     outfile,
+        //     no_order_pcap,
+        //     flow_per_day,
+        //     net_enabler,
+        //     duration,
+        //     deterministic,
+        //     injection_algo,
+        // } => {
+        //     #[cfg(not(all(target_os = "linux", feature = "iptables")))]
+        //     let stealthy = false;
 
-            // Extract all IPv4 local interfaces (except loopback)
-            let extract_addr = |iface: datalink::NetworkInterface| {
-                iface
-                    .ips
-                    .into_iter()
-                    .filter(IpNetwork::is_ipv4)
-                    .map(|i| match i {
-                        IpNetwork::V4(data) => data.ip(),
-                        _ => unreachable!(),
-                    })
-            };
-            // the local interfaces are used by the inject module and used to identify local IPs
-            // we do not include loopback interfaces or interfaces without an IPv4 address
-            let local_interfaces: Vec<datalink::NetworkInterface> = datalink::interfaces()
-                .into_iter()
-                .filter(|iface| !iface.is_loopback() && iface.ips.iter().any(IpNetwork::is_ipv4))
-                .collect();
+        //     // Extract all IPv4 local interfaces (except loopback)
+        //     let extract_addr = |iface: datalink::NetworkInterface| {
+        //         iface
+        //             .ips
+        //             .into_iter()
+        //             .filter(IpNetwork::is_ipv4)
+        //             .map(|i| match i {
+        //                 IpNetwork::V4(data) => data.ip(),
+        //                 _ => unreachable!(),
+        //             })
+        //     };
+        //     // the local interfaces are used by the inject module and used to identify local IPs
+        //     // we do not include loopback interfaces or interfaces without an IPv4 address
+        //     let local_interfaces: Vec<datalink::NetworkInterface> = datalink::interfaces()
+        //         .into_iter()
+        //         .filter(|iface| !iface.is_loopback() && iface.ips.iter().any(IpNetwork::is_ipv4))
+        //         .collect();
 
-            // for each interface, we extract its addresses
-            let local_ips: Vec<Ipv4Addr> = local_interfaces
-                .clone()
-                .into_iter()
-                .flat_map(extract_addr)
-                .filter(|i| !i.is_loopback())
-                .collect();
-            log::debug!("IPv4 interfaces: {:?}", &local_ips);
+        //     // for each interface, we extract its addresses
+        //     let local_ips: Vec<Ipv4Addr> = local_interfaces
+        //         .clone()
+        //         .into_iter()
+        //         .flat_map(extract_addr)
+        //         .filter(|i| !i.is_loopback())
+        //         .collect();
+        //     log::debug!("IPv4 interfaces: {:?}", &local_ips);
 
-            // identify the role of the current host
-            let profile: Option<String> = None;
-            let profile = Profile::load(profile.as_deref());
-            // log::debug!("Configuration: {:?}", profile.config);
-            assert!(!local_ips.is_empty());
-            let mut has_role = false;
-            // TODO
-            // for ip in local_ips.iter() {
-            //     if let Some(s) = profile.config.get_os(ip) {
-            //         log::info!("Computer role: {s}");
-            //     }
-            //     if profile.config.exists(ip) {
-            //         has_role = true;
-            //     }
-            // }
-            if !has_role {
-                log::error!("This computer has no traffic to inject in this profile! Exiting.");
-                process::exit(1);
-            }
+        //     // identify the role of the current host
+        //     let profile: Option<String> = None;
+        //     let profile = Profile::load(profile.as_deref());
+        //     // log::debug!("Configuration: {:?}", profile.config);
+        //     assert!(!local_ips.is_empty());
+        //     let mut has_role = false;
+        //     // TODO
+        //     // for ip in local_ips.iter() {
+        //     //     if let Some(s) = profile.config.get_os(ip) {
+        //     //         log::info!("Computer role: {s}");
+        //     //     }
+        //     //     if profile.config.exists(ip) {
+        //     //         has_role = true;
+        //     //     }
+        //     // }
+        //     if !has_role {
+        //         log::error!("This computer has no traffic to inject in this profile! Exiting.");
+        //         process::exit(1);
+        //     }
 
-            // load the models
-            let s0 = stage0::BinBasedGenerator::new_for_injection(
-                seed,
-                duration
-                    .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed.")),
-                flow_per_day,
-                profile.time_bins,
-                deterministic,
-            );
+        //     // load the models
+        //     let s0 = stage0::BinBasedGenerator::new_for_injection(
+        //         seed,
+        //         duration
+        //             .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed.")),
+        //         flow_per_day,
+        //         profile.time_bins,
+        //         deterministic,
+        //     );
 
-            let automata_library = Arc::new(profile.automata);
-            // let patterns = Arc::new(profile.patterns);
-            let bn = Arc::new(profile.bn);
+        //     let automata_library = Arc::new(profile.automata);
+        //     // let patterns = Arc::new(profile.patterns);
+        //     let bn = Arc::new(profile.bn);
 
-            let s1 = stage1::bayesian_networks::BNGenerator::new(bn, false);
-            // let s1 =
-            // stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
-            let s1 = stage1::FilterForOnline::new(local_ips.clone(), s1);
-            let s2 = stage2::tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(!stealthy);
+        //     let s1 = stage1::bayesian_networks::BNGenerator::new(bn, false);
+        //     // let s1 =
+        //     // stage1::flowchronicle::FCGenerator::new(patterns, profile.config.clone(), false);
+        //     let s1 = stage1::FilterForOnline::new(local_ips.clone(), s1);
+        //     let s2 = stage2::tadam::TadamGenerator::new(automata_library);
+        //     let s3 = stage3::Stage3::new(!stealthy);
 
-            // run
-            log::info!("Network enabler: {net_enabler:?}");
-            match net_enabler {
-                #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
-                cmd::NetEnabler::Ebpf => {
-                    let s4net = InjectParam {
-                        net_enabler: inject::ebpf::EBPFNetEnabler::new(false, &local_interfaces),
-                        injection_algo,
-                    };
-                    run_efficient(
-                        local_ips,
-                        outfile.map(|o| ExportParams {
-                            outfile: o,
-                            order_pcap: !no_order_pcap,
-                        }),
-                        s0,
-                        (s1, 1),
-                        (s2, 1),
-                        (s3, 1),
-                        Arc::new(stats::Stats::default()),
-                        Some(s4net),
-                    );
-                }
-                #[cfg(all(target_os = "linux", feature = "iptables"))]
-                cmd::NetEnabler::Iptables => {
-                    let s4net = InjectParam {
-                        net_enabler: inject::iptables::IPTablesNetEnabler::new(!stealthy, false),
-                        injection_algo,
-                    };
-                    run_efficient(
-                        local_ips,
-                        outfile.map(|o| ExportParams {
-                            outfile: o,
-                            order_pcap: !no_order_pcap,
-                        }),
-                        s0,
-                        (s1, 1),
-                        (s2, 1),
-                        (s3, 1),
-                        Arc::new(stats::Stats::default()),
-                        Some(s4net),
-                    );
-                }
-            };
-        }
+        //     // run
+        //     log::info!("Network enabler: {net_enabler:?}");
+        //     match net_enabler {
+        //         #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
+        //         cmd::NetEnabler::Ebpf => {
+        //             let s4net = InjectParam {
+        //                 net_enabler: inject::ebpf::EBPFNetEnabler::new(false, &local_interfaces),
+        //                 injection_algo,
+        //             };
+        //             run_efficient(
+        //                 local_ips,
+        //                 outfile.map(|o| ExportParams {
+        //                     outfile: o,
+        //                     order_pcap: !no_order_pcap,
+        //                 }),
+        //                 s0,
+        //                 (s1, 1),
+        //                 (s2, 1),
+        //                 (s3, 1),
+        //                 Arc::new(stats::Stats::default()),
+        //                 Some(s4net),
+        //             );
+        //         }
+        //         #[cfg(all(target_os = "linux", feature = "iptables"))]
+        //         cmd::NetEnabler::Iptables => {
+        //             let s4net = InjectParam {
+        //                 net_enabler: inject::iptables::IPTablesNetEnabler::new(!stealthy, false),
+        //                 injection_algo,
+        //             };
+        //             run_efficient(
+        //                 local_ips,
+        //                 outfile.map(|o| ExportParams {
+        //                     outfile: o,
+        //                     order_pcap: !no_order_pcap,
+        //                 }),
+        //                 s0,
+        //                 (s1, 1),
+        //                 (s2, 1),
+        //                 (s3, 1),
+        //                 Arc::new(stats::Stats::default()),
+        //                 Some(s4net),
+        //             );
+        //         }
+        //     };
+        // }
         cmd::Command::CreatePcap {
             seed,
             outfile,
@@ -395,7 +395,7 @@ fn main() {
             }
         }
         cmd::Command::Untaint { input, output } => {
-            pcap2flow::untaint_file(&input, &output);
+            utils::untaint_file(&input, &output);
         }
     };
 }

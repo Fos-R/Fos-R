@@ -4,4 +4,4 @@ Fos-R generates data with a four-staged generation, as indicated in the schema b
 
 ![](fosr-schema.png)
 
-If you want to know more about the science behind Fos-R, check the [related publications](./index.html#related-publications).
+If you want to know more about the science behind Fos-R, check the [publications](./index.html#publications).
