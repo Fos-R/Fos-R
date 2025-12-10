@@ -4,24 +4,41 @@
 
 ### Added
 
-- Faster (up to ~5x) generation
+#### fosr-lib
+
 - New stage 0 with realistic time distribution
 - New stage 1 with Bayesian networks
 - New default models for stages 0 and 1
+- Models customizing with configuration
+
+#### fosr
+
+- Faster (up to ~5x) generation
 - Added `--tz` option and timezone support more generally
-- Added --jobs option
+- Added `--jobs` option
+- Added `--default-models` and `--custom-models` options
 - Two generation profiles: fast or efficient
+
+#### other
+
 - A Zeek script to extract features
 
 ### Changed
 
-- "fosr" crate split into "fosr-lib" and "fosr"
-- "stage4" module renamed to "inject"
-- Create the `export` module
-- No network injection by default
+#### fosr-lib
+
+- `fosr` crate split into `fosr-lib` and `fosr`
+- `stage4` module renamed to `inject`
+- Created the `export` module
 - Significantly modified the configuration file format
-- Pcap files are now sorted by default
+- Transformed panics into `Result`s
 - Better library documentation
+- Bugfixes
+
+#### fosr
+
+- No network injection by default
+- Pcap files are now sorted by default
 - Bugfixes
 
 ### Removed
