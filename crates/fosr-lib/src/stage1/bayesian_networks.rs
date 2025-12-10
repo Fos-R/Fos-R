@@ -384,6 +384,8 @@ impl BayesianModel {
 
         let bn_common = bn_from_bif(bif_common, &bn_additional_data)?;
 
+        log::info!("Bayesian networks have been loaded");
+
         // log::info!("{bn_common}");
         let mut model = BayesianModel {
             bn: bn_common,

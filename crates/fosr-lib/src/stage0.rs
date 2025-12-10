@@ -258,7 +258,7 @@ impl TimeModel {
         let profile: TimeModel = serde_json::from_str(&m.get_time_profile()?)
             .map_err(|_| "Cannot parse the time model".to_string())?;
         log::info!(
-            "Load time profile learned on {}",
+            "Time model learned on {} have been loaded",
             profile.metadata.input_file
         );
         Ok(profile)

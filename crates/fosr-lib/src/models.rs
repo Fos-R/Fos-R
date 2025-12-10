@@ -124,7 +124,7 @@ impl ModelsSource {
                 for p in paths {
                     let p = p.expect("Cannot open path").path();
                     if !p.is_dir() && p.extension() == Some(OsStr::new("json")) {
-                        let string = fs::read_to_string(p.file_name().unwrap())?;
+                        let string = fs::read_to_string(p)?;
                         automata.push(string);
                     }
                 }
