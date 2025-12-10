@@ -128,7 +128,11 @@ pub enum Command {
     #[clap(group(
     clap::ArgGroup::new("target")
         .required(true)
-        .args(&["duration", "packets_count"]),
+        .args(&["duration", "packets_count"])),
+    group(
+    clap::ArgGroup::new("models")
+        .args(&["default_models", "custom_models"]),
+
     ))]
     CreatePcap {
         #[arg(
@@ -187,19 +191,11 @@ pub enum Command {
             help = "Use a default model"
         )]
         default_models: DefaultModels,
-        // #[arg(
-        //     long,
-        //     help = "Use a custom model"
-        // )]
-        // custom_models: Option<String>,
-
-        // #[arg(
-        //     short,
-        //     long,
-        //     default_value = None,
-        //     help = "Path to the profile with the models and the configuration"
-        // )]
-        // profile: Option<String>,
+        #[arg(
+            long,
+            help = "Use a custom model"
+        )]
+        custom_models: Option<String>,
         #[arg(
             long,
             default_value = None,

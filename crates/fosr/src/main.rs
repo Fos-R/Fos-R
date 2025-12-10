@@ -71,9 +71,17 @@ fn main() {
             config,
             taint,
             default_models,
+            custom_models,
         } => {
             // load the models
-            let mut model = models::Models::from_source(default_models.get_source()).unwrap();
+            let source =
+                if let Some(custom_models) = custom_models {
+                    models::ModelsSource::UserDefined(custom_models)
+                } else {
+                    default_models.get_source()
+                };
+
+            let mut model = models::Models::from_source(source).unwrap();
             if let Some(config) = config {
                 model = model.with_config(&config).unwrap();
             }
