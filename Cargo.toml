@@ -5,6 +5,6 @@ exclude = ["/dev","/learning","/resources","/public"]
 default-members = ["crates/fosr"]
 
 [profile.release]
-debug = true
-# strip = true
-# lto = true
+# debug = true
+strip = true
+lto = true
