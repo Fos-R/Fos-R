@@ -23,6 +23,8 @@ Fos-R is a high-quality and high-throughput network traffic generator based on A
 
 # Get Fos-R
 
+The sources are available on the [GitLab repository](https://gitlab.inria.fr/pirat-public/Fos-R) or the [GitHub mirror](https://github.com/Fos-R/Fos-R).
+
 ## Cargo features
 
 Fos-R make use of Cargo features for conditional compilation. The available features:
