@@ -1,9 +1,9 @@
-use crate::ui::generate::{generate, Params};
+use crate::ui::generate::{Params, generate};
 use eframe::egui;
 use eframe::egui::{SliderClamping, Widget};
 use rfd::FileHandle;
 use std::io::Error;
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::{Receiver, channel};
 use std::time::Duration;
 
 // WASM-specific imports
@@ -47,7 +47,11 @@ fn duration_to_slider(d: Duration) -> f32 {
 
     let numerator = secs.ln() - min.ln();
     let denominator = max.ln() - min.ln();
-    let v = if denominator == 0.0 { 0.0 } else { numerator / denominator };
+    let v = if denominator == 0.0 {
+        0.0
+    } else {
+        numerator / denominator
+    };
     v.clamp(0.0, 1.0) as f32
 }
 
@@ -71,6 +75,26 @@ fn slider_from_duration_string(duration_str: String) -> Option<f32> {
 }
 
 /**
+ * Structure to handle inputs errors from the user
+ */
+#[derive(Default, Clone)]
+pub struct FieldValidation {
+    pub error: Option<String>,
+}
+
+impl FieldValidation {
+    pub fn set_ok(&mut self) {
+        self.error = None;
+    }
+    pub fn set_err(&mut self, msg: impl Into<String>) {
+        self.error = Some(msg.into());
+    }
+    pub fn is_ok(&self) -> bool {
+        self.error.is_none()
+    }
+}
+
+/**
  * Represents the state of the generation tab.
  */
 pub struct GenerationState {
@@ -86,6 +110,10 @@ pub struct GenerationState {
     pub progress_receiver: Option<Receiver<f32>>,
     pub pcap_bytes: Option<Vec<u8>>,
     pub pcap_receiver: Option<Receiver<Vec<u8>>>,
+    pub duration_validation: FieldValidation,
+    pub start_time_validation: FieldValidation,
+    pub seed_validation: FieldValidation,
+    pub packets_count_validation: FieldValidation,
 }
 
 impl Default for GenerationState {
@@ -116,8 +144,77 @@ impl Default for GenerationState {
             progress_receiver: None,
             pcap_bytes: None,
             pcap_receiver: None,
+            duration_validation: FieldValidation::default(),
+            start_time_validation: FieldValidation::default(),
+            seed_validation: FieldValidation::default(),
+            packets_count_validation: FieldValidation::default(),
         }
     }
+}
+
+/**
+ * display the error in red
+ */
+fn show_field_error(ui: &mut egui::Ui, validation: &FieldValidation) {
+    if let Some(msg) = &validation.error {
+        ui.add_space(6.0);
+        ui.colored_label(egui::Color32::RED, msg);
+    }
+}
+
+fn validate_duration(duration_str: &str) -> Result<Duration, String> {
+    let d = humantime::parse_duration(duration_str).map_err(|_| "invalid value".to_string())?;
+
+    if d < DURATION_MIN || d > DURATION_MAX {
+        return Err(format!(
+            "out of range ({} – {})",
+            humantime::format_duration(DURATION_MIN),
+            humantime::format_duration(DURATION_MAX),
+        ));
+    }
+    Ok(d)
+}
+
+fn validate_start_time(input: &str) -> Result<(), String> {
+    let s = input.trim();
+    if s.is_empty() {
+        return Err("invalid value".to_string());
+    }
+
+    // 1) RFC3339 (ex: 2025-01-01T00:00:00Z)
+    if humantime::parse_rfc3339_weak(s).is_ok() {
+        return Ok(());
+    }
+
+    // 2) timestamp (seconds since epoch)
+    if s.parse::<u64>().is_ok() {
+        return Ok(());
+    }
+
+    Err("invalid value".to_string())
+}
+
+fn validate_optional_u64(input: &str) -> Result<Option<u64>, String> {
+    let s = input.trim();
+    if s.is_empty() {
+        return Ok(None);
+    }
+    s.parse::<u64>()
+        .map(Some)
+        .map_err(|_| "invalid value".to_string())
+}
+
+fn validate_optional_u64_gt0(input: &str) -> Result<Option<u64>, String> {
+    let s = input.trim();
+    if s.is_empty() {
+        return Ok(None);
+    }
+
+    let n = s.parse::<u64>().map_err(|_| "invalid value".to_string())?;
+    if n == 0 {
+        return Err("must be > 0".to_string());
+    }
+    Ok(Some(n))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -146,12 +243,10 @@ fn save_file_desktop(data: &[u8], file_name: &str) -> Result<FileHandle, Error> 
         .map(|path| FileHandle::from(path));
 
     match result {
-        Some(file_handle) => {
-            match std::fs::write(file_handle.path(), data) {
-                Ok(_) => Ok(file_handle),
-                Err(e) => Err(e),
-            }
-        }
+        Some(file_handle) => match std::fs::write(file_handle.path(), data) {
+            Ok(_) => Ok(file_handle),
+            Err(e) => Err(e),
+        },
         None => Err(Error::new(std::io::ErrorKind::Other, "No file selected")),
     }
 }
@@ -162,16 +257,16 @@ async fn save_file_wasm(data: &[u8], file_name: &str) -> Result<FileHandle, Erro
         .save_file()
         .await;
     match result {
-        Some(file_handle) => {
-            match file_handle.write(data).await {
-                Ok(_) => Ok(file_handle),
-                Err(e) => Err(e),
-            }
-        }
-        None => Err(std::io::Error::new(std::io::ErrorKind::Other, "No file selected")),
+        Some(file_handle) => match file_handle.write(data).await {
+            Ok(_) => Ok(file_handle),
+            Err(e) => Err(e),
+        },
+        None => Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "No file selected",
+        )),
     }
 }
-
 
 pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationState) {
     ui.add_space(5.0);
@@ -220,7 +315,8 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
         }
 
         // Display the filename of the picked file, or a placeholder
-        let filename = state.picked_config_file
+        let filename = state
+            .picked_config_file
             .as_ref()
             .map(|file| file.file_name())
             .unwrap_or("No file selected".to_string());
@@ -228,7 +324,8 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
         // On desktop: filename with its full path on hover, on WASM: just the filename
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let path_text = state.picked_config_file
+            let path_text = state
+                .picked_config_file
                 .as_ref()
                 .map(|file| file.path().to_string_lossy().to_string())
                 .unwrap_or("Select a configuration file".to_string());
@@ -260,14 +357,22 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
 
         let response = egui::TextEdit::singleline(&mut state.params.duration)
             .desired_width(100.0)
+            .hint_text("ex: 30m, 1h, 2d")
             .ui(ui);
 
         if response.changed() {
-            if let Some(value) = slider_from_duration_string(state.params.duration.clone()) {
-                state.duration_slider_value = value;
-                state.params.duration = duration_string_from_slider(state.duration_slider_value);
+            match validate_duration(&state.params.duration) {
+                Ok(d) => {
+                    state.duration_validation.set_ok();
+                    state.duration_slider_value = duration_to_slider(d);
+                }
+                Err(msg) => {
+                    state.duration_validation.set_err(msg);
+                }
             }
         }
+
+        show_field_error(ui, &state.duration_validation);
     });
 
     ui.horizontal(|ui| {
@@ -279,7 +384,9 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
         );
 
         if response.changed() {
-            state.params.duration = duration_string_from_slider(state.duration_slider_value);
+            let s = duration_string_from_slider(state.duration_slider_value);
+            state.params.duration = s;
+            state.duration_validation.set_ok();
         }
     });
 
@@ -288,9 +395,19 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
     ui.horizontal(|ui| {
         ui.label("Start time");
 
-        egui::TextEdit::singleline(&mut state.params.start_time)
+        let response = egui::TextEdit::singleline(&mut state.params.start_time)
             .desired_width(150.0)
+            .hint_text("RFC3339 (…Z) or unix seconds")
             .ui(ui);
+
+        if response.changed() {
+            match validate_start_time(&state.params.start_time) {
+                Ok(()) => state.start_time_validation.set_ok(),
+                Err(msg) => state.start_time_validation.set_err(msg),
+            }
+        }
+
+        show_field_error(ui, &state.start_time_validation);
     });
 
     ui.add_space(10.0);
@@ -301,23 +418,23 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
         let response = ui.add(
             egui::TextEdit::singleline(&mut state.seed_input)
                 .hint_text("leave empty for random")
-                .desired_width(160.0)
+                .desired_width(160.0),
         );
 
         if response.changed() {
             // Convert String to Option<u64>
-            state.params.seed = if state.seed_input.trim().is_empty() {
-                None
-            } else {
-                match state.seed_input.trim().parse::<u64>() {
-                    Ok(n) => Some(n),
-                    Err(e) => {
-                        eprintln!("Failed to parse seed '{}': {e}", state.seed_input.trim());
-                        None
-                    }
+            match validate_optional_u64(&state.seed_input) {
+                Ok(value) => {
+                    state.seed_validation.set_ok();
+                    state.params.seed = value;
                 }
-            };
+                Err(msg) => {
+                    state.seed_validation.set_err(msg);
+                }
+            }
         }
+
+        show_field_error(ui, &state.seed_validation);
     });
 
     ui.add_space(10.0);
@@ -328,25 +445,24 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
         let response = ui.add(
             egui::TextEdit::singleline(&mut state.packets_count_input)
                 .hint_text("leave empty for default")
-                .desired_width(160.0)
+                .desired_width(160.0),
         );
 
         if response.changed() {
             // Convert string to Option<u64>
-            state.params.packets_count = if state.packets_count_input.trim().is_empty() {
-                None
-            } else {
-                match state.packets_count_input.trim().parse::<u64>() {
-                    Ok(n) => Some(n),
-                    Err(e) => {
-                        eprintln!("Failed to parse packets count '{}': {e}", state.packets_count_input.trim());
-                        None
-                    }
+            match validate_optional_u64_gt0(&state.packets_count_input) {
+                Ok(value) => {
+                    state.packets_count_validation.set_ok();
+                    state.params.packets_count = value;
                 }
-            };
+                Err(msg) => {
+                    state.packets_count_validation.set_err(msg);
+                }
+            }
         }
-    });
 
+        show_field_error(ui, &state.packets_count_validation);
+    });
 
     ui.add_space(15.0);
 
@@ -356,12 +472,14 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
 
     ui.add_space(20.0);
 
-    ui.horizontal(|ui| {
+    let can_generate = state.duration_validation.is_ok()
+        && state.start_time_validation.is_ok()
+        && state.seed_validation.is_ok()
+        && state.packets_count_validation.is_ok();
+
+    ui.add_enabled_ui(can_generate, |ui| {
         if ui.button("Generate").clicked() {
-            println!(
-                "Generate button clicked with params: {:?}",
-                state.params
-            );
+            println!("Generate button clicked with params: {:?}", state.params);
 
             // Reset the progress value
             state.progress = 0.0;
@@ -388,8 +506,13 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
             {
                 wasm_bindgen_futures::spawn_local(async move {
                     generate(
-                        seed, profile, packets_count, order_pcap,
-                        start_time, duration, taint,
+                        seed,
+                        profile,
+                        packets_count,
+                        order_pcap,
+                        start_time,
+                        duration,
+                        taint,
                         Some(progress_sender),
                         Some(pcap_sender),
                     );
@@ -401,8 +524,13 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
             {
                 std::thread::spawn(move || {
                     generate(
-                        seed, profile, packets_count, order_pcap,
-                        start_time, duration, taint,
+                        seed,
+                        profile,
+                        packets_count,
+                        order_pcap,
+                        start_time,
+                        duration,
+                        taint,
                         Some(progress_sender),
                         Some(pcap_sender),
                     );
@@ -428,7 +556,6 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
             }
         }
 
-
         if state.pcap_bytes.is_some() && state.progress == 1.0 {
             #[cfg(not(target_arch = "wasm32"))]
             let save_button_label = "Save";
@@ -442,7 +569,10 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
                     let data = pcap_bytes.as_ref().unwrap().as_slice();
                     match save_file_desktop(data, &state.params.outfile) {
                         Ok(file_handle) => {
-                            println!("Successfully wrote to file: {}", file_handle.path().to_string_lossy());
+                            println!(
+                                "Successfully wrote to file: {}",
+                                file_handle.path().to_string_lossy()
+                            );
                         }
                         Err(e) => {
                             eprintln!("Failed to save file: {:?}", e);
