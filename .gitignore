@@ -3,3 +3,7 @@
 .vagrant/
 *.pcap
 learning/tadam_*
+.idea/
+.DS_Store
+public/fosr_gui.js
+public/fosr_gui_bg.wasm

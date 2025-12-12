@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fos-R GUI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            min-height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        #page-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        #canvas-wrapper {
+            position: relative;
+            width: 600px;
+            height: 500px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        #loading_text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #333;
+            z-index: 10;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            opacity: 0.8;
+            max-width: 600px;
+        }
+
+        footer p {
+            margin-bottom: 10px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            #canvas-wrapper {
+                width: 100%;
+                min-width: 400px;
+                height: 500px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #canvas-wrapper {
+                min-width: 350px;
+                height: 450px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .subtitle {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="page-container">
+    <header>
+        <h1>🚀 Fos-R GUI</h1>
+        <p class="subtitle">Graphical interface for Fos-R</p>
+    </header>
+
+    <div id="canvas-wrapper">
+        <div id="loading_text">Loading application...</div>
+        <canvas id="fosr_gui_canvas"></canvas>
+    </div>
+</div>
+
+<script type="module">
+    // Import the WASM initializer and start function.
+    import init, { start } from './fosr_gui.js';
+
+    async function run() {
+        // 1. Initialize the WASM module
+        await init();
+
+        // 2. Start the application, passing the canvas ID
+        await start('fosr_gui_canvas');
+
+        // 3. Remove the loading text once initialization is complete
+        const loadingText = document.getElementById('loading_text');
+        if (loadingText) {
+            loadingText.remove();
+        }
+    }
+
+    run().catch(error => {
+        console.error('Failed to start WASM application:', error);
+        // Update the loading text to show an error message
+        const loadingText = document.getElementById('gui_loading_text');
+        if (loadingText) {
+            loadingText.innerHTML = '<p style="color: red;">Application failed to load. Check console for details.</p>';
+        }
+    });
+</script>
+</body>
+</html>
