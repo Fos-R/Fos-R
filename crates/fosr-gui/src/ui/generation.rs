@@ -14,6 +14,29 @@ use wasm_bindgen_futures;
 const DURATION_MIN: Duration = Duration::from_secs(60); // 1 min
 const DURATION_MAX: Duration = Duration::from_secs(3 * 24 * 3600); // 3 days
 
+// Spec expected for each parameter
+const SPEC_DURATION: &str = "a duration between 1 min and 3 days (e.g. 30m, 1h, 2d)";
+const SPEC_START_TIME: &str = "RFC3339 (e.g. 2025-01-01T00:00:00Z) or unix timestamp (seconds)";
+const SPEC_SEED: &str = "an unsigned integer (u64) or empty for random";
+const SPEC_PACKETS_COUNT: &str = "a positive unsigned integer (> 0) or empty";
+
+// return the first invalid parameter
+fn first_invalid_param(state: &GenerationState) -> Option<(&'static str, &'static str, String)> {
+    if let Some(err) = &state.duration_validation.error {
+        return Some(("Duration", SPEC_DURATION, err.clone()));
+    }
+    if let Some(err) = &state.start_time_validation.error {
+        return Some(("Start time", SPEC_START_TIME, err.clone()));
+    }
+    if let Some(err) = &state.seed_validation.error {
+        return Some(("Seed", SPEC_SEED, err.clone()));
+    }
+    if let Some(err) = &state.packets_count_validation.error {
+        return Some(("Packets count", SPEC_PACKETS_COUNT, err.clone()));
+    }
+    None
+}
+
 /**
  * Returns the minimum and maximum durations, expressed in seconds (f64),
  * used as bounds when converting between a duration and the slider position.
@@ -89,9 +112,14 @@ impl FieldValidation {
     pub fn set_err(&mut self, msg: impl Into<String>) {
         self.error = Some(msg.into());
     }
-    pub fn is_ok(&self) -> bool {
-        self.error.is_none()
-    }
+}
+
+pub enum UiStatus {
+    Idle,
+    Generating,
+    Generated,
+    Saved(String),
+    Error(String),
 }
 
 /**
@@ -114,6 +142,7 @@ pub struct GenerationState {
     pub start_time_validation: FieldValidation,
     pub seed_validation: FieldValidation,
     pub packets_count_validation: FieldValidation,
+    pub status: UiStatus,
 }
 
 impl Default for GenerationState {
@@ -148,6 +177,7 @@ impl Default for GenerationState {
             start_time_validation: FieldValidation::default(),
             seed_validation: FieldValidation::default(),
             packets_count_validation: FieldValidation::default(),
+            status: UiStatus::Idle,
         }
     }
 }
@@ -159,6 +189,24 @@ fn show_field_error(ui: &mut egui::Ui, validation: &FieldValidation) {
     if let Some(msg) = &validation.error {
         ui.add_space(6.0);
         ui.colored_label(egui::Color32::RED, msg);
+    }
+}
+
+fn show_status(ui: &mut egui::Ui, status: &UiStatus) {
+    match status {
+        UiStatus::Idle => {}
+        UiStatus::Generating => {
+            ui.label("Generating file…");
+        }
+        UiStatus::Generated => {
+            ui.label("File generated. You can save it.");
+        }
+        UiStatus::Saved(msg) => {
+            ui.label(format!("File saved. {}", msg));
+        }
+        UiStatus::Error(msg) => {
+            ui.colored_label(egui::Color32::RED, format!("Error: {msg}"));
+        }
     }
 }
 
@@ -472,13 +520,21 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
 
     ui.add_space(20.0);
 
-    let can_generate = state.duration_validation.is_ok()
-        && state.start_time_validation.is_ok()
-        && state.seed_validation.is_ok()
-        && state.packets_count_validation.is_ok();
+    show_status(ui, &state.status);
+    if let Some((name, spec, err)) = first_invalid_param(state) {
+        ui.colored_label(
+            egui::Color32::RED,
+            format!("Invalid parameter: {name}. Expected: {spec}. ({err})"),
+        );
+        ui.add_space(8.0);
+    }
+    ui.add_space(8.0);
+
+    let can_generate = first_invalid_param(&state).is_none();
 
     ui.add_enabled_ui(can_generate, |ui| {
         if ui.button("Generate").clicked() {
+            state.status = UiStatus::Generating;
             println!("Generate button clicked with params: {:?}", state.params);
 
             // Reset the progress value
@@ -557,6 +613,7 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
         }
 
         if state.pcap_bytes.is_some() && state.progress == 1.0 {
+            state.status = UiStatus::Generated;
             #[cfg(not(target_arch = "wasm32"))]
             let save_button_label = "Save";
             #[cfg(target_arch = "wasm32")]
@@ -573,9 +630,14 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
                                 "Successfully wrote to file: {}",
                                 file_handle.path().to_string_lossy()
                             );
+                            state.status = UiStatus::Saved(format!(
+                                "Saved to: {}",
+                                file_handle.path().to_string_lossy()
+                            ));
                         }
                         Err(e) => {
                             eprintln!("Failed to save file: {:?}", e);
+                            state.status = UiStatus::Error(format!("Failed to save file: {e}"));
                         }
                     }
                 }
