@@ -103,6 +103,7 @@ impl Default for GenerationState {
         params.start_time = default_start_time.clone();
         params.duration = default_duration.clone();
         params.taint = false;
+        params.timezone = None;
 
         Self {
             picked_config_file: None,
@@ -386,6 +387,7 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
                 None => Some(state.params.duration.clone()),
             };
             let taint = state.params.taint;
+            let timezone = state.params.timezone.clone();
             let ctx = ui.ctx().clone();
 
             #[cfg(target_arch = "wasm32")]
@@ -393,7 +395,7 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
                 wasm_bindgen_futures::spawn_local(async move {
                     generate(
                         seed, profile, packets_count, order_pcap,
-                        start_time, duration, taint,
+                        start_time, duration, taint, timezone,
                         Some(progress_sender),
                         Some(pcap_sender),
                     );
@@ -406,7 +408,7 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
                 std::thread::spawn(move || {
                     generate(
                         seed, profile, packets_count, order_pcap,
-                        start_time, duration, taint,
+                        start_time, duration, taint, timezone,
                         Some(progress_sender),
                         Some(pcap_sender),
                     );
