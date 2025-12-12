@@ -37,7 +37,7 @@
     <div class="container-xxl bd-gutter bd-layout mb-5">
       <main class="bd-main order-1">
 	
-	<!-- Tiltle -->
+	<!-- Title -->
 	$if(title)$<h1 class="bd-intro ps-lg-2 pt-2" id="title">$title$</h1>$endif$
 	
 	$if(toc)$
@@ -56,10 +56,19 @@
 	<!-- Main Content -->
 	<div class="bd-content ps-lg-2">
 	  $body$
+
+        <!-- Start of WASM GUI Integration -->
+        <h1 id="fosr-wasm-gui">Fos-R Wasm GUI (Experimental Demo)</h1>
+
+        <div id="gui_wrapper">
+            <div id="gui_loading_text">Loading Application...</div>
+            <canvas id="fosr_gui_canvas" class="gui_canvas"></canvas>
+        </div>
+        <!-- End of WASM GUI Integration -->
 	</div>
       </main>
     </div>
-    
+
     <!-- After body contents -->
     $for(include-after)$
     $include-after$
@@ -112,6 +121,35 @@
 	  // Initialize Highlight.js
 	  hljs.highlightAll();
       });
+    </script>
+
+    <!-- Script to load the WASM application -->
+    <script type="module">
+        // Import the WASM initializer and start function.
+        import init, { start } from './fosr_gui.js';
+
+        async function run() {
+            // 1. Initialize the WASM module
+            await init();
+
+            // 2. Start the application, passing the canvas ID
+            await start('fosr_gui_canvas');
+
+            // 3. Remove the loading text once initialization is complete
+            const loadingText = document.getElementById('gui_loading_text');
+            if (loadingText) {
+                loadingText.remove();
+            }
+        }
+
+        run().catch(error => {
+            console.error('Failed to start WASM application:', error);
+            // Update the loading text to show an error message
+            const loadingText = document.getElementById('gui_loading_text');
+            if (loadingText) {
+                loadingText.innerHTML = '<p style="color: red;">Application failed to load. Check console for details.</p>';
+            }
+        });
     </script>
   </body>
 </html>
