@@ -369,6 +369,10 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
             .map(|file| file.file_name())
             .unwrap_or("No file selected".to_string());
 
+        if state.picked_config_file.is_some() && ui.button("Remove").clicked() {
+            state.picked_config_file = None;
+        };
+
         // On desktop: filename with its full path on hover, on WASM: just the filename
         #[cfg(not(target_arch = "wasm32"))]
         {
