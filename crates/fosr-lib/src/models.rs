@@ -41,6 +41,13 @@ impl Models {
         self.bn.apply_config(&config)?;
         Ok(self)
     }
+
+    pub fn with_string_config(mut self, config: &str) -> Result<Self, String> {
+        let config = config::import_config(config);
+        self.bn.apply_config(&config)?;
+        Ok(self)
+    }
+
 }
 
 impl ModelsSource {
