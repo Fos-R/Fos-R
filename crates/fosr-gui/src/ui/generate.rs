@@ -1,5 +1,4 @@
-use chrono::DateTime;
-use chrono::{Offset, TimeZone};
+use chrono::{DateTime, Offset, TimeZone};
 use chrono_tz::Tz;
 use fosr_lib::{models, stage0, stage1, stage2, stage2::tadam::TadamGenerator, stage3, stats::Target};
 use indicatif::HumanBytes;
@@ -17,7 +16,7 @@ pub struct Params {
     pub start_time: String,
     pub duration: String,
     pub taint: bool,
-
+    pub timezone: Option<String>,
 }
 
 pub fn generate(seed: Option<u64>,
@@ -27,6 +26,7 @@ pub fn generate(seed: Option<u64>,
                 start_time: Option<String>,
                 duration: Option<String>,
                 taint: bool,
+                timezone: Option<String>,
                 progress_sender: Option<Sender<f32>>,
                 pcap_sender: Option<Sender<Vec<u8>>>,
 ) {
@@ -83,11 +83,9 @@ pub fn generate(seed: Option<u64>,
         SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
     };
 
-    let tz = Some("CET"); // TODO: make it a parameter
-    let tz_offset = match tz {
+    let tz_offset = match timezone {
         Some(tz_str) => {
-            // Gérer le timezone depuis un string
-            let tz: Tz = tz_str.parse().expect("Could not parse the timezone");
+            let tz = tz_str.parse::<Tz>().expect("Could not parse the timezone");
             let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
                 .unwrap()
                 .naive_utc();
@@ -96,7 +94,7 @@ pub fn generate(seed: Option<u64>,
             tz
         }
         None => {
-            // détecter le timezone
+            // Detect the local timezone
             let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
                 .unwrap()
                 .naive_utc();
