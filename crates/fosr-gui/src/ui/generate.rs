@@ -9,7 +9,6 @@ use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 #[derive(Default, Debug)]
 pub struct Params {
     pub seed: Option<u64>,
-    pub profile: Option<String>,
     pub outfile: String,
     pub packets_count: Option<u64>,
     pub order_pcap: bool,
@@ -48,7 +47,7 @@ pub fn generate(seed: Option<u64>,
     let source = models::ModelsSource::Legacy;
     let mut model = models::Models::from_source(source).unwrap();
     if let Some(config) = profile {
-        model = model.with_config(&config).unwrap();
+        model = model.with_string_config(&config).unwrap();
     }
 
     let automata_library = Arc::new(model.automata);

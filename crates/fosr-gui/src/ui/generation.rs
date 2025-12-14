@@ -310,6 +310,17 @@ async fn show_file_picker_wasm() -> Option<FileHandle> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+fn read_config_file_desktop(config_file: &FileHandle) -> String {
+    std::fs::read_to_string(config_file.path()).unwrap()
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn read_config_file_wasm(config_file: &FileHandle) -> String {
+    let content = config_file.read().await;
+    String::from_utf8(content).expect("Invalid UTF-8")
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn save_file_desktop(data: &[u8], file_name: &str) -> Result<FileHandle, Error> {
     let result = rfd::FileDialog::new()
         .set_directory(std::env::current_dir().unwrap_or(std::path::PathBuf::from("/")))
@@ -644,7 +655,6 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
             state.pcap_receiver = Some(pcap_receiver);
 
             let seed = state.params.seed;
-            let profile = state.params.profile.clone();
             let packets_count = state.params.packets_count;
             let order_pcap = state.params.order_pcap;
             let start_time = Some(format!("{}T{}Z", state.start_date.format("%Y-%m-%d"), state.start_hour));
@@ -655,10 +665,16 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
             let taint = state.params.taint;
             let timezone = state.params.timezone.clone();
             let ctx = ui.ctx().clone();
+            let file_handle = state.picked_config_file.clone();
 
             #[cfg(target_arch = "wasm32")]
             {
                 wasm_bindgen_futures::spawn_local(async move {
+                    let profile = if let Some(file) = file_handle.as_ref() {
+                        Some(read_config_file_wasm(file).await)
+                    } else {
+                        None
+                    };
                     generate(
                         seed,
                         profile,
@@ -678,6 +694,7 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
             #[cfg(not(target_arch = "wasm32"))]
             {
                 std::thread::spawn(move || {
+                    let profile = file_handle.as_ref().map(|file| read_config_file_desktop(file));
                     generate(
                         seed,
                         profile,
