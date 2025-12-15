@@ -6,6 +6,7 @@ use crate::ui::{
 #[cfg(not(target_arch = "wasm32"))]
 use crate::ui::show_injection_tab_content;
 use eframe::egui;
+use eframe::egui::global_theme_preference_switch;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum CurrentTab {
@@ -33,6 +34,8 @@ impl eframe::App for FosrApp {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // Add a Menu Bar to host the tabs buttons
             egui::MenuBar::new().ui(ui, |ui| {
+                global_theme_preference_switch(ui);
+
                 if ui
                     .selectable_label(self.current_tab == CurrentTab::Generation, "Generation")
                     .clicked()
