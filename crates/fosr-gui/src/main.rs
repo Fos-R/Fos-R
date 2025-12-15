@@ -1,5 +1,9 @@
 mod app;
-mod ui;
+
+mod generation;
+mod about;
+#[cfg(not(target_arch = "wasm32"))]
+mod injection;
 
 // Desktop: native compilation
 #[cfg(not(target_arch = "wasm32"))]
