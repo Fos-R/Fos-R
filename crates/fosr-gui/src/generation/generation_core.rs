@@ -103,11 +103,11 @@ pub fn generate(
     let s1 = stage1::bayesian_networks::BNGenerator::new(bn, false);
     let s2 = TadamGenerator::new(automata_library);
     let s3 = stage3::Stage3::new(taint);
-    log::info!("Run monothread");
-    run_monothread(order_pcap, s0, s1, s2, s3, send_progress, send_pcap);
+    log::info!("Run single thread");
+    run_single_thread(order_pcap, s0, s1, s2, s3, send_progress, send_pcap);
 }
 
-fn run_monothread(
+fn run_single_thread(
     order_pcap: bool,
     s0: impl stage0::Stage0,
     s1: impl stage1::Stage1,

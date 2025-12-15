@@ -29,8 +29,7 @@ Fos-R/
 
 ### Desktop (Native)
 ```shell
-cd crates/fosr-gui
-cargo run --release
+cargo run -p fosr-gui -r
 ```
 This compiles and launches the native GUI.
 
@@ -40,7 +39,7 @@ This compiles and launches the native GUI.
 # Install `cargo-bundle`
 cargo install cargo-bundle
 # Bundle in a .app
-cargo bundle --release
+cargo bundle -p fosr-gui -r
 ```
 
 ### Web (WASM)

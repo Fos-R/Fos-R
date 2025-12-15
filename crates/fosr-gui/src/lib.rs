@@ -1,6 +1,10 @@
 #![cfg(target_arch = "wasm32")]
 mod app;
-mod ui;
+
+mod generation;
+mod about;
+#[cfg(not(target_arch = "wasm32"))]
+mod injection;
 
 use app::FosrApp;
 use eframe::wasm_bindgen::JsCast;

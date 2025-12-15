@@ -1,120 +1,30 @@
-use crate::ui::generate::generate;
+use super::generation_core::generate;
+#[cfg(not(target_arch = "wasm32"))]
+use super::generation_io::{read_config_file_desktop, save_file_desktop, show_file_picker_desktop};
+#[cfg(target_arch = "wasm32")]
+use super::generation_io::{read_config_file_wasm, save_file_wasm, show_file_picker_wasm};
+use super::generation_ui_components::{show_field_error, show_status, timezone_picker};
+use super::generation_utils::{
+    duration_string_from_slider, duration_to_slider, slider_from_duration_string,
+};
+use super::generation_validation::{
+    FieldValidation, first_invalid_param, validate_duration, validate_optional_u64,
+    validate_start_hour, validate_timezone,
+};
 use chrono::NaiveDate;
-use chrono_tz::{TZ_VARIANTS, Tz};
+use chrono_tz::Tz;
 use eframe::egui;
-use eframe::egui::{PopupCloseBehavior, SliderClamping, Widget};
+use eframe::egui::{SliderClamping, Widget};
 use egui_extras::DatePickerButton;
 use rfd::FileHandle;
-use std::io::Error;
 use std::sync::mpsc::{Receiver, channel};
 use std::time::Duration;
-// WASM-specific imports
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures;
 
 // Time interval for the slider.
-const DURATION_MIN: Duration = Duration::from_secs(60); // 1 min
-const DURATION_MAX: Duration = Duration::from_secs(3 * 24 * 3600); // 3 days
-
-// Spec expected for each parameter
-const SPEC_DURATION: &str = "a duration between 1 min and 3 days (e.g. 30m, 1h, 2d)";
-const SPEC_START_HOUR: &str = "an hour in HH:MM format";
-const SPEC_SEED: &str = "an unsigned integer (u64) or empty for random";
-const SPEC_TIMEZONE: &str = "a valid timezone";
-
-// return the first invalid parameter
-fn first_invalid_param(state: &GenerationTabState) -> Option<(&'static str, &'static str, String)> {
-    if let Some(err) = &state.duration_validation.error {
-        return Some(("Duration", SPEC_DURATION, err.clone()));
-    }
-    if let Some(err) = &state.start_hour_validation.error {
-        return Some(("Start hour", SPEC_START_HOUR, err.clone()));
-    }
-    if let Some(err) = &state.seed_validation.error {
-        return Some(("Seed", SPEC_SEED, err.clone()));
-    }
-    if let Some(err) = &state.timezone_validation.error {
-        return Some(("Timezone", SPEC_TIMEZONE, err.clone()));
-    }
-    None
-}
-
-/**
- * Returns the minimum and maximum durations, expressed in seconds (f64),
- * used as bounds when converting between a duration and the slider position.
- */
-fn duration_range_secs() -> (f64, f64) {
-    (DURATION_MIN.as_secs_f64(), DURATION_MAX.as_secs_f64())
-}
-
-/**
- * Converts the slider position (between 0.0 and 1.0) into an actual Duration,
- * by logarithmically interpolating between DURATION_MIN and DURATION_MAX.
- */
-fn slider_to_duration(value: f32) -> Duration {
-    let (min, max) = duration_range_secs();
-    let v = value.clamp(0.0, 1.0) as f64;
-
-    let log_secs = min.ln() + (max.ln() - min.ln()) * v;
-    let secs = log_secs.exp();
-    let rounded_secs = (secs / 60.0).round() * 60.0;
-
-    Duration::from_secs_f64(rounded_secs.clamp(min, max).round())
-}
-
-/**
- * Converts a real Duration into a slider position (between 0.0 and 1.0),
- * based on its proportion within the [DURATION_MIN, DURATION_MAX] interval.
- */
-fn duration_to_slider(d: Duration) -> f32 {
-    let (min, max) = duration_range_secs();
-    let secs = d.as_secs_f64().clamp(min, max);
-
-    let numerator = secs.ln() - min.ln();
-    let denominator = max.ln() - min.ln();
-    let v = if denominator == 0.0 {
-        0.0
-    } else {
-        numerator / denominator
-    };
-    v.clamp(0.0, 1.0) as f32
-}
-
-/**
- * Produces a human-readable duration string from the given slider position.
- */
-fn duration_string_from_slider(value: f32) -> String {
-    let duration = slider_to_duration(value);
-    humantime::format_duration(duration).to_string()
-}
-
-/**
- * Converts a human-readable duration string into a slider position.
- */
-fn slider_from_duration_string(duration_str: String) -> Option<f32> {
-    let result = humantime::parse_duration(&duration_str);
-    match result {
-        Ok(duration) => Some(duration_to_slider(duration)),
-        Err(_) => None,
-    }
-}
-
-/**
- * Structure to handle inputs errors from the user
- */
-#[derive(Default, Clone)]
-pub struct FieldValidation {
-    pub error: Option<String>,
-}
-
-impl FieldValidation {
-    pub fn set_ok(&mut self) {
-        self.error = None;
-    }
-    pub fn set_err(&mut self, msg: impl Into<String>) {
-        self.error = Some(msg.into());
-    }
-}
+pub const DURATION_MIN: Duration = Duration::from_secs(60); // 1 min
+pub const DURATION_MAX: Duration = Duration::from_secs(3 * 24 * 3600); // 3 days
 
 pub enum UiStatus {
     Idle,
@@ -146,18 +56,13 @@ pub struct GenerationTabState {
     // Parameters
     pub order_pcap: bool,
     pub taint: bool,
-
     pub duration_str: String,
     pub duration_slider_value: f32,
-
     pub seed_input: String,
-
     pub timezone_input: String,
     pub use_local_timezone: bool,
-
     pub start_date: NaiveDate,
     pub start_hour: String,
-
     pub output_file_name: String,
 }
 
@@ -183,171 +88,15 @@ impl Default for GenerationTabState {
             // Parameters
             order_pcap: false,
             taint: false,
-
             duration_str: default_duration,
             duration_slider_value,
-
             seed_input: String::new(),
-
             timezone_input: Tz::CET.to_string(),
             use_local_timezone: true,
-
             start_date: NaiveDate::from_ymd_opt(2025, 1, 1).unwrap(),
             start_hour: "00:00:00".to_string(),
-
             output_file_name: "output.pcap".to_string(),
         }
-    }
-}
-
-/**
- * Display the error in red
- */
-fn show_field_error(ui: &mut egui::Ui, validation: &FieldValidation) {
-    if let Some(msg) = &validation.error {
-        ui.add_space(6.0);
-        ui.colored_label(egui::Color32::RED, msg);
-    }
-}
-
-fn show_status(ui: &mut egui::Ui, status: &UiStatus) {
-    match status {
-        UiStatus::Idle => {}
-        UiStatus::Generating => {
-            ui.label("Generating file…");
-        }
-        UiStatus::Generated => {
-            ui.label("File generated. You can save it.");
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        UiStatus::Saved(msg) => {
-            ui.label(format!("File saved. {}", msg));
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        UiStatus::Error(msg) => {
-            ui.colored_label(egui::Color32::RED, format!("Error: {msg}"));
-        }
-    }
-}
-
-fn validate_duration(duration_str: &str) -> Result<Duration, String> {
-    let d = humantime::parse_duration(duration_str).map_err(|_| "Invalid value".to_string())?;
-
-    if d < DURATION_MIN || d > DURATION_MAX {
-        return Err(format!(
-            "Out of range ({} – {})",
-            humantime::format_duration(DURATION_MIN),
-            humantime::format_duration(DURATION_MAX),
-        ));
-    }
-    Ok(d)
-}
-
-fn validate_start_hour(input: &str) -> Result<(), String> {
-    let s = input.trim();
-    if s.is_empty() {
-        return Err("Invalid value".to_string());
-    }
-
-    let parts: Vec<&str> = s.split(':').collect();
-    if parts.len() != 3 || parts[0].len() != 2 || parts[1].len() != 2 || parts[2].len() != 2 {
-        return Err("Invalid value".to_string());
-    }
-
-    let hour = parts[0]
-        .parse::<u8>()
-        .map_err(|_| "Invalid value".to_string())?;
-    let minute = parts[1]
-        .parse::<u8>()
-        .map_err(|_| "Invalid value".to_string())?;
-    let second = parts[2]
-        .parse::<u8>()
-        .map_err(|_| "Invalid value".to_string())?;
-
-    if hour > 23 || minute > 59 || second > 59 {
-        return Err("Invalid value".to_string());
-    }
-
-    Ok(())
-}
-
-fn validate_optional_u64(input: &str) -> Result<Option<u64>, String> {
-    let s = input.trim();
-    if s.is_empty() {
-        return Ok(None);
-    }
-    s.parse::<u64>()
-        .map(Some)
-        .map_err(|_| "Invalid value".to_string())
-}
-
-fn validate_timezone(input: &str) -> Result<(), String> {
-    let parsed = input.parse::<Tz>();
-    match parsed {
-        Ok(_) => Ok(()),
-        Err(_) => Err("Invalid value".to_string()),
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn show_file_picker_desktop() -> Option<FileHandle> {
-    rfd::FileDialog::new()
-        .add_filter("Configuration files", &["toml", "json", "yaml", "yml"])
-        .set_directory(std::env::current_dir().unwrap_or(std::path::PathBuf::from("/")))
-        .pick_file()
-        .map(|path| FileHandle::from(path))
-}
-
-#[cfg(target_arch = "wasm32")]
-async fn show_file_picker_wasm() -> Option<FileHandle> {
-    rfd::AsyncFileDialog::new()
-        .add_filter("Configuration files", &["toml", "json", "yaml", "yml"])
-        .pick_file()
-        .await
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn read_config_file_desktop(config_file: &FileHandle) -> String {
-    std::fs::read_to_string(config_file.path()).unwrap()
-}
-
-#[cfg(target_arch = "wasm32")]
-async fn read_config_file_wasm(config_file: &FileHandle) -> String {
-    let content = config_file.read().await;
-    String::from_utf8(content).expect("Invalid UTF-8")
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn save_file_desktop(data: &[u8], file_name: &str) -> Result<FileHandle, Error> {
-    let result = rfd::FileDialog::new()
-        .set_directory(std::env::current_dir().unwrap_or(std::path::PathBuf::from("/")))
-        .set_file_name(file_name)
-        .save_file()
-        .map(|path| FileHandle::from(path));
-
-    match result {
-        Some(file_handle) => match std::fs::write(file_handle.path(), data) {
-            Ok(_) => Ok(file_handle),
-            Err(e) => Err(e),
-        },
-        None => Err(Error::new(std::io::ErrorKind::Other, "No file selected")),
-    }
-}
-#[cfg(target_arch = "wasm32")]
-async fn save_file_wasm(data: &[u8], file_name: &str) -> Result<FileHandle, Error> {
-    let result = rfd::AsyncFileDialog::new()
-        .set_file_name(file_name)
-        .save_file()
-        .await;
-    match result {
-        Some(file_handle) => match file_handle.write(data).await {
-            Ok(_) => Ok(file_handle),
-            Err(e) => Err(e),
-        },
-        None => Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "No file selected",
-        )),
     }
 }
 
@@ -515,46 +264,7 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationTabS
             } else {
                 initial_selected = state.timezone_input.clone();
             }
-            egui::ComboBox::from_id_salt("timezone")
-                .selected_text(&state.timezone_input)
-                .width(200.0)
-                .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
-                .show_ui(ui, |ui| {
-                    ui.set_max_width(240.0);
-
-                    // Define a unique ID for focus and state tracking
-                    let edit_id = ui.make_persistent_id("timezone_search_input");
-
-                    // Add the text edit widget
-                    ui.add(
-                        egui::TextEdit::singleline(&mut state.timezone_input)
-                            .hint_text("Search...")
-                            .id(edit_id),
-                    );
-
-                    // Handle Auto-focus & Auto-select on initial open
-                    if ui.memory(|m| m.focused().is_none()) {
-                        ui.memory_mut(|m| m.request_focus(edit_id));
-                    }
-
-                    ui.separator();
-
-                    // List with filtering
-                    let filter = state.timezone_input.to_lowercase();
-                    for tz in TZ_VARIANTS {
-                        let tz_str = tz.to_string();
-                        if filter.is_empty() || tz_str.to_lowercase().contains(&filter) {
-                            if ui
-                                .selectable_label(state.timezone_input == tz_str, &tz_str)
-                                .clicked()
-                            {
-                                state.timezone_input = tz_str;
-                                // Manually close the popup
-                                ui.close();
-                            }
-                        }
-                    }
-                });
+            timezone_picker(ui, state);
 
             // The returned response's changed() method does not work properly here
             if initial_selected != state.timezone_input {

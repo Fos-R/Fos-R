@@ -1,10 +1,7 @@
-use crate::ui::{
-    GenerationTabState,
-    show_about_tab_content,
-    show_generation_tab_content,
-};
+use crate::generation::generation_tab::{GenerationTabState, show_generation_tab_content};
 #[cfg(not(target_arch = "wasm32"))]
-use crate::ui::show_injection_tab_content;
+use crate::injection::show_injection_tab_content;
+use crate::about::show_about_tab_content;
 use eframe::egui;
 #[cfg(not(target_arch = "wasm32"))]
 use eframe::egui::global_theme_preference_switch;

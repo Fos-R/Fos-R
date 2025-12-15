@@ -1,7 +1,7 @@
 use eframe::egui;
 
 pub fn show_about_tab_content(ui: &mut egui::Ui) {
-    ui.image(egui::include_image!("../../../../public/logo.png"));
+    ui.image(egui::include_image!("../../../public/logo.png"));
     ui.separator();
     ui.add_space(10.0);
 
