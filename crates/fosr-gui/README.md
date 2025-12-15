@@ -54,14 +54,12 @@ cargo install wasm-bindgen-cli
 
 #### Step 1: Compile to WASM
 ```shell
-cd crates/fosr-gui
-cargo build --release --target wasm32-unknown-unknown --no-default-features
+cargo build -p fosr-gui -r --target wasm32-unknown-unknown --no-default-features
 ```
 Output: `Fos-R/target/wasm32-unknown-unknown/release/fosr_gui.wasm`
 
 #### Step 2: Generate JavaScript Glue
 ```shell
-cd ../.. # Back to project root
 wasm-bindgen --out-dir public --target web target/wasm32-unknown-unknown/release/fosr_gui.wasm --no-typescript
 ```
 Generates in `Fos-R/public/`:
