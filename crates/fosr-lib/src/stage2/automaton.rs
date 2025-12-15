@@ -5,7 +5,8 @@ use rand_distr::weighted::WeightedIndex;
 use rand_distr::{Distribution, Normal, Poisson};
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter, Result};
+use std::fmt;
+use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -265,8 +266,8 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
                     let size = sizes[(rng.next_u32() as usize) % sizes.len()];
                     (Payload::Random(size), size)
                 }
-                PayloadType::Text(tss) => {
-                    let ts = &tss[(rng.next_u32() as usize) % tss.len()];
+                PayloadType::Text(tss, distrib) => {
+                    let ts = &tss[distrib.sample(rng)];
                     (Payload::Replay(ts), ts.len())
                 }
                 PayloadType::Replay(tss) => {
@@ -309,7 +310,7 @@ pub struct TimedAutomaton<T: EdgeType> {
 }
 
 impl<T: EdgeType> Display for TimedAutomaton<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "automaton \"{}\" for ports {:?} learned on {} from {}",
@@ -379,14 +380,23 @@ struct JsonEdge {
 #[serde(tag = "type")]
 #[serde(into = "PayloadType")]
 enum JsonPayload {
-    Lengths { lengths: Vec<usize> },
-    HexCodes { content: Vec<String> },
-    Text { content: Vec<String> },
+    Lengths {
+        lengths: Vec<usize>,
+    },
+    HexCodes {
+        content: Vec<String>,
+    },
+    Text {
+        weights: Option<Vec<u64>>,
+        content: Vec<String>,
+    },
     NoPayload,
 }
 
-impl From<JsonPayload> for PayloadType {
-    fn from(p: JsonPayload) -> Self {
+impl TryFrom<JsonPayload> for PayloadType {
+    type Error = String;
+
+    fn try_from(p: JsonPayload) -> Result<Self, String> {
         let decode = |s: String| {
             s.as_bytes()
                 .chunks(2)
@@ -399,19 +409,42 @@ impl From<JsonPayload> for PayloadType {
 
         match p {
             JsonPayload::Lengths { lengths: l } => {
-                assert!(!l.is_empty());
-                PayloadType::Random(l)
+                if l.is_empty() {
+                    Err("No payload information".to_string())
+                } else {
+                    Ok(PayloadType::Random(l))
+                }
             }
-            JsonPayload::NoPayload => PayloadType::Empty,
+            JsonPayload::NoPayload => Ok(PayloadType::Empty),
             JsonPayload::HexCodes { content: p } => {
-                assert!(!p.is_empty());
-                PayloadType::Replay(Box::leak(Box::new(p.into_iter().map(decode).collect())))
+                if p.is_empty() {
+                    Err("No payload information".to_string())
+                } else {
+                    Ok(PayloadType::Replay(Box::leak(Box::new(
+                        p.into_iter().map(decode).collect(),
+                    ))))
+                }
             }
-            JsonPayload::Text { content: p } => {
-                assert!(!p.is_empty());
-                PayloadType::Text(Box::leak(Box::new(
-                    p.into_iter().map(|v| v.into()).collect(),
-                )))
+            JsonPayload::Text {
+                weights: w,
+                content: p,
+            } => {
+                if p.is_empty() {
+                    Err("No payload information".to_string())
+                } else if let Some(w) = w {
+                    Ok(PayloadType::Text(
+                        Box::leak(Box::new(p.into_iter().map(|v| v.into()).collect())),
+                        WeightedIndex::new(&w).map_err(|_| "Weights error".to_string())?,
+                    ))
+                } else {
+                    // Backward-compatible version
+                    let weights = WeightedIndex::new(vec![1; p.len()])
+                        .map_err(|_| "Weights error".to_string())?;
+                    Ok(PayloadType::Text(
+                        Box::leak(Box::new(p.into_iter().map(|v| v.into()).collect())),
+                        weights,
+                    ))
+                }
             }
         }
     }
@@ -421,7 +454,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
     pub fn import_timed_automaton(
         a: JsonAutomaton,
         symbol_parser: impl Fn(String, PayloadType) -> T,
-    ) -> Self {
+    ) -> Result<Self, String> {
         let mut nodes_nb = 0;
         let mut graph: Vec<TimedNode<T>> = vec![];
         for _ in 0..a.edges.len() + 1 {
@@ -437,7 +470,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
             let data = if e.symbol.eq("$") {
                 None
             } else {
-                Some(Arc::new(symbol_parser(e.symbol, e.payloads.into())))
+                Some(Arc::new(symbol_parser(e.symbol, e.payloads.try_into()?)))
             };
             let new_edge = TimedEdge {
                 dst_node: e.dst,
@@ -461,12 +494,12 @@ impl<T: EdgeType> TimedAutomaton<T> {
         // println!("{:?} {:?}",weights, self.graph[current_state].out_edges);
         graph.truncate(nodes_nb);
         // dbg!(&graph);
-        TimedAutomaton::<T> {
+        Ok(TimedAutomaton::<T> {
             graph,
             metadata: a.metadata,
             noise: a.noise,
             initial_state: a.initial_state,
             accepting_state: a.accepting_state,
-        }
+        })
     }
 }

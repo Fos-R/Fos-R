@@ -32,6 +32,7 @@
 - Created the `export` module
 - Significantly modified the configuration file format
 - Transformed panics into `Result`s
+- Slight modification of automata json format
 - Better library documentation
 - Bugfixes
 

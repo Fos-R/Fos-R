@@ -47,7 +47,6 @@ impl Models {
         self.bn.apply_config(&config)?;
         Ok(self)
     }
-
 }
 
 impl ModelsSource {

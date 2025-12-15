@@ -1,5 +1,6 @@
 use chrono::{DateTime, FixedOffset};
 use pcap_file::pcap;
+use rand_distr::weighted::WeightedIndex;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
@@ -233,7 +234,7 @@ impl From<Flow> for FlowData {
 #[derive(Debug, Clone)]
 pub enum PayloadType {
     Empty,
-    Text(&'static Vec<Vec<u8>>),
+    Text(&'static Vec<Vec<u8>>, WeightedIndex<u64>),
     Replay(&'static Vec<Vec<u8>>),
     Random(Vec<usize>),
 }
