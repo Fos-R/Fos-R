@@ -176,15 +176,16 @@ impl AutomataLibrary {
         Ok(lib)
     }
 
-    pub fn import_from_str(&mut self, string: &str) -> std::io::Result<L7Proto> {
-        let a: automaton::JsonAutomaton = serde_json::from_str(string)?;
+    pub fn import_from_str(&mut self, string: &str) -> Result<L7Proto, String> {
+        let a: automaton::JsonAutomaton =
+            serde_json::from_str(string).map_err(|_| "Import error".to_string())?;
         let l7proto = a.l7protocol;
         match a.protocol {
             Protocol::TCP => {
                 let a = automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(
                     a,
                     parse_tcp_symbol,
-                );
+                )?;
                 log::debug!("Import TCP {a}");
                 self.tcp_automata.insert(l7proto, a.clone());
                 self.cons_tcp_automata.insert(l7proto, a.into());
@@ -193,7 +194,7 @@ impl AutomataLibrary {
                 let a = automaton::TimedAutomaton::<UDPEdgeTuple>::import_timed_automaton(
                     a,
                     parse_udp_symbol,
-                );
+                )?;
                 log::debug!("Import UDP {a}");
                 self.udp_automata.insert(l7proto, a.clone());
                 self.cons_udp_automata.insert(l7proto, a.into());
@@ -202,7 +203,7 @@ impl AutomataLibrary {
                 let a = automaton::TimedAutomaton::<ICMPEdgeTuple>::import_timed_automaton(
                     a,
                     parse_icmp_symbol,
-                );
+                )?;
                 log::debug!("Import ICMP {a}");
                 self.icmp_automata.insert(l7proto, a.clone());
                 self.cons_icmp_automata.insert(l7proto, a.into());

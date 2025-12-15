@@ -191,10 +191,7 @@ pub enum Command {
             help = "Use a default model"
         )]
         default_models: DefaultModels,
-        #[arg(
-            long,
-            help = "Use a custom model"
-        )]
+        #[arg(long, help = "Use a custom model")]
         custom_models: Option<String>,
         #[arg(
             long,

@@ -199,7 +199,11 @@ if __name__ == '__main__':
             tss = []
             for ts, t in e.tss.items():
                 tss = tss + [payloads[ts].split()[a].split(":")[1] for (a,_) in t]
-            d["payloads"] = { "content": [bytes.fromhex(s).decode('utf-8') for s in tss] }
+            values, counts = np.unique(tss, return_counts=True)
+            d["payloads"] = { "content": [bytes.fromhex(s).decode('utf-8') for s in values] }
+            # save the weights only if it’s not equiprobable
+            if any(c != counts[0] for c in counts):
+                d["payloads"]["weights"] = [int(i) for i in counts]
             d["payloads"]["type"] = "Text"
         elif "Random" in e.symbol:
             lengths = []
