@@ -18,6 +18,8 @@ pub async fn start(canvas_id: &str) -> Result<(), JsValue> {
         .document()
         .expect("No document");
 
+    // The canvas_id is passed as an argument from the HTML file
+    // and identifies the canvas element on which the app will be rendered
     let canvas = document
         .get_element_by_id(canvas_id)
         .expect(format!("Failed to find {}", canvas_id).as_str())

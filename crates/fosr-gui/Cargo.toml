@@ -12,12 +12,16 @@ icon = ["../../public/fosr.icns"]
 [[bin]]
 name = "fosr-gui"
 path = "src/main.rs"
+# The binary is only compiled if the "native" feature is enabled.
+# This avoids warnings when compiling for wasm32.
 required-features = ["native"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [features]
+# By default, we are compiling for native.
+# If we want to compile for wasm32, we need to use the --no-default-features flag.
 default = ["native"]
 native = []
 
@@ -37,4 +41,7 @@ web-time = "1.1.0"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4.55"
 web-sys = "0.3.82"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+env_logger = { version = "0.11.8", default-features = false, features = ["auto-color", "humantime"] }
 

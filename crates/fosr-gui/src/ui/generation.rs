@@ -1,12 +1,12 @@
-use crate::ui::generate::{generate, Params};
+use crate::ui::generate::generate;
 use chrono::NaiveDate;
-use chrono_tz::{Tz, TZ_VARIANTS};
+use chrono_tz::{TZ_VARIANTS, Tz};
 use eframe::egui;
 use eframe::egui::{PopupCloseBehavior, SliderClamping, Widget};
 use egui_extras::DatePickerButton;
 use rfd::FileHandle;
 use std::io::Error;
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::{Receiver, channel};
 use std::time::Duration;
 // WASM-specific imports
 #[cfg(target_arch = "wasm32")]
@@ -20,22 +20,18 @@ const DURATION_MAX: Duration = Duration::from_secs(3 * 24 * 3600); // 3 days
 const SPEC_DURATION: &str = "a duration between 1 min and 3 days (e.g. 30m, 1h, 2d)";
 const SPEC_START_HOUR: &str = "an hour in HH:MM format";
 const SPEC_SEED: &str = "an unsigned integer (u64) or empty for random";
-const SPEC_PACKETS_COUNT: &str = "a positive unsigned integer (> 0) or empty";
 const SPEC_TIMEZONE: &str = "a valid timezone";
 
 // return the first invalid parameter
-fn first_invalid_param(state: &GenerationState) -> Option<(&'static str, &'static str, String)> {
+fn first_invalid_param(state: &GenerationTabState) -> Option<(&'static str, &'static str, String)> {
     if let Some(err) = &state.duration_validation.error {
         return Some(("Duration", SPEC_DURATION, err.clone()));
     }
-    if let Some(err) = &state.start_time_validation.error {
+    if let Some(err) = &state.start_hour_validation.error {
         return Some(("Start hour", SPEC_START_HOUR, err.clone()));
     }
     if let Some(err) = &state.seed_validation.error {
         return Some(("Seed", SPEC_SEED, err.clone()));
-    }
-    if let Some(err) = &state.packets_count_validation.error {
-        return Some(("Packets count", SPEC_PACKETS_COUNT, err.clone()));
     }
     if let Some(err) = &state.timezone_validation.error {
         return Some(("Timezone", SPEC_TIMEZONE, err.clone()));
@@ -124,14 +120,16 @@ pub enum UiStatus {
     Idle,
     Generating,
     Generated,
+    #[cfg(not(target_arch = "wasm32"))]
     Saved(String),
+    #[cfg(not(target_arch = "wasm32"))]
     Error(String),
 }
 
 /**
  * Represents the state of the generation tab.
  */
-pub struct GenerationState {
+pub struct GenerationTabState {
     pub picked_config_file: Option<FileHandle>,
     #[cfg(target_arch = "wasm32")]
     pub config_file_receiver: Option<Receiver<Option<FileHandle>>>,
@@ -140,68 +138,70 @@ pub struct GenerationState {
     pub pcap_bytes: Option<Vec<u8>>,
     pub pcap_receiver: Option<Receiver<Vec<u8>>>,
     pub status: UiStatus,
-    pub params: Params,
-    // Validators
+    // Validation states
     pub duration_validation: FieldValidation,
-    pub start_time_validation: FieldValidation,
+    pub start_hour_validation: FieldValidation,
     pub seed_validation: FieldValidation,
-    pub packets_count_validation: FieldValidation,
     pub timezone_validation: FieldValidation,
-    // Temp fields
+    // Parameters
+    pub order_pcap: bool,
+    pub taint: bool,
+
+    pub duration_str: String,
     pub duration_slider_value: f32,
+
     pub seed_input: String,
-    pub packets_count_input: String,
+
     pub timezone_input: String,
+    pub use_local_timezone: bool,
+
     pub start_date: NaiveDate,
     pub start_hour: String,
-    pub use_local_timezone: bool,
+
+    pub output_file_name: String,
 }
 
-impl Default for GenerationState {
+impl Default for GenerationTabState {
     fn default() -> Self {
         let default_duration = "1h".to_string();
-        let default_start_time = "2025-01-01T00:00:00Z".to_string();
-        let default_outfile = "output.pcap".to_string();
         let duration_slider_value = slider_from_duration_string(default_duration.clone()).unwrap();
-        let seed_input = String::new();
-        let packets_count_input = String::new();
-
-        let mut params = Params::default();
-        params.outfile = default_outfile.clone();
-        params.order_pcap = false;
-        params.start_time = default_start_time.clone();
-        params.duration = default_duration.clone();
-        params.taint = false;
-        params.timezone = Some(Tz::CET.to_string());
 
         Self {
             picked_config_file: None,
             #[cfg(target_arch = "wasm32")]
             config_file_receiver: None,
-            params,
-            duration_slider_value,
-            seed_input,
-            packets_count_input,
-            timezone_input: Tz::CET.to_string(),
-            use_local_timezone: true,
             progress: 0.0,
             progress_receiver: None,
             pcap_bytes: None,
             pcap_receiver: None,
-            duration_validation: FieldValidation::default(),
-            start_time_validation: FieldValidation::default(),
-            seed_validation: FieldValidation::default(),
-            packets_count_validation: FieldValidation::default(),
-            timezone_validation: FieldValidation::default(),
             status: UiStatus::Idle,
+            // Validation states
+            duration_validation: FieldValidation::default(),
+            start_hour_validation: FieldValidation::default(),
+            seed_validation: FieldValidation::default(),
+            timezone_validation: FieldValidation::default(),
+            // Parameters
+            order_pcap: false,
+            taint: false,
+
+            duration_str: default_duration,
+            duration_slider_value,
+
+            seed_input: String::new(),
+
+            timezone_input: Tz::CET.to_string(),
+            use_local_timezone: true,
+
             start_date: NaiveDate::from_ymd_opt(2025, 1, 1).unwrap(),
             start_hour: "00:00:00".to_string(),
+
+            output_file_name: "output.pcap".to_string(),
         }
     }
 }
 
 /**
- * display the error in red
+ * Display the error in red
  */
 fn show_field_error(ui: &mut egui::Ui, validation: &FieldValidation) {
     if let Some(msg) = &validation.error {
@@ -219,9 +219,11 @@ fn show_status(ui: &mut egui::Ui, status: &UiStatus) {
         UiStatus::Generated => {
             ui.label("File generated. You can save it.");
         }
+        #[cfg(not(target_arch = "wasm32"))]
         UiStatus::Saved(msg) => {
             ui.label(format!("File saved. {}", msg));
         }
+        #[cfg(not(target_arch = "wasm32"))]
         UiStatus::Error(msg) => {
             ui.colored_label(egui::Color32::RED, format!("Error: {msg}"));
         }
@@ -229,11 +231,11 @@ fn show_status(ui: &mut egui::Ui, status: &UiStatus) {
 }
 
 fn validate_duration(duration_str: &str) -> Result<Duration, String> {
-    let d = humantime::parse_duration(duration_str).map_err(|_| "invalid value".to_string())?;
+    let d = humantime::parse_duration(duration_str).map_err(|_| "Invalid value".to_string())?;
 
     if d < DURATION_MIN || d > DURATION_MAX {
         return Err(format!(
-            "out of range ({} – {})",
+            "Out of range ({} – {})",
             humantime::format_duration(DURATION_MIN),
             humantime::format_duration(DURATION_MAX),
         ));
@@ -244,20 +246,26 @@ fn validate_duration(duration_str: &str) -> Result<Duration, String> {
 fn validate_start_hour(input: &str) -> Result<(), String> {
     let s = input.trim();
     if s.is_empty() {
-        return Err("invalid value".to_string());
+        return Err("Invalid value".to_string());
     }
 
     let parts: Vec<&str> = s.split(':').collect();
     if parts.len() != 3 || parts[0].len() != 2 || parts[1].len() != 2 || parts[2].len() != 2 {
-        return Err("invalid value".to_string());
+        return Err("Invalid value".to_string());
     }
 
-    let hour = parts[0].parse::<u8>().map_err(|_| "invalid value".to_string())?;
-    let minute = parts[1].parse::<u8>().map_err(|_| "invalid value".to_string())?;
-    let second = parts[2].parse::<u8>().map_err(|_| "invalid value".to_string())?;
+    let hour = parts[0]
+        .parse::<u8>()
+        .map_err(|_| "Invalid value".to_string())?;
+    let minute = parts[1]
+        .parse::<u8>()
+        .map_err(|_| "Invalid value".to_string())?;
+    let second = parts[2]
+        .parse::<u8>()
+        .map_err(|_| "Invalid value".to_string())?;
 
     if hour > 23 || minute > 59 || second > 59 {
-        return Err("invalid value".to_string());
+        return Err("Invalid value".to_string());
     }
 
     Ok(())
@@ -270,27 +278,14 @@ fn validate_optional_u64(input: &str) -> Result<Option<u64>, String> {
     }
     s.parse::<u64>()
         .map(Some)
-        .map_err(|_| "invalid value".to_string())
-}
-
-fn validate_optional_u64_gt0(input: &str) -> Result<Option<u64>, String> {
-    let s = input.trim();
-    if s.is_empty() {
-        return Ok(None);
-    }
-
-    let n = s.parse::<u64>().map_err(|_| "invalid value".to_string())?;
-    if n == 0 {
-        return Err("must be > 0".to_string());
-    }
-    Ok(Some(n))
+        .map_err(|_| "Invalid value".to_string())
 }
 
 fn validate_timezone(input: &str) -> Result<(), String> {
     let parsed = input.parse::<Tz>();
     match parsed {
         Ok(_) => Ok(()),
-        Err(_) => Err("invalid value".to_string()),
+        Err(_) => Err("Invalid value".to_string()),
     }
 }
 
@@ -356,7 +351,7 @@ async fn save_file_wasm(data: &[u8], file_name: &str) -> Result<FileHandle, Erro
     }
 }
 
-pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationState) {
+pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationTabState) {
     ui.add_space(5.0);
 
     // --- Configuration File Picker ---
@@ -436,7 +431,7 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
     {
         ui.horizontal(|ui| {
             ui.label("Output file name:");
-            egui::TextEdit::singleline(&mut state.params.outfile)
+            egui::TextEdit::singleline(&mut state.output_file_name)
                 .desired_width(180.0)
                 .ui(ui);
         });
@@ -447,13 +442,13 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
     ui.horizontal(|ui| {
         ui.label("Duration");
 
-        let response = egui::TextEdit::singleline(&mut state.params.duration)
+        let response = egui::TextEdit::singleline(&mut state.duration_str)
             .desired_width(100.0)
             .hint_text("ex: 30m, 1h, 2d")
             .ui(ui);
 
         if response.changed() {
-            match validate_duration(&state.params.duration) {
+            match validate_duration(&state.duration_str) {
                 Ok(d) => {
                     state.duration_validation.set_ok();
                     state.duration_slider_value = duration_to_slider(d);
@@ -477,7 +472,7 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
 
         if response.changed() {
             let s = duration_string_from_slider(state.duration_slider_value);
-            state.params.duration = s;
+            state.duration_str = s;
             state.duration_validation.set_ok();
         }
     });
@@ -496,12 +491,12 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
 
         if response.changed() {
             match validate_start_hour(&state.start_hour) {
-                Ok(()) => state.start_time_validation.set_ok(),
-                Err(msg) => state.start_time_validation.set_err(msg),
+                Ok(()) => state.start_hour_validation.set_ok(),
+                Err(msg) => state.start_hour_validation.set_err(msg),
             }
         }
 
-        show_field_error(ui, &state.start_time_validation);
+        show_field_error(ui, &state.start_hour_validation);
     });
 
     ui.add_space(10.0);
@@ -509,11 +504,17 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
     ui.horizontal(|ui| {
         ui.checkbox(&mut state.use_local_timezone, "Use local timezone");
         if state.use_local_timezone {
-            // Reset the timezone in the params
-            state.params.timezone = None;
+            // Reset the timezone
+            state.timezone_input = String::new();
         } else {
             // Display a dropdown button to select a timezone
-            let initial_selected = state.timezone_input.clone();
+            let initial_selected: String;
+            if state.timezone_input.is_empty() {
+                state.timezone_input = Tz::CET.to_string();
+                initial_selected = state.timezone_input.clone();
+            } else {
+                initial_selected = state.timezone_input.clone();
+            }
             egui::ComboBox::from_id_salt("timezone")
                 .selected_text(&state.timezone_input)
                 .width(200.0)
@@ -528,7 +529,7 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
                     ui.add(
                         egui::TextEdit::singleline(&mut state.timezone_input)
                             .hint_text("Search...")
-                            .id(edit_id)
+                            .id(edit_id),
                     );
 
                     // Handle Auto-focus & Auto-select on initial open
@@ -543,8 +544,10 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
                     for tz in TZ_VARIANTS {
                         let tz_str = tz.to_string();
                         if filter.is_empty() || tz_str.to_lowercase().contains(&filter) {
-                            if ui.selectable_label(state.timezone_input == tz_str, &tz_str)
-                                .clicked() {
+                            if ui
+                                .selectable_label(state.timezone_input == tz_str, &tz_str)
+                                .clicked()
+                            {
                                 state.timezone_input = tz_str;
                                 // Manually close the popup
                                 ui.close();
@@ -553,17 +556,13 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
                     }
                 });
 
-
             // The returned response's changed() method does not work properly here
             if initial_selected != state.timezone_input {
                 let result = validate_timezone(&state.timezone_input);
                 if result.is_ok() {
-                    state.params.timezone = Some(state.timezone_input.clone());
                     state.timezone_validation.set_ok();
                 } else {
                     state.timezone_validation.set_err(result.err().unwrap());
-                    // Reset the timezone in the params
-                    state.params.timezone = None;
                 }
             }
         }
@@ -583,9 +582,8 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
         if response.changed() {
             // Convert String to Option<u64>
             match validate_optional_u64(&state.seed_input) {
-                Ok(value) => {
+                Ok(_) => {
                     state.seed_validation.set_ok();
-                    state.params.seed = value;
                 }
                 Err(msg) => {
                     state.seed_validation.set_err(msg);
@@ -596,38 +594,11 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
         show_field_error(ui, &state.seed_validation);
     });
 
-    ui.add_space(10.0);
-
-    ui.horizontal(|ui| {
-        ui.label("Packets count (optional)");
-
-        let response = ui.add(
-            egui::TextEdit::singleline(&mut state.packets_count_input)
-                .hint_text("leave empty for default")
-                .desired_width(160.0),
-        );
-
-        if response.changed() {
-            // Convert string to Option<u64>
-            match validate_optional_u64_gt0(&state.packets_count_input) {
-                Ok(value) => {
-                    state.packets_count_validation.set_ok();
-                    state.params.packets_count = value;
-                }
-                Err(msg) => {
-                    state.packets_count_validation.set_err(msg);
-                }
-            }
-        }
-
-        show_field_error(ui, &state.packets_count_validation);
-    });
-
     ui.add_space(15.0);
 
-    ui.checkbox(&mut state.params.taint, "Taint the packets");
+    ui.checkbox(&mut state.taint, "Taint the packets");
 
-    ui.checkbox(&mut state.params.order_pcap, "Order temporally");
+    ui.checkbox(&mut state.order_pcap, "Order temporally");
 
     ui.add_space(20.0);
 
@@ -656,16 +627,20 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
             let (pcap_sender, pcap_receiver) = channel();
             state.pcap_receiver = Some(pcap_receiver);
 
-            let seed = state.params.seed;
-            let packets_count = state.params.packets_count;
-            let order_pcap = state.params.order_pcap;
-            let start_time = Some(format!("{}T{}Z", state.start_date.format("%Y-%m-%d"), state.start_hour));
-            let duration = match state.params.packets_count {
-                Some(_) => None,
-                None => Some(state.params.duration.clone()),
+            let seed = state.seed_input.parse::<u64>().ok();
+            let order_pcap = state.order_pcap;
+            let start_time = Some(format!(
+                "{}T{}Z",
+                state.start_date.format("%Y-%m-%d"),
+                state.start_hour
+            ));
+            let duration = state.duration_str.clone();
+            let taint = state.taint;
+            let timezone = if state.timezone_input.is_empty() {
+                None
+            } else {
+                Some(state.timezone_input.clone())
             };
-            let taint = state.params.taint;
-            let timezone = state.params.timezone.clone();
             let ctx = ui.ctx().clone();
             let file_handle = state.picked_config_file.clone();
 
@@ -680,7 +655,6 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
                     generate(
                         seed,
                         profile,
-                        packets_count,
                         order_pcap,
                         start_time,
                         duration,
@@ -696,11 +670,12 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
             #[cfg(not(target_arch = "wasm32"))]
             {
                 std::thread::spawn(move || {
-                    let profile = file_handle.as_ref().map(|file| read_config_file_desktop(file));
+                    let profile = file_handle
+                        .as_ref()
+                        .map(|file| read_config_file_desktop(file));
                     generate(
                         seed,
                         profile,
-                        packets_count,
                         order_pcap,
                         start_time,
                         duration,
@@ -717,7 +692,6 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
         if let Some(receiver) = &state.progress_receiver {
             if let Ok(progress) = receiver.try_recv() {
                 state.progress = progress;
-                println!("Progress: {}", progress);
                 // Remove the progress receiver if the generation is done
                 if progress >= 1.0 {
                     state.progress_receiver = None;
@@ -743,9 +717,9 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
                 #[cfg(not(target_arch = "wasm32"))]
                 {
                     let data = pcap_bytes.as_ref().unwrap().as_slice();
-                    match save_file_desktop(data, &state.params.outfile) {
+                    match save_file_desktop(data, &state.output_file_name) {
                         Ok(file_handle) => {
-                            println!(
+                            log::info!(
                                 "Successfully wrote to file: {}",
                                 file_handle.path().to_string_lossy()
                             );
@@ -755,7 +729,7 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
                             ));
                         }
                         Err(e) => {
-                            eprintln!("Failed to save file: {:?}", e);
+                            log::error!("Failed to save file: {:?}", e);
                             state.status = UiStatus::Error(format!("Failed to save file: {e}"));
                         }
                     }
@@ -764,17 +738,17 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationStat
                 #[cfg(target_arch = "wasm32")]
                 {
                     // Spawn a local async task to run the file write operation.
-                    let file_name = state.params.outfile.clone();
+                    let file_name = state.output_file_name.clone();
                     wasm_bindgen_futures::spawn_local(async move {
                         let data = pcap_bytes.as_ref().unwrap().as_slice();
-                        println!("Attempting to write file on WASM...");
+                        log::info!("Attempting to write file on WASM...");
                         // Perform the asynchronous write operation. This triggers the browser's saving dialog.
                         match save_file_wasm(data, &file_name).await {
                             Ok(_) => {
-                                println!("File written successfully!");
+                                log::info!("File written successfully!");
                             }
                             Err(e) => {
-                                eprintln!("Failed to write file: {:?}", e);
+                                log::error!("Failed to write file: {:?}", e);
                             }
                         }
                     });
