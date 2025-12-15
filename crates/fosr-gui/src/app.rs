@@ -30,6 +30,9 @@ impl Default for CurrentTab {
 
 impl eframe::App for FosrApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Set the image loaders
+        egui_extras::install_image_loaders(ctx);
+
         // The Top Panel is logically at the top of the window.
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // Add a Menu Bar to host the tabs buttons
