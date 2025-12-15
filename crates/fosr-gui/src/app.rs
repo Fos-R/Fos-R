@@ -1,5 +1,5 @@
 use crate::ui::{
-    GenerationState,
+    GenerationTabState,
     show_about_tab_content,
     show_generation_tab_content,
 };
@@ -20,7 +20,7 @@ enum CurrentTab {
 #[derive(Default)]
 pub struct FosrApp {
     current_tab: CurrentTab,
-    generation_state: GenerationState,
+    generation_tab_state: GenerationTabState,
 }
 
 impl Default for CurrentTab {
@@ -32,6 +32,7 @@ impl Default for CurrentTab {
 impl eframe::App for FosrApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Set the image loaders
+        // Required for egui to display images
         egui_extras::install_image_loaders(ctx);
 
         // The Top Panel is logically at the top of the window.
@@ -72,7 +73,7 @@ impl eframe::App for FosrApp {
             // Display the tab content depending on the currently select tab
             match self.current_tab {
                 CurrentTab::Generation => {
-                    show_generation_tab_content(ui, &mut self.generation_state);
+                    show_generation_tab_content(ui, &mut self.generation_tab_state);
                 }
                 #[cfg(not(target_arch = "wasm32"))]
                 CurrentTab::Injection => {

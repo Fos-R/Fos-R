@@ -1,33 +1,23 @@
 use chrono::{DateTime, Offset, TimeZone};
 use chrono_tz::Tz;
-use fosr_lib::{models, stage0, stage1, stage2, stage2::tadam::TadamGenerator, stage3, stats::Target};
+use fosr_lib::{
+    models, stage0, stage1, stage2, stage2::tadam::TadamGenerator, stage3, stats::Target,
+};
 use indicatif::HumanBytes;
-use std::sync::{mpsc::Sender, Arc};
+use std::sync::{Arc, mpsc::Sender};
 use std::time::UNIX_EPOCH as STD_UNIX_EPOCH;
 use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-#[derive(Default, Debug)]
-pub struct Params {
-    pub seed: Option<u64>,
-    pub outfile: String,
-    pub packets_count: Option<u64>,
-    pub order_pcap: bool,
-    pub start_time: String,
-    pub duration: String,
-    pub taint: bool,
-    pub timezone: Option<String>,
-}
-
-pub fn generate(seed: Option<u64>,
-                profile: Option<String>,
-                packets_count: Option<u64>,
-                order_pcap: bool,
-                start_time: Option<String>,
-                duration: Option<String>,
-                taint: bool,
-                timezone: Option<String>,
-                progress_sender: Option<Sender<f32>>,
-                pcap_sender: Option<Sender<Vec<u8>>>,
+pub fn generate(
+    seed: Option<u64>,
+    profile: Option<String>,
+    order_pcap: bool,
+    start_time: Option<String>,
+    duration: String,
+    taint: bool,
+    timezone: Option<String>,
+    progress_sender: Option<Sender<f32>>,
+    pcap_sender: Option<Sender<Vec<u8>>>,
 ) {
     // Create a closure to send progress updates
     let send_progress = |progress: f32| {
@@ -54,18 +44,11 @@ pub fn generate(seed: Option<u64>,
     let bn = Arc::new(model.bn);
 
     // Handle the parameters: either there is a packet count target or a duration
-    let (_target, duration) = match (packets_count, duration) {
-        (None, Some(d)) => {
-            let d = humantime::parse_duration(&d).expect("Duration could not be parsed.");
-            log::info!("Generating a pcap of {d:?}");
-            (Target::GenerationDuration(d), Some(d))
-        }
-        (Some(p), None) => {
-            log::info!("Generation at least {p} packets");
-            (Target::PacketCount(p), None)
-        }
-        _ => unreachable!(),
-    };
+    let d = humantime::parse_duration(&duration).expect("Duration could not be parsed.");
+    log::info!("Generating a pcap of {d:?}");
+    let _target = Target::GenerationDuration(d);
+    let duration = Some(d);
+
     if let Some(s) = seed {
         log::info!("Generating with seed {s}");
     }
@@ -108,7 +91,6 @@ pub fn generate(seed: Option<u64>,
         }
     };
 
-
     let s0 = stage0::BinBasedGenerator::new(
         seed,
         false,
@@ -122,15 +104,7 @@ pub fn generate(seed: Option<u64>,
     let s2 = TadamGenerator::new(automata_library);
     let s3 = stage3::Stage3::new(taint);
     log::info!("Run monothread");
-    run_monothread(
-        order_pcap,
-        s0,
-        s1,
-        s2,
-        s3,
-        send_progress,
-        send_pcap,
-    );
+    run_monothread(order_pcap, s0, s1, s2, s3, send_progress, send_pcap);
 }
 
 fn run_monothread(
