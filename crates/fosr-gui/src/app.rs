@@ -6,6 +6,7 @@ use crate::ui::{
 #[cfg(not(target_arch = "wasm32"))]
 use crate::ui::show_injection_tab_content;
 use eframe::egui;
+#[cfg(not(target_arch = "wasm32"))]
 use eframe::egui::global_theme_preference_switch;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -37,7 +38,12 @@ impl eframe::App for FosrApp {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // Add a Menu Bar to host the tabs buttons
             egui::MenuBar::new().ui(ui, |ui| {
+                // On native, show the theme switch (using system theme by default)
+                #[cfg(not(target_arch = "wasm32"))]
                 global_theme_preference_switch(ui);
+                // On web, use dark theme to match with the Fos-R website's theme
+                #[cfg(target_arch = "wasm32")]
+                ctx.set_theme(egui::Theme::Dark);
 
                 if ui
                     .selectable_label(self.current_tab == CurrentTab::Generation, "Generation")

@@ -135,24 +135,26 @@ pub struct GenerationState {
     pub picked_config_file: Option<FileHandle>,
     #[cfg(target_arch = "wasm32")]
     pub config_file_receiver: Option<Receiver<Option<FileHandle>>>,
+    pub progress: f32,
+    pub progress_receiver: Option<Receiver<f32>>,
+    pub pcap_bytes: Option<Vec<u8>>,
+    pub pcap_receiver: Option<Receiver<Vec<u8>>>,
+    pub status: UiStatus,
     pub params: Params,
+    // Validators
+    pub duration_validation: FieldValidation,
+    pub start_time_validation: FieldValidation,
+    pub seed_validation: FieldValidation,
+    pub packets_count_validation: FieldValidation,
+    pub timezone_validation: FieldValidation,
+    // Temp fields
     pub duration_slider_value: f32,
     pub seed_input: String,
     pub packets_count_input: String,
     pub timezone_input: String,
     pub start_date: NaiveDate,
     pub start_hour: String,
-    pub progress: f32,
-    pub progress_receiver: Option<Receiver<f32>>,
-    pub pcap_bytes: Option<Vec<u8>>,
-    pub pcap_receiver: Option<Receiver<Vec<u8>>>,
-    pub duration_validation: FieldValidation,
-    pub start_time_validation: FieldValidation,
-    pub seed_validation: FieldValidation,
-    pub packets_count_validation: FieldValidation,
-    pub timezone_validation: FieldValidation,
     pub use_local_timezone: bool,
-    pub status: UiStatus,
 }
 
 impl Default for GenerationState {
