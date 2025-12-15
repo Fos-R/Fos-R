@@ -123,6 +123,17 @@ impl Stats {
     pub fn stop_early(&self) {
         self.early_stop.store(true, Ordering::Relaxed);
     }
+
+    /// Get the generation progress as a percentage
+    pub fn get_progress(&self) -> Option<f64> {
+        if let Some(target) = self.packets_target {
+            Some(((self.packets_counter.load(Ordering::Relaxed) as f64) / (target as f64)).min(1.0f64))
+        } else if let Some(target) = self.duration_target {
+            Some(((self.current_duration.load(Ordering::Relaxed) as f64) / (target as f64)).min(1.0f64))
+        } else {
+            None
+        }
+    }
 }
 
 fn update_progress_bar(
