@@ -417,7 +417,9 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationTabS
             }
 
             if state.pcap_bytes.is_some() && state.progress == 1.0 {
-                state.status = UiStatus::Generated;
+                if !matches!(state.status, UiStatus::Saved(_) | UiStatus::Error(_)) {
+                    state.status = UiStatus::Generated;
+                }
                 #[cfg(not(target_arch = "wasm32"))]
                 let save_button_label = "Save";
                 #[cfg(target_arch = "wasm32")]
