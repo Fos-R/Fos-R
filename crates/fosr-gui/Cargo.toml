@@ -7,7 +7,7 @@ description = "A GUI for Fos-R."
 [package.metadata.bundle]
 name = "Fos-R"
 identifier = "com.inria.fosr"
-icon = ["../../public/fosr.icns"]
+icon = ["crates/fosr-gui/assets/fosr-gui-macos.icns"]
 
 [[bin]]
 name = "fosr-gui"

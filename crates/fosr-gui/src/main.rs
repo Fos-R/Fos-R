@@ -1,7 +1,7 @@
 mod app;
 
-mod generation;
 mod about;
+mod generation;
 #[cfg(not(target_arch = "wasm32"))]
 mod injection;
 
@@ -15,15 +15,25 @@ fn main() -> eframe::Result {
     // Redirect log messages to the console
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
+    let shared_viewport = egui::ViewportBuilder::default()
+        .with_inner_size([500.0, 440.0])
+        .with_min_inner_size([400.0, 350.0])
+        .with_title("Fos-R");
+
+    #[cfg(target_os = "macos")]
+    let viewport = shared_viewport.with_icon(
+        eframe::icon_data::from_png_bytes(&include_bytes!("../assets/fosr-gui-macos.png")[..])
+            .expect("Failed to load icon"),
+    );
+
+    #[cfg(not(target_os = "macos"))]
+    let viewport = shared_viewport.with_icon(
+        eframe::icon_data::from_png_bytes(&include_bytes!("../assets/fosr-gui.png")[..])
+            .expect("Failed to load icon"),
+    );
+
     let native_options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([500.0, 440.0])
-            .with_min_inner_size([400.0, 350.0])
-            .with_title("Fos-R")
-            .with_icon(
-                eframe::icon_data::from_png_bytes(&include_bytes!("../../../public/fosr.png")[..])
-                    .expect("Failed to load icon"),
-            ),
+        viewport,
         ..Default::default()
     };
     eframe::run_native(

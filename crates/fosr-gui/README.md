@@ -39,7 +39,7 @@ This compiles and launches the native GUI.
 # Install `cargo-bundle`
 cargo install cargo-bundle
 # Bundle in a .app
-cargo bundle -p fosr-gui -r
+cargo bundle -p fosr-gui -r -f osx
 ```
 
 ### Web (WASM)
