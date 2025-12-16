@@ -84,6 +84,79 @@ def parse_ICMP(input_string):
         return match.group(1), [int(float(match.group(2).replace(',', '.')) * 1e6)]
     assert False, "Parsing error on "+input_string
 
+class Exporter:
+
+    def __init__(self, metadata, output_name, protocol):
+        self.metadata = metadata
+        self.output_name = output_name
+        self.protocol = protocol
+
+    def export_automata(self, ta):
+        tmp = []
+        for e in ta.edges:
+            d = {}
+            if "Replay" in e.symbol:
+                tss = []
+                for ts, t in e.tss.items():
+                    tss = tss + [payloads[ts].split()[a].split(":")[1] for (a,_) in t]
+                d["payloads"] = { "content": [str(s) for s in tss] }
+                d["payloads"]["type"] = "HexCodes"
+            elif "Text" in e.symbol:
+                tss = []
+                for ts, t in e.tss.items():
+                    tss = tss + [payloads[ts].split()[a].split(":")[1] for (a,_) in t]
+                values, counts = np.unique(tss, return_counts=True)
+                d["payloads"] = { "content": [bytes.fromhex(s).decode('utf-8') for s in values] }
+                # save the weights only if it’s not equiprobable
+                if any(c != counts[0] for c in counts):
+                    d["payloads"]["weights"] = [int(i) for i in counts]
+                d["payloads"]["type"] = "Text"
+            elif "Random" in e.symbol:
+                lengths = []
+                for ts, t in e.tss.items():
+                    lengths = lengths + [int(len(payloads[ts].split()[a].split(":")[1])/2) for (a,_) in t]
+                    # divide by 2 because it’s hexadecimal encoding, so 2 letters -> 1 byte
+                d["payloads"] = { "type": "Lengths", "lengths": lengths }
+            else:
+                d["payloads"] = { "type": "NoPayload" }
+            # if empty: keep tss empty
+            d["p"] = e.proba
+            d["count"] = len(e.tss)
+            d["src"] = ta.states.index(e.source)
+            d["dst"] = ta.states.index(e.destination)
+            d["symbol"] = e.symbol
+            d["mu"] = e.mu.tolist()
+            d["cov"] = e.cov.tolist()
+            tmp.append(d)
+
+        noise = {}
+        noise["none"] = 2**(-ta.cost_transition)
+        noise["deletion"] = 2**(-ta.cost_deletion)
+        noise["reemission"] = 2**(-ta.cost_reemission)
+        noise["transposition"] = 2**(-ta.cost_transposition)
+        noise["addition"] = 2**(-ta.cost_addition)
+        s = sum(noise.values())
+        for k,v in noise.items(): # normalize, just in case
+            noise[k] = v/s
+
+        d = { "edges": tmp, "noise": noise }
+        for i,n in enumerate(ta.states):
+            if n.initial:
+                d["initial_state"] = i
+            if n.accepting:
+                d["accepting_state"] = i
+
+        d["protocol"] = self.protocol
+        d["metadata"] = self.metadata
+        try:
+            out_file2 = open(self.output_name, "w")
+            json.dump(d, out_file2, indent=4)
+            # out_file = open(output_name.rsplit(".",1)[0]+"_human_readable.json", "w")
+            # json.dump(d, out_file, indent=4)
+            print("JSON file successfully created:", self.output_name)
+        except Exception as e:
+            print("Error during json save:", e)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Learn timed automata from packet sequences.')
     parser.add_argument('--proto', choices=["TCP","UDP","ICMP"], type=str.upper)
@@ -115,6 +188,7 @@ if __name__ == '__main__':
         print("No output file specified: using \"automata.json\" by default")
         args.output = "automata.json"
 
+    output_name = args.output
     try:
         df = pd.read_csv(args.input,low_memory=False)
         # df = pd.read_csv(args.input,low_memory=False,names=["protocol","src_ip","dst_ip","dst_port","fwd_packets","bwd_packets","fwd_bytes","bwd_bytes","time_sequence","payloads"])
@@ -182,80 +256,17 @@ if __name__ == '__main__':
                     init = Init.STATE_SYMBOL)
     payloads = df["payloads"]
 
-    l = exhaustive_search(options, tss_list=df["time_sequence"], verbose=args.verbose, noise_model=noise_model)
-    ta = l.ta
-    # print("Automaton successfully learned")
-
-    tmp = []
-    for e in ta.edges:
-        d = {}
-        if "Replay" in e.symbol:
-            tss = []
-            for ts, t in e.tss.items():
-                tss = tss + [payloads[ts].split()[a].split(":")[1] for (a,_) in t]
-            d["payloads"] = { "content": [str(s) for s in tss] }
-            d["payloads"]["type"] = "HexCodes"
-        elif "Text" in e.symbol:
-            tss = []
-            for ts, t in e.tss.items():
-                tss = tss + [payloads[ts].split()[a].split(":")[1] for (a,_) in t]
-            values, counts = np.unique(tss, return_counts=True)
-            d["payloads"] = { "content": [bytes.fromhex(s).decode('utf-8') for s in values] }
-            # save the weights only if it’s not equiprobable
-            if any(c != counts[0] for c in counts):
-                d["payloads"]["weights"] = [int(i) for i in counts]
-            d["payloads"]["type"] = "Text"
-        elif "Random" in e.symbol:
-            lengths = []
-            for ts, t in e.tss.items():
-                lengths = lengths + [int(len(payloads[ts].split()[a].split(":")[1])/2) for (a,_) in t]
-                # divide by 2 because it’s hexadecimal encoding, so 2 letters -> 1 byte
-            d["payloads"] = { "type": "Lengths", "lengths": lengths }
-        else:
-            d["payloads"] = { "type": "NoPayload" }
-        # if empty: keep tss empty
-        d["p"] = e.proba
-        d["count"] = len(e.tss)
-        d["src"] = ta.states.index(e.source)
-        d["dst"] = ta.states.index(e.destination)
-        d["symbol"] = e.symbol
-        d["mu"] = e.mu.tolist()
-        d["cov"] = e.cov.tolist()
-        tmp.append(d)
-
-    noise = {}
-    noise["none"] = 2**(-ta.cost_transition)
-    noise["deletion"] = 2**(-ta.cost_deletion)
-    noise["reemission"] = 2**(-ta.cost_reemission)
-    noise["transposition"] = 2**(-ta.cost_transposition)
-    noise["addition"] = 2**(-ta.cost_addition)
-    s = sum(noise.values())
-    for k,v in noise.items(): # normalize, just in case
-        noise[k] = v/s
-
-    d = { "edges": tmp, "noise": noise}
-    for i,n in enumerate(ta.states):
-        if n.initial:
-            d["initial_state"] = i
-        if n.accepting:
-            d["accepting_state"] = i
-
-    d["protocol"] = protocol
     metadata = {}
     metadata["select_dst_ports"] = select_dst_ports
     metadata["input_file"] = os.path.split(args.input)[-1]
     metadata["ignore_dst_ports"] = ignore_dst_ports
     metadata["creation_time"] = str(datetime.datetime.now())
     metadata["automaton_name"] = args.automaton_name or "none"
-    d["metadata"] = metadata
-    try:
-        out_file2 = open(args.output, "w")
-        json.dump(d, out_file2, indent=4)
-        # out_file = open(args.output.rsplit(".",1)[0]+"_human_readable.json", "w")
-        # json.dump(d, out_file, indent=4)
-        print("JSON file successfully created:",args.output)
-    except Exception as e:
-        print("Error during json save:",e)
+
+    exporter = Exporter(metadata, output_name, protocol)
+    l = exhaustive_search(options, tss_list=df["time_sequence"], verbose=args.verbose, noise_model=noise_model, on_iter=exporter.export_automata)
+    ta = l.ta
+    # print("Automaton successfully learned")
 
     if args.output_dot:
         try:
