@@ -211,20 +211,21 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationTabS
         show_field_error(ui, &state.duration_validation);
     });
 
-    ui.horizontal(|ui| {
-        ui.set_width(300.0);
-        let response = ui.add(
-            egui::Slider::new(&mut state.duration_slider_value, 0.0..=1.0)
-                .show_value(false)
-                .clamping(SliderClamping::Never),
-        );
+    // The only way to set the slider width currently is to set it globally.
+    // If we need another slider at some point, this value should be mutated
+    // again before adding it.
+    ui.style_mut().spacing.slider_width = 250.0;
+    let response = ui.add(
+        egui::Slider::new(&mut state.duration_slider_value, 0.0..=1.0)
+            .show_value(false)
+            .clamping(SliderClamping::Never),
+    );
 
-        if response.changed() {
-            let s = duration_string_from_slider(state.duration_slider_value);
-            state.duration_str = s;
-            state.duration_validation.set_ok();
-        }
-    });
+    if response.changed() {
+        let s = duration_string_from_slider(state.duration_slider_value);
+        state.duration_str = s;
+        state.duration_validation.set_ok();
+    }
 
     ui.add_space(10.0);
 
