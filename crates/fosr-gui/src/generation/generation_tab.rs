@@ -324,147 +324,149 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationTabS
 
     let can_generate = first_invalid_param(&state).is_none();
 
-    ui.add_enabled_ui(can_generate, |ui| {
-        if ui.button("Generate").clicked() {
-            state.status = UiStatus::Generating;
+    ui.horizontal(|ui| {
+        ui.add_enabled_ui(can_generate, |ui| {
+            if ui.button("Generate").clicked() {
+                state.status = UiStatus::Generating;
 
-            // Reset the progress value
-            state.progress = 0.0;
+                // Reset the progress value
+                state.progress = 0.0;
 
-            let (progress_sender, progress_receiver) = channel();
-            state.progress_receiver = Some(progress_receiver);
+                let (progress_sender, progress_receiver) = channel();
+                state.progress_receiver = Some(progress_receiver);
 
-            let (pcap_sender, pcap_receiver) = channel();
-            state.pcap_receiver = Some(pcap_receiver);
+                let (pcap_sender, pcap_receiver) = channel();
+                state.pcap_receiver = Some(pcap_receiver);
 
-            let seed = state.seed_input.parse::<u64>().ok();
-            let order_pcap = state.order_pcap;
-            let start_time = Some(format!(
-                "{}T{}Z",
-                state.start_date.format("%Y-%m-%d"),
-                state.start_hour
-            ));
-            let duration = state.duration_str.clone();
-            let taint = state.taint;
-            let timezone = if state.timezone_input.is_empty() {
-                None
-            } else {
-                Some(state.timezone_input.clone())
-            };
-            let ctx = ui.ctx().clone();
-            let file_handle = state.picked_config_file.clone();
-
-            #[cfg(target_arch = "wasm32")]
-            {
-                wasm_bindgen_futures::spawn_local(async move {
-                    let profile = if let Some(file) = file_handle.as_ref() {
-                        Some(read_config_file_wasm(file).await)
-                    } else {
-                        None
-                    };
-                    generate(
-                        seed,
-                        profile,
-                        order_pcap,
-                        start_time,
-                        duration,
-                        taint,
-                        timezone,
-                        Some(progress_sender),
-                        Some(pcap_sender),
-                    );
-                    ctx.request_repaint();
-                });
-            }
-
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                std::thread::spawn(move || {
-                    let profile = file_handle
-                        .as_ref()
-                        .map(|file| read_config_file_desktop(file));
-                    generate(
-                        seed,
-                        profile,
-                        order_pcap,
-                        start_time,
-                        duration,
-                        taint,
-                        timezone,
-                        Some(progress_sender),
-                        Some(pcap_sender),
-                    );
-                    ctx.request_repaint();
-                });
-            }
-        }
-
-        if let Some(receiver) = &state.progress_receiver {
-            if let Ok(progress) = receiver.try_recv() {
-                state.progress = progress;
-                // Remove the progress receiver if the generation is done
-                if progress >= 1.0 {
-                    state.progress_receiver = None;
-                }
-            }
-        }
-
-        if let Some(receiver) = &state.pcap_receiver {
-            if let Ok(pcap_bytes) = receiver.try_recv() {
-                state.pcap_bytes = Some(pcap_bytes);
-            }
-        }
-
-        if state.pcap_bytes.is_some() && state.progress == 1.0 {
-            state.status = UiStatus::Generated;
-            #[cfg(not(target_arch = "wasm32"))]
-            let save_button_label = "Save";
-            #[cfg(target_arch = "wasm32")]
-            let save_button_label = "Download";
-            if ui.button(save_button_label).clicked() {
-                // --- Save file ---
-                let pcap_bytes = state.pcap_bytes.clone();
-                #[cfg(not(target_arch = "wasm32"))]
-                {
-                    let data = pcap_bytes.as_ref().unwrap().as_slice();
-                    match save_file_desktop(data, &state.output_file_name) {
-                        Ok(file_handle) => {
-                            log::info!(
-                                "Successfully wrote to file: {}",
-                                file_handle.path().to_string_lossy()
-                            );
-                            state.status = UiStatus::Saved(format!(
-                                "Saved to: {}",
-                                file_handle.path().to_string_lossy()
-                            ));
-                        }
-                        Err(e) => {
-                            log::error!("Failed to save file: {:?}", e);
-                            state.status = UiStatus::Error(format!("Failed to save file: {e}"));
-                        }
-                    }
-                }
+                let seed = state.seed_input.parse::<u64>().ok();
+                let order_pcap = state.order_pcap;
+                let start_time = Some(format!(
+                    "{}T{}Z",
+                    state.start_date.format("%Y-%m-%d"),
+                    state.start_hour
+                ));
+                let duration = state.duration_str.clone();
+                let taint = state.taint;
+                let timezone = if state.timezone_input.is_empty() {
+                    None
+                } else {
+                    Some(state.timezone_input.clone())
+                };
+                let ctx = ui.ctx().clone();
+                let file_handle = state.picked_config_file.clone();
 
                 #[cfg(target_arch = "wasm32")]
                 {
-                    // Spawn a local async task to run the file write operation.
-                    let file_name = state.output_file_name.clone();
                     wasm_bindgen_futures::spawn_local(async move {
-                        let data = pcap_bytes.as_ref().unwrap().as_slice();
-                        log::info!("Attempting to write file on WASM...");
-                        // Perform the asynchronous write operation. This triggers the browser's saving dialog.
-                        match save_file_wasm(data, &file_name).await {
-                            Ok(_) => {
-                                log::info!("File written successfully!");
-                            }
-                            Err(e) => {
-                                log::error!("Failed to write file: {:?}", e);
-                            }
-                        }
+                        let profile = if let Some(file) = file_handle.as_ref() {
+                            Some(read_config_file_wasm(file).await)
+                        } else {
+                            None
+                        };
+                        generate(
+                            seed,
+                            profile,
+                            order_pcap,
+                            start_time,
+                            duration,
+                            taint,
+                            timezone,
+                            Some(progress_sender),
+                            Some(pcap_sender),
+                        );
+                        ctx.request_repaint();
+                    });
+                }
+
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    std::thread::spawn(move || {
+                        let profile = file_handle
+                            .as_ref()
+                            .map(|file| read_config_file_desktop(file));
+                        generate(
+                            seed,
+                            profile,
+                            order_pcap,
+                            start_time,
+                            duration,
+                            taint,
+                            timezone,
+                            Some(progress_sender),
+                            Some(pcap_sender),
+                        );
+                        ctx.request_repaint();
                     });
                 }
             }
-        }
+
+            if let Some(receiver) = &state.progress_receiver {
+                if let Ok(progress) = receiver.try_recv() {
+                    state.progress = progress;
+                    // Remove the progress receiver if the generation is done
+                    if progress >= 1.0 {
+                        state.progress_receiver = None;
+                    }
+                }
+            }
+
+            if let Some(receiver) = &state.pcap_receiver {
+                if let Ok(pcap_bytes) = receiver.try_recv() {
+                    state.pcap_bytes = Some(pcap_bytes);
+                }
+            }
+
+            if state.pcap_bytes.is_some() && state.progress == 1.0 {
+                state.status = UiStatus::Generated;
+                #[cfg(not(target_arch = "wasm32"))]
+                let save_button_label = "Save";
+                #[cfg(target_arch = "wasm32")]
+                let save_button_label = "Download";
+                if ui.button(save_button_label).clicked() {
+                    // --- Save file ---
+                    let pcap_bytes = state.pcap_bytes.clone();
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        let data = pcap_bytes.as_ref().unwrap().as_slice();
+                        match save_file_desktop(data, &state.output_file_name) {
+                            Ok(file_handle) => {
+                                log::info!(
+                                    "Successfully wrote to file: {}",
+                                    file_handle.path().to_string_lossy()
+                                );
+                                state.status = UiStatus::Saved(format!(
+                                    "Saved to: {}",
+                                    file_handle.path().to_string_lossy()
+                                ));
+                            }
+                            Err(e) => {
+                                log::error!("Failed to save file: {:?}", e);
+                                state.status = UiStatus::Error(format!("Failed to save file: {e}"));
+                            }
+                        }
+                    }
+
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        // Spawn a local async task to run the file write operation.
+                        let file_name = state.output_file_name.clone();
+                        wasm_bindgen_futures::spawn_local(async move {
+                            let data = pcap_bytes.as_ref().unwrap().as_slice();
+                            log::info!("Attempting to write file on WASM...");
+                            // Perform the asynchronous write operation. This triggers the browser's saving dialog.
+                            match save_file_wasm(data, &file_name).await {
+                                Ok(_) => {
+                                    log::info!("File written successfully!");
+                                }
+                                Err(e) => {
+                                    log::error!("Failed to write file: {:?}", e);
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        });
     });
 
     ui.add_space(10.0);
