@@ -91,7 +91,7 @@ impl Default for GenerationTabState {
             duration_str: default_duration,
             duration_slider_value,
             seed_input: String::new(),
-            timezone_input: Tz::CET.to_string(),
+            timezone_input: String::new(),
             use_local_timezone: true,
             start_date: NaiveDate::from_ymd_opt(2025, 1, 1).unwrap(),
             start_hour: "00:00:00".to_string(),
@@ -251,29 +251,28 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationTabS
     ui.add_space(10.0);
 
     ui.horizontal(|ui| {
-        ui.checkbox(&mut state.use_local_timezone, "Use local timezone");
-        if state.use_local_timezone {
-            // Reset the timezone
-            state.timezone_input = String::new();
-        } else {
-            // Display a dropdown button to select a timezone
-            let initial_selected: String;
-            if state.timezone_input.is_empty() {
-                state.timezone_input = Tz::CET.to_string();
-                initial_selected = state.timezone_input.clone();
+        if ui
+            .checkbox(&mut state.use_local_timezone, "Use local timezone")
+            .clicked()
+        {
+            if state.use_local_timezone {
+                // Reset the timezone
+                state.timezone_input = String::new();
+                state.timezone_validation.set_ok();
             } else {
-                initial_selected = state.timezone_input.clone();
+                // Set the default timezone
+                state.timezone_input = Tz::CET.to_string();
             }
+        }
+        if !state.use_local_timezone {
+            // Display the dropdown button
             timezone_picker(ui, state);
 
-            // The returned response's changed() method does not work properly here
-            if initial_selected != state.timezone_input {
-                let result = validate_timezone(&state.timezone_input);
-                if result.is_ok() {
-                    state.timezone_validation.set_ok();
-                } else {
-                    state.timezone_validation.set_err(result.err().unwrap());
-                }
+            let result = validate_timezone(&state.timezone_input);
+            if result.is_ok() {
+                state.timezone_validation.set_ok();
+            } else {
+                state.timezone_validation.set_err(result.err().unwrap());
             }
         }
     });
