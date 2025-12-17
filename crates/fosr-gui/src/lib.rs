@@ -1,10 +1,12 @@
 #![cfg(target_arch = "wasm32")]
 mod app;
-
 mod generation;
-mod about;
+mod configuration;
+mod about_tab;
 #[cfg(not(target_arch = "wasm32"))]
-mod injection;
+mod injection_tab;
+mod shared;
+mod visualization;
 
 use app::FosrApp;
 use eframe::wasm_bindgen::JsCast;

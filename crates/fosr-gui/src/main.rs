@@ -1,9 +1,11 @@
 mod app;
-
-mod about;
+mod about_tab;
 mod generation;
+mod configuration;
 #[cfg(not(target_arch = "wasm32"))]
-mod injection;
+mod injection_tab;
+mod shared;
+mod visualization;
 
 // Desktop: native compilation
 #[cfg(not(target_arch = "wasm32"))]
