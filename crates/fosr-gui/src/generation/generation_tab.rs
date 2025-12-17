@@ -1,8 +1,4 @@
 use super::generation_core::generate;
-#[cfg(not(target_arch = "wasm32"))]
-use super::generation_io::{read_config_file_desktop, save_file_desktop, show_file_picker_desktop};
-#[cfg(target_arch = "wasm32")]
-use super::generation_io::{read_config_file_wasm, save_file_wasm, show_file_picker_wasm};
 use super::generation_ui_components::{show_field_error, show_status, timezone_picker};
 use super::generation_utils::{
     duration_string_from_slider, duration_to_slider, slider_from_duration_string,
@@ -11,16 +7,18 @@ use super::generation_validation::{
     FieldValidation, first_invalid_param, validate_duration, validate_optional_u64,
     validate_start_hour, validate_timezone,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use crate::shared::files::{read_file_desktop, save_file_desktop};
+#[cfg(target_arch = "wasm32")]
+use crate::shared::files::{read_file_wasm, save_file_wasm};
 use chrono::NaiveDate;
 use chrono_tz::Tz;
 use eframe::egui;
 use eframe::egui::{SliderClamping, Widget};
 use egui_extras::DatePickerButton;
-use rfd::FileHandle;
 use std::sync::mpsc::{Receiver, channel};
 use std::time::Duration;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen_futures;
+use crate::configuration::configuration_file::{configuration_file_picker, ConfigurationFileState};
 
 // Time interval for the slider.
 pub const DURATION_MIN: Duration = Duration::from_secs(60); // 1 min
@@ -40,9 +38,6 @@ pub enum UiStatus {
  * Represents the state of the generation tab.
  */
 pub struct GenerationTabState {
-    pub picked_config_file: Option<FileHandle>,
-    #[cfg(target_arch = "wasm32")]
-    pub config_file_receiver: Option<Receiver<Option<FileHandle>>>,
     pub progress: f32,
     pub progress_receiver: Option<Receiver<f32>>,
     pub pcap_bytes: Option<Vec<u8>>,
@@ -72,9 +67,6 @@ impl Default for GenerationTabState {
         let duration_slider_value = slider_from_duration_string(default_duration.clone()).unwrap();
 
         Self {
-            picked_config_file: None,
-            #[cfg(target_arch = "wasm32")]
-            config_file_receiver: None,
             progress: 0.0,
             progress_receiver: None,
             pcap_bytes: None,
@@ -100,77 +92,12 @@ impl Default for GenerationTabState {
     }
 }
 
-pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationTabState) {
-    ui.add_space(5.0);
-
-    // --- Configuration File Picker ---
-    ui.horizontal(|ui| {
-        ui.label("Configuration file:");
-
-        // File Dialog to pick a config file
-        if ui.button("Select file").clicked() {
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                // Only update if a file was actually selected
-                let file = show_file_picker_desktop();
-                if file.is_some() {
-                    state.picked_config_file = file;
-                }
-            }
-
-            #[cfg(target_arch = "wasm32")]
-            {
-                let (sender, receiver) = channel();
-                state.config_file_receiver = Some(receiver);
-
-                let ctx = ui.ctx().clone();
-                wasm_bindgen_futures::spawn_local(async move {
-                    let file = show_file_picker_wasm().await;
-                    let _ = sender.send(file);
-                    ctx.request_repaint();
-                });
-            }
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        // Check if we received a file from the async task
-        {
-            if let Some(receiver) = &state.config_file_receiver {
-                if let Ok(file) = receiver.try_recv() {
-                    // Only update if a file was actually selected
-                    if file.is_some() {
-                        state.picked_config_file = file;
-                    }
-                    state.config_file_receiver = None; // Dialog finished
-                }
-            }
-        }
-
-        // Display the filename of the picked file, or a placeholder
-        let filename = state
-            .picked_config_file
-            .as_ref()
-            .map(|file| file.file_name())
-            .unwrap_or("No file selected".to_string());
-
-        if state.picked_config_file.is_some() && ui.button("Remove").clicked() {
-            state.picked_config_file = None;
-        };
-
-        // On desktop: filename with its full path on hover, on WASM: just the filename
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let path_text = state
-                .picked_config_file
-                .as_ref()
-                .map(|file| file.path().to_string_lossy().to_string())
-                .unwrap_or("Select a configuration file".to_string());
-            ui.label(&filename).on_hover_text(path_text);
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        ui.label(&filename);
-    });
+pub fn show_generation_tab_content(
+    ui: &mut egui::Ui,
+    state: &mut GenerationTabState,
+    configuration_file_state: &mut ConfigurationFileState,
+) {
+    configuration_file_picker(ui, configuration_file_state);
 
     ui.separator();
 
@@ -353,13 +280,13 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationTabS
                     Some(state.timezone_input.clone())
                 };
                 let ctx = ui.ctx().clone();
-                let file_handle = state.picked_config_file.clone();
+                let file_handle = configuration_file_state.picked_config_file.clone();
 
                 #[cfg(target_arch = "wasm32")]
                 {
                     wasm_bindgen_futures::spawn_local(async move {
                         let profile = if let Some(file) = file_handle.as_ref() {
-                            Some(read_config_file_wasm(file).await)
+                            Some(read_file_wasm(file).await)
                         } else {
                             None
                         };
@@ -381,9 +308,7 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationTabS
                 #[cfg(not(target_arch = "wasm32"))]
                 {
                     std::thread::spawn(move || {
-                        let profile = file_handle
-                            .as_ref()
-                            .map(|file| read_config_file_desktop(file));
+                        let profile = file_handle.as_ref().map(|file| read_file_desktop(file));
                         generate(
                             seed,
                             profile,
@@ -417,7 +342,12 @@ pub fn show_generation_tab_content(ui: &mut egui::Ui, state: &mut GenerationTabS
             }
 
             if state.pcap_bytes.is_some() && state.progress == 1.0 {
+                #[cfg(not(target_arch = "wasm32"))]
                 if !matches!(state.status, UiStatus::Saved(_) | UiStatus::Error(_)) {
+                    state.status = UiStatus::Generated;
+                }
+                #[cfg(target_arch = "wasm32")]
+                {
                     state.status = UiStatus::Generated;
                 }
                 #[cfg(not(target_arch = "wasm32"))]
