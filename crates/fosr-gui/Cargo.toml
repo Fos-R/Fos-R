@@ -29,7 +29,7 @@ native = []
 chrono = "0.4.42"
 chrono-tz = "0.10.4"
 eframe = "0.33.3"
-egui_extras = { version = "0.33.3", features = ["chrono", "all_loaders", "syntect"] }
+egui_extras = { version = "0.33.3", features = ["chrono", "all_loaders", "syntect", "serde"] }
 log = "0.4.28"
 wasm-bindgen = "0.2.106"
 fosr-lib = { version = "1.0.0-dev", path = "../fosr-lib", features = ["wasm_js"] }
@@ -37,6 +37,8 @@ rfd = "0.16.0"
 humantime = "2.3.0"
 indicatif = "0.18.3"
 web-time = "1.1.0"
+petgraph = "0.8.3"
+egui_graphs = "0.29.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4.55"
