@@ -1,7 +1,7 @@
-mod app;
 mod about_tab;
-mod generation;
+mod app;
 mod configuration;
+mod generation;
 #[cfg(not(target_arch = "wasm32"))]
 mod injection_tab;
 mod shared;

@@ -1,7 +1,7 @@
-use chrono_tz::TZ_VARIANTS;
-use eframe::{egui, egui::PopupCloseBehavior};
 use super::generation_tab::{GenerationTabState, UiStatus};
 use super::generation_validation::FieldValidation;
+use chrono_tz::TZ_VARIANTS;
+use eframe::{egui, egui::PopupCloseBehavior};
 
 /**
  * Display the error in red

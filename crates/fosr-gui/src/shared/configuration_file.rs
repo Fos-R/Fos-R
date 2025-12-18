@@ -1,7 +1,7 @@
 #[cfg(not(target_arch = "wasm32"))]
-use crate::shared::files::{read_file_desktop, show_file_picker_desktop};
+use crate::shared::file_io::{read_file_desktop, show_file_picker_desktop};
 #[cfg(target_arch = "wasm32")]
-use crate::shared::files::{read_file_wasm, show_file_picker_wasm};
+use crate::shared::file_io::{read_file_wasm, show_file_picker_wasm};
 use eframe::egui;
 use rfd::FileHandle;
 #[cfg(target_arch = "wasm32")]

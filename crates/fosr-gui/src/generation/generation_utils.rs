@@ -1,5 +1,5 @@
+use super::generation_tab::{DURATION_MAX, DURATION_MIN};
 use std::time::Duration;
-use super::generation_tab::{DURATION_MIN, DURATION_MAX};
 
 /**
  * Returns the minimum and maximum durations, expressed in seconds (f64),

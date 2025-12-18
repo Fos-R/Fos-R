@@ -8,7 +8,9 @@ pub fn show_about_tab_content(ui: &mut egui::Ui) {
     ui.heading("Fos-R - Synthetic Network Traffic Generator");
     ui.add_space(5.0);
 
-    ui.label("Fos-R is a high-quality and high-throughput network traffic generator based on AI models.");
+    ui.label(
+        "Fos-R is a high-quality and high-throughput network traffic generator based on AI models.",
+    );
     ui.add_space(15.0);
 
     ui.heading("Repository Information");
@@ -33,6 +35,9 @@ pub fn show_about_tab_content(ui: &mut egui::Ui) {
     ui.add_space(5.0);
     ui.horizontal(|ui| {
         ui.label("Maintainer:");
-        ui.hyperlink_to("pierre-francois.gimenez@inria.fr", "mailto:pierre-francois.gimenez@inria.fr");
+        ui.hyperlink_to(
+            "pierre-francois.gimenez@inria.fr",
+            "mailto:pierre-francois.gimenez@inria.fr",
+        );
     });
 }
