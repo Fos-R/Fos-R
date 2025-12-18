@@ -1,0 +1,47 @@
+[package]
+name = "fosr-gui"
+version = "0.1.0"
+edition = "2024"
+description = "A GUI for Fos-R."
+
+[package.metadata.bundle]
+name = "Fos-R"
+identifier = "com.inria.fosr"
+icon = ["crates/fosr-gui/assets/fosr-gui-macos.icns"]
+
+[[bin]]
+name = "fosr-gui"
+path = "src/main.rs"
+# The binary is only compiled if the "native" feature is enabled.
+# This avoids warnings when compiling for wasm32.
+required-features = ["native"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# By default, we are compiling for native.
+# If we want to compile for wasm32, we need to use the --no-default-features flag.
+default = ["native"]
+native = []
+
+[dependencies]
+chrono = "0.4.42"
+chrono-tz = "0.10.4"
+eframe = "0.33.3"
+egui_extras = { version = "0.33.3", features = ["chrono", "all_loaders", "syntect"] }
+log = "0.4.28"
+wasm-bindgen = "0.2.106"
+fosr-lib = { version = "1.0.0-dev", path = "../fosr-lib", features = ["wasm_js"] }
+rfd = "0.16.0"
+humantime = "2.3.0"
+indicatif = "0.18.3"
+web-time = "1.1.0"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4.55"
+web-sys = "0.3.82"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+env_logger = { version = "0.11.8", default-features = false, features = ["auto-color", "humantime"] }
+
