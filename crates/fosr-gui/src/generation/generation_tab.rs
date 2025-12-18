@@ -7,10 +7,11 @@ use super::generation_validation::{
     FieldValidation, first_invalid_param, validate_duration, validate_optional_u64,
     validate_start_hour, validate_timezone,
 };
+use crate::shared::configuration_file::{ConfigurationFileState, configuration_file_picker};
 #[cfg(not(target_arch = "wasm32"))]
-use crate::shared::files::{read_file_desktop, save_file_desktop};
+use crate::shared::file_io::{read_file_desktop, save_file_desktop};
 #[cfg(target_arch = "wasm32")]
-use crate::shared::files::{read_file_wasm, save_file_wasm};
+use crate::shared::file_io::{read_file_wasm, save_file_wasm};
 use chrono::NaiveDate;
 use chrono_tz::Tz;
 use eframe::egui;
@@ -18,7 +19,6 @@ use eframe::egui::{SliderClamping, Widget};
 use egui_extras::DatePickerButton;
 use std::sync::mpsc::{Receiver, channel};
 use std::time::Duration;
-use crate::configuration::configuration_file::{configuration_file_picker, ConfigurationFileState};
 
 // Time interval for the slider.
 pub const DURATION_MIN: Duration = Duration::from_secs(60); // 1 min

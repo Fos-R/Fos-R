@@ -1,6 +1,6 @@
-use std::time::Duration;
+use super::generation_tab::{DURATION_MAX, DURATION_MIN, GenerationTabState};
 use chrono_tz::Tz;
-use super::generation_tab::{GenerationTabState, DURATION_MAX, DURATION_MIN};
+use std::time::Duration;
 
 /**
  * Structure to handle inputs errors from the user
@@ -26,7 +26,9 @@ const SPEC_SEED: &str = "an unsigned integer (u64) or empty for random";
 const SPEC_TIMEZONE: &str = "a valid timezone";
 
 // return the first invalid parameter
-pub fn first_invalid_param(state: &GenerationTabState) -> Option<(&'static str, &'static str, String)> {
+pub fn first_invalid_param(
+    state: &GenerationTabState,
+) -> Option<(&'static str, &'static str, String)> {
     if let Some(err) = &state.duration_validation.error {
         return Some(("Duration", SPEC_DURATION, err.clone()));
     }

@@ -1,4 +1,4 @@
-use crate::configuration::configuration_file::{
+use crate::shared::configuration_file::{
     ConfigurationFileState, configuration_file_picker, load_config_file_contents,
 };
 use eframe::egui;

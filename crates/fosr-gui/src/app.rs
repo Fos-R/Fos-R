@@ -1,13 +1,17 @@
+use crate::about_tab::show_about_tab_content;
+use crate::configuration::configuration_tab::{
+    ConfigurationTabState, show_configuration_tab_content,
+};
 use crate::generation::generation_tab::{GenerationTabState, show_generation_tab_content};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::injection_tab::show_injection_tab_content;
-use crate::about_tab::show_about_tab_content;
+use crate::shared::configuration_file::ConfigurationFileState;
+use crate::visualization::visualization_tab::{
+    VisualizationTabState, show_visualization_tab_content,
+};
 use eframe::egui;
 #[cfg(not(target_arch = "wasm32"))]
 use eframe::egui::global_theme_preference_switch;
-use crate::configuration::configuration_file::ConfigurationFileState;
-use crate::configuration::configuration_tab::{show_configuration_tab_content, ConfigurationTabState};
-use crate::visualization::visualization_tab::{show_visualization_tab_content, VisualizationTabState};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum CurrentTab {
@@ -58,13 +62,19 @@ impl eframe::App for FosrApp {
                     self.current_tab = CurrentTab::Generation;
                 }
                 if ui
-                    .selectable_label(self.current_tab == CurrentTab::Configuration, "Configuration")
+                    .selectable_label(
+                        self.current_tab == CurrentTab::Configuration,
+                        "Configuration",
+                    )
                     .clicked()
                 {
                     self.current_tab = CurrentTab::Configuration;
                 }
                 if ui
-                    .selectable_label(self.current_tab == CurrentTab::Visualization, "Visualization")
+                    .selectable_label(
+                        self.current_tab == CurrentTab::Visualization,
+                        "Visualization",
+                    )
                     .clicked()
                 {
                     self.current_tab = CurrentTab::Visualization;
@@ -90,10 +100,18 @@ impl eframe::App for FosrApp {
             // Display the tab content depending on the currently select tab
             match self.current_tab {
                 CurrentTab::Generation => {
-                    show_generation_tab_content(ui, &mut self.generation_tab_state, &mut self.configuration_file_state);
+                    show_generation_tab_content(
+                        ui,
+                        &mut self.generation_tab_state,
+                        &mut self.configuration_file_state,
+                    );
                 }
                 CurrentTab::Configuration => {
-                    show_configuration_tab_content(ui, &mut self.configuration_tab_state, &mut self.configuration_file_state);
+                    show_configuration_tab_content(
+                        ui,
+                        &mut self.configuration_tab_state,
+                        &mut self.configuration_file_state,
+                    );
                 }
                 CurrentTab::Visualization => {
                     show_visualization_tab_content(ui, &mut self.visualization_tab_state);
