@@ -127,11 +127,15 @@ impl Stats {
     /// Get the generation progress as a percentage
     pub fn get_progress(&self) -> Option<f64> {
         if let Some(target) = self.packets_target {
-            Some(((self.packets_counter.load(Ordering::Relaxed) as f64) / (target as f64)).min(1.0f64))
-        } else if let Some(target) = self.duration_target {
-            Some(((self.current_duration.load(Ordering::Relaxed) as f64) / (target as f64)).min(1.0f64))
+            Some(
+                ((self.packets_counter.load(Ordering::Relaxed) as f64) / (target as f64))
+                    .min(1.0f64),
+            )
         } else {
-            None
+            self.duration_target.map(|target| {
+                ((self.current_duration.load(Ordering::Relaxed) as f64) / (target as f64))
+                    .min(1.0f64)
+            })
         }
     }
 }
@@ -153,7 +157,7 @@ fn update_progress_bar(
     }
 }
 
-/// Display the progression of the generation
+/// Display the progression of the generation. This is a blocking function.
 pub fn show_progression(stats: Arc<Stats>) {
     if stats.packets_target.is_some() || stats.duration_target.is_some() {
         let mut progress_bar = if let Some(target) = stats.packets_target {

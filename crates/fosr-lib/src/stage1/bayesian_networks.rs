@@ -321,7 +321,7 @@ pub struct BNGenerator {
 #[derive(Deserialize, Debug, Clone)]
 struct AdditionalData {
     s0_bin_count: usize,
-    // ttl: HashMap<Ipv4Addr, u8>,
+    ttl: HashMap<Ipv4Addr, u8>,
     tcp_out_pkt_gaussians: GaussianDistribs,
     tcp_in_pkt_gaussians: GaussianDistribs,
     udp_out_pkt_gaussians: GaussianDistribs,
@@ -982,24 +982,22 @@ impl Stage1 for BNGenerator {
         )) {
             domain_vector.dst_port = Some(*port);
         }
-        domain_vector.ttl_client = Some(64);
-        // Some(
-        // *self
-        //     .model
-        //     .bn_additional_data
-        //     .ttl
-        //     .get(&domain_vector.src_ip.unwrap())
-        //     .unwrap_or(&60),
-        // );
-        domain_vector.ttl_server = Some(64);
-        // Some(
-        //     *self
-        //         .model
-        //         .bn_additional_data
-        //         .ttl
-        //         .get(&domain_vector.dst_ip.unwrap())
-        //         .unwrap_or(&60),
-        // );
+        domain_vector.ttl_client = Some(
+            *self
+                .model
+                .bn_additional_data
+                .ttl
+                .get(&domain_vector.src_ip.unwrap())
+                .unwrap_or(&64), // this can happen (for example for broadcast IP)
+        );
+        domain_vector.ttl_server = Some(
+            *self
+                .model
+                .bn_additional_data
+                .ttl
+                .get(&domain_vector.dst_ip.unwrap())
+                .unwrap_or(&64),
+        );
         Ok(iter::once(SeededData {
             seed: rng.next_u64(),
             data: domain_vector.into(),

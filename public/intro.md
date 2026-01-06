@@ -19,7 +19,7 @@ Fos-R is a high-quality and high-throughput network traffic generator based on A
 
 - creating in a few minutes network datasets lasting for weeks, for example to learn AI models or to evaluate intrusion detection systems;
 - generating background traffic in cyber ranges so the exercise is more realistic and attacks are more difficult to detect;
-- generating background traffic in low- or high-interactivity honeypots to deceive attackers.
+- generating background traffic in high-interactivity honeypots to deceive attackers.
 
 # Get Fos-R
 

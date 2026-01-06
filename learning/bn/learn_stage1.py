@@ -7,25 +7,9 @@ import random
 from sklearn.mixture import GaussianMixture
 import json
 import pyagrum as gum
-
-def parse_conn_state(value):
-    value = str(value)
-    if value == "-":
-        return 'None'
-    elif 'RST' in value:
-        return 'RST'
-    elif value == "SF":
-        return 'SF'
-    elif value == "SH":
-        return 'SH'
-    elif value == "S0":
-        return 'S0'
-    elif value == "OTH": # removed from the dataset afterward
-        return 'OTH'
-    elif value == "REJ":
-        return 'REJ'
-    else:
-        return 'other'
+import os
+import sys
+import csv
 
 def group_ip_dst(value):
     value = str(value)
@@ -39,12 +23,6 @@ def remove_public_ip(value):
     if group_ip_dst(value) == "Internet":
         return "Internet"
     return value
-
-# specific to CIDDS
-# def deanonymise_ip(value):
-#     if "_" in value:
-#         random.seed(value)
-#         return ".".join(str(random.randint(0, 255)) for _ in range(4))
 
 def get_network_role(ip, clients, servers):
     if ip in clients:
@@ -93,9 +71,16 @@ def ParametersLearning(bn,df):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Learn a time profile for Fos-R.')
-    parser.add_argument('--input', required=True, help="Select the input file. It must a csv.")
+    parser.add_argument('--input', required=True, help="Select the input folder.")
     # parser.add_argument('--output', help="Select the output file to create.")
     args = parser.parse_args()
+
+    conn_input = os.path.join(args.input, "conn.log")
+
+    tcp_input = os.path.join(args.input, "fosr_tcp.log")
+    udp_input = os.path.join(args.input, "fosr_udp.log")
+
+    ttl_input = os.path.join(args.input, "fosr_ttl.log")
 
     random.seed(0)
     gum.initRandom(seed=42)
@@ -103,29 +88,44 @@ if __name__ == '__main__':
     output = {}
     output["s0_bin_count"] = bin_count
 
-    flow = pd.read_csv(args.input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
+    print("Loading files")
 
+    csv.field_size_limit(sys.maxsize) # payload is too long
+    try:
+        flow = pd.read_csv(conn_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
+    except:
+        print(f"Cannot find conn.log in {args.input}!")
+        exit(1)
+
+    tcp_fosr = None
+    try:
+        tcp_fosr = pd.read_csv(tcp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service", "flags", "conn_state"])
+    except:
+        print("No TCP data")
+    udp_fosr = None
+    try:
+        udp_fosr = pd.read_csv(udp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service"])
+    except:
+        print("No UDP data")
+    ttl_fosr = pd.read_csv(ttl_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["uid", "ip", "ttl", "proto"]);
+
+    print("Extracting")
     flow["Time"] = flow["ts"].apply(categorize_time)
 
     flow["Proto"] = flow["proto"].str.upper()
 
     # Remove non-UDP and non-TCP flows
     flow = flow[(flow["Proto"]=="TCP") | (flow["Proto"]=="UDP")]
-    flow['Connection State'] = flow['conn_state'].apply(parse_conn_state)
-    flow = flow[(flow["Connection State"]!="OTH")]
+
+    if tcp_fosr is not None:
+        flow = flow.join(tcp_fosr.set_index("uid"), on="uid", rsuffix="_tcp_fosr")
+        flow['Connection State'] = flow['conn_state_tcp_fosr']
+        flow = flow[(flow["Connection State"]!="other")]
+
     flow['Applicative Proto'] = flow['service']
     flow['Src IP Addr'] = flow['id.orig_h'].apply(remove_public_ip)
     flow['Dst IP Addr'] = flow['id.resp_h'].apply(remove_public_ip)
     flow['Dst Pt'] = flow['id.resp_p'].apply(to_string)
-
-    # import matplotlib.pyplot as plt
-    # counts = flow['conn_state'].value_counts()
-
-    # plt.bar(counts.index, counts.values, color='skyblue', edgecolor='black')
-    # plt.show()
-
-    # Only keep the most common protocols (TODO: lift that restriction)
-    # flow = flow[flow['Applicative Proto'].isin(["DNS", "HTTP", "HTTPS", "SMTP", "DHCP", "IMAPS", "SSH", "NTP"])]
 
     # get all the local IP addresses
     ips = list(set(flow["Src IP Addr"].tolist()).union(set(flow["Dst IP Addr"].tolist())))
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     clients = []
     servers = []
 
-    # ttl = {}
+    ttl = {}
 
     for ip in ips:
         occurrences_dst = sum(flow["Dst IP Addr"]==ip)
@@ -146,21 +146,26 @@ if __name__ == '__main__':
         else:
             # print(ip,"is a server")
             servers.append(ip)
-        # ttl[ip] = 64 - random.randint(1,4) # TODO should be measured !
 
-    # output["ttl"] = ttl
+        # broadcast IP will be have no TTL
+        if ip in ttl_fosr["ip"].values:
+            # use the most common TTL
+            ttl[ip] = int(ttl_fosr[ttl_fosr["ip"] == ip]["ttl"].mode()[0])
+
+    output["ttl"] = ttl
     print("Local clients:",list(clients))
     print("Local servers:",list(servers))
-
 
 # only for local addresses
     flow['Src IP Role'] = flow['Src IP Addr'].apply(get_network_role, clients=clients, servers=servers)
     flow['Dst IP Role'] = flow['Dst IP Addr'].apply(get_network_role, clients=clients, servers=servers)
 
-    TCP_out_pkt_count = np.array(flow[flow['Proto']=="TCP"]["orig_pkts"]).reshape(-1,1)
-    TCP_in_pkt_count = np.array(flow[flow['Proto']=="TCP"]["resp_pkts"]).reshape(-1,1)
-    UDP_out_pkt_count = np.array(flow[flow['Proto']=="UDP"]["orig_pkts"]).reshape(-1,1)
-    UDP_in_pkt_count = np.array(flow[flow['Proto']=="UDP"]["resp_pkts"]).reshape(-1,1)
+    if tcp_fosr is not None:
+        TCP_out_pkt_count = np.array(flow[flow['Proto']=="TCP"]["orig_pkts"]).reshape(-1,1)
+        TCP_in_pkt_count = np.array(flow[flow['Proto']=="TCP"]["resp_pkts"]).reshape(-1,1)
+    if udp_fosr is not None:
+        UDP_out_pkt_count = np.array(flow[flow['Proto']=="UDP"]["orig_pkts"]).reshape(-1,1)
+        UDP_in_pkt_count = np.array(flow[flow['Proto']=="UDP"]["resp_pkts"]).reshape(-1,1)
 
     def categorize(pkt_count):
         best_bic = None
@@ -177,25 +182,27 @@ if __name__ == '__main__':
         best_labels = list(map(str,best_labels)) # make the variable discrete
         return best_model.means_.reshape(1,-1)[0], best_model.covariances_, best_labels
 
-    print("Gaussian mixture for TCP out packet count")
-    mu, cov, labels = categorize(TCP_out_pkt_count)
-    output["tcp_out_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
-    flow.loc[flow['Proto']=="TCP", ["Cat Out Packet"]] = labels
+    if tcp_fosr is not None:
+        print("Gaussian mixture for TCP out packet count")
+        mu, cov, labels = categorize(TCP_out_pkt_count)
+        output["tcp_out_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
+        flow.loc[flow['Proto']=="TCP", ["Cat Out Packet"]] = labels
 
-    print("Gaussian mixture for TCP in packet count")
-    mu, cov, labels = categorize(TCP_in_pkt_count)
-    output["tcp_in_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
-    flow.loc[flow['Proto']=="TCP", ["Cat In Packet"]] = labels
+        print("Gaussian mixture for TCP in packet count")
+        mu, cov, labels = categorize(TCP_in_pkt_count)
+        output["tcp_in_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
+        flow.loc[flow['Proto']=="TCP", ["Cat In Packet"]] = labels
 
-    print("Gaussian mixture for UDP out packet count")
-    mu, cov, labels = categorize(UDP_out_pkt_count)
-    output["udp_out_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
-    flow.loc[flow['Proto']=="UDP", ["Cat Out Packet"]] = labels
+    if udp_fosr is not None:
+        print("Gaussian mixture for UDP out packet count")
+        mu, cov, labels = categorize(UDP_out_pkt_count)
+        output["udp_out_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
+        flow.loc[flow['Proto']=="UDP", ["Cat Out Packet"]] = labels
 
-    print("Gaussian mixture for UDP in packet count")
-    mu, cov, labels = categorize(UDP_in_pkt_count)
-    output["udp_in_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
-    flow.loc[flow['Proto']=="UDP", ["Cat In Packet"]] = labels
+        print("Gaussian mixture for UDP in packet count")
+        mu, cov, labels = categorize(UDP_in_pkt_count)
+        output["udp_in_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
+        flow.loc[flow['Proto']=="UDP", ["Cat In Packet"]] = labels
 
     flow = flow.replace("-", "none") # "-" causes pyagrum to parse the value as a number, leading to an exception
 
@@ -216,7 +223,8 @@ if __name__ == '__main__':
 
     tcp_vars = ["Cat Out Packet", "Cat In Packet", "Connection State"]
     tcp_data = flow[flow['Proto']=="TCP"]
-    tcp_data = flow[tcp_vars + common_vars]
+    tcp_data = tcp_data[tcp_vars + common_vars]
+    tcp_data = tcp_data.dropna()
 
     # UDP-only variables:
         # In Pkt Count
@@ -224,7 +232,7 @@ if __name__ == '__main__':
 
     udp_vars = ["Cat Out Packet", "Cat In Packet"]
     udp_data = flow[flow['Proto']=="UDP"]
-    udp_data = flow[udp_vars + common_vars]
+    udp_data = udp_data[udp_vars + common_vars]
 
     # Variables not used during structure learning (saved as dictionaries alongside the BN)
         # Dst Port
@@ -244,33 +252,36 @@ if __name__ == '__main__':
     bn_common = learner_common.learnBN()
     ParametersLearning(bn_common, common_data)
 
-    learner_udp = gum.BNLearner(udp_data)
-    for var in common_vars:
-        learner_udp.addNoParentNode(var) # variable with no parent
-    for var in vars_without_children:
-        learner_udp.addNoChildrenNode(var) # variable with no children
+    if udp_fosr is not None:
+        learner_udp = gum.BNLearner(udp_data)
+        for var in common_vars:
+            learner_udp.addNoParentNode(var) # variable with no parent
+        for var in vars_without_children:
+            learner_udp.addNoChildrenNode(var) # variable with no children
 
-    learner_udp.useMIIC()
-    bn_udp = learner_udp.learnBN()
-    ParametersLearning(bn_udp, udp_data)
+        learner_udp.useMIIC()
+        bn_udp = learner_udp.learnBN()
+        ParametersLearning(bn_udp, udp_data)
 
-    learner_tcp = gum.BNLearner(tcp_data)
-    for var in common_vars:
-        learner_tcp.addNoParentNode(var) # variable with no parent
-    for var in vars_without_children:
-        learner_tcp.addNoChildrenNode(var) # variable with no children
+    if tcp_fosr is not None:
+        learner_tcp = gum.BNLearner(tcp_data)
+        for var in common_vars:
+            learner_tcp.addNoParentNode(var) # variable with no parent
+        for var in vars_without_children:
+            learner_tcp.addNoChildrenNode(var) # variable with no children
 
-    learner_tcp.useMIIC()
-    bn_tcp = learner_tcp.learnBN()
-    ParametersLearning(bn_tcp, tcp_data)
+        learner_tcp.useMIIC()
+        bn_tcp = learner_tcp.learnBN()
+        ParametersLearning(bn_tcp, tcp_data)
 
     print("Model export")
 
     bn_common.saveBIFXML("bn_common.bifxml")
-    bn_udp.saveBIFXML("bn_udp.bifxml")
-    bn_tcp.saveBIFXML("bn_tcp.bifxml")
+    if udp_fosr is not None:
+        bn_udp.saveBIFXML("bn_udp.bifxml")
+    if tcp_fosr is not None:
+        bn_tcp.saveBIFXML("bn_tcp.bifxml")
 
-    print(output)
     try:
         out_file = open("bn_additional_data.json", "w")
         json.dump(output, out_file)
