@@ -6,6 +6,8 @@ export {
     redef enum Log::ID += {LOG_TCP, LOG_UDP, LOG_TTL};
 
     type InfoTCP : record {
+        ts:
+            time &log;
         uid:
             string &log;
         payloads:
@@ -23,6 +25,8 @@ export {
     };
 
     type InfoUDP : record {
+        ts:
+            time &log;
         uid:
             string &log;
         payloads:
@@ -60,6 +64,7 @@ global flags_result_list : table[string] of vector of string;
 global forward_result_list : table[string] of vector of bool;
 global payloads_result_list : table[string] of vector of string;
 global last_time : table[string] of double;
+global first_time : table[string] of time;
 global proto_list : table[string] of string;
 global proto_int_list: table[string] of count;
 
@@ -101,6 +106,7 @@ event tcp_packet(c : connection,
                  payload : string) {
     local exists = c$uid in proto_list;
     if (!exists) {
+        first_time[c$uid] = network_time();
         flags_result_list[c$uid] = vector();
         iat_result_list[c$uid] = vector();
         forward_result_list[c$uid] = vector();
@@ -129,6 +135,7 @@ event tcp_packet(c : connection,
 event udp_contents(c : connection, is_orig : bool, contents : string) {
     local exists = c$uid in proto_list;
     if (!exists) {
+        first_time[c$uid] = network_time();
         iat_result_list[c$uid] = vector();
         forward_result_list[c$uid] = vector();
         payloads_result_list[c$uid] = vector();
@@ -191,6 +198,7 @@ event connection_state_remove(c : connection) {
             }
 
             local rec_tcp = InfoTCP(
+                $ts = first_time[c$uid],
                 $uid = c$uid,
                 $payloads = payloads_result_list[c$uid],
                 $flags = flags_result_list[c$uid],
@@ -208,7 +216,8 @@ event connection_state_remove(c : connection) {
             Log::write(LOG_TCP, rec_tcp);
         } else if (proto_list[c$uid] == "udp") {
             local rec_udp =
-                InfoUDP($uid = c$uid,
+                InfoUDP($ts = first_time[c$uid],
+                        $uid = c$uid,
                         $payloads = payloads_result_list[c$uid],
                         $iat = iat_result_list[c$uid],
                         $forward_list = forward_result_list[c$uid]);
