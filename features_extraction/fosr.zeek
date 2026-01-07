@@ -18,6 +18,8 @@ export {
             vector of bool &log;
         service:
             string &log &optional;
+        dst_port:
+            port &log;
         flags:
             vector of string &log;
         conn_state:
@@ -37,6 +39,8 @@ export {
             vector of bool &log;
         service:
             string &log &optional;
+        dst_port:
+            port &log;
     };
 
     type InfoTTL : record {
@@ -67,6 +71,7 @@ global last_time : table[string] of double;
 global first_time : table[string] of time;
 global proto_list : table[string] of string;
 global proto_int_list: table[string] of count;
+global dst_port : table[string] of port;
 
 event zeek_init() {
     Log::create_stream(LOG_UDP, [ $columns = InfoUDP, $path = "fosr_udp" ]);
@@ -107,6 +112,7 @@ event tcp_packet(c : connection,
     local exists = c$uid in proto_list;
     if (!exists) {
         first_time[c$uid] = network_time();
+        dst_port[c$uid] = c$id$resp_p;
         flags_result_list[c$uid] = vector();
         iat_result_list[c$uid] = vector();
         forward_result_list[c$uid] = vector();
@@ -136,6 +142,7 @@ event udp_contents(c : connection, is_orig : bool, contents : string) {
     local exists = c$uid in proto_list;
     if (!exists) {
         first_time[c$uid] = network_time();
+        dst_port[c$uid] = c$id$resp_p;
         iat_result_list[c$uid] = vector();
         forward_result_list[c$uid] = vector();
         payloads_result_list[c$uid] = vector();
@@ -204,7 +211,8 @@ event connection_state_remove(c : connection) {
                 $flags = flags_result_list[c$uid],
                 $iat = iat_result_list[c$uid],
                 $forward_list = forward_result_list[c$uid],
-                $conn_state = conn_state_category);
+                $conn_state = conn_state_category,
+                $dst_port = dst_port[c$uid]);
             if (c$conn?$service) {
                 rec_tcp$service = c$conn$service;
             }
@@ -220,7 +228,8 @@ event connection_state_remove(c : connection) {
                         $uid = c$uid,
                         $payloads = payloads_result_list[c$uid],
                         $iat = iat_result_list[c$uid],
-                        $forward_list = forward_result_list[c$uid]);
+                        $forward_list = forward_result_list[c$uid],
+                        $dst_port = dst_port[c$uid]);
             if (c$conn?$service) {
                 rec_udp$service = c$conn$service;
             }
