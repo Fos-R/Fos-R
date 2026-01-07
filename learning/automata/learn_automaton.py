@@ -2,6 +2,7 @@ import os
 import argparse
 import re
 import json
+import base64
 from functools import partial
 from tadam.tadam import exhaustive_search, opportunistic_search
 from tadam.mdl import NoiseModel
@@ -10,19 +11,32 @@ import pandas as pd
 import datetime
 from scipy.stats import chisquare
 import numpy as np
+import sys
+import csv
 
 def add_payload_type(payload_type, row):
-    if row['protocol'] == "ICMP":
-        return row["time_sequence"] # no payload to analyze
+    # if row['protocol'] == "ICMP":
+    #     return row["time_sequence"] # no payload to analyze
 
-    headers = row['time_sequence'].split()
-    payloads = row["payloads"].split()
+    headers = row['flags'].split(",")
+    iat = row['iat'].split(",")
+    directions = row["forward_list"].split(",")
+    directions = list(map(lambda s: True if s == "T" else False, directions))
+    payloads = row["payloads"].split(",")
+    payloads = list(map(lambda s: "" if s == "(empty)" else base64.standard_b64decode(s).hex(), payloads))
+
     nb_replay = 0
     nb_random = 0
     nb_text = 0
     for i,p in enumerate(payloads):
+        if directions[i]:
+            headers[i]+="/>"
+        else:
+            headers[i]+="/<"
+        headers[i]+="/"+iat[i]
+        headers[i]+="/"+str(int(len(p)/2)) # 2 hex digits per byte
+
         # TODO: utiliser des nibbles (et pas half)-nibbles si on a assez d’exemples ?
-        p = p.split(":")[1]
         hnibbles = [int(v,16)%4 for v in list(p)]+[int(v,16)//4 for v in list(p)]
         if len(hnibbles)==0: # only P:, i.e., empty payload
             headers[i]+="/Empty"
@@ -36,6 +50,7 @@ def add_payload_type(payload_type, row):
             if random or payload_type == "encrypted":
                 headers[i]+="/Random"
                 nb_random += 1
+                # print("Detected as random")
             else:
                 replay = True
                 try:
@@ -45,14 +60,15 @@ def add_payload_type(payload_type, row):
                         headers[i]+="/Text:"+s.split()[0][:10].replace("$","")
                         # print(s, s.split()[0])
                         replay = False
+                        # print("Detected as text")
                         nb_text += 1
                 except: # cannot decode: not text
                     pass
                 if replay:
                     headers[i]+="/Replay"
+                    # print("Detected as replay")
                     nb_replay += 1
-
-    # print("Replay:",nb_replay,"Random:",nb_random,"Text:",nb_text)
+    # print("Type inference. Replay:",nb_replay,"Random:",nb_random,"Text:",nb_text)
     return " ".join(headers)
 
 def parse_TCP(input_string):
@@ -86,10 +102,11 @@ def parse_ICMP(input_string):
 
 class Exporter:
 
-    def __init__(self, metadata, output_name, protocol):
+    def __init__(self, metadata, output_name, protocol, payloads):
         self.metadata = metadata
         self.output_name = output_name
         self.protocol = protocol
+        self.payloads = payloads
 
     def export_automata(self, ta):
         tmp = []
@@ -98,15 +115,19 @@ class Exporter:
             if "Replay" in e.symbol:
                 tss = []
                 for ts, t in e.tss.items():
-                    tss = tss + [payloads[ts].split()[a].split(":")[1] for (a,_) in t]
+                    tss = tss + [self.payloads[ts][a] for (a,_) in t]
+                values, counts = np.unique(tss, return_counts=True)
                 d["payloads"] = { "content": [str(s) for s in tss] }
-                d["payloads"]["type"] = "HexCodes"
+                # save the weights only if it’s not equiprobable
+                if any(c != counts[0] for c in counts):
+                    d["payloads"]["weights"] = [int(i) for i in counts]
+                d["payloads"]["type"] = "Base64"
             elif "Text" in e.symbol:
                 tss = []
                 for ts, t in e.tss.items():
-                    tss = tss + [payloads[ts].split()[a].split(":")[1] for (a,_) in t]
+                    tss = tss + [self.payloads[ts][a] for (a,_) in t]
                 values, counts = np.unique(tss, return_counts=True)
-                d["payloads"] = { "content": [bytes.fromhex(s).decode('utf-8') for s in values] }
+                d["payloads"] = { "content": [base64.standard_b64decode(s).decode('utf-8') for s in values] }
                 # save the weights only if it’s not equiprobable
                 if any(c != counts[0] for c in counts):
                     d["payloads"]["weights"] = [int(i) for i in counts]
@@ -114,8 +135,7 @@ class Exporter:
             elif "Random" in e.symbol:
                 lengths = []
                 for ts, t in e.tss.items():
-                    lengths = lengths + [int(len(payloads[ts].split()[a].split(":")[1])/2) for (a,_) in t]
-                    # divide by 2 because it’s hexadecimal encoding, so 2 letters -> 1 byte
+                    lengths = lengths + [len(base64.standard_b64decode(self.payloads[ts][a])) for (a,_) in t]
                 d["payloads"] = { "type": "Lengths", "lengths": lengths }
             else:
                 d["payloads"] = { "type": "NoPayload" }
@@ -159,16 +179,16 @@ class Exporter:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Learn timed automata from packet sequences.')
-    parser.add_argument('--proto', choices=["TCP","UDP","ICMP"], type=str.upper)
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('--select_dst_ports', type=int, nargs="+", help="Learn from these specific destination ports. Cannot be used with --ignore_dst_ports.")
-    group.add_argument('--ignore_dst_ports', type=int, nargs="+", help="Learn from all ports except these. Cannot be used with --select_dst_ports.")
-    parser.add_argument('--input', required=True, help="Select the input file. It must a FosR-netflow file.")
-    parser.add_argument('--payload_type', choices=["encrypted", "text", "binary"], help="Select a payload type.", type=str.lower)
-    parser.add_argument('--automaton_name', help="The name of the automaton.")
+    parser.add_argument('--proto', required=True, choices=["TCP","UDP"], type=str.upper)
+    parser.add_argument('--service', required=True, type=str.lower, help="Learn from this specific service.")
+    parser.add_argument('--dst-port', type=int, help="Restrict to this destination port.")
+    parser.add_argument('--input', required=True, help="Select the input directory.")
+    parser.add_argument('--automaton-name', help="The name of the automaton.")
+    parser.add_argument('--conn-state', choices=["SF", "SH", "RST", "S0", "REJ"], help="Learn for one connection state only. TCP only.")
+    parser.add_argument('--payload-type', choices=["encrypted", "text", "binary"], help="Select a payload type.", type=str.lower)
     parser.add_argument('--subsample', type=int, help="How many flows to learn from at most.")
     parser.add_argument('--output', help="Select the output file to create.")
-    parser.add_argument('--output_dot', help="Select the dot output file for visualization.")
+    parser.add_argument('--output-dot', help="Select the dot output file for visualization.")
     parser.add_argument('--verbose', help="Increase TADAM’s verbosity.", action="store_true")
     args = parser.parse_args()
     protocol = args.proto
@@ -180,98 +200,102 @@ if __name__ == '__main__':
             args.output = args.automaton_name+".json"
         if args.output_dot is None:
             args.output_dot = args.automaton_name+".dot"
-
-    select_dst_ports = args.select_dst_ports or []
-    ignore_dst_ports = args.ignore_dst_ports or []
-
-    if args.output is None:
-        print("No output file specified: using \"automata.json\" by default")
-        args.output = "automata.json"
+    else:
+        if args.output is None:
+            args.output = args.service+".json"
+        if args.output_dot is None:
+            args.output_dot = args.service+".dot"
 
     output_name = args.output
+
     try:
-        df = pd.read_csv(args.input,low_memory=False)
-        # df = pd.read_csv(args.input,low_memory=False,names=["protocol","src_ip","dst_ip","dst_port","fwd_packets","bwd_packets","fwd_bytes","bwd_bytes","time_sequence","payloads"])
+        print("Loading file")
+        csv.field_size_limit(sys.maxsize) # payload is too long
+        if protocol == "TCP":
+            file_input = os.path.join(args.input, "fosr_tcp.log")
+            df = pd.read_csv(file_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service", "dst_port", "flags", "conn_state"])
+            print("Services in this file:",df["service"].unique())
+            if args.dst_port:
+                df = df[df["dst_port"] == args.dst_port]
+            df = df[df["service"] == args.service]
+            df = df[(df["conn_state"]!="other")]
+            conn_states = df["conn_state"].unique()
+            if args.conn_state:
+                print(f"Learning for connection state {args.conn_state} only")
+                assert args.conn_state in conn_states
+                conn_states = [args.conn_state]
+
+        elif protocol == "UDP":
+            file_input = os.path.join(args.input, "fosr_udp.log")
+            df = pd.read_csv(file_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service", "dst_port"])
+            conn_states = [None]
+
     except Exception as e:
         print("Input file cannot be opened:",e)
-        exit()
+        exit(1)
+
     if len(df) == 0:
         print("Input file is empty")
         exit()
-    # Ensure destination port is an integer
-    df['dst_port'] = pd.to_numeric(df['dst_port'], downcast='integer')
 
-    if len(select_dst_ports) > 0:
-        df = df[df["dst_port"].isin(select_dst_ports)]
-    elif len(ignore_dst_ports) > 0:
-        df = df[~df["dst_port"].isin(ignore_dst_ports)]
-    print(df)
-    if len(df) == 0:
-        if len(select_dst_ports) > 0:
-            print("No stream satisfies these conditions (selected ports: "+str(select_dst_ports)+")")
-        elif len(ignore_dst_ports) > 0:
-            print("No stream satisfies these conditions (ignored ports: "+str(ignore_dst_ports)+")")
+    all_df = df
+
+    for state in conn_states:
+        if state is None: # not TCP: use everything
+            df = all_df
         else:
-            print("ASSERTION ERROR")
-        exit()
+            print(f"Learning for connection state {state}")
+            df = all_df[all_df["conn_state"] == state]
+            output_name = state+"-"+args.output
 
-    if protocol is None:
-        unique = pd.unique(df["protocol"])
-        if len(unique) == 1:
-            protocol = unique[0].upper()
-            if protocol not in ["TCP","UDP","ICMP"]:
-                print("Network protocol should be TCP, UDP or ICMP. Found:",str(protocol))
-                exit()
-        else:
-            print("Multiple network protocols detected. Please manually select one with --proto")
-            exit()
-    else:
-        df = df[df["protocol"] == protocol]
+        assert len(df) > 0 # by construction
 
-    if args.subsample and len(df) > 2*args.subsample:
-        df = df.sample(n=2*args.subsample)
+        if args.subsample and len(df) > 2*args.subsample:
+            df = df.sample(n=2*args.subsample)
 
-    df["time_sequence"] = df.apply(partial(add_payload_type,args.payload_type), axis=1)
+        df["time_sequence"] = df.apply(partial(add_payload_type,args.payload_type), axis=1)
 
-    len_before = len(df)
-    df = df[df["time_sequence"].str.len() < 20000]
-    if len(df) < len_before:
-        print((len_before-len(df)),"flows have been ignored because they are too long.")
+        len_before = len(df)
+        df = df[df["time_sequence"].str.len() < 20000]
+        if len(df) < len_before:
+            print((len_before-len(df)),"flows have been ignored because they are too long.")
 
-    if args.subsample and len(df) > args.subsample:
-        df = df.sample(n=args.subsample)
-        print("Subsampling to",args.subsample,"examples")
+        if args.subsample and len(df) > args.subsample:
+            df = df.sample(n=args.subsample)
+            print("Subsampling to",args.subsample,"examples")
 
-    df = df.reset_index(drop=True)
+        df = df.reset_index(drop=True)
 
-    # print("Learning from",len(df),"examples")
+        # print("Learning from",len(df),"examples")
 
-    noise_model = NoiseModel(deletion_possible=False)
-    parsers = { "TCP": parse_TCP, "UDP": parse_UDP, "ICMP": parse_ICMP }
+        noise_model = NoiseModel(deletion_possible=False, addition_possible=False, reemission_possible=False)
+        parsers = { "TCP": parse_TCP, "UDP": parse_UDP, "ICMP": parse_ICMP }
 
-    options = Options(filename=None,
-                    data_parser=parsers[protocol],
-                    guards=GuardsFormat.DISTRIB,
-                    search = Search.EXHAUSTIVE,
-                    init = Init.STATE_SYMBOL)
-    payloads = df["payloads"]
+        options = Options(filename=None,
+                        data_parser=parsers[protocol],
+                        guards=GuardsFormat.DISTRIB,
+                        search = Search.EXHAUSTIVE,
+                        init = Init.STATE_SYMBOL)
 
-    metadata = {}
-    metadata["select_dst_ports"] = select_dst_ports
-    metadata["input_file"] = os.path.split(args.input)[-1]
-    metadata["ignore_dst_ports"] = ignore_dst_ports
-    metadata["creation_time"] = str(datetime.datetime.now())
-    metadata["automaton_name"] = args.automaton_name or "none"
+        metadata = {}
+        metadata["service"] = args.service
+        metadata["conn_state"] = state
+        metadata["dst_port"] = args.dst_port or "none"
+        metadata["input_file"] = os.path.split(args.input)[-1]
+        metadata["creation_time"] = str(datetime.datetime.now())
+        metadata["automaton_name"] = args.automaton_name or "unnamed"
 
-    exporter = Exporter(metadata, output_name, protocol)
-    l = exhaustive_search(options, tss_list=df["time_sequence"], verbose=args.verbose, noise_model=noise_model, on_iter=exporter.export_automata)
-    ta = l.ta
-    # print("Automaton successfully learned")
+        payloads = df["payloads"].apply(lambda l:list(map(lambda s: "" if s == "(empty)" else s, l.split(","))))
 
-    if args.output_dot:
-        try:
-            l.ta.export_ta(args.output_dot, guard_as_distrib=True)
-            print("Dot file successfully created:",args.output_dot)
-        except Exception as e:
-            print("Error during dot save:",e)
+        exporter = Exporter(metadata, output_name, protocol, payloads)
+        l = exhaustive_search(options, tss_list=df["time_sequence"], verbose=args.verbose, noise_model=noise_model, on_iter=exporter.export_automata)
+        ta = l.ta
+        print("Automaton successfully learned")
+
+        if args.output_dot:
+            try:
+                l.ta.export_ta(args.output_dot, guard_as_distrib=True)
+                print("Dot file successfully created:",args.output_dot)
+            except Exception as e:
+                print("Error during dot save:",e)
 
