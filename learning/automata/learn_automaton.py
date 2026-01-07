@@ -18,21 +18,26 @@ def add_payload_type(payload_type, row):
     # if row['protocol'] == "ICMP":
     #     return row["time_sequence"] # no payload to analyze
 
-    headers = row['flags'].split(",")
     iat = row['iat'].split(",")
     directions = row["forward_list"].split(",")
     directions = list(map(lambda s: True if s == "T" else False, directions))
     payloads = row["payloads"].split(",")
     payloads = list(map(lambda s: "" if s == "(empty)" else base64.standard_b64decode(s).hex(), payloads))
 
+    if 'flags' in row: # TCP only
+        headers = row['flags'].split(",")
+        headers = list(map(lambda s: s+"/", headers))
+    else:
+        headers = [""]*len(payloads)
+
     nb_replay = 0
     nb_random = 0
     nb_text = 0
     for i,p in enumerate(payloads):
         if directions[i]:
-            headers[i]+="/>"
+            headers[i]+=">"
         else:
-            headers[i]+="/<"
+            headers[i]+="<"
         headers[i]+="/"+iat[i]
         headers[i]+="/"+str(int(len(p)/2)) # 2 hex digits per byte
 
@@ -112,31 +117,32 @@ class Exporter:
         tmp = []
         for e in ta.edges:
             d = {}
-            if "Replay" in e.symbol:
+            if "Text" in e.symbol:
                 tss = []
                 for ts, t in e.tss.items():
                     tss = tss + [self.payloads[ts][a] for (a,_) in t]
                 values, counts = np.unique(tss, return_counts=True)
-                d["payloads"] = { "content": [str(s) for s in tss] }
+                d["payloads"] = { "type": "Text", "content": [base64.standard_b64decode(s).decode('utf-8') for s in values] }
                 # save the weights only if it’s not equiprobable
                 if any(c != counts[0] for c in counts):
                     d["payloads"]["weights"] = [int(i) for i in counts]
-                d["payloads"]["type"] = "Base64"
-            elif "Text" in e.symbol:
+            elif "Replay" in e.symbol:
                 tss = []
                 for ts, t in e.tss.items():
                     tss = tss + [self.payloads[ts][a] for (a,_) in t]
                 values, counts = np.unique(tss, return_counts=True)
-                d["payloads"] = { "content": [base64.standard_b64decode(s).decode('utf-8') for s in values] }
+                d["payloads"] = { "type": "Base64", "content": [str(s) for s in values] }
                 # save the weights only if it’s not equiprobable
                 if any(c != counts[0] for c in counts):
                     d["payloads"]["weights"] = [int(i) for i in counts]
-                d["payloads"]["type"] = "Text"
             elif "Random" in e.symbol:
                 lengths = []
                 for ts, t in e.tss.items():
                     lengths = lengths + [len(base64.standard_b64decode(self.payloads[ts][a])) for (a,_) in t]
-                d["payloads"] = { "type": "Lengths", "lengths": lengths }
+                values, counts = np.unique(lengths, return_counts=True)
+                d["payloads"] = { "type": "Lengths", "lengths": [int(v) for v in values] }
+                if any(c != counts[0] for c in counts):
+                    d["payloads"]["weights"] = [int(i) for i in counts]
             else:
                 d["payloads"] = { "type": "NoPayload" }
             # if empty: keep tss empty
@@ -170,9 +176,7 @@ class Exporter:
         d["metadata"] = self.metadata
         try:
             out_file2 = open(self.output_name, "w")
-            json.dump(d, out_file2, indent=4)
-            # out_file = open(output_name.rsplit(".",1)[0]+"_human_readable.json", "w")
-            # json.dump(d, out_file, indent=4)
+            json.dump(d, out_file2, indent=1)
             print("JSON file successfully created:", self.output_name)
         except Exception as e:
             print("Error during json save:", e)
@@ -180,7 +184,7 @@ class Exporter:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Learn timed automata from packet sequences.')
     parser.add_argument('--proto', required=True, choices=["TCP","UDP"], type=str.upper)
-    parser.add_argument('--service', required=True, type=str.lower, help="Learn from this specific service.")
+    parser.add_argument('--service', type=str.lower, help="Learn from this specific service.")
     parser.add_argument('--dst-port', type=int, help="Restrict to this destination port.")
     parser.add_argument('--input', required=True, help="Select the input directory.")
     parser.add_argument('--automaton-name', help="The name of the automaton.")
@@ -201,10 +205,13 @@ if __name__ == '__main__':
         if args.output_dot is None:
             args.output_dot = args.automaton_name+".dot"
     else:
+        args.automaton_name = args.service or "all-services"
+
+        service = args.service or "all"
         if args.output is None:
-            args.output = args.service+".json"
+            args.output = service+".json"
         if args.output_dot is None:
-            args.output_dot = args.service+".dot"
+            args.output_dot = service+".dot"
 
     output_name = args.output
 
@@ -214,10 +221,11 @@ if __name__ == '__main__':
         if protocol == "TCP":
             file_input = os.path.join(args.input, "fosr_tcp.log")
             df = pd.read_csv(file_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service", "dst_port", "flags", "conn_state"])
-            print("Services in this file:",df["service"].unique())
+            print("Services in the TCP file:\n",df["service"].value_counts())
             if args.dst_port:
                 df = df[df["dst_port"] == args.dst_port]
-            df = df[df["service"] == args.service]
+            if args.service:
+                df = df[df["service"] == args.service]
             df = df[(df["conn_state"]!="other")]
             conn_states = df["conn_state"].unique()
             if args.conn_state:
@@ -228,6 +236,11 @@ if __name__ == '__main__':
         elif protocol == "UDP":
             file_input = os.path.join(args.input, "fosr_udp.log")
             df = pd.read_csv(file_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service", "dst_port"])
+            print("Services in the UDP file:\n",df[["service","dst_port"]].value_counts())
+            if args.dst_port:
+                df = df[df["dst_port"] == args.dst_port]
+            if args.service:
+                df = df[df["service"] == args.service]
             conn_states = [None]
 
     except Exception as e:
@@ -266,7 +279,7 @@ if __name__ == '__main__':
 
         df = df.reset_index(drop=True)
 
-        # print("Learning from",len(df),"examples")
+        print("Learning from",len(df),"examples")
 
         noise_model = NoiseModel(deletion_possible=False, addition_possible=False, reemission_possible=False)
         parsers = { "TCP": parse_TCP, "UDP": parse_UDP, "ICMP": parse_ICMP }
@@ -278,12 +291,12 @@ if __name__ == '__main__':
                         init = Init.STATE_SYMBOL)
 
         metadata = {}
-        metadata["service"] = args.service
+        metadata["service"] = args.service or "all"
         metadata["conn_state"] = state
         metadata["dst_port"] = args.dst_port or "none"
         metadata["input_file"] = os.path.split(args.input)[-1]
         metadata["creation_time"] = str(datetime.datetime.now())
-        metadata["automaton_name"] = args.automaton_name or "unnamed"
+        metadata["automaton_name"] = args.automaton_name
 
         payloads = df["payloads"].apply(lambda l:list(map(lambda s: "" if s == "(empty)" else s, l.split(","))))
 
