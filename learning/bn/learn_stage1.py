@@ -99,12 +99,12 @@ if __name__ == '__main__':
 
     tcp_fosr = None
     try:
-        tcp_fosr = pd.read_csv(tcp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service", "flags", "conn_state"])
+        tcp_fosr = pd.read_csv(tcp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service", "dst_port", "flags", "conn_state"])
     except:
         print("No TCP data")
     udp_fosr = None
     try:
-        udp_fosr = pd.read_csv(udp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service"])
+        udp_fosr = pd.read_csv(udp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service", "dst_port"])
     except:
         print("No UDP data")
     ttl_fosr = pd.read_csv(ttl_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["uid", "ip", "ttl", "proto"]);
