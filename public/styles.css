@@ -117,3 +117,33 @@ table {
 table tr:nth-child(even) {
   background: var(--bd-pre-bg);
 }
+
+#gui_wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    height: 440px;
+    background: var(--bs-body-bg, #ffffff);
+    margin: 15px auto;
+    border-radius: 0.5rem;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+#gui_loading_text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: var(--bs-secondary-color, #6c757d);
+    z-index: 10;
+}
+
+.gui_canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+    border-radius: 0.5rem;
+    background: transparent;
+}
