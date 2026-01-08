@@ -1,4 +1,4 @@
-use crate::shared::config_model::Host;
+use crate::shared::config_model::{Host, Interface};
 use crate::shared::configuration_file::{
     ConfigurationFileState, configuration_file_picker, load_config_file_contents,
 };
@@ -8,8 +8,8 @@ use eframe::egui;
 use egui_extras::DatePickerButton;
 
 /**
- * Represents the state of the configuration tab.
- */
+* Represents the state of the configuration tab.
+*/
 pub struct ConfigurationTabState {}
 
 impl Default for ConfigurationTabState {
@@ -147,8 +147,8 @@ pub fn show_configuration_tab_content(
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
                             ui.strong(format!(
-                                "{hostname_for_header}  |  type: {host_type_for_header}  |  interfaces: {if_count}"
-                            ));
+                            "{hostname_for_header}  |  type: {host_type_for_header}  |  interfaces: {if_count}"
+                        ));
                             ui.with_layout(
                                 egui::Layout::right_to_left(egui::Align::Center),
                                 |ui| {
@@ -197,7 +197,7 @@ pub fn show_configuration_tab_content(
                             ui.label("Type (optional):");
 
                             let selected_text =
-                                host.r#type.as_deref().unwrap_or("<auto>").to_string();
+                            host.r#type.as_deref().unwrap_or("<auto>").to_string();
 
                             egui::ComboBox::from_id_salt((host_idx, "host_type"))
                                 .selected_text(selected_text)
@@ -262,48 +262,65 @@ pub fn show_configuration_tab_content(
                                 host.client.clear();
                             }
                         });
-
                         ui.separator();
-                        ui.label("Interfaces:");
+                        ui.horizontal(|ui| {
+                            ui.label("Interfaces:");
+                            if ui.button("+ Add interface").clicked() {
+                                // IP is mandatory, so give a placeholder that user must edit
+                                host.interfaces.push(Interface {
+                                    ip_addr: "192.168.0.1".to_string(),
+                                    mac_addr: None,
+                                    services: Vec::new(),
+                                });
+                            }
+                        });
 
                         if host.interfaces.is_empty() {
                             ui.label("No interfaces.");
                         } else {
-                            for (if_idx, iface) in host.interfaces.iter().enumerate() {
-                                egui::CollapsingHeader::new(format!(
-                                    "Interface #{if_idx} — {}",
-                                    iface.ip_addr
-                                ))
-                                .default_open(if_idx == 0)
-                                .show(ui, |ui| {
-                                    ui.horizontal(|ui| {
-                                        ui.label("IP:");
-                                        ui.monospace(&iface.ip_addr);
-                                    });
+                            let mut iface_to_remove: Option<usize> = None;
 
-                                    ui.horizontal(|ui| {
-                                        ui.label("MAC:");
-                                        ui.monospace(iface.mac_addr.as_deref().unwrap_or("<none>"));
-                                    });
+                            for (if_idx, iface) in host.interfaces.iter_mut().enumerate() {
+                                let ip_for_header = iface.ip_addr.clone();
+                                egui::CollapsingHeader::new(format!("Interface #{if_idx} — {ip_for_header}"))
+                                    .default_open(if_idx == 0)
+                                    .show(ui, |ui| {
+                                        // Remove interface (mark for removal)
+                                        if ui.button("Remove interface").clicked() {
+                                            iface_to_remove = Some(if_idx);
+                                        }
 
-                                    let svc_count = iface.services.len();
-                                    egui::CollapsingHeader::new(format!("Services ({svc_count})"))
-                                        .default_open(false)
-                                        .show(ui, |ui| {
-                                            if iface.services.is_empty() {
-                                                ui.monospace("<none>");
-                                            } else {
-                                                egui::ScrollArea::vertical().max_height(80.0).show(
-                                                    ui,
-                                                    |ui| {
-                                                        for svc in &iface.services {
-                                                            ui.monospace(format!("- {svc}"));
-                                                        }
-                                                    },
-                                                );
-                                            }
+                                        ui.add_space(4.0);
+
+                                        // Mandatory IP
+                                        ui.horizontal(|ui| {
+                                            ui.label("IP (mandatory):");
+                                            ui.text_edit_singleline(&mut iface.ip_addr);
                                         });
-                                });
+
+                                        // Optional MAC
+                                        edit_optional_string(ui, "MAC (optional):", &mut iface.mac_addr, "00:14:2A:3F:47:D8");
+
+                                        // Services: keep read-only for now (next micro-step)
+                                        let svc_count = iface.services.len();
+                                        egui::CollapsingHeader::new(format!("Services ({svc_count})"))
+                                            .default_open(false)
+                                            .show(ui, |ui| {
+                                                if iface.services.is_empty() {
+                                                    ui.monospace("<none>");
+                                                } else {
+                                                    for svc in &iface.services {
+                                                        ui.monospace(format!("- {svc}"));
+                                                    }
+                                                }
+                                            });
+                                    });
+
+                                ui.add_space(6.0);
+                            }
+
+                            if let Some(idx) = iface_to_remove {
+                                host.interfaces.remove(idx);
                             }
                         }
                     });
