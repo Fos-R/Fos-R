@@ -24,6 +24,25 @@ pub fn show_configuration_tab_content(
 
     ui.separator();
 
+    // --- Parsing status ---
+    if configuration_file_state.picked_config_file.is_some() {
+        if let Some(err) = &configuration_file_state.parse_error {
+            ui.colored_label(egui::Color32::RED, "YAML parsing failed:");
+            ui.label(err);
+        } else if configuration_file_state.config_model.is_some() {
+            ui.colored_label(egui::Color32::GREEN, "YAML parsed successfully ✅");
+        } else if configuration_file_state.config_file_content.is_some() {
+            // Content loaded but model not set -> should not happen often, but safe
+            ui.colored_label(egui::Color32::YELLOW, "YAML loaded, but not parsed yet.");
+        }
+        ui.separator();
+    }
+    if let Some(model) = &configuration_file_state.config_model {
+        let title = model.metadata.title.as_deref().unwrap_or("<no title>");
+        ui.label(format!("Title: {title}"));
+        ui.label(format!("Hosts: {}", model.hosts.len()));
+        ui.separator();
+    }
     // Config file editor
     if configuration_file_state.picked_config_file.is_none() {
         ui.label("No configuration file selected");
