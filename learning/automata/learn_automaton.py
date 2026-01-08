@@ -216,14 +216,22 @@ if __name__ == '__main__':
     output_name = args.output
 
     try:
-        print("Loading file")
+        print("Loading files")
         csv.field_size_limit(sys.maxsize) # payload is too long
+        conn_input = os.path.join(args.input, "conn.log")
+        flow = pd.read_csv(conn_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
+
         if protocol == "TCP":
             file_input = os.path.join(args.input, "fosr_tcp.log")
-            df = pd.read_csv(file_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service", "dst_port", "flags", "conn_state"])
+            df = pd.read_csv(file_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service", "flags", "conn_state"])
             print("Services in the TCP file:\n",df["service"].value_counts())
+            df = df.join(flow.set_index("uid"), on="uid", rsuffix="_conn")
+            prev_len = len(df)
+            df = df[df["iat"].map(len) < 1000] # remove incomplete flows (1000 is defined in fosr.zeek)
+            if prev_len > len(df):
+                print((prev_len-len(df)),"flows have been ignored because they are too long.")
             if args.dst_port:
-                df = df[df["dst_port"] == args.dst_port]
+                df = df[df["id.resp_p"] == args.dst_port]
             if args.service:
                 df = df[df["service"] == args.service]
             df = df[(df["conn_state"]!="other")]
@@ -235,13 +243,19 @@ if __name__ == '__main__':
 
         elif protocol == "UDP":
             file_input = os.path.join(args.input, "fosr_udp.log")
-            df = pd.read_csv(file_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service", "dst_port"])
+            df = pd.read_csv(file_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service"])
             print("Services in the UDP file:\n",df[["service","dst_port"]].value_counts())
+            df = df.join(flow.set_index("uid"), on="uid", rsuffix="_conn")
+            prev_len = len(df)
+            df = df[df["iat"].map(len) < 1000] # remove incomplete flows (1000 is defined in fosr.zeek)
+            if prev_len > len(df):
+                print((prev_len-len(df)),"flows have been ignored because they are too long.")
             if args.dst_port:
-                df = df[df["dst_port"] == args.dst_port]
+                df = df[df["id.resp_p"] == args.dst_port]
             if args.service:
                 df = df[df["service"] == args.service]
             conn_states = [None]
+
 
     except Exception as e:
         print("Input file cannot be opened:",e)
@@ -263,20 +277,15 @@ if __name__ == '__main__':
 
         assert len(df) > 0 # by construction
 
-        if args.subsample and len(df) > 2*args.subsample:
-            df = df.sample(n=2*args.subsample)
+        # if args.subsample and len(df) > 2*args.subsample:
+        #     df = df.sample(n=2*args.subsample)
 
-        df["time_sequence"] = df.apply(partial(add_payload_type,args.payload_type), axis=1)
-
-        len_before = len(df)
-        df = df[df["time_sequence"].str.len() < 20000]
-        if len(df) < len_before:
-            print((len_before-len(df)),"flows have been ignored because they are too long.")
 
         if args.subsample and len(df) > args.subsample:
             df = df.sample(n=args.subsample)
             print("Subsampling to",args.subsample,"examples")
 
+        df["time_sequence"] = df.apply(partial(add_payload_type,args.payload_type), axis=1)
         df = df.reset_index(drop=True)
 
         print("Learning from",len(df),"examples")

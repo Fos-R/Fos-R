@@ -18,8 +18,6 @@ export {
             vector of bool &log;
         service:
             string &log &optional;
-        dst_port:
-            port &log;
         flags:
             vector of string &log;
         conn_state:
@@ -39,8 +37,6 @@ export {
             vector of bool &log;
         service:
             string &log &optional;
-        dst_port:
-            port &log;
     };
 
     type InfoTTL : record {
@@ -61,6 +57,9 @@ redef tcp_content_deliver_all_resp=T;
 redef udp_content_deliver_all_orig=T;
 redef udp_content_deliver_all_resp=T;
 
+# Only keep the first 1000 packets
+const max_packet_number = 1000;
+
 global iat_result_list : table[string] of vector of double;
 global src_ttl_result : table[string] of int;
 global dst_ttl_result : table[string] of int;
@@ -71,7 +70,6 @@ global last_time : table[string] of double;
 global first_time : table[string] of time;
 global proto_list : table[string] of string;
 global proto_int_list: table[string] of count;
-global dst_port : table[string] of port;
 
 event zeek_init() {
     Log::create_stream(LOG_UDP, [ $columns = InfoUDP, $path = "fosr_udp" ]);
@@ -112,26 +110,27 @@ event tcp_packet(c : connection,
     local exists = c$uid in proto_list;
     if (!exists) {
         first_time[c$uid] = network_time();
-        dst_port[c$uid] = c$id$resp_p;
         flags_result_list[c$uid] = vector();
         iat_result_list[c$uid] = vector();
         forward_result_list[c$uid] = vector();
         payloads_result_list[c$uid] = vector();
         proto_list[c$uid] = "tcp";
     }
-    flags_result_list[c$uid][| flags_result_list[c$uid] |] = flags;
-    forward_result_list[c$uid][| forward_result_list[c$uid] |] = is_orig;
-    payloads_result_list[c$uid][| payloads_result_list[c$uid] |] =
-        encode_base64(payload);
-    if (!exists) {
-        iat_result_list[c$uid][| iat_result_list[c$uid] |] = 0;
-    } else {
-        local iat = time_to_double(network_time()) - last_time[c$uid];
-        if (iat < 0) {
-            print "Negative IAT!";
+    if (|flags_result_list[c$uid]| < max_packet_number) {
+        flags_result_list[c$uid][| flags_result_list[c$uid] |] = flags;
+        forward_result_list[c$uid][| forward_result_list[c$uid] |] = is_orig;
+        payloads_result_list[c$uid][| payloads_result_list[c$uid] |] =
+            encode_base64(payload);
+        if (!exists) {
             iat_result_list[c$uid][| iat_result_list[c$uid] |] = 0;
         } else {
-            iat_result_list[c$uid][| iat_result_list[c$uid] |] = iat;
+            local iat = time_to_double(network_time()) - last_time[c$uid];
+            if (iat < 0) {
+                print "Negative IAT!";
+                iat_result_list[c$uid][| iat_result_list[c$uid] |] = 0;
+            } else {
+                iat_result_list[c$uid][| iat_result_list[c$uid] |] = iat;
+            }
         }
     }
     last_time[c$uid] = time_to_double(network_time());
@@ -142,24 +141,25 @@ event udp_contents(c : connection, is_orig : bool, contents : string) {
     local exists = c$uid in proto_list;
     if (!exists) {
         first_time[c$uid] = network_time();
-        dst_port[c$uid] = c$id$resp_p;
         iat_result_list[c$uid] = vector();
         forward_result_list[c$uid] = vector();
         payloads_result_list[c$uid] = vector();
         proto_list[c$uid] = "udp";
     }
-    forward_result_list[c$uid][| forward_result_list[c$uid] |] = is_orig;
-    payloads_result_list[c$uid][| payloads_result_list[c$uid] |] =
-        encode_base64(contents);
-    if (!exists) {
-        iat_result_list[c$uid][| iat_result_list[c$uid] |] = 0;
-    } else {
-        local iat = time_to_double(network_time()) - last_time[c$uid];
-        if (iat < 0) {
-            print "Negative IAT!";
+    if (|forward_result_list[c$uid]| < max_packet_number) {
+        forward_result_list[c$uid][| forward_result_list[c$uid] |] = is_orig;
+        payloads_result_list[c$uid][| payloads_result_list[c$uid] |] =
+            encode_base64(contents);
+        if (!exists) {
             iat_result_list[c$uid][| iat_result_list[c$uid] |] = 0;
         } else {
-            iat_result_list[c$uid][| iat_result_list[c$uid] |] = iat;
+            local iat = time_to_double(network_time()) - last_time[c$uid];
+            if (iat < 0) {
+                print "Negative IAT!";
+                iat_result_list[c$uid][| iat_result_list[c$uid] |] = 0;
+            } else {
+                iat_result_list[c$uid][| iat_result_list[c$uid] |] = iat;
+            }
         }
     }
     last_time[c$uid] = time_to_double(network_time());
@@ -211,12 +211,12 @@ event connection_state_remove(c : connection) {
                 $flags = flags_result_list[c$uid],
                 $iat = iat_result_list[c$uid],
                 $forward_list = forward_result_list[c$uid],
-                $conn_state = conn_state_category,
-                $dst_port = dst_port[c$uid]);
+                $conn_state = conn_state_category);
             if (c$conn?$service) {
                 rec_tcp$service = c$conn$service;
             }
 
+            delete first_time[c$uid];
             delete flags_result_list[c$uid];
             delete payloads_result_list[c$uid];
             delete iat_result_list[c$uid];
@@ -228,12 +228,12 @@ event connection_state_remove(c : connection) {
                         $uid = c$uid,
                         $payloads = payloads_result_list[c$uid],
                         $iat = iat_result_list[c$uid],
-                        $forward_list = forward_result_list[c$uid],
-                        $dst_port = dst_port[c$uid]);
+                        $forward_list = forward_result_list[c$uid]);
             if (c$conn?$service) {
                 rec_udp$service = c$conn$service;
             }
 
+            delete first_time[c$uid];
             delete payloads_result_list[c$uid];
             delete iat_result_list[c$uid];
             delete forward_result_list[c$uid];
