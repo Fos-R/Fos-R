@@ -37,12 +37,81 @@ pub fn show_configuration_tab_content(
         }
         ui.separator();
     }
-    if let Some(model) = &configuration_file_state.config_model {
-        let title = model.metadata.title.as_deref().unwrap_or("<no title>");
-        ui.label(format!("Title: {title}"));
-        ui.label(format!("Hosts: {}", model.hosts.len()));
+    if let Some(model) = configuration_file_state.config_model.as_mut() {
+        ui.heading("Metadata");
+        ui.add_space(6.0);
+
+        // --- title (mandatory in spec, but keep Option<String> for editing) ---
+        ui.horizontal(|ui| {
+            ui.label("Title:");
+            let title = model.metadata.title.get_or_insert_with(String::new);
+            ui.text_edit_singleline(title);
+        });
+
+        // --- desc (optional, multiline) ---
+        ui.label("Description:");
+        {
+            let desc = model.metadata.desc.get_or_insert_with(String::new);
+            ui.add(
+                egui::TextEdit::multiline(desc)
+                    .desired_rows(3)
+                    .hint_text("Optional description"),
+            );
+        }
+
+        // --- author (optional) ---
+        ui.horizontal(|ui| {
+            ui.label("Author:");
+            let author = model.metadata.author.get_or_insert_with(String::new);
+            ui.text_edit_singleline(author);
+        });
+
+        // --- date (optional, keep as string for now) ---
+        // TODO : utiliser un date picker comme dans l'onglet génération
+        ui.horizontal(|ui| {
+            ui.label("Date:");
+            let date = model.metadata.date.get_or_insert_with(String::new);
+            ui.text_edit_singleline(date)
+                .on_hover_text("Optional. Example: 2025/11/05");
+        });
+
+        // --- version (optional) ---
+        ui.horizontal(|ui| {
+            ui.label("Version:");
+            let version = model.metadata.version.get_or_insert_with(String::new);
+            ui.text_edit_singleline(version);
+        });
+
+        // --- format (reserved) ---
+        ui.horizontal(|ui| {
+            ui.label("Format:");
+            let current = model.metadata.format.unwrap_or(1);
+            ui.label(current.to_string())
+                .on_hover_text("Reserved for now. Should remain 1.");
+
+            if ui.button("Set to 1").clicked() {
+                model.metadata.format = Some(1);
+            }
+
+            if ui.button("Clear").clicked() {
+                model.metadata.format = None;
+            }
+        });
+
         ui.separator();
+        if ui.button("Export YAML (preview)").clicked() {
+            match serde_yaml::to_string(&*model) {
+                Ok(yaml) => {
+                    configuration_file_state.config_file_content = Some(yaml);
+                    configuration_file_state.parse_error = None;
+                }
+                Err(e) => {
+                    configuration_file_state.parse_error = Some(e.to_string());
+                }
+            }
+        }
     }
+
     // Config file editor
     if configuration_file_state.picked_config_file.is_none() {
         ui.label("No configuration file selected");
