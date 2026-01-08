@@ -5,6 +5,7 @@ use crate::shared::ui_utils::{edit_optional_string,edit_optional_multiline_strin
 use chrono::NaiveDate;
 use eframe::egui;
 use egui_extras::DatePickerButton;
+use crate::shared::config_model::Host;
 
 /**
  * Represents the state of the configuration tab.
@@ -114,22 +115,42 @@ pub fn show_configuration_tab_content(
 
         ui.heading("Hosts");
         ui.add_space(6.0);
+        ui.horizontal(|ui| {
+            if ui.button("+ Add host").clicked() {
+                model.hosts.push(Host::default());
+            }
+        });
+        ui.add_space(6.0);
 
         if model.hosts.is_empty() {
             ui.label("No hosts in this configuration.");
         } else {
-            for (host_idx, host) in model.hosts.iter().enumerate() {
+            let mut host_to_remove: Option<usize> = None;
+            for (host_idx, host) in model.hosts.iter_mut().enumerate() {
                 let hostname = host.hostname.as_deref().unwrap_or("<no hostname>");
                 let host_type = host.r#type.as_deref().unwrap_or("<auto>");
                 let if_count = host.interfaces.len();
 
-                let header = format!(
-                    "Host #{host_idx}: {hostname}  |  type: {host_type}  |  interfaces: {if_count}"
-                );
-
-                egui::CollapsingHeader::new(header)
-                    .default_open(host_idx == 0) // optionnel: ouvre le premier host par défaut
+                // let header = format!(
+                //     "Host #{host_idx}: {hostname}  |  type: {host_type}  |  interfaces: {if_count}"
+                // );
+                //
+                // egui::CollapsingHeader::new(header)
+                //     .default_open(host_idx == 0) // optionnel: ouvre le premier host par défaut
+                //     .show(ui, |ui| {
+                egui::CollapsingHeader::new(format!("Host #{host_idx}"))
+                    .default_open(host_idx == 0)
                     .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.strong(format!(
+                            "{hostname}  |  type: {host_type}  |  interfaces: {if_count}"
+                        ));
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                if ui.button("Remove host").clicked() {
+                                    host_to_remove = Some(host_idx);
+                                }
+                            });
+                        });
                         // Host fields (read-only for now)
                         ui.horizontal(|ui| {
                             ui.label("Hostname:");
@@ -209,6 +230,9 @@ pub fn show_configuration_tab_content(
                     });
 
                 ui.add_space(6.0);
+            }
+            if let Some(idx) = host_to_remove{
+                model.hosts.remove(idx);
             }
         }
         ui.separator();
