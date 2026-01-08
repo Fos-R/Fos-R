@@ -1,11 +1,11 @@
+use crate::shared::config_model::Host;
 use crate::shared::configuration_file::{
     ConfigurationFileState, configuration_file_picker, load_config_file_contents,
 };
-use crate::shared::ui_utils::{edit_optional_string,edit_optional_multiline_string};
+use crate::shared::ui_utils::{edit_optional_multiline_string, edit_optional_string};
 use chrono::NaiveDate;
 use eframe::egui;
 use egui_extras::DatePickerButton;
-use crate::shared::config_model::Host;
 
 /**
  * Represents the state of the configuration tab.
@@ -127,8 +127,12 @@ pub fn show_configuration_tab_content(
         } else {
             let mut host_to_remove: Option<usize> = None;
             for (host_idx, host) in model.hosts.iter_mut().enumerate() {
-                let hostname = host.hostname.as_deref().unwrap_or("<no hostname>");
-                let host_type = host.r#type.as_deref().unwrap_or("<auto>");
+                let hostname_for_header = host
+                    .hostname
+                    .clone()
+                    .unwrap_or_else(|| "<no hostname>".to_string());
+                let host_type_for_header =
+                    host.r#type.clone().unwrap_or_else(|| "<auto>".to_string());
                 let if_count = host.interfaces.len();
 
                 // let header = format!(
@@ -143,45 +147,119 @@ pub fn show_configuration_tab_content(
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
                             ui.strong(format!(
-                            "{hostname}  |  type: {host_type}  |  interfaces: {if_count}"
-                        ));
-                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                if ui.button("Remove host").clicked() {
-                                    host_to_remove = Some(host_idx);
+                                "{hostname_for_header}  |  type: {host_type_for_header}  |  interfaces: {if_count}"
+                            ));
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    if ui.button("Remove host").clicked() {
+                                        host_to_remove = Some(host_idx);
+                                    }
+                                },
+                            );
+                        });
+                        // --- Editable host fields ---
+
+                        // Hostname (optional)
+                        edit_optional_string(
+                            ui,
+                            "Hostname (optional):",
+                            &mut host.hostname,
+                            "host1",
+                        );
+
+                        // OS (optional, default is Linux)
+                        edit_optional_string(ui, "OS (optional):", &mut host.os, "Linux");
+
+                        // Usage (optional, default is 1.0)
+                        ui.horizontal(|ui| {
+                            ui.label("Usage (optional):");
+
+                            let mut usage_val = host.usage.unwrap_or(1.0);
+                            let resp = ui.add(egui::DragValue::new(&mut usage_val).speed(0.1));
+
+                            if resp.changed() {
+                                // If equals default, keep None to avoid polluting YAML
+                                if (usage_val - 1.0).abs() < f32::EPSILON {
+                                    host.usage = None;
+                                } else {
+                                    host.usage = Some(usage_val);
                                 }
-                            });
-                        });
-                        // Host fields (read-only for now)
-                        ui.horizontal(|ui| {
-                            ui.label("Hostname:");
-                            ui.monospace(hostname);
+                            }
+
+                            if ui.button("Clear").clicked() {
+                                host.usage = None;
+                            }
                         });
 
+                        // Type (optional, auto if None)
                         ui.horizontal(|ui| {
-                            ui.label("OS:");
-                            ui.monospace(host.os.as_deref().unwrap_or("<default: Linux>"));
+                            ui.label("Type (optional):");
+
+                            let selected_text =
+                                host.r#type.as_deref().unwrap_or("<auto>").to_string();
+
+                            egui::ComboBox::from_id_salt((host_idx, "host_type"))
+                                .selected_text(selected_text)
+                                .show_ui(ui, |ui| {
+                                    if ui
+                                        .selectable_label(host.r#type.is_none(), "<auto>")
+                                        .clicked()
+                                    {
+                                        host.r#type = None;
+                                    }
+                                    if ui
+                                        .selectable_label(
+                                            host.r#type.as_deref() == Some("server"),
+                                            "server",
+                                        )
+                                        .clicked()
+                                    {
+                                        host.r#type = Some("server".to_string());
+                                    }
+                                    if ui
+                                        .selectable_label(
+                                            host.r#type.as_deref() == Some("user"),
+                                            "user",
+                                        )
+                                        .clicked()
+                                    {
+                                        host.r#type = Some("user".to_string());
+                                    }
+                                });
+
+                            if ui.button("Clear").clicked() {
+                                host.r#type = None;
+                            }
                         });
 
+                        // Client protocols (optional list)
+                        // For now: comma-separated editor
                         ui.horizontal(|ui| {
-                            ui.label("Usage:");
-                            match host.usage {
-                                Some(u) => ui.monospace(format!("{u}")),
-                                None => ui.monospace("<default: 1.0>"),
-                            };
-                        });
+                            ui.label("Client protocols (optional):");
 
-                        ui.horizontal(|ui| {
-                            ui.label("Type:");
-                            ui.monospace(host_type);
-                        });
-
-                        // Client protocols
-                        ui.horizontal(|ui| {
-                            ui.label("Client:");
-                            if host.client.is_empty() {
-                                ui.monospace("<empty>");
+                            let mut buf = if host.client.is_empty() {
+                                String::new()
                             } else {
-                                ui.monospace(host.client.join(", "));
+                                host.client.join(",")
+                            };
+
+                            let resp = ui.add(
+                                egui::TextEdit::singleline(&mut buf)
+                                    .hint_text("ex: http,https,ssh"),
+                            );
+
+                            if resp.changed() {
+                                host.client = buf
+                                    .split(',')
+                                    .map(|s| s.trim())
+                                    .filter(|s| !s.is_empty())
+                                    .map(|s| s.to_string())
+                                    .collect();
+                            }
+
+                            if ui.button("Clear").clicked() {
+                                host.client.clear();
                             }
                         });
 
@@ -208,22 +286,23 @@ pub fn show_configuration_tab_content(
                                         ui.monospace(iface.mac_addr.as_deref().unwrap_or("<none>"));
                                     });
 
-                                        let svc_count = iface.services.len();
-                                        egui::CollapsingHeader::new(format!("Services ({svc_count})"))
-                                            .default_open(false)
-                                            .show(ui, |ui| {
-                                                if iface.services.is_empty() {
-                                                    ui.monospace("<none>");
-                                                } else {
-                                                    egui::ScrollArea::vertical()
-                                                        .max_height(80.0)
-                                                        .show(ui, |ui| {
-                                                            for svc in &iface.services {
-                                                                ui.monospace(format!("- {svc}"));
-                                                            }
-                                                        });
-                                                }
-                                            });
+                                    let svc_count = iface.services.len();
+                                    egui::CollapsingHeader::new(format!("Services ({svc_count})"))
+                                        .default_open(false)
+                                        .show(ui, |ui| {
+                                            if iface.services.is_empty() {
+                                                ui.monospace("<none>");
+                                            } else {
+                                                egui::ScrollArea::vertical().max_height(80.0).show(
+                                                    ui,
+                                                    |ui| {
+                                                        for svc in &iface.services {
+                                                            ui.monospace(format!("- {svc}"));
+                                                        }
+                                                    },
+                                                );
+                                            }
+                                        });
                                 });
                             }
                         }
@@ -231,7 +310,7 @@ pub fn show_configuration_tab_content(
 
                 ui.add_space(6.0);
             }
-            if let Some(idx) = host_to_remove{
+            if let Some(idx) = host_to_remove {
                 model.hosts.remove(idx);
             }
         }
