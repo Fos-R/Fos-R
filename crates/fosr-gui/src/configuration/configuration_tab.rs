@@ -99,6 +99,99 @@ pub fn show_configuration_tab_content(
         });
 
         ui.separator();
+
+        ui.heading("Hosts");
+        ui.add_space(6.0);
+
+        if model.hosts.is_empty() {
+            ui.label("No hosts in this configuration.");
+        } else {
+            for (host_idx, host) in model.hosts.iter().enumerate() {
+                let hostname = host.hostname.as_deref().unwrap_or("<no hostname>");
+                let host_type = host.r#type.as_deref().unwrap_or("<auto>");
+                let if_count = host.interfaces.len();
+
+                let header = format!(
+                    "Host #{host_idx}: {hostname}  |  type: {host_type}  |  interfaces: {if_count}"
+                );
+
+                egui::CollapsingHeader::new(header)
+                    .default_open(host_idx == 0) // optionnel: ouvre le premier host par défaut
+                    .show(ui, |ui| {
+                        // Host fields (read-only for now)
+                        ui.horizontal(|ui| {
+                            ui.label("Hostname:");
+                            ui.monospace(hostname);
+                        });
+
+                        ui.horizontal(|ui| {
+                            ui.label("OS:");
+                            ui.monospace(host.os.as_deref().unwrap_or("<default: Linux>"));
+                        });
+
+                        ui.horizontal(|ui| {
+                            ui.label("Usage:");
+                            match host.usage {
+                                Some(u) => ui.monospace(format!("{u}")),
+                                None => ui.monospace("<default: 1.0>"),
+                            };
+                        });
+
+                        ui.horizontal(|ui| {
+                            ui.label("Type:");
+                            ui.monospace(host_type);
+                        });
+
+                        // Client protocols
+                        ui.horizontal(|ui| {
+                            ui.label("Client:");
+                            if host.client.is_empty() {
+                                ui.monospace("<empty>");
+                            } else {
+                                ui.monospace(host.client.join(", "));
+                            }
+                        });
+
+                        ui.separator();
+                        ui.label("Interfaces:");
+
+                        if host.interfaces.is_empty() {
+                            ui.label("No interfaces.");
+                        } else {
+                            for (if_idx, iface) in host.interfaces.iter().enumerate() {
+                                egui::CollapsingHeader::new(format!(
+                                    "Interface #{if_idx} — {}",
+                                    iface.ip_addr
+                                ))
+                                .default_open(if_idx == 0)
+                                .show(ui, |ui| {
+                                    ui.horizontal(|ui| {
+                                        ui.label("IP:");
+                                        ui.monospace(&iface.ip_addr);
+                                    });
+
+                                    ui.horizontal(|ui| {
+                                        ui.label("MAC:");
+                                        ui.monospace(iface.mac_addr.as_deref().unwrap_or("<none>"));
+                                    });
+
+                                    ui.horizontal(|ui| {
+                                        ui.label("Services:");
+                                        if iface.services.is_empty() {
+                                            ui.monospace("<none>");
+                                        } else {
+                                            ui.monospace(iface.services.join(", "));
+                                        }
+                                    });
+                                });
+                            }
+                        }
+                    });
+
+                ui.add_space(6.0);
+            }
+        }
+        ui.separator();
         if ui.button("Export YAML (preview)").clicked() {
             match serde_yaml::to_string(&*model) {
                 Ok(yaml) => {
