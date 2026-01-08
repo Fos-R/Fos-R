@@ -1,3 +1,4 @@
+use crate::shared::config_model::Configuration;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::{read_file_desktop, show_file_picker_desktop};
 #[cfg(target_arch = "wasm32")]
@@ -14,6 +15,8 @@ pub struct ConfigurationFileState {
     pub config_file_content: Option<String>,
     #[cfg(target_arch = "wasm32")]
     pub config_file_content_receiver: Option<Receiver<Option<String>>>,
+    pub config_model: Option<Configuration>,
+    pub parse_error: Option<String>,
 }
 
 impl Default for ConfigurationFileState {
@@ -25,6 +28,8 @@ impl Default for ConfigurationFileState {
             config_file_content: None,
             #[cfg(target_arch = "wasm32")]
             config_file_content_receiver: None,
+            config_model: None,
+            parse_error: None,
         }
     }
 }
@@ -44,6 +49,7 @@ pub fn configuration_file_picker(
                 let file = show_file_picker_desktop();
                 if file.is_some() {
                     configuration_file_state.picked_config_file = file;
+                    reset_loaded_config(configuration_file_state);
                 }
             }
 
@@ -69,6 +75,7 @@ pub fn configuration_file_picker(
                     // Only update if a file was actually selected
                     if file.is_some() {
                         configuration_file_state.picked_config_file = file;
+                        reset_loaded_config(configuration_file_state);
                     }
                     configuration_file_state.config_file_receiver = None; // Dialog finished
                 }
@@ -84,6 +91,7 @@ pub fn configuration_file_picker(
 
         if configuration_file_state.picked_config_file.is_some() && ui.button("Remove").clicked() {
             configuration_file_state.picked_config_file = None;
+            reset_loaded_config(configuration_file_state);
         };
 
         // On desktop: filename with its full path on hover, on WASM: just the filename
@@ -108,6 +116,7 @@ pub fn load_config_file_contents(configuration_file_state: &mut ConfigurationFil
         {
             let content = read_file_desktop(file_handle);
             configuration_file_state.config_file_content = Some(content);
+            parse_config_yaml(configuration_file_state);
         }
 
         #[cfg(target_arch = "wasm32")]
@@ -129,7 +138,35 @@ pub fn load_config_file_contents(configuration_file_state: &mut ConfigurationFil
                     configuration_file_state.config_file_content = content;
                     configuration_file_state.config_file_content_receiver = None;
                 }
+                if configuration_file_state.config_file_content.is_some() {
+                    parse_config_yaml(configuration_file_state);
+                }
             }
         }
+    }
+}
+
+fn parse_config_yaml(configuration_file_state: &mut ConfigurationFileState) {
+    configuration_file_state.config_model = None;
+    configuration_file_state.parse_error = None;
+
+    let Some(yaml) = configuration_file_state.config_file_content.as_deref() else {
+        return;
+    };
+
+    match serde_yaml::from_str::<Configuration>(yaml) {
+        Ok(model) => configuration_file_state.config_model = Some(model),
+        Err(e) => configuration_file_state.parse_error = Some(e.to_string()),
+    }
+}
+
+pub fn reset_loaded_config(configuration_file_state: &mut ConfigurationFileState) {
+    configuration_file_state.config_file_content = None;
+    configuration_file_state.config_model = None;
+    configuration_file_state.parse_error = None;
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        configuration_file_state.config_file_content_receiver = None;
     }
 }
