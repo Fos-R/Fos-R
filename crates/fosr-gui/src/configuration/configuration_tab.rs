@@ -1,7 +1,10 @@
 use crate::shared::configuration_file::{
     ConfigurationFileState, configuration_file_picker, load_config_file_contents,
 };
+use crate::shared::ui_utils::{edit_optional_string,edit_optional_multiline_string};
+use chrono::NaiveDate;
 use eframe::egui;
+use egui_extras::DatePickerButton;
 
 /**
  * Represents the state of the configuration tab.
@@ -48,39 +51,48 @@ pub fn show_configuration_tab_content(
             ui.text_edit_singleline(title);
         });
 
-        // --- desc (optional, multiline) ---
-        ui.label("Description:");
-        {
-            let desc = model.metadata.desc.get_or_insert_with(String::new);
-            ui.add(
-                egui::TextEdit::multiline(desc)
-                    .desired_rows(3)
-                    .hint_text("Optional description"),
-            );
-        }
+        edit_optional_multiline_string(
+            ui,
+            "Description (optional):",
+            &mut model.metadata.desc,
+            "Optional description",
+            3,
+        );
 
-        // --- author (optional) ---
+        edit_optional_string(
+            ui,
+            "Author (optional):",
+            &mut model.metadata.author,
+            "Jane Doe",
+        );
+
         ui.horizontal(|ui| {
-            ui.label("Author:");
-            let author = model.metadata.author.get_or_insert_with(String::new);
-            ui.text_edit_singleline(author);
+            ui.label("Date (optional):");
+
+            let mut date_val = model
+                .metadata
+                .date
+                .as_deref()
+                .and_then(|s| NaiveDate::parse_from_str(s, "%Y/%m/%d").ok())
+                .unwrap_or_else(|| NaiveDate::from_ymd_opt(2025, 1, 1).unwrap());
+
+            let resp = ui.add(DatePickerButton::new(&mut date_val));
+
+            if resp.changed() {
+                model.metadata.date = Some(date_val.format("%Y/%m/%d").to_string());
+            }
+
+            if ui.button("Clear").clicked() {
+                model.metadata.date = None;
+            }
         });
 
-        // --- date (optional, keep as string for now) ---
-        // TODO : utiliser un date picker comme dans l'onglet génération
-        ui.horizontal(|ui| {
-            ui.label("Date:");
-            let date = model.metadata.date.get_or_insert_with(String::new);
-            ui.text_edit_singleline(date)
-                .on_hover_text("Optional. Example: 2025/11/05");
-        });
-
-        // --- version (optional) ---
-        ui.horizontal(|ui| {
-            ui.label("Version:");
-            let version = model.metadata.version.get_or_insert_with(String::new);
-            ui.text_edit_singleline(version);
-        });
+        edit_optional_string(
+            ui,
+            "Version (optional):",
+            &mut model.metadata.author,
+            "0.1.0",
+        );
 
         // --- format (reserved) ---
         ui.horizontal(|ui| {
@@ -175,14 +187,22 @@ pub fn show_configuration_tab_content(
                                         ui.monospace(iface.mac_addr.as_deref().unwrap_or("<none>"));
                                     });
 
-                                    ui.horizontal(|ui| {
-                                        ui.label("Services:");
-                                        if iface.services.is_empty() {
-                                            ui.monospace("<none>");
-                                        } else {
-                                            ui.monospace(iface.services.join(", "));
-                                        }
-                                    });
+                                        let svc_count = iface.services.len();
+                                        egui::CollapsingHeader::new(format!("Services ({svc_count})"))
+                                            .default_open(false)
+                                            .show(ui, |ui| {
+                                                if iface.services.is_empty() {
+                                                    ui.monospace("<none>");
+                                                } else {
+                                                    egui::ScrollArea::vertical()
+                                                        .max_height(80.0)
+                                                        .show(ui, |ui| {
+                                                            for svc in &iface.services {
+                                                                ui.monospace(format!("- {svc}"));
+                                                            }
+                                                        });
+                                                }
+                                            });
                                 });
                             }
                         }
