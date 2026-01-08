@@ -154,6 +154,21 @@ build-win32-x86:
     paths:
       - target/*/release/fosr.exe
 
+build-wasm32:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: build
+  image: rust
+  script:
+    - rustup target add wasm32-unknown-unknown
+    - cargo install wasm-bindgen-cli
+    - cargo build -p fosr-gui -r --target wasm32-unknown-unknown --no-default-features
+    - wasm-bindgen --out-dir public --target web target/wasm32-unknown-unknown/release/fosr_gui.wasm --no-typescript
+  artifacts:
+    paths:
+      - public/fosr_gui.js
+      - public/fosr_gui_bg.wasm
 
 # build-freebsd-x86-64:
 #   tags:
