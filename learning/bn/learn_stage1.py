@@ -72,7 +72,7 @@ def ParametersLearning(bn,df):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Learn a time profile for Fos-R.')
     parser.add_argument('--input', required=True, help="Select the input folder.")
-    # parser.add_argument('--output', help="Select the output file to create.")
+    parser.add_argument('--output', help="Select the output directory.")
     args = parser.parse_args()
 
     conn_input = os.path.join(args.input, "conn.log")
@@ -93,20 +93,20 @@ if __name__ == '__main__':
     csv.field_size_limit(sys.maxsize) # payload is too long
     try:
         flow = pd.read_csv(conn_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
-    except:
-        print(f"Cannot find conn.log in {args.input}!")
+    except Exception as e:
+        print(f"Cannot find conn.log in {args.input}!",e)
         exit(1)
 
     tcp_fosr = None
     try:
         tcp_fosr = pd.read_csv(tcp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service", "flags", "conn_state"])
-    except:
-        print("No TCP data")
+    except Exception as e:
+        print("No TCP data:",e)
     udp_fosr = None
     try:
         udp_fosr = pd.read_csv(udp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service"])
-    except:
-        print("No UDP data")
+    except Exception as e:
+        print("No UDP data", e)
     ttl_fosr = pd.read_csv(ttl_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["uid", "ip", "ttl", "proto"]);
 
     print("Extracting")
@@ -172,13 +172,17 @@ if __name__ == '__main__':
         for i in range(5): # limit on the number of components
             if i+1 > len(pkt_count): # at most as many components as the number of points
                 break
-            m = GaussianMixture(n_components=i+1, random_state=42, covariance_type="spherical")
-            labels = m.fit_predict(pkt_count)
-            bic = m.bic(pkt_count)
-            if best_bic is None or best_bic > bic:
-                best_model = m
-                best_bic = bic
-                best_labels = labels
+            try:
+                m = GaussianMixture(n_components=i+1, random_state=42, covariance_type="spherical")
+                labels = m.fit_predict(pkt_count)
+                bic = m.bic(pkt_count)
+                if best_bic is None or best_bic > bic:
+                    best_model = m
+                    best_bic = bic
+                    best_labels = labels
+            except Exception as e:
+                print("Error during GaussianMixture:",e)
+        assert best_bic is not None
         best_labels = list(map(str,best_labels)) # make the variable discrete
         return best_model.means_.reshape(1,-1)[0], best_model.covariances_, best_labels
 
@@ -276,14 +280,17 @@ if __name__ == '__main__':
 
     print("Model export")
 
-    bn_common.saveBIFXML("bn_common.bifxml")
+    args.output = args.output or "."
+    if not os.path.exists(args.output):
+        os.makedirs(args.output)
+    bn_common.saveBIFXML(os.path.join(args.output, "bn_common.bifxml"))
     if udp_fosr is not None:
-        bn_udp.saveBIFXML("bn_udp.bifxml")
+        bn_udp.saveBIFXML(os.path.join(args.output, "bn_udp.bifxml"))
     if tcp_fosr is not None:
-        bn_tcp.saveBIFXML("bn_tcp.bifxml")
+        bn_tcp.saveBIFXML(os.path.join(args.output, "bn_tcp.bifxml"))
 
     try:
-        out_file = open("bn_additional_data.json", "w")
+        out_file = open(os.path.join(args.output, "bn_additional_data.json"), "w")
         json.dump(output, out_file)
         print("JSON file successfully created")
     except Exception as e:
