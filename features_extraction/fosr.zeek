@@ -213,7 +213,9 @@ event connection_state_remove(c : connection) {
                 $forward_list = forward_result_list[c$uid],
                 $conn_state = conn_state_category);
             if (c$conn?$service) {
-                rec_tcp$service = c$conn$service;
+                rec_tcp$service = c$conn$service + ":" + cat(c$id$resp_p);
+            } else {
+                rec_tcp$service = cat(c$id$resp_p);
             }
 
             delete first_time[c$uid];
@@ -230,7 +232,9 @@ event connection_state_remove(c : connection) {
                         $iat = iat_result_list[c$uid],
                         $forward_list = forward_result_list[c$uid]);
             if (c$conn?$service) {
-                rec_udp$service = c$conn$service;
+                rec_udp$service = c$conn$service + ":" + cat(c$id$resp_p);
+            } else {
+                rec_udp$service = cat(c$id$resp_p);
             }
 
             delete first_time[c$uid];
