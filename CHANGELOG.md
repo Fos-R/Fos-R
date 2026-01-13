@@ -19,9 +19,15 @@
 - Added `--default-models` and `--custom-models` options
 - Two generation profiles: fast or efficient
 
+#### fosr-gui
+
+- Added a GUI to Fos-R
+- Published an WASM-based online version
+
 #### other
 
-- A Zeek script to extract features
+- A Zeek script for feature extraction
+- Reworked learning algorithms
 
 ### Changed
 
