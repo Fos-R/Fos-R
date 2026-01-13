@@ -15,6 +15,7 @@ pub trait Stage2: Clone + std::marker::Send + 'static {
     fn generate_tcp_packets_info(
         &self,
         flow: SeededData<FlowData>,
+        conn_state: TCPConnState,
     ) -> Option<SeededData<PacketsIR<TCPPacketInfo>>>;
     fn generate_udp_packets_info(
         &self,
@@ -55,11 +56,14 @@ pub fn run_channel(
         }
         log::trace!("Generating packets info");
         match flow.data {
-            Flow::TCP(data) => {
-                if let Some(pir) = generator.generate_tcp_packets_info(SeededData {
-                    seed: flow.seed,
-                    data,
-                }) {
+            Flow::TCP(data, conn_state) => {
+                if let Some(pir) = generator.generate_tcp_packets_info(
+                    SeededData {
+                        seed: flow.seed,
+                        data,
+                    },
+                    conn_state,
+                ) {
                     tx_s2.tcp.send(pir)?;
                 }
             }
@@ -92,7 +96,7 @@ pub fn run_vec(generator: impl Stage2, vec_s2: Vec<SeededData<Flow>>) -> S2Vecto
         tcp: Vec::with_capacity(
             vec_s2
                 .iter()
-                .filter(|f| matches!(f.data, Flow::TCP(_)))
+                .filter(|f| matches!(f.data, Flow::TCP(_, _)))
                 .count(),
         ),
         udp: Vec::with_capacity(
@@ -111,11 +115,14 @@ pub fn run_vec(generator: impl Stage2, vec_s2: Vec<SeededData<Flow>>) -> S2Vecto
     for flow in vec_s2 {
         log::trace!("Generating packets info");
         match flow.data {
-            Flow::TCP(data) => {
-                if let Some(pir) = generator.generate_tcp_packets_info(SeededData {
-                    seed: flow.seed,
-                    data,
-                }) {
+            Flow::TCP(data, conn_state) => {
+                if let Some(pir) = generator.generate_tcp_packets_info(
+                    SeededData {
+                        seed: flow.seed,
+                        data,
+                    },
+                    conn_state,
+                ) {
                     vectors.tcp.push(pir);
                 }
             }

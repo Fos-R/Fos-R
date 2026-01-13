@@ -32,7 +32,7 @@ struct IntermediateVector {
     bwd_packets_count: Option<usize>,
     timestamp: Option<Duration>,
     proto: Option<Protocol>,
-    tcp_flags: Option<TCPEndFlags>,
+    tcp_flags: Option<TCPConnState>,
     src_ip: Option<Ipv4Addr>, // if None, randomly sampled
     dst_ip: Option<Ipv4Addr>, // if None, randomly sampled
 }
@@ -51,7 +51,7 @@ impl From<IntermediateVector> for Flow {
             timestamp: p.timestamp.unwrap(),
             l7_proto: p.l7_proto.unwrap(),
         };
-        p.proto.unwrap().wrap(d)
+        p.proto.unwrap().wrap(d, p.tcp_flags)
     }
 }
 
@@ -89,26 +89,6 @@ impl TryFrom<String> for IpRole {
 }
 
 #[derive(Debug, Clone)]
-/// The TCP end flags
-enum TCPEndFlags {
-    None,
-    R,
-    FAndNotR,
-    NotFAndNotR,
-}
-
-impl TCPEndFlags {
-    fn iter() -> [TCPEndFlags; 4] {
-        [
-            TCPEndFlags::None,
-            TCPEndFlags::R,
-            TCPEndFlags::FAndNotR,
-            TCPEndFlags::NotFAndNotR,
-        ]
-    }
-}
-
-#[derive(Debug, Clone)]
 enum AnonymizedIpv4Addr {
     Public,
     Local(Ipv4Addr),
@@ -128,7 +108,7 @@ enum Feature {
     BwdPkt(Vec<Normal<f64>>), // idem
     L7Proto(Vec<L7Proto>),
     L4Proto(Vec<Protocol>),
-    EndFlags,
+    EndFlags(Vec<TCPConnState>),
 }
 
 impl Feature {
@@ -140,7 +120,7 @@ impl Feature {
             Feature::FwdPkt(v) | Feature::BwdPkt(v) => format!("{:?}", v[index]),
             Feature::L4Proto(v) => format!("{:?}", v[index]),
             Feature::L7Proto(v) => format!("{:?}", v[index]),
-            Feature::EndFlags => format!("{:?}", TCPEndFlags::iter()[index]),
+            Feature::EndFlags(v) => format!("{:?}", v[index]),
             Feature::TimeBin(_) => format!("Time bin {index}"),
         }
     }
@@ -153,7 +133,7 @@ impl Feature {
             Feature::FwdPkt(v) | Feature::BwdPkt(v) => v.len(),
             Feature::L4Proto(v) => v.len(),
             Feature::L7Proto(v) => v.len(),
-            Feature::EndFlags => TCPEndFlags::iter().len(),
+            Feature::EndFlags(v) => v.len(),
             Feature::TimeBin(card) => *card,
         }
     }
@@ -273,8 +253,8 @@ impl BayesianNetwork {
                                         Some(v[i].sample(rng) as usize)
                                 }
                                 Feature::L4Proto(v) => domain_vector.proto = Some(v[i]),
-                                Feature::EndFlags => {
-                                    domain_vector.tcp_flags = Some(TCPEndFlags::iter()[i].clone())
+                                Feature::EndFlags(v) => {
+                                    domain_vector.tcp_flags = Some(v[i])
                                 }
                                 Feature::TimeBin(_) => unreachable!(),
                             }
@@ -893,7 +873,13 @@ fn bn_from_bif(
             "Cat In Packet TCP" => Some(Feature::BwdPkt(
                 bn_additional_data.tcp_in_pkt_gaussians.to_normals(),
             )),
-            "End Flags TCP" => Some(Feature::EndFlags),
+            "End Flags TCP" => Some(Feature::EndFlags(
+                v.outcome
+                    .clone()
+                    .into_iter()
+                    .map(<std::string::String as TryInto<TCPConnState>>::try_into)
+                    .collect::<Result<Vec<TCPConnState>, String>>()?,
+            )),
 
             "Cat Out Packet UDP" => Some(Feature::FwdPkt(
                 bn_additional_data.udp_out_pkt_gaussians.to_normals(),

@@ -132,8 +132,7 @@ if __name__ == '__main__':
     if tcp_fosr is not None:
         flow = flow.join(tcp_fosr.set_index("uid"), on="uid", rsuffix="_tcp_fosr")
         flow['Connection State'] = flow['conn_state_tcp_fosr']
-        flow = flow[(flow["Connection State"]!="other")] # remove rare connection state
-        flow = flow[(flow["Connection State"]!="OTH")] # OTH flows are side effects of capture: we do not want to generate them
+        flow = flow[(flow["Connection State"]!="other")] # remove rare and OTH connection states
         flow["service_tcp_fosr"] = flow["service_tcp_fosr"].fillna("")
 
     if udp_fosr is not None:
@@ -163,9 +162,16 @@ if __name__ == '__main__':
     print("Export for automata learning")
     automata = []
     for s in flow["Applicative Proto"].unique():
-        for conn_state in flow[flow["Applicative Proto"] == s]["Connection State"].unique():
-            flows = flow[(flow["Applicative Proto"] == s) & (flow["Connection State"] == conn_state)]["uid"]
-            d = { "service": s, "conn_state": conn_state, "flows": list(flows) }
+        if not flow[flow["Applicative Proto"] == s].isnull().all(axis=0)["Connection State"]: # TCP
+            for conn_state in flow[flow["Applicative Proto"] == s]["Connection State"].unique():
+                # print(conn_state)
+                flows = list(flow[(flow["Applicative Proto"] == s) & (flow["Connection State"] == conn_state)]["uid"])
+                # print(len(flows))
+                d = { "service": s, "conn_state": conn_state, "flows": flows, "proto": "tcp" }
+                automata.append(d)
+        else: # not TCP
+            flows = list(flow[flow["Applicative Proto"] == s]["uid"])
+            d = { "service": s, "flows": flows, "proto": "udp" }
             automata.append(d)
 
     out_file = open(os.path.join(args.output, "automata-flows.json"), "w")

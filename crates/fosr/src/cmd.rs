@@ -131,6 +131,7 @@ pub enum Command {
         .args(&["duration", "packets_count"])),
     group(
     clap::ArgGroup::new("models")
+        .required(true)
         .args(&["default_models", "custom_models"]),
 
     ))]
@@ -187,10 +188,10 @@ pub enum Command {
         seed: Option<u64>,
         #[arg(
             long,
-            default_value_t = DefaultModels::Legacy,
+            // default_value_t = DefaultModels::Legacy,
             help = "Use a default model"
         )]
-        default_models: DefaultModels,
+        default_models: Option<DefaultModels>,
         #[arg(long, help = "Use a custom model")]
         custom_models: Option<String>,
         #[arg(

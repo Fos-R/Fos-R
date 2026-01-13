@@ -1,4 +1,5 @@
 use crate::structs::*;
+use base64::Engine;
 use kd_tree::KdTree;
 use rand_core::*;
 use rand_distr::weighted::WeightedIndex;
@@ -262,16 +263,16 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
             // if $-transition, don’t create a header
             let (payload, payload_size) = match data.get_payload_type() {
                 PayloadType::Empty => (Payload::Empty, 0),
-                PayloadType::Random(sizes) => {
-                    let size = sizes[(rng.next_u32() as usize) % sizes.len()];
+                PayloadType::Random(sizes, distrib) => {
+                    let size = sizes[distrib.sample(rng)];
                     (Payload::Random(size), size)
                 }
                 PayloadType::Text(tss, distrib) => {
                     let ts = &tss[distrib.sample(rng)];
                     (Payload::Replay(ts), ts.len())
                 }
-                PayloadType::Replay(tss) => {
-                    let ts = &tss[(rng.next_u32() as usize) % tss.len()];
+                PayloadType::Replay(tss, distrib) => {
+                    let ts = &tss[distrib.sample(rng)];
                     (Payload::Replay(ts), ts.len())
                 }
             };
@@ -292,13 +293,6 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
     output
 }
 
-impl<T: EdgeType> CrossProductTimedAutomaton<T> {
-    #[allow(unused)]
-    pub fn is_compatible_with(&self, port: u16) -> bool {
-        self.metadata.select_dst_ports.contains(&port)
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct TimedAutomaton<T: EdgeType> {
     graph: Vec<TimedNode<T>>,
@@ -313,28 +307,21 @@ impl<T: EdgeType> Display for TimedAutomaton<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "automaton \"{}\" for ports {:?} learned on {} from {}",
+            "automaton \"{}\" for service {:?} learned on {} from {}",
             self.metadata.automaton_name,
-            self.metadata.select_dst_ports,
+            self.metadata.service,
             self.metadata.input_file,
             self.metadata.creation_time
         )
     }
 }
 
-// TODO: fusionner avec la version "crossproduct"
-impl<T: EdgeType> TimedAutomaton<T> {
-    #[allow(unused)]
-    pub fn is_compatible_with(&self, port: u16) -> bool {
-        self.metadata.select_dst_ports.contains(&port)
-    }
-}
-
 #[derive(Deserialize, Debug, Clone)]
 #[allow(unused)]
 struct AutomatonMetaData {
-    select_dst_ports: Vec<u16>,
-    ignore_dst_ports: Vec<u16>,
+    service: String,
+    dst_port: u16,
+    conn_state: TCPConnState,
     input_file: String,
     creation_time: String,
     automaton_name: String,
@@ -381,9 +368,15 @@ struct JsonEdge {
 #[serde(into = "PayloadType")]
 enum JsonPayload {
     Lengths {
+        weights: Option<Vec<u64>>,
         lengths: Vec<usize>,
     },
     HexCodes {
+        weights: Option<Vec<u64>>,
+        content: Vec<String>,
+    },
+    Base64 {
+        weights: Option<Vec<u64>>,
         content: Vec<String>,
     },
     Text {
@@ -397,7 +390,7 @@ impl TryFrom<JsonPayload> for PayloadType {
     type Error = String;
 
     fn try_from(p: JsonPayload) -> Result<Self, String> {
-        let decode = |s: String| {
+        let hex_decode = |s: String| {
             s.as_bytes()
                 .chunks(2)
                 .map(|pair| {
@@ -408,21 +401,51 @@ impl TryFrom<JsonPayload> for PayloadType {
         };
 
         match p {
-            JsonPayload::Lengths { lengths: l } => {
+            JsonPayload::Lengths {
+                weights: w,
+                lengths: l,
+            } => {
                 if l.is_empty() {
                     Err("No payload information".to_string())
                 } else {
-                    Ok(PayloadType::Random(l))
+                    let weights = w.unwrap_or_else(|| vec![1; l.len()]);
+                    Ok(PayloadType::Random(
+                        l,
+                        WeightedIndex::new(weights).map_err(|_| "Weights error".to_string())?,
+                    ))
                 }
             }
             JsonPayload::NoPayload => Ok(PayloadType::Empty),
-            JsonPayload::HexCodes { content: p } => {
+            JsonPayload::HexCodes {
+                weights: w,
+                content: p,
+            } => {
                 if p.is_empty() {
                     Err("No payload information".to_string())
                 } else {
-                    Ok(PayloadType::Replay(Box::leak(Box::new(
-                        p.into_iter().map(decode).collect(),
-                    ))))
+                    let weights = w.unwrap_or_else(|| vec![1; p.len()]);
+                    Ok(PayloadType::Replay(
+                        Box::leak(Box::new(p.into_iter().map(hex_decode).collect())),
+                        WeightedIndex::new(weights).map_err(|_| "Weights error".to_string())?,
+                    ))
+                }
+            }
+            JsonPayload::Base64 {
+                weights: w,
+                content: p,
+            } => {
+                if p.is_empty() {
+                    Err("No payload information".to_string())
+                } else {
+                    let weights = w.unwrap_or_else(|| vec![1; p.len()]);
+                    Ok(PayloadType::Replay(
+                        Box::leak(Box::new(
+                            p.into_iter()
+                                .map(|s| base64::prelude::BASE64_STANDARD.decode(s).unwrap())
+                                .collect(),
+                        )),
+                        WeightedIndex::new(weights).map_err(|_| "Weights error".to_string())?,
+                    ))
                 }
             }
             JsonPayload::Text {
@@ -431,18 +454,11 @@ impl TryFrom<JsonPayload> for PayloadType {
             } => {
                 if p.is_empty() {
                     Err("No payload information".to_string())
-                } else if let Some(w) = w {
-                    Ok(PayloadType::Text(
-                        Box::leak(Box::new(p.into_iter().map(|v| v.into()).collect())),
-                        WeightedIndex::new(&w).map_err(|_| "Weights error".to_string())?,
-                    ))
                 } else {
-                    // Backward-compatible version
-                    let weights = WeightedIndex::new(vec![1; p.len()])
-                        .map_err(|_| "Weights error".to_string())?;
+                    let weights = w.unwrap_or_else(|| vec![1; p.len()]);
                     Ok(PayloadType::Text(
                         Box::leak(Box::new(p.into_iter().map(|v| v.into()).collect())),
-                        weights,
+                        WeightedIndex::new(weights).map_err(|_| "Weights error".to_string())?,
                     ))
                 }
             }
