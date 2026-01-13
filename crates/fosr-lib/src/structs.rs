@@ -34,6 +34,44 @@ pub enum Protocol {
     ICMP,
 }
 
+#[allow(clippy::upper_case_acronyms)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TCPConnState {
+    SF,
+    SH,
+    RST,
+    S0,
+    REJ,
+}
+
+impl TCPConnState {
+    pub fn iter() -> [TCPConnState; 5] {
+        [
+            TCPConnState::SF,
+            TCPConnState::SH,
+            TCPConnState::RST,
+            TCPConnState::S0,
+            TCPConnState::REJ,
+        ]
+    }
+}
+
+// TODO: refaire proprement
+impl TryFrom<String> for TCPConnState {
+    type Error = String;
+
+    fn try_from(s: String) -> Result<TCPConnState, String> {
+        match s.to_uppercase().replace(" ", "").as_str().trim() {
+            "SF" => Ok(TCPConnState::SF),
+            "SH" => Ok(TCPConnState::SH),
+            "RST" => Ok(TCPConnState::RST),
+            "S0" => Ok(TCPConnState::S0),
+            "REJ" => Ok(TCPConnState::REJ),
+            _ => Err(format!("Unknown connection state: {s}")),
+        }
+    }
+}
+
 // TODO: refaire proprement
 impl From<String> for Protocol {
     fn from(s: String) -> Protocol {
@@ -70,11 +108,17 @@ impl Protocol {
         }
     }
 
-    pub fn wrap(&self, d: FlowData) -> Flow {
+    pub fn wrap(&self, d: FlowData, c: Option<TCPConnState>) -> Flow {
         match &self {
-            Protocol::TCP => Flow::TCP(d),
-            Protocol::UDP => Flow::UDP(d),
-            Protocol::ICMP => Flow::ICMP(d),
+            Protocol::TCP => Flow::TCP(d, c.unwrap()),
+            Protocol::UDP => {
+                assert!(c.is_none());
+                Flow::UDP(d)
+            }
+            Protocol::ICMP => {
+                assert!(c.is_none());
+                Flow::ICMP(d)
+            }
         }
     }
 }
@@ -162,7 +206,7 @@ impl OS {
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, Copy)]
 pub enum Flow {
-    TCP(FlowData),
+    TCP(FlowData, TCPConnState),
     UDP(FlowData),
     ICMP(FlowData),
 }
@@ -170,7 +214,7 @@ pub enum Flow {
 impl Flow {
     pub fn get_data(&self) -> &FlowData {
         match &self {
-            Flow::TCP(data) => data,
+            Flow::TCP(data, _) => data,
             Flow::UDP(data) => data,
             Flow::ICMP(data) => data,
         }
@@ -178,7 +222,7 @@ impl Flow {
 
     pub fn get_data_mut(&mut self) -> &mut FlowData {
         match self {
-            Flow::TCP(data) => data,
+            Flow::TCP(data, _) => data,
             Flow::UDP(data) => data,
             Flow::ICMP(data) => data,
         }
@@ -197,7 +241,7 @@ impl Flow {
 
     pub fn get_proto(&self) -> Protocol {
         match &self {
-            Flow::TCP(_) => Protocol::TCP,
+            Flow::TCP(_, _) => Protocol::TCP,
             Flow::UDP(_) => Protocol::UDP,
             Flow::ICMP(_) => Protocol::ICMP,
         }
@@ -222,7 +266,7 @@ pub struct FlowData {
 impl From<Flow> for FlowData {
     fn from(f: Flow) -> FlowData {
         match f {
-            Flow::TCP(data) => data,
+            Flow::TCP(data, _) => data,
             Flow::UDP(data) => data,
             Flow::ICMP(data) => data,
         }
@@ -235,8 +279,8 @@ impl From<Flow> for FlowData {
 pub enum PayloadType {
     Empty,
     Text(&'static Vec<Vec<u8>>, WeightedIndex<u64>),
-    Replay(&'static Vec<Vec<u8>>),
-    Random(Vec<usize>),
+    Replay(&'static Vec<Vec<u8>>, WeightedIndex<u64>),
+    Random(Vec<usize>, WeightedIndex<u64>),
 }
 
 pub(crate) trait EdgeType: Debug + Clone {
@@ -378,7 +422,7 @@ impl Default for Packets {
             packets: Vec::with_capacity(150),
             directions: Vec::with_capacity(150),
             timestamps: Vec::with_capacity(150),
-            flow: Flow::TCP(FlowData {
+            flow: Flow::UDP(FlowData {
                 src_ip: Ipv4Addr::new(1, 2, 3, 4),
                 dst_ip: Ipv4Addr::new(5, 6, 7, 8),
                 src_port: 0,

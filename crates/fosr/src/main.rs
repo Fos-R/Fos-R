@@ -77,7 +77,7 @@ fn main() {
             let source = if let Some(custom_models) = custom_models {
                 models::ModelsSource::UserDefined(custom_models)
             } else {
-                default_models.get_source()
+                default_models.unwrap().get_source() // we are sure it contains something
             };
 
             let mut model = models::Models::from_source(source).unwrap();

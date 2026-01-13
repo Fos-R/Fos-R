@@ -12,6 +12,7 @@ categories = ["network-programming","security","science"]
 keywords = ["networking", "ai", "security"]
 
 [dependencies]
+base64 = "0.22.1"
 chrono = "0.4.42"
 crossbeam-channel = "0.5.15"
 fosr-ebpf = { version = "0.1.1", path = "../fosr-ebpf", optional = true }
