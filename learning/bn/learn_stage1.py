@@ -10,6 +10,7 @@ import pyagrum as gum
 import os
 import sys
 import csv
+import functools
 
 def group_ip_dst(value):
     value = str(value)
@@ -69,6 +70,14 @@ def ParametersLearning(bn,df):
     for name in bn.names():
         computeCPTfromDF(bn,df,name)
 
+def complete_proto(l, port):
+    if ":" in port: # already a service
+        return port.split(":")[0]
+    for service in l:
+        if service.endswith(":"+port):
+            return service.split(":")[0]
+    return pd.NA
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Learn a time profile for Fos-R.')
     parser.add_argument('--input', required=True, help="Select the input folder.")
@@ -109,6 +118,9 @@ if __name__ == '__main__':
         print("No UDP data", e)
     ttl_fosr = pd.read_csv(ttl_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["uid", "ip", "ttl", "proto"]);
 
+    print("Services in the TCP file:\n",tcp_fosr["service"].value_counts())
+    print("Services in the UDP file:\n",udp_fosr["service"].value_counts())
+
     print("Extracting")
     flow["Time"] = flow["ts"].apply(categorize_time)
 
@@ -120,9 +132,46 @@ if __name__ == '__main__':
     if tcp_fosr is not None:
         flow = flow.join(tcp_fosr.set_index("uid"), on="uid", rsuffix="_tcp_fosr")
         flow['Connection State'] = flow['conn_state_tcp_fosr']
-        flow = flow[(flow["Connection State"]!="other")]
+        flow = flow[(flow["Connection State"]!="other")] # remove rare connection state
+        flow = flow[(flow["Connection State"]!="OTH")] # OTH flows are side effects of capture: we do not want to generate them
+        flow["service_tcp_fosr"] = flow["service_tcp_fosr"].fillna("")
 
-    flow['Applicative Proto'] = flow['service']
+    if udp_fosr is not None:
+        flow = flow.join(udp_fosr.set_index("uid"), on="uid", rsuffix="_udp_fosr")
+        flow["service_udp_fosr"] = flow["service_udp_fosr"].fillna("")
+
+    # one or the other will be empty
+    flow['Applicative Proto'] = flow['service_tcp_fosr'] + flow['service_udp_fosr']
+
+    # remove flows with unknown service
+    flow = flow[flow["Applicative Proto"] != ""]
+
+    # get all the services detected
+    services = [s for s in flow['Applicative Proto'].unique() if ":" in s]
+    print("Recognized services:",services)
+    # some flow’s protocols may not be corrected infered (S0’s for example). We use the other flows to infer the service
+    flow["Applicative Proto"] = flow["Applicative Proto"].apply(functools.partial(complete_proto,services))
+    # we remove flows with unknown service
+    flow = flow.dropna(subset="Applicative Proto")
+
+    m = 0.001 * len(flow) # remove services that appear less than 0.1% of the time
+    print("Removed rare services:\n",flow["Applicative Proto"].value_counts()[flow["Applicative Proto"].value_counts() <= m])
+    flow = flow[flow["Applicative Proto"].isin(flow["Applicative Proto"].value_counts()[flow["Applicative Proto"].value_counts() > m].index)]
+
+    # Export for automata learning
+
+    print("Export for automata learning")
+    automata = []
+    for s in flow["Applicative Proto"].unique():
+        for conn_state in flow[flow["Applicative Proto"] == s]["Connection State"].unique():
+            flows = flow[(flow["Applicative Proto"] == s) & (flow["Connection State"] == conn_state)]["uid"]
+            d = { "service": s, "conn_state": conn_state, "flows": list(flows) }
+            automata.append(d)
+
+    out_file = open(os.path.join(args.output, "automata-flows.json"), "w")
+    json.dump(automata, out_file, indent=1)
+
+    # anonymise public IP
     flow['Src IP Addr'] = flow['id.orig_h'].apply(remove_public_ip)
     flow['Dst IP Addr'] = flow['id.resp_h'].apply(remove_public_ip)
     flow['Dst Pt'] = flow['id.resp_p'].apply(to_string)
@@ -291,7 +340,7 @@ if __name__ == '__main__':
 
     try:
         out_file = open(os.path.join(args.output, "bn_additional_data.json"), "w")
-        json.dump(output, out_file)
+        json.dump(output, out_file, indent=1)
         print("JSON file successfully created")
     except Exception as e:
         print("Error during json save:",e)
