@@ -182,6 +182,7 @@ fn main() {
                         s2,
                         s3,
                         jobs,
+                        Arc::new(stats::Stats::new(target)),
                     );
                     // }
                 }
@@ -496,6 +497,7 @@ fn run_fast(
     s2: impl stage2::Stage2,
     s3: stage3::Stage3,
     jobs: usize,
+    stats: Arc<stats::Stats>,
 ) {
     // TODO: remettre "stats", ctrlc, etc.
     let start = Instant::now();
@@ -510,12 +512,23 @@ fn run_fast(
 
         let mut threads = vec![];
 
+        {
+            let stats = Arc::clone(&stats);
+            let builder = thread::Builder::new().name("Monitoring".into());
+            threads.push(
+                builder
+                    .spawn(move || stats::show_progression(stats))
+                    .unwrap(),
+            );
+        }
+
         for chunk in chunk_iter {
             let tx = tx.clone();
             let vec = chunk.to_vec();
             let s1 = s1.clone();
             let s2 = s2.clone();
             let s3 = s3.clone();
+            let stats = Arc::clone(&stats);
             threads.push(thread::spawn(move || {
                 // log::info!("Stage 1 generation");
                 let vec = stage1::run_vec(s1, vec).unwrap();
@@ -523,21 +536,28 @@ fn run_fast(
                 let vec = stage2::run_vec(s2, vec);
 
                 let mut packets = vec![];
-
-                // log::info!("Stage 3 generation");
-                packets.append(&mut stage3::run_vec(
-                    |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
-                    vec.udp,
-                ));
-                packets.append(&mut stage3::run_vec(
-                    |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
-                    vec.tcp,
-                ));
+                {
+                    let stats = Arc::clone(&stats);
+                    // log::info!("Stage 3 generation");
+                    packets.append(&mut stage3::run_vec(
+                        |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
+                        vec.udp,
+                        stats,
+                    ));
+                }
+                {
+                    let stats = Arc::clone(&stats);
+                    packets.append(&mut stage3::run_vec(
+                        |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
+                        vec.tcp,
+                        stats,
+                    ));
+                }
                 packets.append(&mut stage3::run_vec(
                     |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
                     vec.icmp,
+                    stats,
                 ));
-
                 packets.sort_unstable();
                 tx.send(packets).unwrap();
             }));
@@ -556,6 +576,8 @@ fn run_fast(
         for thread in threads {
             thread.join().unwrap();
         }
+
+        log::info!("Generation complete");
 
         let gen_duration = start.elapsed().as_secs_f64();
 

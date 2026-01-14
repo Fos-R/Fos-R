@@ -20,6 +20,7 @@ use std::io::BufWriter;
 use std::net::Ipv4Addr;
 use std::num::Wrapping;
 use std::sync::Arc;
+use std::time::Duration;
 
 // const TEMPORARY_FILE_THRESHOLD: usize = 100_000;
 
@@ -519,15 +520,29 @@ pub fn run_channel<T: PacketInfo>(
 pub fn run_vec<T: PacketInfo>(
     generator: impl Fn(&SeededData<PacketsIR<T>>, &mut Packets, &mut [u8; 65536], &mut [u8; 65536]),
     vec_s3: Vec<SeededData<PacketsIR<T>>>,
+    stats: Arc<Stats>,
 ) -> Vec<Packet> {
     let mut payload_array: [u8; 65536] = [0; 65536]; // to avoid allocating Vec for payloads
     let mut packet: [u8; 65536] = [0; 65536];
     let mut all_packets: Vec<Packet> =
         Vec::with_capacity(vec_s3.iter().map(|h| h.data.packets_info.len()).sum());
+    let mut initial_ts: Option<Duration> = None;
 
     for headers in vec_s3 {
+        let new_ts = headers.data.flow.get_data().timestamp;
+        if let Some(ts) = initial_ts {
+            if new_ts < ts {
+                initial_ts = Some(new_ts)
+            }
+        } else {
+            initial_ts = Some(new_ts)
+        }
         let mut flow_packets = Packets::default();
+        stats.set_current_duration(new_ts.as_secs() - initial_ts.unwrap().as_secs());
+
         generator(&headers, &mut flow_packets, &mut packet, &mut payload_array);
+        stats.increase(&flow_packets);
+
         for packet in flow_packets.packets.into_iter() {
             all_packets.push(packet);
         }
