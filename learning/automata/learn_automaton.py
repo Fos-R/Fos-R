@@ -13,6 +13,7 @@ from scipy.stats import chisquare
 import numpy as np
 import sys
 import csv
+import time
 
 def add_payload_type(payload_type, row):
     # if row['protocol'] == "ICMP":
@@ -41,7 +42,6 @@ def add_payload_type(payload_type, row):
         headers[i]+="/"+iat[i]
         headers[i]+="/"+str(int(len(p)/2)) # 2 hex digits per byte
 
-        # TODO: utiliser des nibbles (et pas half)-nibbles si on a assez d’exemples ?
         hnibbles = [int(v,16)%4 for v in list(p)]+[int(v,16)//4 for v in list(p)]
         if len(hnibbles)==0: # only P:, i.e., empty payload
             headers[i]+="/Empty"
@@ -60,10 +60,10 @@ def add_payload_type(payload_type, row):
                 replay = True
                 try:
                     s = bytes.fromhex(p).decode('utf-8')
-                    s = s.translate({10: "", 13: ""}) # remove CR and LF
+                    s = s.translate({10: " ", 13: " "}) # replace CR and LF by whitespace
                     if s.isprintable() or payload_type == "text":
-                        if len(s.split()[0]) <= 10:
-                            headers[i]+="/Text:"+s.split()[0].replace("$","") # To avoid detecting the end-of-sequence symbol
+                        if len(s.split()[0]) <= 10: # check if we detect a keyword at the beginning
+                            headers[i]+="/Text:"+s.split()[0].replace("$","-") # To avoid detecting the end-of-sequence symbol
                         else:
                             headers[i]+="/Text"
                         # print(s, s.split()[0])
@@ -80,6 +80,9 @@ def add_payload_type(payload_type, row):
     return " ".join(headers)
 
 def parse_TCP(input_string):
+    """
+        Contains: flags, direction, iat, payload size, payload type
+    """
     if "$" in input_string: return "$", [0,0]
     regex_format2 = r'([A-Za-z]+)/([><])/(-?\d+\.?\d*)/(\d+)/(.+)'
     match = re.match(regex_format2, input_string)
@@ -126,7 +129,16 @@ class Exporter:
                 for ts, t in e.tss.items():
                     tss = tss + [self.payloads[ts][a] for (a,_) in t]
                 values, counts = np.unique(tss, return_counts=True)
-                d["payloads"] = { "type": "Text", "content": [base64.standard_b64decode(s).decode('utf-8') for s in values] }
+                content = []
+                for i,s in enumerate(values):
+                    try:
+                        # Due to a TADAM bug, it can fail
+                        content.append(base64.standard_b64decode(s).decode('utf-8'))
+                    except Exception as e:
+                        print("UTF-8 decoding error: skipping", e)
+                        content.append("")
+                        counts[i] = 0
+                d["payloads"] = { "type": "Text", "content": content }
                 # save the weights only if it’s not equiprobable
                 if any(c != counts[0] for c in counts):
                     d["payloads"]["weights"] = [int(i) for i in counts]
@@ -145,6 +157,7 @@ class Exporter:
                     lengths = lengths + [len(base64.standard_b64decode(self.payloads[ts][a])) for (a,_) in t]
                 values, counts = np.unique(lengths, return_counts=True)
                 d["payloads"] = { "type": "Lengths", "lengths": [int(v) for v in values] }
+                # save the weights only if it’s not equiprobable
                 if any(c != counts[0] for c in counts):
                     d["payloads"]["weights"] = [int(i) for i in counts]
             else:
@@ -233,7 +246,7 @@ if __name__ == '__main__':
         prev_len = len(df)
         df = df[df["iat"].map(len) < 1000] # remove incomplete flows (1000 is defined in fosr.zeek)
         if prev_len > len(df):
-            print((prev_len-len(df)),"flows have been ignored because they are too long.")
+            print((prev_len-len(df)),"TCP flows have been ignored because they are too long.")
         df_tcp = df
 
         file_input = os.path.join(args.input, "fosr_udp.log")
@@ -243,7 +256,7 @@ if __name__ == '__main__':
         prev_len = len(df)
         df = df[df["iat"].map(len) < 1000] # remove incomplete flows (1000 is defined in fosr.zeek)
         if prev_len > len(df):
-            print((prev_len-len(df)),"flows have been ignored because they are too long.")
+            print((prev_len-len(df)),"UDP flows have been ignored because they are too long.")
         df_udp = df
 
         with open(args.flows) as f:
@@ -285,8 +298,7 @@ if __name__ == '__main__':
             df = df_udp[df_udp["uid"].isin(d["flows"])]
 
         if len(df) == 0:
-            print("Input file is empty")
-            exit()
+            print("Input file is empty, skipping")
 
         all_df = df
 
@@ -321,7 +333,13 @@ if __name__ == '__main__':
         payloads = df["payloads"].apply(lambda l:list(map(lambda s: "" if s == "(empty)" else s, l.split(","))))
 
         exporter = Exporter(args.verbose, metadata, output_name, protocol, payloads)
-        l = exhaustive_search(options, tss_list=df["time_sequence"], verbose=args.verbose, noise_model=noise_model, on_iter=exporter.export_automata)
+        start = time.time()
+        try:
+            l = exhaustive_search(options, tss_list=df["time_sequence"], verbose=args.verbose, noise_model=noise_model, on_iter=exporter.export_automata)
+        except Exception as e:
+            print("Fatal error during TADAM learning: skipping",e)
+        print("Learning time:", time.time() - start)
+
         ta = l.ta
         print("Automaton successfully learned")
 
