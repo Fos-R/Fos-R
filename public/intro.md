@@ -11,7 +11,6 @@ description: "A network synthetic traffic generator"
 <img style="width: auto" src="https://img.shields.io/crates/v/fosr.svg?color=brightgreen"> <!-- version -->
 <img style="width: auto" src="https://img.shields.io/crates/d/fosr?label=downloads%20%28crates.io%29"> <!-- downloads -->
 <img style="width: auto" src="https://img.shields.io/crates/l/fosr"><!-- license -->
-<img style="width: auto" src="https://gitlab.inria.fr/pirat-public/Fos-R/badges/main/pipeline.svg"> <!-- CI status -->
 <img style="width: auto" src="https://img.shields.io/gitlab/last-commit/pirat-public%2FFos-R?gitlab_url=https%3A%2F%2Fgitlab.inria.fr%2F"> <!-- last commit -->
 </center>
 

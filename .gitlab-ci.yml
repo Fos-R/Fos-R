@@ -228,9 +228,7 @@ eval-zeek:
     - apt update
     - apt install -y zip
     - mkdir analysis
-    - cd analysis
-    - zeek -r ../sample.pcap
-    - cd ..
+    - zeek -r sample.pcap Log::default_logdir="analysis"
     - zip -r analysis-zeek.zip analysis
   artifacts:
     paths:
