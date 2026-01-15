@@ -114,7 +114,11 @@ impl eframe::App for FosrApp {
                     );
                 }
                 CurrentTab::Visualization => {
-                    show_visualization_tab_content(ui, &mut self.visualization_tab_state);
+                    show_visualization_tab_content(
+                        ui,
+                        &mut self.visualization_tab_state,
+                        &self.configuration_file_state,
+                    );
                 }
                 #[cfg(not(target_arch = "wasm32"))]
                 CurrentTab::Injection => {
