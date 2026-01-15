@@ -2,9 +2,7 @@ use super::generation_tab::{DURATION_MAX, DURATION_MIN, GenerationTabState};
 use chrono_tz::Tz;
 use std::time::Duration;
 
-/**
- * Structure to handle inputs errors from the user
- */
+/// Structure to handle inputs errors from the user
 #[derive(Default, Clone)]
 pub struct FieldValidation {
     pub error: Option<String>,

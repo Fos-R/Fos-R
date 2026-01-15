@@ -3,9 +3,7 @@ use crate::shared::configuration_file::{
 };
 use eframe::egui;
 
-/**
- * Represents the state of the configuration tab.
- */
+/// Represents the state of the configuration tab.
 pub struct ConfigurationTabState {}
 
 impl Default for ConfigurationTabState {
