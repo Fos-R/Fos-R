@@ -34,9 +34,8 @@ pub enum UiStatus {
     Error(String),
 }
 
-/**
- * Represents the state of the generation tab.
- */
+
+/// Represents the state of the generation tab.
 pub struct GenerationTabState {
     pub progress: f32,
     pub progress_receiver: Option<Receiver<f32>>,
