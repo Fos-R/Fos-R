@@ -3,8 +3,10 @@ import argparse
 import pandas as pd
 import numpy as np
 from math import log2
+from scipy.stats import wasserstein_distance
 
 def merge_internet(value):
+    # TODO: use "local_orig" et "local_resp" plutôt
     value = str(value)
     local_net = ['192.168.', '10.', '0.', '127.', '172.', '192.0.0', '198.18', '198.19']
     for ip in local_net:
@@ -41,6 +43,8 @@ def jsd(l1, l2):
             score += 0.5 * p2 * log2(p2 / m)
     return score
 
+def emd(l1, l2):
+    return wasserstein_distance(l1, l2)
 
 if __name__ == '__main__':
 
@@ -56,11 +60,20 @@ if __name__ == '__main__':
         print(f"Cannot find conn.log!",e)
         exit(1)
 
+    print("JSD\n===")
     print("Source IP",jsd(flow_real["id.orig_h"].apply(merge_internet),flow_synthetic["id.orig_h"].apply(merge_internet)))
     print("Dest. IP",jsd(flow_real["id.resp_h"].apply(merge_internet),flow_synthetic["id.resp_h"].apply(merge_internet)))
     print("Dest. port",jsd(flow_real["id.resp_p"],flow_synthetic["id.resp_p"]))
     print("Protocol",jsd(flow_real["proto"],flow_synthetic["proto"]))
     print("Service",jsd(flow_real["service"],flow_synthetic["service"]))
+    print("History",jsd(flow_real["history"],flow_synthetic["history"]))
     # we only consider connections with a connection state (i.e., TCP)
     print("Connection state",jsd(flow_real[flow_real["conn_state"] != "-"]["conn_state"],flow_synthetic[flow_synthetic["conn_state"] != "-"]["conn_state"]))
     print("IP protocol",jsd(flow_real["ip_proto"],flow_synthetic["ip_proto"]))
+    print("\nEMD\n===")
+    print("Duration",emd(flow_real["duration"].replace("-", "0"),flow_synthetic["duration"].replace("-", "0")))
+    print("Source bytes",emd(flow_real["orig_bytes"].replace("-", "0"),flow_synthetic["orig_bytes"].replace("-", "0")))
+    print("Dest. bytes",emd(flow_real["resp_bytes"].replace("-", "0"),flow_synthetic["resp_bytes"].replace("-", "0")))
+    print("Source packets",emd(flow_real["orig_pkts"].replace("-", "0"),flow_synthetic["orig_pkts"].replace("-", "0")))
+    print("Dest. packets",emd(flow_real["resp_pkts"].replace("-", "0"),flow_synthetic["resp_pkts"].replace("-", "0")))
+
