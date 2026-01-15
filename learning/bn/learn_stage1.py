@@ -164,15 +164,16 @@ if __name__ == '__main__':
     for s in flow["Applicative Proto"].unique():
         if not flow[flow["Applicative Proto"] == s].isnull().all(axis=0)["Connection State"]: # TCP
             for conn_state in flow[flow["Applicative Proto"] == s]["Connection State"].unique():
-                # print(conn_state)
-                flows = list(flow[(flow["Applicative Proto"] == s) & (flow["Connection State"] == conn_state)]["uid"])
-                # print(len(flows))
-                d = { "service": s, "conn_state": conn_state, "flows": flows, "proto": "tcp" }
-                automata.append(d)
+                if str(conn_state) != "NaN":
+                    flows = list(flow[(flow["Applicative Proto"] == s) & (flow["Connection State"] == conn_state)]["uid"])
+                    if len(flows) > 0:
+                        d = { "service": s, "conn_state": conn_state, "flows": flows, "proto": "tcp" }
+                        automata.append(d)
         else: # not TCP
             flows = list(flow[flow["Applicative Proto"] == s]["uid"])
-            d = { "service": s, "flows": flows, "proto": "udp" }
-            automata.append(d)
+            if len(flows) > 0:
+                d = { "service": s, "flows": flows, "proto": "udp" }
+                automata.append(d)
 
     out_file = open(os.path.join(args.output, "automata-flows.json"), "w")
     json.dump(automata, out_file, indent=1)
