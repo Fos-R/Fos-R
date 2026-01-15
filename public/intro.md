@@ -21,6 +21,8 @@ Fos-R is a high-quality and high-throughput network traffic generator based on A
 - generating background traffic in cyber ranges so the exercise is more realistic and attacks are more difficult to detect;
 - generating background traffic in low- or high-interactivity honeypots to deceive attackers.
 
+# Try it online!
+
 <!-- Start of WASM GUI Integration -->
 <div id="gui_wrapper">
 <div id="gui_loading_text">Loading Application...</div>
@@ -55,6 +57,7 @@ Fos-R is a high-quality and high-throughput network traffic generator based on A
 </script>
 <!-- End of WASM GUI Integration -->
 
+**The online version has limited performance and features. Download Fos-R for the full experience!**
 
 # Get Fos-R
 
