@@ -1,6 +1,6 @@
 use crate::config;
 use crate::models;
-use crate::stage1::*;
+use crate::stage2::*;
 
 use chrono::Timelike;
 use rand_distr::weighted::WeightedIndex;
@@ -943,7 +943,7 @@ impl BNGenerator {
     }
 }
 
-impl Stage1 for BNGenerator {
+impl Stage2 for BNGenerator {
     /// Generates flows
     fn generate_flows(
         &self,

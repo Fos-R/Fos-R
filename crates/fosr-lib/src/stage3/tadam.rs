@@ -1,5 +1,5 @@
 use crate::models;
-use crate::stage2::*;
+use crate::stage3::*;
 
 // use indicatif::{ProgressBar, ProgressStyle};
 use rand_core::*;
@@ -116,7 +116,7 @@ fn update_packet_counts<U: PacketInfo>(packets_info: &mut [U], flow: &mut FlowDa
 }
 
 #[allow(unused)]
-impl Stage2 for TadamGenerator {
+impl Stage3 for TadamGenerator {
     fn generate_tcp_packets_info(
         &self,
         mut flow: SeededData<FlowData>,

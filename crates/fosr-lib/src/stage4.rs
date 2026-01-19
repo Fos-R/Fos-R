@@ -26,7 +26,7 @@ use std::time::Duration;
 
 /// Stage 3: generate full packets from packet metadata
 #[derive(Debug, Clone)]
-pub struct Stage3 {
+pub struct Stage4 {
     taint: bool,
     // config: Hosts,
     zero: MacAddr,
@@ -56,7 +56,7 @@ impl TcpPacketData {
     }
 }
 
-impl Stage3 {
+impl Stage4 {
     /// Configures the Ethernet frame by setting the source, destination MAC addresses,
     /// and setting the EtherType to IPv4.
     fn setup_ethernet_frame(&self, packet: &mut [u8], src_mac: &MacAddr, dst_mac: &MacAddr) {
@@ -287,7 +287,7 @@ impl Stage3 {
     }
 
     pub fn new(taint: bool /*config: Hosts*/) -> Self {
-        Stage3 {
+        Stage4 {
             taint,
             // config,
             zero: MacAddr::zero(),
@@ -465,7 +465,7 @@ pub fn send_online(
 /// may be further processed (for example, noise insertion) before export.
 fn send_pcap(flow_packets: thingbuf::mpsc::blocking::SendRef<Packets>) {
     // if noise { // insert noise // TODO: find a better way to do it
-    //     stage3::insert_noise(&mut noisy_flow);
+    //     stage4::insert_noise(&mut noisy_flow);
     // }
     drop(flow_packets); // actually send (the drop in itself is useless but easier to read)
     // tx_s3_to_pcap.send(flow_packets).unwrap();

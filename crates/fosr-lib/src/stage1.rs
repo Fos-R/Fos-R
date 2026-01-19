@@ -20,7 +20,7 @@ const WINDOW_WIDTH_IN_SECS: u64 = 5;
 /// Stage 0: generate timestamps.
 /// Generate a throughput according to some distribution and never stops. It always prepares the next windows (i.e., not
 /// the one being sent)
-pub trait Stage0:
+pub trait Stage1:
     Iterator<Item = SeededData<TimePoint>> + Clone + std::marker::Send + 'static
 {
     /// Used to compute the duration of generated data
@@ -45,7 +45,7 @@ pub struct BinBasedGenerator {
     dest_tz_offset: FixedOffset,
 }
 
-impl Stage0 for BinBasedGenerator {
+impl Stage1 for BinBasedGenerator {
     fn get_initial_ts(&self) -> Duration {
         self.initial_ts
     }
@@ -289,7 +289,7 @@ struct Metadata {
 
 /// Generate data and send them progressively to a channel
 pub fn run_channel(
-    generator: impl Stage0,
+    generator: impl Stage1,
     tx_s0: Sender<SeededData<TimePoint>>,
     stats: Arc<Stats>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -310,7 +310,7 @@ pub fn run_channel(
 }
 
 /// Generate data into a vector
-pub fn run_vec(generator: impl Stage0) -> Vec<SeededData<TimePoint>> {
+pub fn run_vec(generator: impl Stage1) -> Vec<SeededData<TimePoint>> {
     log::trace!("Start S0");
     let mut vector = vec![];
     for ts in generator {
