@@ -1,4 +1,4 @@
-use crate::stage1::*;
+use crate::stage2::*;
 use rand_distr::weighted::WeightedIndex;
 use rand_distr::{Distribution, Uniform};
 use rand_pcg::Pcg32;

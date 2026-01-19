@@ -1,5 +1,5 @@
 use crate::config;
-use crate::{stage0, stage1, stage2};
+use crate::{stage1, stage2, stage3};
 use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
@@ -21,19 +21,19 @@ pub enum ModelsSource {
 /// The models
 pub struct Models {
     /// The time model of stage 0
-    pub time_bins: stage0::TimeModel,
+    pub time_bins: stage1::TimeModel,
     /// The Bayesian network of stage 1
-    pub bn: stage1::bayesian_networks::BayesianModel,
+    pub bn: stage2::bayesian_networks::BayesianModel,
     /// The automata of stage 2
-    pub automata: stage2::tadam::AutomataLibrary,
+    pub automata: stage3::tadam::AutomataLibrary,
 }
 
 impl Models {
     pub fn from_source(source: ModelsSource) -> Result<Self, String> {
         Ok(Models {
-            automata: stage2::tadam::AutomataLibrary::from_source(&source)?,
-            bn: stage1::bayesian_networks::BayesianModel::from_source(&source)?,
-            time_bins: stage0::TimeModel::from_source(&source)?,
+            automata: stage3::tadam::AutomataLibrary::from_source(&source)?,
+            bn: stage2::bayesian_networks::BayesianModel::from_source(&source)?,
+            time_bins: stage1::TimeModel::from_source(&source)?,
         })
     }
 

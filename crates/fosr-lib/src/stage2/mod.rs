@@ -1,149 +1,90 @@
-use crate::icmp::*;
 use crate::stats::Stats;
 use crate::structs::*;
-use crate::tcp::*;
-use crate::udp::*;
 use crossbeam_channel::{Receiver, Sender};
+use rand_core::*;
+use std::net::Ipv4Addr;
 use std::sync::Arc;
 
-mod automaton;
-/// An implementation of TADAM automaton for generation
-pub mod tadam;
+/// A implementation of Bayesian networks generation
+pub mod bayesian_networks;
+mod bifxml;
 
-/// A trait for Stage 2 that generates packet metadata from flows
+// /// A implementation of FlowChronicle’s generation
+// pub mod flowchronicle;
+
+/// A trait for Stage 1 that generates flow descriptions
 pub trait Stage2: Clone + std::marker::Send + 'static {
-    fn generate_tcp_packets_info(
+    /// Generate flow(s) from a starting timestamp
+    fn generate_flows(
         &self,
-        flow: SeededData<FlowData>,
-        conn_state: TCPConnState,
-    ) -> Option<SeededData<PacketsIR<TCPPacketInfo>>>;
-    fn generate_udp_packets_info(
-        &self,
-        flow: SeededData<FlowData>,
-    ) -> Option<SeededData<PacketsIR<UDPPacketInfo>>>;
-    fn generate_icmp_packets_info(
-        &self,
-        flow: SeededData<FlowData>,
-    ) -> Option<SeededData<PacketsIR<ICMPPacketInfo>>>;
+        ts: SeededData<TimePoint>,
+    ) -> Result<impl Iterator<Item = SeededData<Flow>>, String>;
 }
 
-/// A set of Sender used by a Stage 2. Each Sender corresponds to a L4 protocol
-#[derive(Debug, Clone)]
-pub struct S2Sender {
-    pub tcp: Sender<SeededData<PacketsIR<TCPPacketInfo>>>,
-    pub udp: Sender<SeededData<PacketsIR<UDPPacketInfo>>>,
-    pub icmp: Sender<SeededData<PacketsIR<ICMPPacketInfo>>>,
-}
-
-/// A set of Vector used by a Stage 2. Each Vector corresponds to a L4 protocol
-pub struct S2Vector {
-    pub tcp: Vec<SeededData<PacketsIR<TCPPacketInfo>>>,
-    pub udp: Vec<SeededData<PacketsIR<UDPPacketInfo>>>,
-    pub icmp: Vec<SeededData<PacketsIR<ICMPPacketInfo>>>,
-}
-
-/// Generate packet metadata from flows sends them progressively to a channel
+/// Generate flows from timestamps and sends them progressively to a channel
 pub fn run_channel(
     generator: impl Stage2,
-    rx_s2: Receiver<SeededData<Flow>>,
-    tx_s2: S2Sender,
+    rx_s1: Receiver<SeededData<TimePoint>>,
+    tx_s1: Sender<SeededData<Flow>>,
     stats: Arc<Stats>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    log::trace!("Start S2");
-    for flow in rx_s2 {
+    log::trace!("Start S1");
+    for ts in rx_s1 {
         if stats.should_stop() {
             break;
         }
-        log::trace!("Generating packets info");
-        match flow.data {
-            Flow::TCP(data, conn_state) => {
-                if let Some(pir) = generator.generate_tcp_packets_info(
-                    SeededData {
-                        seed: flow.seed,
-                        data,
-                    },
-                    conn_state,
-                ) {
-                    tx_s2.tcp.send(pir)?;
-                }
-            }
-            Flow::UDP(data) => {
-                if let Some(pir) = generator.generate_udp_packets_info(SeededData {
-                    seed: flow.seed,
-                    data,
-                }) {
-                    tx_s2.udp.send(pir)?;
-                }
-            }
-            Flow::ICMP(data) => {
-                if let Some(pir) = generator.generate_icmp_packets_info(SeededData {
-                    seed: flow.seed,
-                    data,
-                }) {
-                    tx_s2.icmp.send(pir)?;
-                }
-            }
+        for f in generator.generate_flows(ts)? {
+            tx_s1.send(f)?;
         }
     }
-    log::trace!("S2 stops");
+    log::trace!("S1 stops");
     Ok(())
 }
 
-/// Generate packet metadata from flows and into a vector
-pub fn run_vec(generator: impl Stage2, vec_s2: Vec<SeededData<Flow>>) -> S2Vector {
-    log::trace!("Start S2");
-    let mut vectors = S2Vector {
-        tcp: Vec::with_capacity(
-            vec_s2
-                .iter()
-                .filter(|f| matches!(f.data, Flow::TCP(_, _)))
-                .count(),
-        ),
-        udp: Vec::with_capacity(
-            vec_s2
-                .iter()
-                .filter(|f| matches!(f.data, Flow::UDP(_)))
-                .count(),
-        ),
-        icmp: Vec::with_capacity(
-            vec_s2
-                .iter()
-                .filter(|f| matches!(f.data, Flow::ICMP(_)))
-                .count(),
-        ),
-    };
-    for flow in vec_s2 {
-        log::trace!("Generating packets info");
-        match flow.data {
-            Flow::TCP(data, conn_state) => {
-                if let Some(pir) = generator.generate_tcp_packets_info(
-                    SeededData {
-                        seed: flow.seed,
-                        data,
-                    },
-                    conn_state,
-                ) {
-                    vectors.tcp.push(pir);
-                }
-            }
-            Flow::UDP(data) => {
-                if let Some(pir) = generator.generate_udp_packets_info(SeededData {
-                    seed: flow.seed,
-                    data,
-                }) {
-                    vectors.udp.push(pir);
-                }
-            }
-            Flow::ICMP(data) => {
-                if let Some(pir) = generator.generate_icmp_packets_info(SeededData {
-                    seed: flow.seed,
-                    data,
-                }) {
-                    vectors.icmp.push(pir);
-                }
-            }
+/// Generate flows from timestamps and into a vector
+pub fn run_vec(
+    generator: impl Stage2,
+    vec_s1: Vec<SeededData<TimePoint>>,
+) -> Result<Vec<SeededData<Flow>>, String> {
+    log::trace!("Start S1");
+    let mut vector = Vec::with_capacity(vec_s1.len());
+    for ts in vec_s1 {
+        for f in generator.generate_flows(ts)? {
+            vector.push(f);
         }
     }
-    log::trace!("S2 stops");
-    vectors
+    log::trace!("S1 stops");
+    Ok(vector)
+}
+
+/// A structure used to drop generated flow that are irrelevant in a network injection scenario
+#[derive(Debug, Clone)]
+pub struct FilterForOnline<T: Stage2> {
+    ips_to_keep: Vec<Ipv4Addr>,
+    s1: T,
+}
+
+impl<T: Stage2> FilterForOnline<T> {
+    pub fn new(ips_to_keep: Vec<Ipv4Addr>, s1: T) -> Self {
+        FilterForOnline { ips_to_keep, s1 }
+    }
+}
+
+impl<T: Stage2> Stage2 for FilterForOnline<T> {
+    fn generate_flows(
+        &self,
+        ts: SeededData<TimePoint>,
+    ) -> Result<impl Iterator<Item = SeededData<Flow>>, String> {
+        Ok(self.s1.generate_flows(ts)?.filter(|f| {
+            let data = f.data.get_data();
+            let kept =
+                self.ips_to_keep.contains(&data.src_ip) || self.ips_to_keep.contains(&data.dst_ip);
+            if kept {
+                log::trace!("{} -> {} (kept)", data.src_ip, data.dst_ip);
+            } else {
+                log::trace!("{} -> {} (dropped)", data.src_ip, data.dst_ip);
+            }
+            kept
+        }))
+    }
 }

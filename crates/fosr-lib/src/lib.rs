@@ -34,16 +34,16 @@ pub use udp::UDPPacketInfo;
 pub mod utils;
 
 /// Timestamp generation
-pub mod stage0;
-
-/// Flow statistics generation
 pub mod stage1;
 
-/// Packet metadata generation
+/// Flow statistics generation
 pub mod stage2;
 
-/// Full packet generation
+/// Packet metadata generation
 pub mod stage3;
+
+/// Full packet generation
+pub mod stage4;
 
 /// Export to pcap
 pub mod export;
