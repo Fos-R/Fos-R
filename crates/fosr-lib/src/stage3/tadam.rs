@@ -9,13 +9,13 @@ use std::sync::Arc;
 
 pub struct AutomataLibrary {
     // TODO: deux types d’automates TCP: ceux finissant par FIN et ceux finissant par RESET
-    cons_tcp_automata: HashMap<L7Proto, automaton::CrossProductTimedAutomaton<TCPEdgeTuple>>,
-    cons_udp_automata: HashMap<L7Proto, automaton::CrossProductTimedAutomaton<UDPEdgeTuple>>,
-    cons_icmp_automata: HashMap<L7Proto, automaton::CrossProductTimedAutomaton<ICMPEdgeTuple>>,
+    cons_tcp_automata: HashMap<&'static str, automaton::CrossProductTimedAutomaton<TCPEdgeTuple>>,
+    cons_udp_automata: HashMap<&'static str, automaton::CrossProductTimedAutomaton<UDPEdgeTuple>>,
+    cons_icmp_automata: HashMap<&'static str, automaton::CrossProductTimedAutomaton<ICMPEdgeTuple>>,
 
-    tcp_automata: HashMap<L7Proto, automaton::TimedAutomaton<TCPEdgeTuple>>,
-    udp_automata: HashMap<L7Proto, automaton::TimedAutomaton<UDPEdgeTuple>>,
-    icmp_automata: HashMap<L7Proto, automaton::TimedAutomaton<ICMPEdgeTuple>>,
+    tcp_automata: HashMap<&'static str, automaton::TimedAutomaton<TCPEdgeTuple>>,
+    udp_automata: HashMap<&'static str, automaton::TimedAutomaton<UDPEdgeTuple>>,
+    icmp_automata: HashMap<&'static str, automaton::TimedAutomaton<ICMPEdgeTuple>>,
 }
 
 impl AutomataLibrary {
@@ -56,9 +56,10 @@ impl AutomataLibrary {
         Ok(lib)
     }
 
-    pub fn import_from_str(&mut self, string: &str) -> Result<L7Proto, String> {
+    pub fn import_from_str(&mut self, string: &str) -> Result<String, String> {
+        let string = string.to_string();
         let a: automaton::JsonAutomaton =
-            serde_json::from_str(string).map_err(|_| "Import error".to_string())?;
+            serde_json::from_str::<automaton::JsonAutomaton>(string.leak()).map_err(|_| "Import error".to_string())?;
         let l7proto = a.l7protocol;
         match a.protocol {
             L4Proto::TCP => {
@@ -89,7 +90,7 @@ impl AutomataLibrary {
                 self.cons_icmp_automata.insert(l7proto, a.into());
             }
         }
-        Ok(l7proto)
+        Ok(l7proto.to_string())
     }
 }
 

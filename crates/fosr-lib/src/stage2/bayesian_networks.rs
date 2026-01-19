@@ -23,7 +23,7 @@ use std::time::Duration;
 struct IntermediateVector {
     src_ip_role: Option<IpRole>,
     dst_ip_role: Option<IpRole>,
-    l7_proto: Option<L7Proto>,
+    l7_proto: Option<&'static str>,
     dst_port: Option<u16>,
     src_port: Option<u16>,
     ttl_client: Option<u8>,
@@ -106,7 +106,7 @@ enum Feature {
     DstPt(Vec<u16>), // the port comes from the config (must be chosen after the dest IP)
     FwdPkt(Vec<Normal<f64>>), // the exact number is sampled from a Gaussian distribution afterward
     BwdPkt(Vec<Normal<f64>>), // idem
-    L7Proto(Vec<L7Proto>),
+    L7Proto(Vec<&'static str>),
     L4Proto(Vec<L4Proto>),
     EndFlags(Vec<TCPConnState>),
 }
@@ -285,7 +285,7 @@ impl BayesianNetwork {
 pub struct BayesianModel {
     bn: BayesianNetwork,
     bn_additional_data: AdditionalData,
-    open_ports: HashMap<(Ipv4Addr, L7Proto), u16>,
+    open_ports: HashMap<(Ipv4Addr, &'static str), u16>,
 }
 
 /// Stage 1: generates flow descriptions
@@ -453,7 +453,7 @@ impl BayesianModel {
 
     pub fn apply_config(&mut self, config: &config::Configuration) -> Result<(), String> {
         // we know L7Proto exists
-        let mut protocols: Vec<L7Proto> = vec![];
+        let mut protocols: Vec<&'static str> = vec![];
         let mut l7proto_index: usize = 0;
         for (index, node) in self.bn.nodes.iter().enumerate() {
             if let Feature::L7Proto(v) = &node.feature {
@@ -851,8 +851,8 @@ fn bn_from_bif(
                 v.outcome
                     .clone()
                     .into_iter()
-                    .map(<std::string::String as TryInto<L7Proto>>::try_into)
-                    .collect::<Result<Vec<L7Proto>, String>>()?,
+                    .map(|s| &*s.leak())
+                    .collect(),
             )),
             "Proto" => Some(Feature::L4Proto(
                 v.outcome.clone().into_iter().map(|s| s.into()).collect(),
