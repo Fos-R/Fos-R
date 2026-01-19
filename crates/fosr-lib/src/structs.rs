@@ -15,16 +15,16 @@ pub struct SeededData<T: Clone> {
     pub data: T,
 }
 
-// Stage 0 structure
-
+/// Stage 1 structure
 #[derive(Debug, Clone)]
 pub struct TimePoint {
     pub unix_time: Duration,
     pub date_time: DateTime<FixedOffset>,
 }
 
-// Stage 1 and 2 structures
+// Stage 2 and 3 structures
 
+/// A transport protocol
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Protocol {
@@ -34,20 +34,20 @@ pub enum Protocol {
     ICMP,
 }
 
-/// Connection states from Zeek
+/// Connection states, adapted from Zeek
 /// <https://docs.zeek.org/en/master/scripts/base/protocols/conn/main.zeek.html#field-Conn::Info$conn_state>
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TCPConnState {
-    /// Normal establishment and termination. Note that this is the same symbol as for state S1. You can tell the two apart because for S1 there will not be any byte counts in the summary, while for SF there will be.
+    /// Normal establishment and termination
     SF,
-    /// Originator sent a SYN followed by a FIN, we never saw a SYN ACK from the responder (hence the connection was “half” open).
+    /// Originator sent a SYN followed by a FIN, we never saw a SYN ACK from the responder (hence the connection was “half” open)
     SH,
     /// Connection aborted (RST)
     RST,
-    /// Connection attempt seen, no reply.
+    /// Connection attempt seen, no reply
     S0,
-    /// Connection attempt rejected.
+    /// Connection attempt rejected
     REJ,
 }
 
@@ -210,6 +210,7 @@ impl OS {
     }
 }
 
+/// A wrapper for transport layer flow
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, Copy)]
 pub enum Flow {
@@ -255,6 +256,7 @@ impl Flow {
     }
 }
 
+/// The data of a transport layer flow
 #[derive(Debug, Clone, Copy)]
 pub struct FlowData {
     // In online mode, the local IP will always be the source
@@ -280,13 +282,18 @@ impl From<Flow> for FlowData {
     }
 }
 
-// Stage 2 structures
+// Stage 3 structures
 
 #[derive(Debug, Clone)]
+/// Types of payload in the automata
 pub enum PayloadType {
+    /// No payload
     Empty,
+    /// Payload is a UTF-8 text
     Text(&'static Vec<Vec<u8>>, WeightedIndex<u64>),
+    /// Payload is not random and will be replayed
     Replay(&'static Vec<Vec<u8>>, WeightedIndex<u64>),
+    /// Payload is random
     Random(Vec<usize>, WeightedIndex<u64>),
 }
 
@@ -295,8 +302,9 @@ pub(crate) trait EdgeType: Debug + Clone {
     fn get_direction(&self) -> PacketDirection;
 }
 
-// Stage 2 and 3 structures
+// Stage 3 and 4 structures
 
+/// The type of noise to apply to a packet
 #[derive(Debug, Clone, Copy)]
 #[allow(unused)]
 pub enum NoiseType {
@@ -307,10 +315,13 @@ pub enum NoiseType {
     Added,
 }
 
+/// The direction of a packet
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum PacketDirection {
-    Forward,  // client to server
-    Backward, // server to client
+    /// client to server
+    Forward,
+    /// server to client
+    Backward,
 }
 
 impl PacketDirection {
@@ -322,10 +333,14 @@ impl PacketDirection {
     }
 }
 
+/// The payload of a packet
 #[derive(Debug, Clone)]
 pub enum Payload {
+    /// No payload
     Empty,
+    /// A replayed payload
     Replay(&'static Vec<u8>),
+    /// A payload that will be randomly generated
     Random(usize),
 }
 
@@ -348,14 +363,15 @@ pub trait PacketInfo: Clone + Debug {
 }
 
 #[derive(Debug, Clone)]
+/// The packets intermediate representation (as output by stage 3)
 pub struct PacketsIR<T: PacketInfo> {
-    // Intermediate representation (as output by stage 2)
     pub packets_info: Vec<T>,
     pub flow: Flow,
 }
 
-// Stage 3 structures
+// Stage 4 structures
 #[derive(Debug, Clone, Eq, PartialEq)]
+/// A packet, with a timestamp and some data
 pub struct Packet {
     pub timestamp: Duration,
     pub data: Vec<u8>,
@@ -396,6 +412,7 @@ impl PartialOrd for Packet {
 }
 
 #[derive(Debug, Clone)]
+/// A set of packets from the same flow
 pub struct Packets {
     pub packets: Vec<Packet>,
     pub directions: Vec<PacketDirection>,
@@ -445,6 +462,7 @@ impl Default for Packets {
     }
 }
 
+/// The recycler used by thingbuf
 pub struct PacketsRecycler {}
 
 impl Recycle<Packets> for PacketsRecycler {
@@ -458,6 +476,7 @@ impl Recycle<Packets> for PacketsRecycler {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+/// A 5-uplet typically used to identify a flow
 pub struct FlowId {
     pub protocol: Protocol,
     pub src_ip: Ipv4Addr,
