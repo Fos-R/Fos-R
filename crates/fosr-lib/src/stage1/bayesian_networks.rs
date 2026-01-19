@@ -253,9 +253,7 @@ impl BayesianNetwork {
                                         Some(v[i].sample(rng) as usize)
                                 }
                                 Feature::L4Proto(v) => domain_vector.proto = Some(v[i]),
-                                Feature::EndFlags(v) => {
-                                    domain_vector.tcp_flags = Some(v[i])
-                                }
+                                Feature::EndFlags(v) => domain_vector.tcp_flags = Some(v[i]),
                                 Feature::TimeBin(_) => unreachable!(),
                             }
                         } else {
