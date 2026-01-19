@@ -302,7 +302,7 @@ if __name__ == '__main__':
     print("Model learning")
 
     learner_common = gum.BNLearner(common_data)
-    # Time must have no parent because it will be sampled from the stage 0
+    # Time must have no parent because it will be sampled from the stage 1
     learner_common.addNoParentNode("Time") # variable with no parent
     # Src IP Addr and Dst IP Addr must have no children because we want to modify their CPT with the configuration file
     for var in vars_without_children:

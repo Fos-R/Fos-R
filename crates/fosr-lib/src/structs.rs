@@ -34,13 +34,20 @@ pub enum Protocol {
     ICMP,
 }
 
+/// Connection states from Zeek
+/// <https://docs.zeek.org/en/master/scripts/base/protocols/conn/main.zeek.html#field-Conn::Info$conn_state>
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TCPConnState {
+    /// Normal establishment and termination. Note that this is the same symbol as for state S1. You can tell the two apart because for S1 there will not be any byte counts in the summary, while for SF there will be.
     SF,
+    /// Originator sent a SYN followed by a FIN, we never saw a SYN ACK from the responder (hence the connection was “half” open).
     SH,
+    /// Connection aborted (RST)
     RST,
+    /// Connection attempt seen, no reply.
     S0,
+    /// Connection attempt rejected.
     REJ,
 }
 

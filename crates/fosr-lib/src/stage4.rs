@@ -24,7 +24,7 @@ use std::time::Duration;
 
 // const TEMPORARY_FILE_THRESHOLD: usize = 100_000;
 
-/// Stage 3: generate full packets from packet metadata
+/// Stage 4: generate full packets from packet metadata
 #[derive(Debug, Clone)]
 pub struct Stage4 {
     taint: bool,
@@ -435,27 +435,27 @@ impl Stage4 {
 pub fn send_online(
     local_interfaces: &[Ipv4Addr],
     mut flow_packets: Packets,
-    tx_s3: &Sender<Packets>,
+    tx_s4: &Sender<Packets>,
 ) {
     // check if exist
     let f = flow_packets.flow.get_data();
-    let src_s4 = local_interfaces.contains(&f.src_ip);
-    let dst_s4 = local_interfaces.contains(&f.dst_ip);
-    if src_s4 && dst_s4 {
+    let src_s5 = local_interfaces.contains(&f.src_ip);
+    let dst_s5 = local_interfaces.contains(&f.dst_ip);
+    if src_s5 && dst_s5 {
         log::trace!("Both source and destination IP are local");
         // only copy if we have to
-        tx_s3.send(flow_packets.clone()).unwrap();
+        tx_s4.send(flow_packets.clone()).unwrap();
         // ensure this host is always the source
         flow_packets.reverse();
-        tx_s3.send(flow_packets).unwrap();
-    } else if src_s4 {
+        tx_s4.send(flow_packets).unwrap();
+    } else if src_s5 {
         log::trace!("Source IP is local");
-        tx_s3.send(flow_packets).unwrap();
-    } else if dst_s4 {
+        tx_s4.send(flow_packets).unwrap();
+    } else if dst_s5 {
         log::trace!("Destination IP is local");
         // ensure this host is always the source
         flow_packets.reverse();
-        tx_s3.send(flow_packets).unwrap();
+        tx_s4.send(flow_packets).unwrap();
     }
 }
 
@@ -468,42 +468,42 @@ fn send_pcap(flow_packets: thingbuf::mpsc::blocking::SendRef<Packets>) {
     //     stage4::insert_noise(&mut noisy_flow);
     // }
     drop(flow_packets); // actually send (the drop in itself is useless but easier to read)
-    // tx_s3_to_pcap.send(flow_packets).unwrap();
+    // tx_s4_to_pcap.send(flow_packets).unwrap();
 }
 
-/// Runs stage 3 of the pipeline, processing incoming seeded packet representations.
+/// Runs stage 4 of the pipeline, processing incoming seeded packet representations.
 ///
-/// This function receives intermediate packet data from rx_s3, generates complete
+/// This function receives intermediate packet data from rx_s4, generates complete
 /// packets using the provided generator function, and then sends the generated flows
 /// to appropriate channels based on the configuration (online transmission and/or pcap export).
 pub fn run_channel<T: PacketInfo>(
     generator: impl Fn(&SeededData<PacketsIR<T>>, &mut Packets, &mut [u8; 65536], &mut [u8; 65536]),
     local_interfaces: Vec<Ipv4Addr>,
-    rx_s3: Receiver<SeededData<PacketsIR<T>>>,
-    tx_s3: Option<Sender<Packets>>,
-    tx_s3_to_pcap: thingbuf::mpsc::blocking::Sender<Packets, PacketsRecycler>, // TODO: Option
+    rx_s4: Receiver<SeededData<PacketsIR<T>>>,
+    tx_s4: Option<Sender<Packets>>,
+    tx_s4_to_pcap: thingbuf::mpsc::blocking::Sender<Packets, PacketsRecycler>, // TODO: Option
     stats: Arc<Stats>,
     pcap_export: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Prepare stage 3
-    log::trace!("Start S3");
+    // Prepare stage 4
+    log::trace!("Start S4");
 
     let mut payload_array: [u8; 65536] = [0; 65536]; // to avoid allocating Vec for payloads
     // everytime. 65536 is the maximum payload
     // size.
     let mut packet: [u8; 65536] = [0; 65536]; // used to avoid initializing the packet to 0
 
-    for headers in rx_s3 {
+    for headers in rx_s4 {
         // log::trace!("Creating packets");
-        let mut flow_packets = tx_s3_to_pcap.send_ref()?;
+        let mut flow_packets = tx_s4_to_pcap.send_ref()?;
         // flow_packets.clear();
         generator(&headers, &mut flow_packets, &mut packet, &mut payload_array);
         flow_packets.flow = headers.data.flow;
         stats.increase(&flow_packets);
 
         // only copy the flows if we need to send it to online and pcap
-        if let Some(ref tx_s3) = tx_s3 {
-            send_online(&local_interfaces, flow_packets.clone(), tx_s3);
+        if let Some(ref tx_s4) = tx_s4 {
+            send_online(&local_interfaces, flow_packets.clone(), tx_s4);
         }
         if pcap_export {
             send_pcap(flow_packets);
@@ -512,23 +512,23 @@ pub fn run_channel<T: PacketInfo>(
             break;
         }
     }
-    log::trace!("S3 stops");
+    log::trace!("S4 stops");
     Ok(())
 }
 
 /// Complete the packets and collect them into a vector
 pub fn run_vec<T: PacketInfo>(
     generator: impl Fn(&SeededData<PacketsIR<T>>, &mut Packets, &mut [u8; 65536], &mut [u8; 65536]),
-    vec_s3: Vec<SeededData<PacketsIR<T>>>,
+    vec_s4: Vec<SeededData<PacketsIR<T>>>,
     stats: Arc<Stats>,
 ) -> Vec<Packet> {
     let mut payload_array: [u8; 65536] = [0; 65536]; // to avoid allocating Vec for payloads
     let mut packet: [u8; 65536] = [0; 65536];
     let mut all_packets: Vec<Packet> =
-        Vec::with_capacity(vec_s3.iter().map(|h| h.data.packets_info.len()).sum());
+        Vec::with_capacity(vec_s4.iter().map(|h| h.data.packets_info.len()).sum());
     let mut initial_ts: Option<Duration> = None;
 
-    for headers in vec_s3 {
+    for headers in vec_s4 {
         let new_ts = headers.data.flow.get_data().timestamp;
         if let Some(ts) = initial_ts {
             if new_ts < ts {
