@@ -848,11 +848,7 @@ fn bn_from_bif(
                     .collect(),
             )),
             "Applicative Proto" => Some(Feature::L7Proto(
-                v.outcome
-                    .clone()
-                    .into_iter()
-                    .map(|s| &*s.leak())
-                    .collect(),
+                v.outcome.clone().into_iter().map(|s| &*s.leak()).collect(),
             )),
             "Proto" => Some(Feature::L4Proto(
                 v.outcome.clone().into_iter().map(|s| s.into()).collect(),

@@ -43,6 +43,7 @@ impl fmt::Display for InjectionAlgo {
 }
 
 #[derive(ValueEnum, Debug, Clone)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum DefaultModels {
     Legacy,
     CICIDS17,
@@ -71,7 +72,7 @@ pub enum Command {
     /// This mode requires the `iptables` or `ebpf` feature. In this mode, Fos-R generates and injects network traffic between different computers in the same network.
     /// Fos-R needs to be executed on each computer and provided a configuration file.
     Inject {
-        #[arg(short, long, default_value = None, help = "Output pcap file of the generated packets")]
+        #[arg(short, long, help = "Output pcap file of the generated packets")]
         outfile: Option<String>,
         #[arg(
             long,
@@ -98,14 +99,11 @@ pub enum Command {
             help = "Average number of flows to generate per day. Actual number of generated flows can be lower or higher"
         )]
         flow_per_day: Option<u64>,
-        // #[arg(
-        //     short,
-        //     long,
-        //     default_value = None,
-        //     help = "Path to the configuration file"
-        // )]
-        // config: Option<String>,
-        #[arg(short = 'd', long, default_value = None, help = "Automatically stop the generation after this time. You can use human-friendly time, such as \"15days 30min 5s\"")]
+        #[arg(
+            short = 'd',
+            long,
+            help = "Automatically stop the generation after this time. You can use human-friendly time, such as \"15days 30min 5s\""
+        )]
         duration: Option<String>,
         #[arg(
             short,
@@ -156,25 +154,21 @@ pub enum Command {
             help = "The generation profile to use. Either \"fast\" that optimizes CPU use but the entire dataset must fit in RAM, or \"efficient\" that requires less RAM but is slower"
         )]
         profile: GenerationProfile,
-        #[arg(
-            short,
-            long,
-            default_value = None,
-            help = "Path to the configuration file"
-        )]
+        #[arg(short, long, help = "Path to the configuration file")]
         config: Option<String>,
-        // #[arg(
-        //     short,
-        //     long,
-        //     default_value_t = false,
-        //     help = "Add noise in the output file"
-        // )]
-        // noise: bool,
-        #[arg(short = 'n', long, default_value = None, help = "Minimum number of packets to generate")]
+        #[arg(short = 'n', long, help = "Minimum number of packets to generate")]
         packets_count: Option<u64>,
-        #[arg(short = 'd', long, default_value = None, help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\"")]
+        #[arg(
+            short = 'd',
+            long,
+            help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\""
+        )]
         duration: Option<String>,
-        #[arg(short = 't', long, default_value = None, help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use the current time. Date time is considered to be in the timezone specified with --tz")]
+        #[arg(
+            short = 't',
+            long,
+            help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use the current time. Date time is considered to be in the timezone specified with --tz"
+        )]
         start_time: Option<String>,
         #[arg(
             short,
@@ -185,46 +179,27 @@ pub enum Command {
         #[arg(
             short,
             long,
-            help = "Number of generation jobs. By default, use half the available cores."
+            help = "Number of generation jobs. By default, use half the available cores"
         )]
         jobs: Option<usize>,
         #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,
-        #[arg(
-            long,
-            help = "Use a default model"
-        )]
+        #[arg(short = 'm', long, help = "Use a default model")]
         default_models: Option<DefaultModels>,
         #[arg(long, help = "Use a custom model")]
         custom_models: Option<String>,
         #[arg(
             long,
-            default_value = None,
             help = "Timezone of the generated, used for realistic work hours. By default, local timezone is used. Use a IANA time zone (like Europe/Paris) or an abbreviation (like CET). The offset is assumed constant during the generation time range"
         )]
         tz: Option<String>,
         #[arg(
             long,
             default_value_t = false,
-            help = "Disable the temporal sorting of the generated pcap. Reduce significantly the RAM usage with \"--profile efficient\""
+            help = "Disable the temporal sorting of the generated pcap. Reduce significantly the RAM usage when used with \"--profile efficient\""
         )]
         no_order_pcap: bool,
     },
-    // /// Extract flow statistics from a pcap file to a csv file
-    // #[command(name = "pcap2flow")]
-    // Pcap2Flow {
-    //     #[arg(short, long, required = true, help = "Pcap file to extract flows from")]
-    //     input_pcap: String,
-    //     #[arg(short, long, required = true, help = "CSV file to export flow into")]
-    //     output_csv: String,
-    //     #[arg(
-    //         short = 'p',
-    //         long,
-    //         help = "Include the payloads in the CSV file",
-    //         default_value_t = false
-    //     )]
-    //     include_payloads: bool,
-    // },
     /// Remove the Fos-R taint from a pcap file
     Untaint {
         #[arg(short, long, required = true, help = "Pcap file to untaint")]
@@ -232,31 +207,4 @@ pub enum Command {
         #[arg(short, long, required = true, help = "Pcap file output")]
         output: String,
     },
-    // /// Replay a pcap file though the network interfaces. Errors (packet loss, non-responding
-    // /// hosts, etc.) are ignored.
-    // #[cfg(feature = "replay")]
-    // Replay {
-    //     #[arg(short, long, help = "Path to the pcap file to be replayed")]
-    //     file: String,
-    //     // #[arg(
-    //     //     short,
-    //     //     long,
-    //     //     default_value = None,
-    //     //     help = "Path to the information system configuration file"
-    //     // )]
-    //     // config_path: Option<String>,
-    //     #[arg(
-    //         short,
-    //         long,
-    //         default_value_t = false,
-    //         help = "Taint the packets to easily identify them"
-    //     )]
-    //     taint: bool,
-    //     #[arg(
-    //         long,
-    //         default_value_t = false,
-    //         help = "Ignores timestamps and send packets without waiting"
-    //     )]
-    //     fast: bool,
-    // },
 }

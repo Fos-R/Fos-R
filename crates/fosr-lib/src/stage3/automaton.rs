@@ -97,7 +97,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
 
         log::trace!(
             "Computing cross-product automata for {}",
-            automaton.metadata.automaton_name
+            automaton.metadata.service
         );
         let max_state_count = (MAX_FWD_BWD_INDEX + 1) * automaton.graph.len();
         let mut openset = Vec::with_capacity(max_state_count);
@@ -307,24 +307,51 @@ impl<T: EdgeType> Display for TimedAutomaton<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "automaton \"{}\" for service {:?} learned on {} from {}",
-            self.metadata.automaton_name,
-            self.metadata.service,
-            self.metadata.input_file,
-            self.metadata.creation_time
+            "automaton for service {:?} learned on {} from {}",
+            self.metadata.service, self.metadata.input_file, self.metadata.creation_time
         )
     }
 }
 
 #[derive(Deserialize, Debug, Clone)]
 #[allow(unused)]
-struct AutomatonMetaData {
-    service: String,
-    dst_port: u16,
-    conn_state: TCPConnState,
-    input_file: String,
-    creation_time: String,
-    automaton_name: String,
+pub struct JsonAutomatonMetaData {
+    pub service: String,
+    pub conn_state: String,
+    pub input_file: String,
+    pub creation_time: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[allow(unused)]
+#[serde(try_from = "JsonAutomatonMetaData")]
+pub struct AutomatonMetaData {
+    pub service: String,
+    pub conn_state: Option<TCPConnState>,
+    pub input_file: String,
+    pub creation_time: String,
+}
+
+impl TryFrom<JsonAutomatonMetaData> for AutomatonMetaData {
+    type Error = String;
+
+    fn try_from(m: JsonAutomatonMetaData) -> Result<Self, String> {
+        let conn_state = match m.conn_state.as_str() {
+            "SF" => Some(TCPConnState::SF),
+            "SH" => Some(TCPConnState::SH),
+            "RST" => Some(TCPConnState::RST),
+            "S0" => Some(TCPConnState::S0),
+            "REJ" => Some(TCPConnState::REJ),
+            "none" => None,
+            s => Err(format!("Unknown connection state: {s}"))?,
+        };
+        Ok(AutomatonMetaData {
+            service: m.service,
+            conn_state,
+            input_file: m.input_file,
+            creation_time: m.creation_time,
+        })
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -347,8 +374,7 @@ pub struct JsonAutomaton {
     initial_state: usize,
     accepting_state: usize,
     pub protocol: L4Proto,
-    pub l7protocol: &'static str,
-    metadata: AutomatonMetaData,
+    pub metadata: AutomatonMetaData,
 }
 
 #[derive(Deserialize, Debug)]

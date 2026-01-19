@@ -27,9 +27,13 @@ pub struct TimePoint {
 /// A transport protocol
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[serde(rename_all_fields = "UPPERCASE")]
 pub enum L4Proto {
+    #[serde(alias = "tcp")]
     TCP,
+    #[serde(alias = "udp")]
     UDP,
+    #[serde(alias = "icmp")]
     ICMP,
 }
 
@@ -128,69 +132,6 @@ impl L4Proto {
         }
     }
 }
-
-// #[derive(Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq)]
-// #[allow(clippy::upper_case_acronyms)]
-// #[serde(rename_all = "lowercase")]
-// /// A list of application layer protocol
-// pub enum L7Proto {
-//     HTTP,
-//     HTTPS,
-//     SSH,
-//     DNS,
-//     DHCP,
-//     SMTP,
-//     Telnet,
-//     IMAPS,
-//     MQTT,
-//     KMS,
-//     MulticastDNS,
-//     NTP, // TODO complete properly
-// }
-
-// impl L7Proto {
-//     /// Default destination port that is used if a configuration file does not override it
-//     pub fn get_default_port(&self) -> u16 {
-//         match self {
-//             L7Proto::HTTP => 80,
-//             L7Proto::HTTPS => 443,
-//             L7Proto::SSH => 22,
-//             L7Proto::DNS => 53,
-//             L7Proto::DHCP => 67,
-//             L7Proto::SMTP => 587,
-//             L7Proto::Telnet => 23,
-//             L7Proto::IMAPS => 993,
-//             L7Proto::MQTT => 1883,
-//             L7Proto::KMS => 1688,
-//             L7Proto::MulticastDNS => 5353,
-//             L7Proto::NTP => 123,
-//             // _ => todo!()
-//         }
-//     }
-// }
-
-// // TODO: refaire proprement
-// impl TryFrom<String> for L7Proto {
-//     type Error = String;
-
-//     fn try_from(s: String) -> Result<L7Proto, String> {
-//         match s.to_uppercase().replace(" ", "").as_str().trim() {
-//             "HTTP" => Ok(L7Proto::HTTP),
-//             "HTTPS" => Ok(L7Proto::HTTPS),
-//             "SSH" => Ok(L7Proto::SSH),
-//             "DNS" => Ok(L7Proto::DNS),
-//             "DHCP" => Ok(L7Proto::DHCP),
-//             "SMTP" => Ok(L7Proto::SMTP),
-//             "TELNET" => Ok(L7Proto::Telnet),
-//             "IMAPS" => Ok(L7Proto::IMAPS),
-//             "MQTT" => Ok(L7Proto::MQTT),
-//             "KMS" => Ok(L7Proto::KMS),
-//             "MULTICAST DNS" => Ok(L7Proto::MulticastDNS),
-//             "NTP" => Ok(L7Proto::NTP),
-//             _ => Err(format!("Unknown protocol: {s}")),
-//         }
-//     }
-// }
 
 #[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 /// The OS of an host. By default, assume Linux
