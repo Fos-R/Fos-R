@@ -1,0 +1,116 @@
+{
+ "edges": [
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.3333333333333333,
+   "count": 4,
+   "src": 3,
+   "dst": 2,
+   "symbol": "S_>_Empty",
+   "mu": [
+    3016.0,
+    0.0
+   ],
+   "cov": [
+    [
+     271.3333343333333,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 1.0,
+   "count": 8,
+   "src": 2,
+   "dst": 3,
+   "symbol": "S_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.6666666666666666,
+   "count": 8,
+   "src": 3,
+   "dst": 1,
+   "symbol": "$",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 1.0,
+   "count": 8,
+   "src": 0,
+   "dst": 2,
+   "symbol": "S_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  }
+ ],
+ "noise": {
+  "none": 0.8918918918918919,
+  "deletion": 0.02702702702702702,
+  "reemission": 0.02702702702702702,
+  "transposition": 0.02702702702702702,
+  "addition": 0.02702702702702702
+ },
+ "initial_state": 0,
+ "accepting_state": 1,
+ "protocol": "tcp",
+ "metadata": {
+  "service": "ssl",
+  "conn_state": "S0",
+  "input_file": "cupid-train",
+  "creation_time": "2026-01-15 23:15:53.731230"
+ }
+}

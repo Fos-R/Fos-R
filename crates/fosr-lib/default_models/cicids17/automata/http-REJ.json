@@ -1,0 +1,116 @@
+{
+ "edges": [
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 1.0,
+   "count": 7,
+   "src": 0,
+   "dst": 1,
+   "symbol": "S_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.875,
+   "count": 7,
+   "src": 1,
+   "dst": 2,
+   "symbol": "RA_<_Empty",
+   "mu": [
+    314.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1108.6666676666666,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 1.0,
+   "count": 7,
+   "src": 2,
+   "dst": 3,
+   "symbol": "$",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.125,
+   "count": 1,
+   "src": 1,
+   "dst": 1,
+   "symbol": "S_>_Empty",
+   "mu": [
+    2996.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  }
+ ],
+ "noise": {
+  "none": 0.8518518518518519,
+  "deletion": 0.03703703703703704,
+  "reemission": 0.03703703703703704,
+  "transposition": 0.03703703703703704,
+  "addition": 0.03703703703703704
+ },
+ "initial_state": 0,
+ "accepting_state": 3,
+ "protocol": "tcp",
+ "metadata": {
+  "service": "http",
+  "conn_state": "REJ",
+  "input_file": "cicids17-train",
+  "creation_time": "2026-01-15 19:07:25.785928"
+ }
+}

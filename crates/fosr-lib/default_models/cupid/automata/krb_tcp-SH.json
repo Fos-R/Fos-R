@@ -1,0 +1,143 @@
+{
+ "edges": [
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.2222222222222222,
+   "count": 1,
+   "src": 0,
+   "dst": 0,
+   "symbol": "S_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.2222222222222222,
+   "count": 1,
+   "src": 0,
+   "dst": 0,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "AAAA22qB2DCB1aEDAgEFogMCAQqjFTATMBGhBAICAICiCQQHMAWgAwEB/6SBsTCBrqAHAwUAQIEAEKEYMBagAwIBAaEPMA0bC2RzLXRvd2VyLTEkoggbBkRTLkxBQqMbMBmgAwIBAqESMBAbBmtyYnRndBsGRFMuTEFCpREYDzIwMzcwOTEzMDI0ODA1WqYRGA8yMDM3MDkxMzAyNDgwNVqnBgIETuibPqgVMBMCARICARECARcCARgCAv95AgEDqR0wGzAZoAMCARShEgQQRFMtVE9XRVItMSAgICAgIA=="
+    ]
+   },
+   "p": 0.2222222222222222,
+   "count": 1,
+   "src": 0,
+   "dst": 0,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    0.0,
+    223.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.2222222222222222,
+   "count": 1,
+   "src": 0,
+   "dst": 0,
+   "symbol": "FA_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.1111111111111111,
+   "count": 1,
+   "src": 0,
+   "dst": 1,
+   "symbol": "$",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  }
+ ],
+ "noise": {
+  "none": 0.75,
+  "deletion": 0.0625,
+  "reemission": 0.0625,
+  "transposition": 0.0625,
+  "addition": 0.0625
+ },
+ "initial_state": 0,
+ "accepting_state": 1,
+ "protocol": "tcp",
+ "metadata": {
+  "service": "krb_tcp",
+  "conn_state": "SH",
+  "input_file": "cupid-train",
+  "creation_time": "2026-01-15 01:33:24.823476"
+ }
+}

@@ -41,6 +41,8 @@ aya = { version = "0.13.1", default-features = false, optional = true }
 default = []
 net_injection = ["pnet/std"]
 wasm_js = ["getrandom/wasm_js"] # needed to compile to wasm32 target. No used by default to avoid bloating the Cargo.lock file
+models_cupid = []
+models_cicids17 = []
 
 # Linux only
 iptables = ["net_injection"]

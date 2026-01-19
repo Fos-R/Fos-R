@@ -1,0 +1,68 @@
+{
+ "edges": [
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.6666666666666666,
+   "count": 4,
+   "src": 0,
+   "dst": 0,
+   "symbol": "S_>_Empty",
+   "mu": [
+    753.375,
+    0.0
+   ],
+   "cov": [
+    [
+     793395.125001,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.3333333333333333,
+   "count": 4,
+   "src": 0,
+   "dst": 1,
+   "symbol": "$",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  }
+ ],
+ "noise": {
+  "none": 0.7647058823529411,
+  "deletion": 0.05882352941176472,
+  "reemission": 0.05882352941176472,
+  "transposition": 0.05882352941176472,
+  "addition": 0.05882352941176472
+ },
+ "initial_state": 0,
+ "accepting_state": 1,
+ "protocol": "tcp",
+ "metadata": {
+  "service": "ssh",
+  "conn_state": "S0",
+  "input_file": "cicids17-train",
+  "creation_time": "2026-01-16 18:20:59.816911"
+ }
+}

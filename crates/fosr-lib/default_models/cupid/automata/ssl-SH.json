@@ -1,0 +1,157 @@
+{
+ "edges": [
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "FwMDACAAAAAAAAAADt6BDkl4zS5/6QqaSlUT+fqZqOfx0S1DtA=="
+    ]
+   },
+   "p": 0.16666666666666666,
+   "count": 1,
+   "src": 0,
+   "dst": 1,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    0.0,
+    37.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "FwMDACAAAAAAAAAADt6BDkl4zS5/6QqaSlUT+fqZqOfx0S1DtA=="
+    ]
+   },
+   "p": 0.9444444444444444,
+   "count": 1,
+   "src": 1,
+   "dst": 1,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    2127.529411764706,
+    37.0
+   ],
+   "cov": [
+    [
+     23343578.13970688,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "FwMDAB4AAAAAAAAAD9yw3AsayBTWFjaLP3OxUvcCqbA+XegVAwMAGgAAAAAAAAAQMcrKD/+KoIL+M8UVDgS3Bd5Z"
+    ]
+   },
+   "p": 0.05555555555555555,
+   "count": 1,
+   "src": 1,
+   "dst": 0,
+   "symbol": "FAP_>_Replay",
+   "mu": [
+    3830.0,
+    66.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "FwMDAB4AAAAAAAAAD9yw3AsayBTWFjaLP3OxUvcCqbA+XegVAwMAGgAAAAAAAAAQMcrKD/+KoIL+M8UVDgS3Bd5Z",
+     "FwMDACAAAAAAAAAADt6BDkl4zS5/6QqaSlUT+fqZqOfx0S1DtBcDAwAeAAAAAAAAAA/csNwLGsgU1hY2iz9zsVL3AqmwPl3oFQMDABoAAAAAAAAAEDHKyg//iqCC/jPFFQ4EtwXeWQ=="
+    ],
+    "weights": [
+     1,
+     2
+    ]
+   },
+   "p": 0.5,
+   "count": 2,
+   "src": 0,
+   "dst": 0,
+   "symbol": "FAP_>_Replay",
+   "mu": [
+    0.0,
+    90.66666666666667
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     456.3333343333333
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.3333333333333333,
+   "count": 2,
+   "src": 0,
+   "dst": 2,
+   "symbol": "$",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  }
+ ],
+ "noise": {
+  "none": 0.8620689655172413,
+  "deletion": 0.03448275862068966,
+  "reemission": 0.03448275862068966,
+  "transposition": 0.03448275862068966,
+  "addition": 0.03448275862068966
+ },
+ "initial_state": 0,
+ "accepting_state": 2,
+ "protocol": "tcp",
+ "metadata": {
+  "service": "ssl",
+  "conn_state": "SH",
+  "input_file": "cupid-train",
+  "creation_time": "2026-01-15 23:15:04.509850"
+ }
+}

@@ -1,0 +1,596 @@
+{
+ "edges": [
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.9592391304347826,
+   "count": 353,
+   "src": 1,
+   "dst": 2,
+   "symbol": "$",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.9652173913043478,
+   "count": 111,
+   "src": 3,
+   "dst": 2,
+   "symbol": "$",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.07014028056112225,
+   "count": 35,
+   "src": 0,
+   "dst": 4,
+   "symbol": "FA_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.603448275862069,
+   "count": 35,
+   "src": 4,
+   "dst": 2,
+   "symbol": "$",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.06896551724137931,
+   "count": 2,
+   "src": 4,
+   "dst": 4,
+   "symbol": "FA_>_Empty",
+   "mu": [
+    1479.0,
+    0.0
+   ],
+   "cov": [
+    [
+     365403.3333343333,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     37
+    ]
+   },
+   "p": 0.03006012024048096,
+   "count": 15,
+   "src": 0,
+   "dst": 5,
+   "symbol": "AP_>_Random",
+   "mu": [
+    0.0,
+    37.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 1.0,
+   "count": 15,
+   "src": 5,
+   "dst": 4,
+   "symbol": "FA_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     37
+    ]
+   },
+   "p": 0.04076086956521739,
+   "count": 15,
+   "src": 1,
+   "dst": 1,
+   "symbol": "FAP_>_Random",
+   "mu": [
+    2001.2666666666667,
+    37.0
+   ],
+   "cov": [
+    [
+     0.20952480952380956,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "FQMBABbP2bnnKODzqiBz0KssrLggogd8wFs/",
+     "FQMBACAIDrIiPn0yDz0DShdEDHBK49TSaMmw/PyidG0Ea3Ghig==",
+     "FQMBACAwFEH+I1oMboLM1U2T3hgkg6rT2E4yJYpKYDRdMcgfew==",
+     "FQMBACDm33dRTrXxg4Y2FVywAu3p/DAXOwIw80WuALLYuDHHWg=="
+    ]
+   },
+   "p": 0.008016032064128256,
+   "count": 4,
+   "src": 0,
+   "dst": 6,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    0.0,
+    34.5
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     25.000001
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 1.0,
+   "count": 4,
+   "src": 6,
+   "dst": 4,
+   "symbol": "FA_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "FQMBABbP2bnnKODzqiBz0KssrLggogd8wFs/",
+     "FQMBACAIDrIiPn0yDz0DShdEDHBK49TSaMmw/PyidG0Ea3Ghig==",
+     "FQMBACAwFEH+I1oMboLM1U2T3hgkg6rT2E4yJYpKYDRdMcgfew==",
+     "FQMBACDm33dRTrXxg4Y2FVywAu3p/DAXOwIw80WuALLYuDHHWg=="
+    ]
+   },
+   "p": 0.06896551724137931,
+   "count": 4,
+   "src": 4,
+   "dst": 3,
+   "symbol": "FAP_>_Replay",
+   "mu": [
+    942.5,
+    34.5
+   ],
+   "cov": [
+    [
+     289.000001,
+     38.33333333333333
+    ],
+    [
+     38.33333333333333,
+     25.000001
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "FQMBABbP2bnnKODzqiBz0KssrLggogd8wFs/",
+     "FQMBACAIDrIiPn0yDz0DShdEDHBK49TSaMmw/PyidG0Ea3Ghig==",
+     "FQMBACAwFEH+I1oMboLM1U2T3hgkg6rT2E4yJYpKYDRdMcgfew==",
+     "FQMBACDm33dRTrXxg4Y2FVywAu3p/DAXOwIw80WuALLYuDHHWg=="
+    ]
+   },
+   "p": 0.034782608695652174,
+   "count": 4,
+   "src": 3,
+   "dst": 3,
+   "symbol": "FAP_>_Replay",
+   "mu": [
+    2001.0,
+    34.5
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     25.000001
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     37
+    ]
+   },
+   "p": 0.6352705410821643,
+   "count": 317,
+   "src": 0,
+   "dst": 1,
+   "symbol": "FAP_>_Random",
+   "mu": [
+    0.0,
+    37.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     27,
+     29
+    ],
+    "weights": [
+     13,
+     8
+    ]
+   },
+   "p": 0.04208416833667335,
+   "count": 21,
+   "src": 0,
+   "dst": 1,
+   "symbol": "FAP_>_Random",
+   "mu": [
+    0.0,
+    27.761904761904763
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     0.9904771904761908
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "FQMBABbP2bnnKODzqiBz0KssrLggogd8wFs/",
+     "FQMBABhV3Y4EEI7WwVfRxsKONyR7tvM0WS3xwTs="
+    ],
+    "weights": [
+     1,
+     5
+    ]
+   },
+   "p": 0.012024048096192385,
+   "count": 6,
+   "src": 0,
+   "dst": 3,
+   "symbol": "FAP_>_Replay",
+   "mu": [
+    0.0,
+    28.666666666666668
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     0.6666676666666667
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "FQMBACA4X6AoI3SQ4/sgGeYDZB0yOF78xV8vAVGtJMTfK6+H/A==",
+     "FQMBACA7GcOkn55Cw2wJnRChkaFLEyfCb2w5dpgU73A3IpMg+A==",
+     "FQMBACAB4wA3GZTOOC/kmzEKKGWFL4zfvzhLohiffk4pA8n5yA==",
+     "FQMBACACAjGKHTpKuYBmjaFQJS3dJzrZVP6t0FFxMcvj6ngErQ==",
+     "FQMBACAIX/J0242vP4tYkNW2koZ9NCiQESsQPOGymrLMITpCBA==",
+     "FQMBACAJYZQAk+NNV9ZyMlQdXEptAuA4fMVThr1Jc/WFODa4pQ==",
+     "FQMBACAJj92oS/xlFKFKiZi1BtF8ziIHD133H4dCx9PzAc/7eA==",
+     "FQMBACAOVEDq1YDDDc9RT26zn7aefgfUTPhE/BwTDdbgUrRDvg==",
+     "FQMBACAQRfYczPOGpHNQVn8ATjD6IUPmgp6algJllQMEPCSlbQ==",
+     "FQMBACAWQ2ShhEEtlDIXWJaXqZ0l47dg7HWAWGkHfkC5F1NHrQ==",
+     "FQMBACAXp+YXZynbY3Dk/CqccCx5zHmTQLPkT0DieniQeDsACg==",
+     "FQMBACAZE3VWrtF8ahsIjG1ITimkK+7DLBwjrDOw+RLC5CGmMg==",
+     "FQMBACAbJj+HaSA5T4MPcAlbA5ChwzV1M8/etyMnsX3jKdG+JQ==",
+     "FQMBACAbfs1RFppOKpwRA7WWvbhIyBmtPk8DVRO8Yib4RGSIlA==",
+     "FQMBACAbwoGBZSaz4gcta7eKHa3OdWELMkALMQ5NVJEVG14uXQ==",
+     "FQMBACAdaJm6EbbWESi4ECTxp6hp6haqoLgk4GCPk16dT/GwwA==",
+     "FQMBACAetapN+hswy6k+2fDbkGLMEdGojRzJww9QGAJ447IszQ==",
+     "FQMBACAgdZNeaChZ+Nwkkq+oEaMWROjAOrLSckEDdG6REaB0tQ==",
+     "FQMBACAjgifHoQaeuaBGzbDDQSO2NAuOPIx8jC3nedAfwhVvfw==",
+     "FQMBACAlNGI0jV/JpqQVQ+o5YxM6E1mI6ThhLDeCPQcPn6QI2w==",
+     "FQMBACAmL4c7QgB2D8VANSzq+eCJ2QOIvqnMiaQIrHm2Mizdug==",
+     "FQMBACAxfohhavYMYEQBf4nRHKQtZvLAv5EDTri3upjgZuplgA==",
+     "FQMBACAyOOtcE4glwM5HIawUkRZpNAQap6bjFMr/RAE29S31Zw==",
+     "FQMBACBA0tX8q8VBBDOIXycpZanUYA4+eJVLxvIEArL4VBjzmg==",
+     "FQMBACBA8e0Ef0VsAVfz8SpoFbejkHzhosFsqGycwYAbNWT2Rw==",
+     "FQMBACBAoucGBsH2+XnuSCyO3JMCBRAGfBMAnzaQ+QkbbSDITg==",
+     "FQMBACBI5tnxhfzxBMEPN0RMu4BLBFw1IOqj0nmpmsKvKTq9CA==",
+     "FQMBACBQpgdvVzEqpuLswx1IfWDsxhGHkh1CB5PwcXR+BGmoCw==",
+     "FQMBACBRTVwScncNSaK/UMlcleteJUgdRPQeBYZs4jDlyPvXdg==",
+     "FQMBACBRtDb00lY9jiACUgfPLbsGEocOyibXxi+T8cNgzL/QeQ==",
+     "FQMBACBSRnU4dSHYR1ss4ycUZhlum6AitkODev2WnoX14hYUkQ==",
+     "FQMBACBWqYJdbkwmqMPGDivmF0jDS5tJSgACXWW2VTBrISBX7g==",
+     "FQMBACBYAPUDHIaOu0oqhlLXDAldJYSdHAAxVQfOT2DX4qCMpg==",
+     "FQMBACBa6Mhw4S4bgUabIg5uJmGLnSkqIkXkbZGbUil4uDTj8w==",
+     "FQMBACBp2XVnwAF2UcrU3Ck5UpLkynDoH57xk+wSx11UeyVIJA==",
+     "FQMBACBzAlgBB/oKd9BClH0Tv9NFsXpsb2iFUMSYjlf3VKRJFw==",
+     "FQMBACCDjmfNfDxyk2vFRcQbpxT7zy2PQb1JMQf13zPg2I0RRQ==",
+     "FQMBACCFNQ5xAG/xJKigfiX4ufEu2412GlPYBcuKWhCf4D1ADg==",
+     "FQMBACCFlAf3A1ESssfLK7/dw/P5pc1vvSwV59F/gtPRCAkF2w==",
+     "FQMBACCIDUA+X44/uGiaeNKtV1TSC4VYHAKyRSOl8ulJ1RXxAA==",
+     "FQMBACCKcb4ejcTwrcxcdI+QLHODIRJ0POXJq8hRpMvO6XIMUA==",
+     "FQMBACCKrIfQGOls4rSZRDH7tCx8O45pIcQVCEa22EXhSQsUhQ==",
+     "FQMBACCZjb2W6qY76qBS9MVPoyknpaEihmSty61qtoSsEPSRNg==",
+     "FQMBACChCB1LaboAB0LOczx8nSZP832d9qqBRb5rAwwiM4DN7w==",
+     "FQMBACChQtdQkQFP/lNGBYFWiFx4suBJFIWlwYCwKXkdpftr6w==",
+     "FQMBACCsI7I/wh6LgcwX9/A7exPwimOBDeB0EMjiJfdHwGsw4Q==",
+     "FQMBACCwdoCv4AgAzw3nrQMg6a/FxSQRFzV+sTvEH1tMze8WHQ==",
+     "FQMBACD/QwChIk1ZnlXmbkzogGjLAINSj2w5cnBqwDme1SzsgQ==",
+     "FQMBACD49dNdJBy+4QzBKMOEhcpgoSqPXMHGmE3m1beUPFSD6Q==",
+     "FQMBACD9GN6C72Rht0wq/jzH79lIcTQwzjGxProcxIe0+zOo/Q==",
+     "FQMBACDEAEsJ4Faa4ho75SVYNVAhXck6Qjl+0yXJRBzynDVyGg==",
+     "FQMBACDFlMjw2TU+Uo6BgaoKlbjklzJYf6KmICLAuhVLzRTRYg==",
+     "FQMBACDPwWjfnAwSTgXzMJFTnVAPI2+KM4lDUkiWms8utH4UEA==",
+     "FQMBACDbyGRAjMMV5SNpFDINnZbwm+ITAPDD0+ixZ4rfcd4dZA==",
+     "FQMBACDiWj1AyLbircLSPNhFECqk7FoJtwg8VqIgzeUvd0PMyg==",
+     "FQMBACDjI9MsWSMSwcjPr8yrrzjKJN1YTYwUD2F7YzF8cgJmHg==",
+     "FQMBACDm33dRTrXxg4Y2FVywAu3p/DAXOwIw80WuALLYuDHHWg==",
+     "FQMBACDoL8y07PDjCKDcKSwf4PFVRSAeTISCn8IJXvJD20zzAA==",
+     "FQMBACDt3zpVNHaDp7bThXPtltcv3Sf0FcywVjb889fMOpZVfA=="
+    ],
+    "weights": [
+     1,
+     1,
+     2,
+     1,
+     3,
+     1,
+     3,
+     1,
+     3,
+     3,
+     1,
+     1,
+     2,
+     2,
+     1,
+     2,
+     3,
+     5,
+     2,
+     1,
+     1,
+     1,
+     1,
+     2,
+     1,
+     1,
+     3,
+     1,
+     1,
+     2,
+     1,
+     2,
+     1,
+     1,
+     2,
+     1,
+     1,
+     2,
+     1,
+     1,
+     1,
+     1,
+     2,
+     1,
+     3,
+     1,
+     3,
+     2,
+     1,
+     5,
+     2,
+     2,
+     2,
+     1,
+     1,
+     1,
+     2,
+     2,
+     2
+    ]
+   },
+   "p": 0.20240480961923848,
+   "count": 101,
+   "src": 0,
+   "dst": 3,
+   "symbol": "FAP_>_Replay",
+   "mu": [
+    0.0,
+    37.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     37
+    ]
+   },
+   "p": 0.25862068965517243,
+   "count": 15,
+   "src": 4,
+   "dst": 1,
+   "symbol": "FAP_>_Random",
+   "mu": [
+    939.4,
+    37.0
+   ],
+   "cov": [
+    [
+     533.9714295714286,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  }
+ ],
+ "noise": {
+  "none": 0.9962406015037594,
+  "deletion": 0.0009398496240601508,
+  "reemission": 0.0009398496240601508,
+  "transposition": 0.0009398496240601508,
+  "addition": 0.0009398496240601508
+ },
+ "initial_state": 0,
+ "accepting_state": 2,
+ "protocol": "tcp",
+ "metadata": {
+  "service": "ssl",
+  "conn_state": "SH",
+  "input_file": "cicids17-train",
+  "creation_time": "2026-01-16 05:24:46.529893"
+ }
+}
