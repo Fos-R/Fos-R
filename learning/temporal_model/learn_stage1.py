@@ -29,5 +29,5 @@ if __name__ == '__main__':
 
     data = { "histogram": hist[1:].tolist(), "metadata": { "creation_time": str(datetime.datetime.now()), "input_file": args.input }}
 
-    with open('stage0.json', 'w') as f:
+    with open('time_profile.json', 'w') as f:
         json.dump(data, f)

@@ -10,7 +10,7 @@ mod automaton;
 /// An implementation of TADAM automaton for generation
 pub mod tadam;
 
-/// A trait for Stage 2 that generates packet metadata from flows
+/// A trait for Stage 3 that generates packet metadata from flows
 pub trait Stage3: Clone + std::marker::Send + 'static {
     fn generate_tcp_packets_info(
         &self,
@@ -27,16 +27,16 @@ pub trait Stage3: Clone + std::marker::Send + 'static {
     ) -> Option<SeededData<PacketsIR<ICMPPacketInfo>>>;
 }
 
-/// A set of Sender used by a Stage 2. Each Sender corresponds to a L4 protocol
+/// A set of Sender used by a Stage 3. Each Sender corresponds to a L4 protocol
 #[derive(Debug, Clone)]
-pub struct S2Sender {
+pub struct S3Sender {
     pub tcp: Sender<SeededData<PacketsIR<TCPPacketInfo>>>,
     pub udp: Sender<SeededData<PacketsIR<UDPPacketInfo>>>,
     pub icmp: Sender<SeededData<PacketsIR<ICMPPacketInfo>>>,
 }
 
-/// A set of Vector used by a Stage 2. Each Vector corresponds to a L4 protocol
-pub struct S2Vector {
+/// A set of Vector used by a Stage 3. Each Vector corresponds to a L4 protocol
+pub struct S3Vector {
     pub tcp: Vec<SeededData<PacketsIR<TCPPacketInfo>>>,
     pub udp: Vec<SeededData<PacketsIR<UDPPacketInfo>>>,
     pub icmp: Vec<SeededData<PacketsIR<ICMPPacketInfo>>>,
@@ -45,12 +45,12 @@ pub struct S2Vector {
 /// Generate packet metadata from flows sends them progressively to a channel
 pub fn run_channel(
     generator: impl Stage3,
-    rx_s2: Receiver<SeededData<Flow>>,
-    tx_s2: S2Sender,
+    rx_s3: Receiver<SeededData<Flow>>,
+    tx_s3: S3Sender,
     stats: Arc<Stats>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    log::trace!("Start S2");
-    for flow in rx_s2 {
+    log::trace!("Start S3");
+    for flow in rx_s3 {
         if stats.should_stop() {
             break;
         }
@@ -64,7 +64,7 @@ pub fn run_channel(
                     },
                     conn_state,
                 ) {
-                    tx_s2.tcp.send(pir)?;
+                    tx_s3.tcp.send(pir)?;
                 }
             }
             Flow::UDP(data) => {
@@ -72,7 +72,7 @@ pub fn run_channel(
                     seed: flow.seed,
                     data,
                 }) {
-                    tx_s2.udp.send(pir)?;
+                    tx_s3.udp.send(pir)?;
                 }
             }
             Flow::ICMP(data) => {
@@ -80,39 +80,39 @@ pub fn run_channel(
                     seed: flow.seed,
                     data,
                 }) {
-                    tx_s2.icmp.send(pir)?;
+                    tx_s3.icmp.send(pir)?;
                 }
             }
         }
     }
-    log::trace!("S2 stops");
+    log::trace!("S3 stops");
     Ok(())
 }
 
 /// Generate packet metadata from flows and into a vector
-pub fn run_vec(generator: impl Stage3, vec_s2: Vec<SeededData<Flow>>) -> S2Vector {
-    log::trace!("Start S2");
-    let mut vectors = S2Vector {
+pub fn run_vec(generator: impl Stage3, vec_s3: Vec<SeededData<Flow>>) -> S3Vector {
+    log::trace!("Start S3");
+    let mut vectors = S3Vector {
         tcp: Vec::with_capacity(
-            vec_s2
+            vec_s3
                 .iter()
                 .filter(|f| matches!(f.data, Flow::TCP(_, _)))
                 .count(),
         ),
         udp: Vec::with_capacity(
-            vec_s2
+            vec_s3
                 .iter()
                 .filter(|f| matches!(f.data, Flow::UDP(_)))
                 .count(),
         ),
         icmp: Vec::with_capacity(
-            vec_s2
+            vec_s3
                 .iter()
                 .filter(|f| matches!(f.data, Flow::ICMP(_)))
                 .count(),
         ),
     };
-    for flow in vec_s2 {
+    for flow in vec_s3 {
         log::trace!("Generating packets info");
         match flow.data {
             Flow::TCP(data, conn_state) => {
@@ -144,6 +144,6 @@ pub fn run_vec(generator: impl Stage3, vec_s2: Vec<SeededData<Flow>>) -> S2Vecto
             }
         }
     }
-    log::trace!("S2 stops");
+    log::trace!("S3 stops");
     vectors
 }

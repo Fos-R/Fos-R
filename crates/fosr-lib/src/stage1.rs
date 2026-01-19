@@ -17,7 +17,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const WINDOW_WIDTH_IN_SECS: u64 = 5;
 
-/// Stage 0: generate timestamps.
+/// Stage 1: generate timestamps.
 /// Generate a throughput according to some distribution and never stops. It always prepares the next windows (i.e., not
 /// the one being sent)
 pub trait Stage1:
@@ -290,10 +290,10 @@ struct Metadata {
 /// Generate data and send them progressively to a channel
 pub fn run_channel(
     generator: impl Stage1,
-    tx_s0: Sender<SeededData<TimePoint>>,
+    tx_s1: Sender<SeededData<TimePoint>>,
     stats: Arc<Stats>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    log::trace!("Start S0");
+    log::trace!("Start S1");
     let initial_ts = generator.get_initial_ts();
     for ts in generator {
         if stats.should_stop() {
@@ -303,19 +303,19 @@ pub fn run_channel(
             ts.data.unix_time.as_secs() - initial_ts.as_secs() + 2 * WINDOW_WIDTH_IN_SECS,
         ); // this hack (adding WINDOW_WIDTH_IN_SECS) is just a way to be sure to reach the duration target for the progress bar
         // log::trace!("S0 generates {ts:?}");
-        tx_s0.send(ts)?;
+        tx_s1.send(ts)?;
     }
-    log::trace!("S0 stops");
+    log::trace!("S1 stops");
     Ok(())
 }
 
 /// Generate data into a vector
 pub fn run_vec(generator: impl Stage1) -> Vec<SeededData<TimePoint>> {
-    log::trace!("Start S0");
+    log::trace!("Start S1");
     let mut vector = vec![];
     for ts in generator {
         vector.push(ts);
     }
-    log::trace!("S0 stops");
+    log::trace!("S1 stops");
     vector
 }

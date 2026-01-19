@@ -8,7 +8,7 @@
 
 - New stage 0 with realistic time distribution
 - New stage 1 with Bayesian networks
-- New default models for stages 0 and 1
+- New default models (CICIDS17 and CUPID)
 - Models customizing with configuration
 
 #### fosr
@@ -34,6 +34,7 @@
 #### fosr-lib
 
 - `fosr` crate split into `fosr-lib` and `fosr`
+- Stage renaming (0->1, 1->2, 2->3, 3->4)
 - `stage4` module renamed to `inject`
 - Created the `export` module
 - Significantly modified the configuration file format
