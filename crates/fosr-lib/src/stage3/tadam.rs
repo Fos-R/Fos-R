@@ -8,7 +8,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct AutomataLibrary {
-    // TODO: deux types d’automates TCP: ceux finissant par FIN et ceux finissant par RESET
     cons_tcp_automata: HashMap<&'static str, automaton::CrossProductTimedAutomaton<TCPEdgeTuple>>,
     cons_udp_automata: HashMap<&'static str, automaton::CrossProductTimedAutomaton<UDPEdgeTuple>>,
     cons_icmp_automata: HashMap<&'static str, automaton::CrossProductTimedAutomaton<ICMPEdgeTuple>>,
@@ -44,10 +43,7 @@ impl AutomataLibrary {
         // );
         for s in strings {
             match lib.import_from_str(&s) {
-                Ok(proto) => {
-                    log::debug!("Automaton {proto:?} is loaded");
-                    nb += 1
-                }
+                Ok(()) => nb += 1,
                 Err(s) => log::error!("Could not load automaton ({})", s),
             }
             // pb.inc(1);
@@ -56,7 +52,7 @@ impl AutomataLibrary {
         Ok(lib)
     }
 
-    pub fn import_from_str(&mut self, string: &str) -> Result<String, String> {
+    pub fn import_from_str(&mut self, string: &str) -> Result<(), String> {
         let string = string.to_string();
         let a: automaton::JsonAutomaton =
             serde_json::from_str::<automaton::JsonAutomaton>(string.leak())
@@ -91,7 +87,7 @@ impl AutomataLibrary {
                 self.cons_icmp_automata.insert(l7proto, a.into());
             }
         }
-        Ok(l7proto.to_string())
+        Ok(())
     }
 }
 

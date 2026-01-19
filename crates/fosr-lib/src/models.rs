@@ -6,8 +6,6 @@ use std::path::Path;
 
 /// The source of models
 pub enum ModelsSource {
-    /// Models of Fos-R v0.1.2, only included for backward compatibility
-    Legacy,
     #[cfg(feature = "models_cicids17")]
     /// Models based on the first day of CICIDS2017 dataset
     CICIDS17,
@@ -56,78 +54,6 @@ impl Models {
 impl ModelsSource {
     pub(crate) fn get_automata(&self) -> std::io::Result<Vec<String>> {
         match &self {
-            ModelsSource::Legacy => Ok(
-                #[cfg(debug_assertions)]
-                {
-                    vec![
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/automata/mqtt.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/automata/smtp.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/automata/ssh.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/automata/https.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/automata/dns.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/automata/ntp.json",
-                            1
-                        ))
-                        .unwrap(),
-                    ]
-                },
-                #[cfg(not(debug_assertions))]
-                {
-                    vec![
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/automata/mqtt.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/automata/smtp.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/automata/ssh.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/automata/https.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/automata/dns.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/automata/ntp.json",
-                            22
-                        ))
-                        .unwrap(),
-                    ]
-                },
-            ),
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
                 #[cfg(debug_assertions)]
@@ -651,58 +577,6 @@ impl ModelsSource {
 
     pub(crate) fn get_bn(&self) -> std::io::Result<Vec<String>> {
         match &self {
-            ModelsSource::Legacy => Ok(
-                #[cfg(debug_assertions)]
-                {
-                    vec![
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/bn/bn_common.bifxml",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/bn/bn_tcp.bifxml",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/bn/bn_udp.bifxml",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/bn/bn_additional_data.json",
-                            1
-                        ))
-                        .unwrap(),
-                    ]
-                },
-                #[cfg(not(debug_assertions))]
-                {
-                    vec![
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/bn/bn_common.bifxml",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/bn/bn_tcp.bifxml",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/bn/bn_udp.bifxml",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/legacy/bn/bn_additional_data.json",
-                            22
-                        ))
-                        .unwrap(),
-                    ]
-                },
-            ),
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
                 #[cfg(debug_assertions)]
@@ -824,24 +698,6 @@ impl ModelsSource {
 
     pub(crate) fn get_time_profile(&self) -> Result<String, String> {
         match &self {
-            ModelsSource::Legacy => Ok(
-                #[cfg(debug_assertions)]
-                {
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/legacy/time_profile.json",
-                        1
-                    ))
-                    .unwrap()
-                },
-                #[cfg(not(debug_assertions))]
-                {
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/legacy/time_profile.json",
-                        22
-                    ))
-                    .unwrap()
-                },
-            ),
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
                 #[cfg(debug_assertions)]
