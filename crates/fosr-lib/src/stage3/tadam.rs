@@ -22,7 +22,7 @@ impl AutomataLibrary {
     pub fn from_source(models: &models::ModelsSource) -> Result<Self, String> {
         let strings = models
             .get_automata()
-            .map_err(|_| "Cannot open the automata files".to_string())?;
+            .map_err(|e| format!("Cannot open the automata files: {e}"))?;
         let mut nb = 0;
         let mut lib = AutomataLibrary {
             cons_tcp_automata: HashMap::new(),
@@ -59,7 +59,7 @@ impl AutomataLibrary {
     pub fn import_from_str(&mut self, string: &str) -> Result<String, String> {
         let string = string.to_string();
         let a: automaton::JsonAutomaton =
-            serde_json::from_str::<automaton::JsonAutomaton>(string.leak()).map_err(|_| "Import error".to_string())?;
+            serde_json::from_str::<automaton::JsonAutomaton>(string.leak()).map_err(|e| format!("Import error: {e}"))?;
         let l7proto = a.l7protocol;
         match a.protocol {
             L4Proto::TCP => {

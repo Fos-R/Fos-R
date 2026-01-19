@@ -347,9 +347,9 @@ impl BayesianModel {
     pub fn from_source(m: &models::ModelsSource) -> Result<Self, String> {
         let bn_strings: Vec<String> = m
             .get_bn()
-            .map_err(|_| "Cannot find the Bayesian networks".to_string())?;
+            .map_err(|e| format!("Cannot find the Bayesian networks: {e}"))?;
         let bn_additional_data: AdditionalData = serde_json::from_str(&bn_strings[3])
-            .map_err(|_| "Cannot parse the additional_data file".to_string())?;
+            .map_err(|e| format!("Cannot parse the additional_data file: {e}"))?;
 
         // log::info!("Loading high-level BN");
         let mut bif_common = bifxml::from_str(&bn_strings[0])?;

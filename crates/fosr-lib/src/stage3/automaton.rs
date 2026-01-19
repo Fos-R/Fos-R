@@ -411,7 +411,7 @@ impl TryFrom<JsonPayload> for PayloadType {
                     let weights = w.unwrap_or_else(|| vec![1; l.len()]);
                     Ok(PayloadType::Random(
                         l,
-                        WeightedIndex::new(weights).map_err(|_| "Weights error".to_string())?,
+                        WeightedIndex::new(weights).map_err(|e| format!("Weights error: {e}"))?,
                     ))
                 }
             }
@@ -426,7 +426,7 @@ impl TryFrom<JsonPayload> for PayloadType {
                     let weights = w.unwrap_or_else(|| vec![1; p.len()]);
                     Ok(PayloadType::Replay(
                         Box::leak(Box::new(p.into_iter().map(hex_decode).collect())),
-                        WeightedIndex::new(weights).map_err(|_| "Weights error".to_string())?,
+                        WeightedIndex::new(weights).map_err(|e| format!("Weights error: {e}"))?,
                     ))
                 }
             }
@@ -444,7 +444,7 @@ impl TryFrom<JsonPayload> for PayloadType {
                                 .map(|s| base64::prelude::BASE64_STANDARD.decode(s).unwrap())
                                 .collect(),
                         )),
-                        WeightedIndex::new(weights).map_err(|_| "Weights error".to_string())?,
+                        WeightedIndex::new(weights).map_err(|e| format!("Weights error: {e}"))?,
                     ))
                 }
             }
@@ -458,7 +458,7 @@ impl TryFrom<JsonPayload> for PayloadType {
                     let weights = w.unwrap_or_else(|| vec![1; p.len()]);
                     Ok(PayloadType::Text(
                         Box::leak(Box::new(p.into_iter().map(|v| v.into()).collect())),
-                        WeightedIndex::new(weights).map_err(|_| "Weights error".to_string())?,
+                        WeightedIndex::new(weights).map_err(|e| format!("Weights error: {e}"))?,
                     ))
                 }
             }
