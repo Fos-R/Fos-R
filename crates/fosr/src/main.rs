@@ -2,10 +2,10 @@ use fosr_lib::export;
 #[cfg(feature = "net_injection")]
 use fosr_lib::inject;
 use fosr_lib::models;
-use fosr_lib::stage0;
 use fosr_lib::stage1;
 use fosr_lib::stage2;
 use fosr_lib::stage3;
+use fosr_lib::stage4;
 use fosr_lib::stats;
 use fosr_lib::utils;
 use fosr_lib::*;
@@ -156,7 +156,7 @@ fn main() {
                 );
             }
 
-            let s0 = stage0::BinBasedGenerator::new(
+            let s0 = stage1::BinBasedGenerator::new(
                 seed,
                 false,
                 flow_per_day,
@@ -165,10 +165,10 @@ fn main() {
                 duration,
                 tz_offset,
             );
-            let s1 = stage1::bayesian_networks::BNGenerator::new(bn, false);
-            // let s1 = stage1::flowchronicle::FCGenerator::new(patterns, model.config.clone(), false);
-            let s2 = stage2::tadam::TadamGenerator::new(automata_library);
-            let s3 = stage3::Stage3::new(taint); //, model.config);
+            let s1 = stage2::bayesian_networks::BNGenerator::new(bn, false);
+            // let s1 = stage2::flowchronicle::FCGenerator::new(patterns, model.config.clone(), false);
+            let s2 = stage3::tadam::TadamGenerator::new(automata_library);
+            let s3 = stage4::Stage4::new(taint); //, model.config);
             let jobs = jobs.unwrap_or(max(1, num_cpus::get() / 2));
             match profile {
                 cmd::GenerationProfile::Fast => {
@@ -241,17 +241,17 @@ struct ExportParams {
 /// - `s2`: a stage 2 implementation
 /// - `s3`: a stage 3 implementation
 /// - `stats`: an Arc to a structure containing generation statistics
-/// - `s4net`: an optional network enable
+/// - `s5net`: an optional network enable
 #[allow(clippy::too_many_arguments)]
 fn run_efficient<T: inject::NetEnabler>(
     local_interfaces: Vec<Ipv4Addr>,
     export: Option<ExportParams>,
-    s0: impl stage0::Stage0,
-    s1: (impl stage1::Stage1, usize),
-    s2: (impl stage2::Stage2, usize),
-    s3: (stage3::Stage3, usize),
+    s0: impl stage1::Stage1,
+    s1: (impl stage2::Stage2, usize),
+    s2: (impl stage3::Stage3, usize),
+    s3: (stage4::Stage4, usize),
     stats: Arc<stats::Stats>,
-    #[allow(unused)] s4net: Option<InjectParam<T>>,
+    #[allow(unused)] s5net: Option<InjectParam<T>>,
 ) {
     let (s1, s1_count) = s1;
     let (s2, s2_count) = s2;
@@ -264,26 +264,26 @@ fn run_efficient<T: inject::NetEnabler>(
     // block to automatically drop channels before the joins
     {
         // Channels creation
-        let (tx_s0, rx_s1) = bounded::<SeededData<TimePoint>>(CHANNEL_SIZE);
-        let (tx_s1, rx_s2) = bounded::<SeededData<Flow>>(CHANNEL_SIZE);
-        let (tx_s2_tcp, rx_s3_tcp) = bounded::<SeededData<PacketsIR<TCPPacketInfo>>>(CHANNEL_SIZE);
-        let (tx_s2_udp, rx_s3_udp) = bounded::<SeededData<PacketsIR<UDPPacketInfo>>>(CHANNEL_SIZE);
-        let (tx_s2_icmp, rx_s3_icmp) =
+        let (tx_s1, rx_s2) = bounded::<SeededData<TimePoint>>(CHANNEL_SIZE);
+        let (tx_s2, rx_s3) = bounded::<SeededData<Flow>>(CHANNEL_SIZE);
+        let (tx_s3_tcp, rx_s4_tcp) = bounded::<SeededData<PacketsIR<TCPPacketInfo>>>(CHANNEL_SIZE);
+        let (tx_s3_udp, rx_s4_udp) = bounded::<SeededData<PacketsIR<UDPPacketInfo>>>(CHANNEL_SIZE);
+        let (tx_s3_icmp, rx_s4_icmp) =
             bounded::<SeededData<PacketsIR<ICMPPacketInfo>>>(CHANNEL_SIZE);
-        let tx_s2 = stage2::S2Sender {
-            tcp: tx_s2_tcp,
-            udp: tx_s2_udp,
-            icmp: tx_s2_icmp,
+        let tx_s3 = stage3::S2Sender {
+            tcp: tx_s3_tcp,
+            udp: tx_s3_udp,
+            icmp: tx_s3_icmp,
         };
         // TODO: only create if online
-        let mut tx_s3 = HashMap::new();
-        let mut rx_s4 = HashMap::new();
+        let mut tx_s4 = HashMap::new();
+        let mut rx_s5 = HashMap::new();
         for proto in Protocol::iter() {
             let (tx, rx) = bounded::<Packets>(CHANNEL_SIZE);
-            rx_s4.insert(proto, rx);
-            tx_s3.insert(proto, tx);
+            rx_s5.insert(proto, rx);
+            tx_s4.insert(proto, tx);
         }
-        let (tx_s3_to_pcap, rx_pcap) = thingbuf::mpsc::blocking::with_recycle::<
+        let (tx_s4_to_pcap, rx_pcap) = thingbuf::mpsc::blocking::with_recycle::<
             Packets,
             PacketsRecycler,
         >(CHANNEL_SIZE, PacketsRecycler {});
@@ -302,12 +302,12 @@ fn run_efficient<T: inject::NetEnabler>(
         .expect("Error setting Ctrl-C handler");
 
         // STAGE 0
-        let builder = thread::Builder::new().name("Stage0".into());
-        let stats_s0 = Arc::clone(&stats);
+        let builder = thread::Builder::new().name("Stage1".into());
+        let stats_s1 = Arc::clone(&stats);
         gen_threads.push(
             builder
                 .spawn(move || {
-                    let _ = stage0::run_channel(s0, tx_s0, stats_s0);
+                    let _ = stage1::run_channel(s0, tx_s1, stats_s1);
                 })
                 .unwrap(),
         );
@@ -315,15 +315,15 @@ fn run_efficient<T: inject::NetEnabler>(
         // STAGE 1
 
         for _ in 0..s1_count {
-            let rx_s1 = rx_s1.clone();
-            let tx_s1 = tx_s1.clone();
+            let rx_s2 = rx_s2.clone();
+            let tx_s2 = tx_s2.clone();
             let s1 = s1.clone();
             let stats = Arc::clone(&stats);
-            let builder = thread::Builder::new().name("Stage1".into());
+            let builder = thread::Builder::new().name("Stage2".into());
             gen_threads.push(
                 builder
                     .spawn(move || {
-                        let _ = stage1::run_channel(s1, rx_s1, tx_s1, stats);
+                        let _ = stage2::run_channel(s1, rx_s2, tx_s2, stats);
                     })
                     .unwrap(),
             );
@@ -332,15 +332,15 @@ fn run_efficient<T: inject::NetEnabler>(
         // STAGE 2
 
         for _ in 0..s2_count {
-            let rx_s2 = rx_s2.clone();
-            let tx_s2 = tx_s2.clone();
+            let rx_s3 = rx_s3.clone();
+            let tx_s3 = tx_s3.clone();
             let s2 = s2.clone();
             let stats = Arc::clone(&stats);
-            let builder = thread::Builder::new().name("Stage2".into());
+            let builder = thread::Builder::new().name("Stage3".into());
             gen_threads.push(
                 builder
                     .spawn(move || {
-                        let _ = stage2::run_channel(s2, rx_s2, tx_s2, stats);
+                        let _ = stage3::run_channel(s2, rx_s3, tx_s3, stats);
                     })
                     .unwrap(),
             );
@@ -348,31 +348,31 @@ fn run_efficient<T: inject::NetEnabler>(
 
         // STAGE 3
 
-        for (proto, tx) in tx_s3 {
+        for (proto, tx) in tx_s4 {
             for _ in 0..s3_count {
                 let tx = if local_interfaces.is_empty() {
                     None
                 } else {
                     Some(tx.clone())
                 };
-                let tx_s3_to_pcap = tx_s3_to_pcap.clone();
+                let tx_s4_to_pcap = tx_s4_to_pcap.clone();
                 let s3 = s3.clone();
                 let stats = Arc::clone(&stats);
                 let local_interfaces = local_interfaces.clone();
 
-                let builder = thread::Builder::new().name(format!("Stage3-{proto:?}"));
+                let builder = thread::Builder::new().name(format!("Stage4-{proto:?}"));
                 match proto {
                     Protocol::TCP => {
-                        let rx_s3_tcp = rx_s3_tcp.clone();
+                        let rx_s4_tcp = rx_s4_tcp.clone();
                         gen_threads.push(
                             builder
                                 .spawn(move || {
-                                    let _ = stage3::run_channel(
+                                    let _ = stage4::run_channel(
                                         |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
                                         local_interfaces,
-                                        rx_s3_tcp,
+                                        rx_s4_tcp,
                                         tx,
-                                        tx_s3_to_pcap,
+                                        tx_s4_to_pcap,
                                         stats,
                                         do_export,
                                     );
@@ -381,16 +381,16 @@ fn run_efficient<T: inject::NetEnabler>(
                         );
                     }
                     Protocol::UDP => {
-                        let rx_s3_udp = rx_s3_udp.clone();
+                        let rx_s4_udp = rx_s4_udp.clone();
                         gen_threads.push(
                             builder
                                 .spawn(move || {
-                                    let _ = stage3::run_channel(
+                                    let _ = stage4::run_channel(
                                         |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
                                         local_interfaces,
-                                        rx_s3_udp,
+                                        rx_s4_udp,
                                         tx,
-                                        tx_s3_to_pcap,
+                                        tx_s4_to_pcap,
                                         stats,
                                         do_export,
                                     );
@@ -399,16 +399,16 @@ fn run_efficient<T: inject::NetEnabler>(
                         );
                     }
                     Protocol::ICMP => {
-                        let rx_s3_icmp = rx_s3_icmp.clone();
+                        let rx_s4_icmp = rx_s4_icmp.clone();
                         gen_threads.push(
                             builder
                                 .spawn(move || {
-                                    let _ = stage3::run_channel(
+                                    let _ = stage4::run_channel(
                                         |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
                                         local_interfaces,
-                                        rx_s3_icmp,
+                                        rx_s4_icmp,
                                         tx,
-                                        tx_s3_to_pcap,
+                                        tx_s4_to_pcap,
                                         stats,
                                         do_export,
                                     );
@@ -440,17 +440,17 @@ fn run_efficient<T: inject::NetEnabler>(
 
         // STAGE 4 (injection mode only)
         #[cfg(feature = "net_injection")]
-        if let Some(s4net) = s4net {
+        if let Some(s5net) = s5net {
             let stats = Arc::clone(&stats);
             let builder = thread::Builder::new().name("inject".into());
             gen_threads.push(
                 builder
-                    .spawn(move || match s4net.injection_algo {
+                    .spawn(move || match s5net.injection_algo {
                         cmd::InjectionAlgo::Fast => {
-                            inject::start_fast(s4net.net_enabler, rx_s4, stats)
+                            inject::start_fast(s5net.net_enabler, rx_s5, stats)
                         }
                         cmd::InjectionAlgo::Reliable => {
-                            inject::start_reliable(s4net.net_enabler, rx_s4, stats)
+                            inject::start_reliable(s5net.net_enabler, rx_s5, stats)
                         }
                     })
                     .unwrap(),
@@ -492,17 +492,17 @@ fn run_efficient<T: inject::NetEnabler>(
 /// Run the generation with very little contention, but the generated dataset must fit in RAM
 fn run_fast(
     export: ExportParams,
-    s0: impl stage0::Stage0,
-    s1: impl stage1::Stage1,
-    s2: impl stage2::Stage2,
-    s3: stage3::Stage3,
+    s0: impl stage1::Stage1,
+    s1: impl stage2::Stage2,
+    s2: impl stage3::Stage3,
+    s3: stage4::Stage4,
     jobs: usize,
     stats: Arc<stats::Stats>,
 ) {
     // TODO: remettre "stats", ctrlc, etc.
     let start = Instant::now();
 
-    let vec = stage0::run_vec(s0);
+    let vec = stage1::run_vec(s0);
     if vec.is_empty() {
         log::error!("No generated data: duration is too small");
     } else {
@@ -531,15 +531,15 @@ fn run_fast(
             let stats = Arc::clone(&stats);
             threads.push(thread::spawn(move || {
                 // log::info!("Stage 1 generation");
-                let vec = stage1::run_vec(s1, vec).unwrap();
+                let vec = stage2::run_vec(s1, vec).unwrap();
                 // log::info!("Stage 2 generation");
-                let vec = stage2::run_vec(s2, vec);
+                let vec = stage3::run_vec(s2, vec);
 
                 let mut packets = vec![];
                 {
                     let stats = Arc::clone(&stats);
                     // log::info!("Stage 3 generation");
-                    packets.append(&mut stage3::run_vec(
+                    packets.append(&mut stage4::run_vec(
                         |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
                         vec.udp,
                         stats,
@@ -547,13 +547,13 @@ fn run_fast(
                 }
                 {
                     let stats = Arc::clone(&stats);
-                    packets.append(&mut stage3::run_vec(
+                    packets.append(&mut stage4::run_vec(
                         |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
                         vec.tcp,
                         stats,
                     ));
                 }
-                packets.append(&mut stage3::run_vec(
+                packets.append(&mut stage4::run_vec(
                     |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
                     vec.icmp,
                     stats,
