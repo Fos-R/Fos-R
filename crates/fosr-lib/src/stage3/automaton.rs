@@ -305,11 +305,20 @@ pub struct TimedAutomaton<T: EdgeType> {
 
 impl<T: EdgeType> Display for TimedAutomaton<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "automaton for service {:?} learned on {} from {}",
-            self.metadata.service, self.metadata.input_file, self.metadata.creation_time
-        )
+        match self.metadata.conn_state {
+            Some(s) =>
+            write!(
+                f,
+                "automaton {:?} for state {s:?} learned from {} on {}",
+                self.metadata.service, self.metadata.input_file, self.metadata.creation_time
+            ),
+            None => 
+            write!(
+                f,
+                "automaton {:?} learned from {} on {}",
+                self.metadata.service, self.metadata.input_file, self.metadata.creation_time
+            ),
+        }
     }
 }
 

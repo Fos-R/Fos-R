@@ -45,7 +45,6 @@ impl fmt::Display for InjectionAlgo {
 #[derive(ValueEnum, Debug, Clone)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum DefaultModels {
-    Legacy,
     CICIDS17,
     CUPID,
 }
@@ -53,7 +52,6 @@ pub enum DefaultModels {
 impl DefaultModels {
     pub fn get_source(&self) -> models::ModelsSource {
         match &self {
-            DefaultModels::Legacy => models::ModelsSource::Legacy,
             DefaultModels::CICIDS17 => models::ModelsSource::CICIDS17,
             DefaultModels::CUPID => models::ModelsSource::CUPID,
         }
