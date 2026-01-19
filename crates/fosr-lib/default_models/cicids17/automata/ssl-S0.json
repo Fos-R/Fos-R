@@ -1,0 +1,92 @@
+{
+ "edges": [
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 1.0,
+   "count": 500,
+   "src": 0,
+   "dst": 1,
+   "symbol": "S_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.6622516556291391,
+   "count": 500,
+   "src": 1,
+   "dst": 2,
+   "symbol": "$",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.33774834437086093,
+   "count": 183,
+   "src": 1,
+   "dst": 1,
+   "symbol": "S_>_Empty",
+   "mu": [
+    2163.007843137255,
+    0.0
+   ],
+   "cov": [
+    [
+     768443.6771045973,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  }
+ ],
+ "noise": {
+  "none": 0.9968253968253968,
+  "deletion": 0.0007936507936507933,
+  "reemission": 0.0007936507936507933,
+  "transposition": 0.0007936507936507933,
+  "addition": 0.0007936507936507933
+ },
+ "initial_state": 0,
+ "accepting_state": 2,
+ "protocol": "tcp",
+ "metadata": {
+  "service": "ssl",
+  "conn_state": "S0",
+  "input_file": "cicids17-train",
+  "creation_time": "2026-01-16 05:24:06.447015"
+ }
+}

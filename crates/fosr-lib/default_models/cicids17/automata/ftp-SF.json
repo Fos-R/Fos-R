@@ -1,0 +1,3800 @@
+{
+ "edges": [
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.9978213507625272,
+   "count": 458,
+   "src": 0,
+   "dst": 1,
+   "symbol": "S_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.9956427015250545,
+   "count": 457,
+   "src": 1,
+   "dst": 2,
+   "symbol": "SA_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.9956427015250545,
+   "count": 457,
+   "src": 2,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "220 (vsFTPd 3.0.3)\r\n"
+    ]
+   },
+   "p": 0.298371335504886,
+   "count": 458,
+   "src": 3,
+   "dst": 4,
+   "symbol": "AP_<_Text:220",
+   "mu": [
+    8.2117903930131,
+    20.0
+   ],
+   "cov": [
+    [
+     2835.23951157305,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "USER iscxtap\r\n"
+    ]
+   },
+   "p": 0.4557235421166307,
+   "count": 211,
+   "src": 4,
+   "dst": 5,
+   "symbol": "AP_>_Text:USER",
+   "mu": [
+    1.042654028436019,
+    14.0
+   ],
+   "cov": [
+    [
+     28.755315827352838,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.9956427015250545,
+   "count": 457,
+   "src": 5,
+   "dst": 6,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.9847494553376906,
+   "count": 452,
+   "src": 7,
+   "dst": 6,
+   "symbol": "A_<_Empty",
+   "mu": [
+    42.30530973451327,
+    0.0
+   ],
+   "cov": [
+    [
+     3.64050489498263,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.008988764044943821,
+   "count": 4,
+   "src": 9,
+   "dst": 6,
+   "symbol": "A_<_Empty",
+   "mu": [
+    41.75,
+    0.0
+   ],
+   "cov": [
+    [
+     0.9166676666666667,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.032679738562091505,
+   "count": 15,
+   "src": 10,
+   "dst": 6,
+   "symbol": "A_<_Empty",
+   "mu": [
+    28.466666666666665,
+    0.0
+   ],
+   "cov": [
+    [
+     436.26666766666665,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.39651416122004357,
+   "count": 182,
+   "src": 11,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.24837310195227766,
+   "count": 458,
+   "src": 6,
+   "dst": 12,
+   "symbol": "$",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "",
+     "USER iscxtap\r\n"
+    ],
+    "weights": [
+     1,
+     245
+    ]
+   },
+   "p": 0.16026058631921825,
+   "count": 246,
+   "src": 3,
+   "dst": 5,
+   "symbol": "AP_>_Text:USER",
+   "mu": [
+    15.24390243902439,
+    14.0
+   ],
+   "cov": [
+    [
+     21674.209657545933,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "PASS 1234\r\n"
+    ]
+   },
+   "p": 0.01498371335504886,
+   "count": 23,
+   "src": 3,
+   "dst": 7,
+   "symbol": "AP_>_Text:PASS",
+   "mu": [
+    0.21739130434782608,
+    11.0
+   ],
+   "cov": [
+    [
+     0.5415029762845849,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "PASV\r\n"
+    ]
+   },
+   "p": 0.01498371335504886,
+   "count": 23,
+   "src": 3,
+   "dst": 8,
+   "symbol": "AP_>_Text:PASV",
+   "mu": [
+    13.217391304347826,
+    6.0
+   ],
+   "cov": [
+    [
+     1757.0869575217414,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "STOR 811e71c8eedc4205bfaee07fdef5d237.txt\r\n",
+     "STOR 88389566e27f45808a106dfe8823c7c8.txt\r\n",
+     "STOR 9de1f03a9ce34d7e84967e3405ac3dde.txt\r\n",
+     "STOR 12d85d391ecf434481fc724839e0840d.txt\r\n",
+     "STOR 176c7922c4514776bce96a2522442fb8.txt\r\n",
+     "STOR 256ccb3fa3bc4018ad69ffac230b30b8.txt\r\n",
+     "STOR 33daad38801e433784ee876f58f98967.txt\r\n",
+     "STOR 3c6630553d5041908d60c5e3a2b97ec3.txt\r\n",
+     "STOR 3f6f6a1876e54525a59997485862bb02.txt\r\n",
+     "STOR aa99ff45db5d4f33a0bc4b73f1d375b4.txt\r\n",
+     "STOR bf47fd697c434232a0b4f65a38ac9e06.txt\r\n",
+     "STOR c2410c4142034224b0aa80264b415e78.txt\r\n",
+     "STOR c7f8bdbd6aac42f6ae34d94fe88370ce.txt\r\n",
+     "STOR c4b4ab8f762b40f3845ecd1cb48592cf.txt\r\n",
+     "STOR c68b645acfe349afb4def9b2fa51bf14.txt\r\n",
+     "STOR c6e29eef3dc4496bbb5f0e04add15815.txt\r\n",
+     "STOR cbea29f2a343481da9b91c7e5a30b643.txt\r\n",
+     "STOR e1d0a5dded794e818ad220e7aa9f8458.txt\r\n",
+     "STOR eb6157adfca7416795ca2d72c5193782.txt\r\n",
+     "STOR ffb696f08b6d4ab88a2099ad650289f5.txt\r\n"
+    ]
+   },
+   "p": 0.013029315960912053,
+   "count": 20,
+   "src": 3,
+   "dst": 9,
+   "symbol": "AP_>_Text:STOR",
+   "mu": [
+    7.7,
+    43.0
+   ],
+   "cov": [
+    [
+     943.1684220526321,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.011726384364820847,
+   "count": 18,
+   "src": 3,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.0021598272138228943,
+   "count": 1,
+   "src": 4,
+   "dst": 6,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "PASS 1234\r\n"
+    ]
+   },
+   "p": 0.004357298474945534,
+   "count": 2,
+   "src": 5,
+   "dst": 7,
+   "symbol": "AP_>_Text:PASS",
+   "mu": [
+    0.0,
+    11.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.003257328990228013,
+   "count": 5,
+   "src": 3,
+   "dst": 6,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     43
+    ]
+   },
+   "p": 0.0006514657980456026,
+   "count": 1,
+   "src": 3,
+   "dst": 13,
+   "symbol": "AP_>_Random",
+   "mu": [
+    1.0,
+    43.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.043478260869565216,
+   "count": 1,
+   "src": 13,
+   "dst": 6,
+   "symbol": "A_<_Empty",
+   "mu": [
+    42.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "PASS 1234\r\n"
+    ]
+   },
+   "p": 0.0005422993492407809,
+   "count": 1,
+   "src": 6,
+   "dst": 7,
+   "symbol": "AP_>_Text:PASS",
+   "mu": [
+    0.0,
+    11.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.002178649237472767,
+   "count": 1,
+   "src": 10,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.004357298474945534,
+   "count": 2,
+   "src": 11,
+   "dst": 6,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.004357298474945534,
+   "count": 2,
+   "src": 1,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.0006514657980456026,
+   "count": 1,
+   "src": 3,
+   "dst": 2,
+   "symbol": "SA_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "220 (vsFTPd 3.0.3)\r\n"
+    ]
+   },
+   "p": 0.002178649237472767,
+   "count": 1,
+   "src": 2,
+   "dst": 4,
+   "symbol": "AP_<_Text:220",
+   "mu": [
+    2.0,
+    20.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.03061889250814332,
+   "count": 47,
+   "src": 3,
+   "dst": 11,
+   "symbol": "FA_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.002178649237472767,
+   "count": 1,
+   "src": 0,
+   "dst": 2,
+   "symbol": "SA_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.002178649237472767,
+   "count": 1,
+   "src": 2,
+   "dst": 1,
+   "symbol": "S_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.0010845986984815619,
+   "count": 2,
+   "src": 6,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    36.5,
+    0.0
+   ],
+   "cov": [
+    [
+     2664.500001,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.0006514657980456026,
+   "count": 1,
+   "src": 3,
+   "dst": 12,
+   "symbol": "$",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     14
+    ]
+   },
+   "p": 0.002178649237472767,
+   "count": 1,
+   "src": 10,
+   "dst": 15,
+   "symbol": "AP_<_Random",
+   "mu": [
+    14.0,
+    14.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     14
+    ]
+   },
+   "p": 0.010893246187363835,
+   "count": 5,
+   "src": 10,
+   "dst": 15,
+   "symbol": "AP_<_Random",
+   "mu": [
+    1.4,
+    14.0
+   ],
+   "cov": [
+    [
+     0.8000010000000002,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     14
+    ]
+   },
+   "p": 0.9520697167755992,
+   "count": 437,
+   "src": 10,
+   "dst": 15,
+   "symbol": "AP_<_Random",
+   "mu": [
+    0.013729977116704805,
+    14.0
+   ],
+   "cov": [
+    [
+     0.08238086270022887,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.10810810810810811,
+   "count": 48,
+   "src": 15,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.8918918918918919,
+   "count": 396,
+   "src": 15,
+   "dst": 11,
+   "symbol": "FA_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     22
+    ]
+   },
+   "p": 0.9565217391304348,
+   "count": 22,
+   "src": 13,
+   "dst": 16,
+   "symbol": "AP_<_Random",
+   "mu": [
+    0.09090909090909091,
+    22.0
+   ],
+   "cov": [
+    [
+     0.18181918181818182,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     24
+    ]
+   },
+   "p": 0.7841409691629956,
+   "count": 356,
+   "src": 16,
+   "dst": 14,
+   "symbol": "AP_<_Random",
+   "mu": [
+    21.09269662921348,
+    24.0
+   ],
+   "cov": [
+    [
+     583.2280038485534,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.21585903083700442,
+   "count": 98,
+   "src": 16,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    61.816326530612244,
+    0.0
+   ],
+   "cov": [
+    [
+     3348.4401440675397,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     34
+    ]
+   },
+   "p": 0.24837310195227766,
+   "count": 458,
+   "src": 6,
+   "dst": 17,
+   "symbol": "AP_<_Random",
+   "mu": [
+    0.024017467248908297,
+    34.0
+   ],
+   "cov": [
+    [
+     0.06725659706840706,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "PASS 1234\r\n"
+    ]
+   },
+   "p": 0.9454148471615721,
+   "count": 433,
+   "src": 17,
+   "dst": 7,
+   "symbol": "AP_>_Text:PASS",
+   "mu": [
+    0.016166281755196306,
+    11.0
+   ],
+   "cov": [
+    [
+     0.03446126858267015,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.05021834061135371,
+   "count": 23,
+   "src": 17,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "USER iscxtap\r\n"
+    ]
+   },
+   "p": 0.004366812227074236,
+   "count": 2,
+   "src": 17,
+   "dst": 5,
+   "symbol": "AP_>_Text:USER",
+   "mu": [
+    0.0,
+    14.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     22
+    ]
+   },
+   "p": 0.038202247191011236,
+   "count": 16,
+   "src": 9,
+   "dst": 16,
+   "symbol": "AP_<_Random",
+   "mu": [
+    13.058823529411764,
+    22.0
+   ],
+   "cov": [
+    [
+     40.558824529411766,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     22
+    ]
+   },
+   "p": 0.952808988764045,
+   "count": 416,
+   "src": 9,
+   "dst": 16,
+   "symbol": "AP_<_Random",
+   "mu": [
+    0.02830188679245283,
+    22.0
+   ],
+   "cov": [
+    [
+     0.09848888973638434,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.5356371490280778,
+   "count": 244,
+   "src": 4,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.016129032258064516,
+    0.0
+   ],
+   "cov": [
+    [
+     0.03212846506464666,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.004319654427645789,
+   "count": 2,
+   "src": 4,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    47.5,
+    0.0
+   ],
+   "cov": [
+    [
+     0.500001,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.0021598272138228943,
+   "count": 1,
+   "src": 4,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    118.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "QUIT\r\n"
+    ]
+   },
+   "p": 0.24364820846905538,
+   "count": 369,
+   "src": 3,
+   "dst": 10,
+   "symbol": "AP_>_Text:QUIT",
+   "mu": [
+    0.045454545454545456,
+    6.0
+   ],
+   "cov": [
+    [
+     0.06495347379965916,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "QUIT\r\n"
+    ]
+   },
+   "p": 0.0013029315960912053,
+   "count": 2,
+   "src": 3,
+   "dst": 10,
+   "symbol": "AP_>_Text:QUIT",
+   "mu": [
+    29.5,
+    6.0
+   ],
+   "cov": [
+    [
+     4.500001,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "QUIT\r\n"
+    ]
+   },
+   "p": 0.006514657980456026,
+   "count": 10,
+   "src": 3,
+   "dst": 10,
+   "symbol": "AP_>_Text:QUIT",
+   "mu": [
+    4.8,
+    6.0
+   ],
+   "cov": [
+    [
+     17.511112111111107,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     23
+    ]
+   },
+   "p": 0.210412147505423,
+   "count": 388,
+   "src": 6,
+   "dst": 18,
+   "symbol": "AP_<_Random",
+   "mu": [
+    114.17525773195877,
+    23.0
+   ],
+   "cov": [
+    [
+     104788.24827612728,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     22,
+     23
+    ],
+    "weights": [
+     5,
+     64
+    ]
+   },
+   "p": 0.037418655097613884,
+   "count": 69,
+   "src": 6,
+   "dst": 18,
+   "symbol": "AP_<_Random",
+   "mu": [
+    77.28985507246377,
+    22.92753623188406
+   ],
+   "cov": [
+    [
+     8276.8853377434,
+     -11.140451832907058
+    ],
+    [
+     -11.140451832907058,
+     0.06820219352088623
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     23,
+     24
+    ],
+    "weights": [
+     1,
+     100
+    ]
+   },
+   "p": 0.06579804560260587,
+   "count": 100,
+   "src": 3,
+   "dst": 18,
+   "symbol": "AP_<_Random",
+   "mu": [
+    69.12871287128714,
+    23.99009900990099
+   ],
+   "cov": [
+    [
+     9050.893268326734,
+     0.6912871287128711
+    ],
+    [
+     0.6912871287128711,
+     0.009901990099009899
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     24
+    ]
+   },
+   "p": 0.0006514657980456026,
+   "count": 1,
+   "src": 3,
+   "dst": 18,
+   "symbol": "AP_<_Random",
+   "mu": [
+    2991.0,
+    24.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     23
+    ]
+   },
+   "p": 0.002178649237472767,
+   "count": 1,
+   "src": 7,
+   "dst": 18,
+   "symbol": "AP_<_Random",
+   "mu": [
+    38.0,
+    23.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     23
+    ]
+   },
+   "p": 0.010893246187363835,
+   "count": 5,
+   "src": 7,
+   "dst": 18,
+   "symbol": "AP_<_Random",
+   "mu": [
+    16.8,
+    23.0
+   ],
+   "cov": [
+    [
+     6.200001,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     34
+    ]
+   },
+   "p": 0.002178649237472767,
+   "count": 1,
+   "src": 7,
+   "dst": 18,
+   "symbol": "AP_<_Random",
+   "mu": [
+    0.0,
+    34.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     22,
+     24
+    ],
+    "weights": [
+     1,
+     2
+    ]
+   },
+   "p": 0.00530035335689046,
+   "count": 3,
+   "src": 18,
+   "dst": 14,
+   "symbol": "AP_<_Random",
+   "mu": [
+    75.33333333333333,
+    23.333333333333332
+   ],
+   "cov": [
+    [
+     12612.333334333334,
+     -129.66666666666669
+    ],
+    [
+     -129.66666666666669,
+     1.3333343333333332
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.07950530035335689,
+   "count": 24,
+   "src": 18,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    1.1111111111111112,
+    0.0
+   ],
+   "cov": [
+    [
+     55.55555655555556,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "QUIT\r\n"
+    ]
+   },
+   "p": 0.13780918727915195,
+   "count": 78,
+   "src": 18,
+   "dst": 10,
+   "symbol": "AP_>_Text:QUIT",
+   "mu": [
+    0.8717948717948718,
+    6.0
+   ],
+   "cov": [
+    [
+     14.346987346986353,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.0035335689045936395,
+   "count": 2,
+   "src": 18,
+   "dst": 6,
+   "symbol": "A_<_Empty",
+   "mu": [
+    21.5,
+    0.0
+   ],
+   "cov": [
+    [
+     924.500001,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.983957219251337,
+   "count": 353,
+   "src": 14,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.01358695652173913,
+    0.0
+   ],
+   "cov": [
+    [
+     0.02433905236346407,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.016042780748663103,
+   "count": 6,
+   "src": 14,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    3.6666666666666665,
+    0.0
+   ],
+   "cov": [
+    [
+     11.866667666666666,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.11921824104234528,
+   "count": 183,
+   "src": 3,
+   "dst": 19,
+   "symbol": "FA_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.0006514657980456026,
+   "count": 1,
+   "src": 3,
+   "dst": 19,
+   "symbol": "FA_>_Empty",
+   "mu": [
+    10.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.599128540305011,
+   "count": 275,
+   "src": 11,
+   "dst": 19,
+   "symbol": "FA_>_Empty",
+   "mu": [
+    0.025454545454545455,
+    0.0
+   ],
+   "cov": [
+    [
+     0.0978908473788986,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.9869281045751634,
+   "count": 453,
+   "src": 19,
+   "dst": 6,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.008714596949891068,
+   "count": 4,
+   "src": 19,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.002178649237472767,
+   "count": 1,
+   "src": 19,
+   "dst": 11,
+   "symbol": "FA_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     14
+    ]
+   },
+   "p": 0.002178649237472767,
+   "count": 1,
+   "src": 19,
+   "dst": 15,
+   "symbol": "AP_<_Random",
+   "mu": [
+    0.0,
+    14.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     31
+    ]
+   },
+   "p": 0.24566160520607375,
+   "count": 453,
+   "src": 6,
+   "dst": 20,
+   "symbol": "AP_<_Random",
+   "mu": [
+    0.03090507726269316,
+    31.0
+   ],
+   "cov": [
+    [
+     0.07868978079274846,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     14
+    ]
+   },
+   "p": 0.008134490238611713,
+   "count": 15,
+   "src": 6,
+   "dst": 20,
+   "symbol": "AP_<_Random",
+   "mu": [
+    161.4,
+    14.0
+   ],
+   "cov": [
+    [
+     21522.54285814286,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     31
+    ]
+   },
+   "p": 0.002109704641350211,
+   "count": 1,
+   "src": 20,
+   "dst": 14,
+   "symbol": "AP_<_Random",
+   "mu": [
+    204.0,
+    31.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.046413502109704644,
+   "count": 22,
+   "src": 20,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    10.272727272727273,
+    0.0
+   ],
+   "cov": [
+    [
+     1209.2554122554106,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.03164556962025317,
+   "count": 15,
+   "src": 20,
+   "dst": 11,
+   "symbol": "FA_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "227 Entering Passive Mode (192,168,10,50,55,109).\r\n",
+     "PASV\r\n"
+    ],
+    "weights": [
+     1,
+     425
+    ]
+   },
+   "p": 0.8987341772151899,
+   "count": 426,
+   "src": 20,
+   "dst": 8,
+   "symbol": "AP_>_Text:PASV",
+   "mu": [
+    0.023474178403755867,
+    6.0
+   ],
+   "cov": [
+    [
+     0.08886043109638164,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "PASV\r\n"
+    ]
+   },
+   "p": 0.008438818565400843,
+   "count": 4,
+   "src": 20,
+   "dst": 8,
+   "symbol": "AP_>_Text:PASV",
+   "mu": [
+    41.25,
+    6.0
+   ],
+   "cov": [
+    [
+     58.250001,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "PASV\r\n"
+    ]
+   },
+   "p": 0.010548523206751054,
+   "count": 5,
+   "src": 20,
+   "dst": 8,
+   "symbol": "AP_>_Text:PASV",
+   "mu": [
+    19.0,
+    6.0
+   ],
+   "cov": [
+    [
+     11.500001,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "TYPE I\r\n"
+    ]
+   },
+   "p": 0.0017667844522968198,
+   "count": 1,
+   "src": 18,
+   "dst": 21,
+   "symbol": "AP_>_Text:TYPE",
+   "mu": [
+    26.0,
+    8.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "TYPE I\r\n"
+    ]
+   },
+   "p": 0.0017667844522968198,
+   "count": 1,
+   "src": 18,
+   "dst": 21,
+   "symbol": "AP_>_Text:TYPE",
+   "mu": [
+    9.0,
+    8.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "TYPE I\r\n"
+    ]
+   },
+   "p": 0.7703180212014135,
+   "count": 436,
+   "src": 18,
+   "dst": 21,
+   "symbol": "AP_>_Text:TYPE",
+   "mu": [
+    0.006880733944954129,
+    8.0
+   ],
+   "cov": [
+    [
+     0.0068500983865864935,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "TYPE I\r\n"
+    ]
+   },
+   "p": 0.012377850162866449,
+   "count": 19,
+   "src": 3,
+   "dst": 21,
+   "symbol": "AP_>_Text:TYPE",
+   "mu": [
+    0.3684210526315789,
+    8.0
+   ],
+   "cov": [
+    [
+     1.3567261461988303,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "TYPE I\r\n"
+    ]
+   },
+   "p": 0.0006514657980456026,
+   "count": 1,
+   "src": 3,
+   "dst": 21,
+   "symbol": "AP_>_Text:TYPE",
+   "mu": [
+    26.0,
+    8.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "TYPE I\r\n"
+    ]
+   },
+   "p": 0.002109704641350211,
+   "count": 1,
+   "src": 20,
+   "dst": 21,
+   "symbol": "AP_>_Text:TYPE",
+   "mu": [
+    0.0,
+    8.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.9847494553376906,
+   "count": 452,
+   "src": 21,
+   "dst": 6,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "PASV\r\n"
+    ]
+   },
+   "p": 0.002178649237472767,
+   "count": 1,
+   "src": 21,
+   "dst": 8,
+   "symbol": "AP_>_Text:PASV",
+   "mu": [
+    27.0,
+    6.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     31
+    ]
+   },
+   "p": 0.013071895424836602,
+   "count": 6,
+   "src": 21,
+   "dst": 20,
+   "symbol": "AP_<_Random",
+   "mu": [
+    0.0,
+    31.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "227 Entering Passive Mode (192,168,10,50,40,184).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,41,117).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,42,11).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,42,17).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,42,39).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,43,179).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,44,220).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,44,248).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,45,126).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,46,145).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,47,54).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,47,67).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,48,121).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,48,164).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,49,141).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,49,191).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,50,66).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,50,115).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,50,184).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,50,3).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,51,221).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,53,52).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,53,78).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,57,189).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,57,212).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,58,60).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,58,10).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,59,126).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,59,235).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,60,45).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,60,87).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,60,244).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,61,70).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,61,12).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,62,97).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,62,120).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,63,49).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,63,95).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,63,239).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,64,209).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,64,32).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,65,106).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,65,232).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,65,3).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,66,38).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,67,207).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,67,32).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,68,248).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,69,87).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,70,76).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,70,18).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,71,127).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,72,83).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,72,89).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,73,112).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,73,245).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,73,25).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,74,207).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,76,76).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,76,113).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,76,164).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,76,239).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,77,82).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,77,177).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,78,202).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,81,20).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,81,239).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,82,119).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,82,145).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,82,203).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,82,223).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,83,58).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,83,70).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,83,93).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,83,155).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,83,172).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,84,13).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,84,21).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,84,241).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,85,37).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,86,209).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,87,162).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,88,109).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,88,12).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,88,158).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,89,73).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,89,175).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,90,51).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,90,129).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,90,193).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,91,222).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,92,50).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,92,214).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,92,217).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,92,23).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,92,29).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,93,6).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,93,102).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,94,123).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,95,197).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,95,241).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,96,43).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,96,250).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,97,130).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,97,188).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,98,28).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,99,201).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,100,179).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,100,172).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,101,120).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,103,122).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,103,15).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,104,158).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,105,125).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,105,148).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,105,181).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,105,239).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,106,139).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,106,175).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,106,172).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,107,221).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,108,170).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,108,212).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,109,158).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,109,245).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,109,26).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,109,45).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,109,65).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,110,228).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,110,39).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,110,81).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,111,194).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,111,67).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,112,186).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,112,207).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,112,210).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,112,213).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,112,234).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,113,18).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,116,169).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,116,16).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,116,98).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,117,108).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,117,44).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,119,215).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,120,92).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,121,157).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,121,33).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,122,219).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,122,67).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,123,139).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,123,179).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,124,244).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,125,110).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,125,144).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,126,176).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,127,63).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,128,209).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,128,6).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,129,121).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,129,210).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,129,37).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,130,232).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,131,115).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,131,125).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,131,189).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,131,183).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,131,201).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,131,254).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,132,138).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,132,174).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,132,52).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,132,88).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,133,54).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,133,55).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,134,153).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,134,169).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,136,31).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,137,173).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,137,30).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,138,58).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,139,84).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,140,110).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,140,112).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,140,193).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,141,157).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,142,147).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,142,152).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,142,250).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,142,81).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,143,155).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,143,150).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,143,47).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,145,248).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,146,110).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,146,234).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,146,85).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,147,1).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,147,182).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,147,209).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,147,7).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,148,112).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,148,151).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,148,32).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,150,52).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,151,128).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,151,149).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,152,142).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,152,195).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,153,127).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,153,254).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,154,120).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,154,227).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,154,33).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,155,178).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,155,244).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,155,243).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,156,180).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,156,25).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,156,46).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,157,163).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,158,3).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,158,34).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,158,61).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,158,94).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,160,153).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,160,172).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,160,254).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,161,101).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,161,169).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,161,201).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,162,129).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,162,145).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,163,91).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,164,0).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,166,195).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,168,53).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,168,81).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,169,104).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,170,107).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,170,149).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,170,244).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,170,32).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,171,227).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,171,244).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,172,6).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,173,219).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,174,100).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,175,152).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,175,46).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,176,84).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,177,66).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,178,37).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,179,128).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,180,24).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,181,105).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,181,235).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,181,96).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,183,38).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,183,63).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,184,192).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,184,215).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,185,242).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,186,116).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,186,121).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,186,155).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,186,51).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,187,188).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,187,42).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,187,5).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,188,244).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,189,138).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,189,130).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,189,195).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,189,198).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,189,212).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,19,241).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,191,179).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,192,140).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,192,182).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,192,210).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,192,37).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,192,42).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,194,43).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,195,169).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,196,58).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,196,95).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,197,109).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,197,202).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,197,54).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,198,44).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,199,186).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,199,210).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,199,232).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,199,3).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,199,43).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,199,92).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,20,62).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,20,149).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,20,165).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,20,2).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,20,208).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,20,33).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,200,129).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,200,68).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,201,101).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,201,215).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,201,66).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,202,155).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,202,230).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,202,249).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,202,56).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,204,115).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,204,33).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,204,50).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,205,85).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,206,126).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,206,147).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,206,148).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,206,165).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,207,224).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,207,238).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,208,143).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,208,56).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,208,84).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,209,145).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,209,141).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,21,181).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,21,228).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,213,186).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,214,8).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,215,161).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,215,44).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,215,76).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,215,84).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,217,222).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,219,132).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,22,134).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,22,192).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,22,231).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,220,16).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,220,52).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,221,10).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,221,178).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,221,49).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,221,63).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,221,93).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,222,138).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,222,176).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,223,109).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,224,52).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,224,90).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,225,159).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,225,26).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,227,165).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,227,176).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,227,40).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,228,139).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,228,224).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,229,143).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,229,223).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,229,83).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,23,43).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,23,193).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,230,107).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,230,111).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,231,2).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,231,65).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,232,107).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,232,128).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,232,161).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,232,205).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,232,209).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,233,200).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,233,24).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,234,11).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,235,151).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,235,49).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,235,50).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,235,80).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,236,107).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,236,145).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,236,17).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,237,17).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,238,157).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,238,185).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,238,42).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,238,80).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,239,29).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,24,116).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,24,195).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,24,201).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,241,150).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,241,95).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,242,239).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,242,68).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,244,118).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,244,123).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,245,193).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,246,164).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,247,123).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,247,157).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,248,164).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,248,167).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,249,167).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,249,182).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,249,195).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,249,249).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,25,199).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,25,219).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,250,107).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,250,117).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,250,141).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,250,163).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,250,187).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,250,226).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,250,22).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,251,19).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,251,52).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,251,77).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,252,116).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,252,231).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,253,10).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,253,150).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,253,231).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,254,144).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,254,154).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,254,161).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,254,179).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,254,38).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,254,76).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,255,210).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,255,91).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,26,150).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,28,47).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,28,8).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,28,220).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,29,98).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,29,213).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,30,174).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,30,225).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,32,121).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,32,130).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,33,26).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,34,113).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,35,47).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,35,192).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,35,229).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,38,53).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,38,69).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,38,124).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,38,188).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,38,23).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,39,155).\r\n",
+     "227 Entering Passive Mode (192,168,10,50,39,173).\r\n",
+     "PASV\r\n"
+    ],
+    "weights": [
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     2,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     2,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     2,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ]
+   },
+   "p": 1.0,
+   "count": 459,
+   "src": 8,
+   "dst": 22,
+   "symbol": "AP_<_Text:227",
+   "mu": [
+    0.008714596949891068,
+    51.26797385620915
+   ],
+   "cov": [
+    [
+     0.013025326664193067,
+     -0.00015697691012358316
+    ],
+    [
+     -0.00015697691012358316,
+     0.5415713399263619
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.0457516339869281,
+   "count": 21,
+   "src": 22,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    2.1904761904761907,
+    0.0
+   ],
+   "cov": [
+    [
+     100.76190576190481,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Lengths",
+    "lengths": [
+     43
+    ]
+   },
+   "p": 0.04793028322440087,
+   "count": 22,
+   "src": 22,
+   "dst": 13,
+   "symbol": "AP_>_Random",
+   "mu": [
+    0.045454545454545456,
+    43.0
+   ],
+   "cov": [
+    [
+     0.045455545454545505,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "STOR 6d845a5201d740f3b9b67744fc933cb1.txt\r\n",
+     "STOR 190028623b10439d8c46abb22d6f498e.txt\r\n",
+     "STOR b7b59dd6c99b49b3935285881df2494c.txt\r\n"
+    ]
+   },
+   "p": 0.006535947712418301,
+   "count": 3,
+   "src": 22,
+   "dst": 9,
+   "symbol": "AP_>_Text:STOR",
+   "mu": [
+    8.0,
+    43.0
+   ],
+   "cov": [
+    [
+     52.000001,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "STOR 402166c6608f4801b16d59f1cb782e1f.txt\r\n",
+     "STOR 403dc759ffe5447da737078ebc999a8c.txt\r\n",
+     "STOR 40559426185f498ea75984150d50b48c.txt\r\n",
+     "STOR 4099e62c65fd4ffa9a6077f2fe4597ce.txt\r\n",
+     "STOR 40cbddd89e294193bae7538a75912bab.txt\r\n",
+     "STOR 424f745888c049be8efa28ae86b62bbd.txt\r\n",
+     "STOR 42cc489efdb8416d9575a96c8cb94f57.txt\r\n",
+     "STOR 42f24d6969934d549304b49567308af8.txt\r\n",
+     "STOR 43554e3b56b8417dabd07c6a38f2ade4.txt\r\n",
+     "STOR 436644da5ab94f918ec80e41accfbe3c.txt\r\n",
+     "STOR 4402a444280342b99d899368c2aaf758.txt\r\n",
+     "STOR 44a7130502f142359853dcba85bb88be.txt\r\n",
+     "STOR 456689fb7c964856a112c695a30c6bea.txt\r\n",
+     "STOR 46021b4ca56a4fca98932eac11028cab.txt\r\n",
+     "STOR 46359e7348384987b087f639105c7931.txt\r\n",
+     "STOR 465ff8107fcd414ba9b8ff9b594f9f2b.txt\r\n",
+     "STOR 4667448855e844c89875743874bdcfb1.txt\r\n",
+     "STOR 46b0ea5972ee4e829171c6411ce2e3eb.txt\r\n",
+     "STOR 472e5faaf0a44bb29ff519040e3c27d7.txt\r\n",
+     "STOR 4810e6efee86468ebc9b91bf7917a9d4.txt\r\n",
+     "STOR 48fc8bda61cb46cb87946a30f266aa2c.txt\r\n",
+     "STOR 4a6fb9326bde432287844ead506c9712.txt\r\n",
+     "STOR 4a91737d7c1d4a55aafc070b4fe2b2c1.txt\r\n",
+     "STOR 4abbe8e3b5b34afe92019fea6884d511.txt\r\n",
+     "STOR 4b14198d292b4494aea48250969b2374.txt\r\n",
+     "STOR 4b1e44c3b68442b7b5392517f51b863d.txt\r\n",
+     "STOR 4ba797443493462e851ccd4bc65902f2.txt\r\n",
+     "STOR 4c3cd6dd4d054ab09d46fa24ba0ad1cf.txt\r\n",
+     "STOR 4c6d7bed4a6b41f99e72e99a54af4ab0.txt\r\n",
+     "STOR 4d64ecba21b64baaa58935ce8e094508.txt\r\n",
+     "STOR 4e557992659a4f9f805144c9f93aed17.txt\r\n",
+     "STOR 4ea300c6deb149b3a5910cbfa4463003.txt\r\n",
+     "STOR 5042a21a097649e7ad409184812a5b75.txt\r\n",
+     "STOR 50debc3e51ae4b4d85fdcd87b786b49d.txt\r\n",
+     "STOR 512b239ebabd4746b6771994571578c5.txt\r\n",
+     "STOR 51d2732d28dc4b9dbf917ea11373fd24.txt\r\n",
+     "STOR 528ec083719a479e8fe788e315a5141f.txt\r\n",
+     "STOR 52b6a6146af34a8496c9a893545d0b30.txt\r\n",
+     "STOR 52c6b3be1cce404ca41ad3668c14c989.txt\r\n",
+     "STOR 57a8fdcf7c9543efa252dada2475dcd8.txt\r\n",
+     "STOR 57cbb6b5bbd641e993eee2563802b5ff.txt\r\n",
+     "STOR 5508566d9f3d4dc5b1803bd7b50f6545.txt\r\n",
+     "STOR 55910b036c6f41a6ae418b2ffccfc4bd.txt\r\n",
+     "STOR 55b490861a1a429e8f17f228153a810b.txt\r\n",
+     "STOR 55d20f238c4b48db95922c3f2f79be70.txt\r\n",
+     "STOR 5639459addb74d978361f842d96867c2.txt\r\n",
+     "STOR 569811f35945449f8e4f7d295726d47b.txt\r\n",
+     "STOR 56e67de2edae41339d9fb85c7bca7d2e.txt\r\n",
+     "STOR 5778216b453642949667a5fe35e8804d.txt\r\n",
+     "STOR 59276a2940cf4729be2639a5f1fd335f.txt\r\n",
+     "STOR 59cce15b2bf74279b8ce5edf941095ed.txt\r\n",
+     "STOR 5a5c6ba8f53c4f6ea0aa51d814e8d806.txt\r\n",
+     "STOR 5ac630835d354e35aa084547053328e2.txt\r\n",
+     "STOR 5b5261c330d140dc887ee477d8a4885c.txt\r\n",
+     "STOR 5d71c0f6a35a4c6097026b0a96aa27a7.txt\r\n",
+     "STOR 5efb139d2a9f4a9e83cf921984b5c61d.txt\r\n",
+     "STOR 5f02c0b31619402bb25bf97f41b8d9c6.txt\r\n",
+     "STOR 6095b4d173c3464cb5abd0fad8bac8b9.txt\r\n",
+     "STOR 61ef2756a19b49c598efd0e102bb07fe.txt\r\n",
+     "STOR 62342429fc2d4207aad455c628aa83b7.txt\r\n",
+     "STOR 62885bde76454573a31cc8748005df1d.txt\r\n",
+     "STOR 6475c7108580434bb59378bffc74c36c.txt\r\n",
+     "STOR 64c193c617764a56953c190c192ddce3.txt\r\n",
+     "STOR 655af31b7647497a824d923e6f4ef9cb.txt\r\n",
+     "STOR 66133e870a9344bcb8d838ae81ddc0be.txt\r\n",
+     "STOR 6652bc89f9144d1f93e5dd9ea47da8fd.txt\r\n",
+     "STOR 665df0b8c3194e078094d4f618d6118d.txt\r\n",
+     "STOR 668a8fadfca8411d8d67e0f24220dae9.txt\r\n",
+     "STOR 66f7f434a1604151a8370b84abb20cc1.txt\r\n",
+     "STOR 67600d8fcd144b47b58b5445599dc929.txt\r\n",
+     "STOR 69086bc96949412ab48e4af0981c431b.txt\r\n",
+     "STOR 691b533c09e046a0b879e5fae733cfac.txt\r\n",
+     "STOR 694ade965b1748349b8b9d81e25a006b.txt\r\n",
+     "STOR 6977082421ba44cc843ecc87bb356a0c.txt\r\n",
+     "STOR 69c8296cd89842cc85b67e5072c273b0.txt\r\n",
+     "STOR 6cb2fd31a36e4cedbbfd68c4e03b9fdf.txt\r\n",
+     "STOR 6a0395b17b10469a843acd6edbaa4415.txt\r\n",
+     "STOR 6a5676f5a82348008f384eb37a9b573a.txt\r\n",
+     "STOR 6b65a5a9b766405ebcdcb50ff2759961.txt\r\n",
+     "STOR 6b7d44e9a3294f3abb26c50b86da97e4.txt\r\n",
+     "STOR 6b94b51a6b894781a07a8f3241eebff1.txt\r\n",
+     "STOR 6c7bb5d5bc964c20a4d7a6105815cfb7.txt\r\n",
+     "STOR 6d4cbd3ac23c4817b593c77c4e51cbe3.txt\r\n",
+     "STOR 6d724b19b8c04d77a62c8b92eccd25dc.txt\r\n",
+     "STOR 6db54b121ceb4c238efd9bea2507bd86.txt\r\n",
+     "STOR 6ee624d217ff4f1797fef67a7deada33.txt\r\n",
+     "STOR 6f705ea06e194ba388d1b4f422651275.txt\r\n",
+     "STOR 6fb953481d77487b88c5358c43d69fd2.txt\r\n",
+     "STOR 73b1458e0f8842c7b9d7fb028fde53ac.txt\r\n",
+     "STOR 702c9e5a11d34331a01b8dd06cf436e8.txt\r\n",
+     "STOR 7076c6bbf8824ed0b90c270f38c7aa8e.txt\r\n",
+     "STOR 70ded038db4d4d368e95fa1d35807fb4.txt\r\n",
+     "STOR 728d31ad943949d79913767199e796cd.txt\r\n",
+     "STOR 743336a2ff6140ecb18ed6b24368f2d3.txt\r\n",
+     "STOR 743f9a0d720a4527a885eaae72b083a2.txt\r\n",
+     "STOR 7544813a03b64c69b6a0c13f9a19039e.txt\r\n",
+     "STOR 756a2542b44f4017a6ce09e675060e3e.txt\r\n",
+     "STOR 75765f037200403aa97fec6aab72f940.txt\r\n",
+     "STOR 772aa78e3a4b48f2a752a6fe1d4da79c.txt\r\n",
+     "STOR 773a1d78117e457eb0a6451e6ce36dd3.txt\r\n",
+     "STOR 78082b19b7414597a30279fff4192a5e.txt\r\n",
+     "STOR 7824cb93469043c5aaabad2ca9047fd4.txt\r\n",
+     "STOR 7842641d932c4d40978caca1d3a5d23a.txt\r\n",
+     "STOR 78ddc3f260914172b5c521f6df292065.txt\r\n",
+     "STOR 7a9bb2fbd27848d285286fc9da3b8340.txt\r\n",
+     "STOR 7b8b12cbfc7e4580aa4b0ab680408e5d.txt\r\n",
+     "STOR 7bc7a931bbcd48da9dac9c8cabac01bb.txt\r\n",
+     "STOR 7c1748e6d704495caf3fa5db78700ed2.txt\r\n",
+     "STOR 7c73dace1f7744358d801d3a987ac58f.txt\r\n",
+     "STOR 7d49760e784a453dbb39bb74705cd4ff.txt\r\n",
+     "STOR 7d8ba47d20964f8190d3567e934dd6ff.txt\r\n",
+     "STOR 7dcfa6d4630d4a45834e470225565ce0.txt\r\n",
+     "STOR 7f2266003700436094f4a89f1e5dc162.txt\r\n",
+     "STOR 7f90b328e2e94d17b2f04dcc3bb66a9b.txt\r\n",
+     "STOR 7ffede574bc1482ca133f89c04d3c2cc.txt\r\n",
+     "STOR 83b9a72a89aa4e6695e622b2fdf29aee.txt\r\n",
+     "STOR 83b31353ec7546bc86ea734e3c69aab9.txt\r\n",
+     "STOR 81366b4c8e4d460fb8e273a85048d359.txt\r\n",
+     "STOR 817245d1eff94fb5ad39caa03feb0240.txt\r\n",
+     "STOR 82443f4219874fc197718d6be66c2ce8.txt\r\n",
+     "STOR 8271730e23d946afbea418332c7898ae.txt\r\n",
+     "STOR 834746c59ed94b53b34b9d80d07104a3.txt\r\n",
+     "STOR 842ed533d68344acb3b15930c2a1d094.txt\r\n",
+     "STOR 84cc6f95b0a54ce6a8a13cf3972de464.txt\r\n",
+     "STOR 85b7adab652440e2b918abde48956ba3.txt\r\n",
+     "STOR 871d0517df444498b93b1189bee5c42c.txt\r\n",
+     "STOR 8866a312d1bc4e458321bc593c8ff85c.txt\r\n",
+     "STOR 88bac8fff6064faa866907aeb3370c4b.txt\r\n",
+     "STOR 8986e3ad91f04409b21205d97a8dc698.txt\r\n",
+     "STOR 89d6b97fbd0e4021834be9f04be17113.txt\r\n",
+     "STOR 8a4570e31b174eb99f4e4a748e8c332b.txt\r\n",
+     "STOR 8b0c83bfc4ca45dcaf0d0621f5c42f1f.txt\r\n",
+     "STOR 8bad0aa37c2241fe8e978c4866ec12cb.txt\r\n",
+     "STOR 8c0b6616369f42d9a4c88cdd560b4e09.txt\r\n",
+     "STOR 8c75c20b976e4d90846003bbd7c17f81.txt\r\n",
+     "STOR 8d2a6313058a4feea1ebc8fb7be1726a.txt\r\n",
+     "STOR 8e151a2411bd4625a1ac991c5adf5b9a.txt\r\n",
+     "STOR 8fa9a5904f504ff794651a0fdd044e71.txt\r\n",
+     "STOR 93a07776b8434b36bee09fb456c5cf1b.txt\r\n",
+     "STOR 90f2737fc5a642deabf2e13f58ccbdc1.txt\r\n",
+     "STOR 91543a6a500240c3a94a1a760df23a4f.txt\r\n",
+     "STOR 92a73cab9f374ae5ad1b510aa2d72f98.txt\r\n",
+     "STOR 92f3e4336b4f49c994490d88064eddf6.txt\r\n",
+     "STOR 9351fb52b745413499a5177159ef4db3.txt\r\n",
+     "STOR 94339c9825744126a0b4527d35e19441.txt\r\n",
+     "STOR 946072efc01f49b0822e5af71203ad4e.txt\r\n",
+     "STOR 955c1e148927410abd2296731de24d18.txt\r\n",
+     "STOR 9567ea517492413e847e743c06423922.txt\r\n",
+     "STOR 9593833ee4a046319e5c2fb8ea05e416.txt\r\n",
+     "STOR 96549108e7134705a751880721b80369.txt\r\n",
+     "STOR 96a25a92f4194ee08b2392bb2f32561a.txt\r\n",
+     "STOR 96bc80e7dbeb46deb642ed8cf6f259b6.txt\r\n",
+     "STOR 96f19c799e8c400ea41b5c6712bd2824.txt\r\n",
+     "STOR 9798f1b079114f78a492e46c0fc23f8c.txt\r\n",
+     "STOR 97917ea694224b21914a1a75301be8bb.txt\r\n",
+     "STOR 9835a89e2a194fd8857180bf7bc3cd09.txt\r\n",
+     "STOR 98ede765739243e99c338ee7f3d2346b.txt\r\n",
+     "STOR 993e6b38193a4d309a01ca356df3d189.txt\r\n",
+     "STOR 9a3410d3ce78480b8ff2b1b9c0eed9fc.txt\r\n",
+     "STOR 9b60deca2acb4f4092e1f74081dc1c86.txt\r\n",
+     "STOR 9c0c42e479fd46e88f59b1f3de5768f3.txt\r\n",
+     "STOR 9c3a079632824085a74436de10217328.txt\r\n",
+     "STOR 9d50a529940042aa9c73439a760baaf5.txt\r\n",
+     "STOR 9d7ecb44353040f08fbde2053960e620.txt\r\n",
+     "STOR 9df9e1c1dc96426b8e988b68645f1300.txt\r\n",
+     "STOR 9e805a9617a8466faea252233eab7c45.txt\r\n",
+     "STOR 9eb50c42e2b34d94895da6d7f8aaf559.txt\r\n",
+     "STOR 9f63f76dcac7475fb052583a0cda5f68.txt\r\n",
+     "STOR 9f76db6b3ef0404ab78e6f5f2c2a1070.txt\r\n",
+     "STOR 9f964e53f6464492b4b361c03a875456.txt\r\n",
+     "STOR 9f91935a076e4d5d817ec3b3c456abc6.txt\r\n",
+     "STOR 03c9581c02e74867a377daee44f32889.txt\r\n",
+     "STOR 00143eeaccfe4d4980ed1a34f85f8c7f.txt\r\n",
+     "STOR 00b0f03b700b4a17aa789e8a6c5e7fa3.txt\r\n",
+     "STOR 01bbd8ba2071447eab58485dae9ec83d.txt\r\n",
+     "STOR 025432a2883448d68aeef3ab69353c12.txt\r\n",
+     "STOR 02b471263db6448db3ab5a62436bbef3.txt\r\n",
+     "STOR 02bd14980b974811aec86c94d0c4f7c1.txt\r\n",
+     "STOR 0355b67e26494e3ab8c18a43e5b518a4.txt\r\n",
+     "STOR 0379f66dd4ea4717bf01a2f00ea18125.txt\r\n",
+     "STOR 0391cff6bb54498ba7dd2fb2e90f53c5.txt\r\n",
+     "STOR 04242e388d544a27bac93ac453b791e3.txt\r\n",
+     "STOR 0473715bd9484797a040e357c543bc24.txt\r\n",
+     "STOR 04b9b52c77c84715837692480f62936e.txt\r\n",
+     "STOR 0613231afb284c418a12d7978882039f.txt\r\n",
+     "STOR 07915e22fa594e01b1e2d93f57a2e123.txt\r\n",
+     "STOR 0846fe7691624151b3b8c7c572b1e4ed.txt\r\n",
+     "STOR 08c5740c34124edb83867d4272f23b63.txt\r\n",
+     "STOR 08c3b6e0045047a4bcbe58fdb2af7d3d.txt\r\n",
+     "STOR 09e170274f7b4278856788fb080724f8.txt\r\n",
+     "STOR 09efcfbf4c8341f1b24fc1664dc706ee.txt\r\n",
+     "STOR 0ca0cb600fc04f73bd498bdf0abac9e1.txt\r\n",
+     "STOR 0cb6ce46fa314060906187fc73ca586b.txt\r\n",
+     "STOR 0a8fb438bc78463bb08f00f8186bd9ca.txt\r\n",
+     "STOR 0adabf559a964a5e8df4656853a21d0d.txt\r\n",
+     "STOR 0d0b41b3166740a6a76d4c941fbf0bbe.txt\r\n",
+     "STOR 0d2643f021944b82ad476c933544ee06.txt\r\n",
+     "STOR 0d90946b460046158b7868ea5620f9f6.txt\r\n",
+     "STOR 0ec2e3c5f5ab46ce84829a3ae85a0f7c.txt\r\n",
+     "STOR 0ee9c3a6febe4f9f95c206b688ebeed9.txt\r\n",
+     "STOR 0f1a08431afd48c89bbf4de600d883f9.txt\r\n",
+     "STOR 0f5e05dd02cb4e1ca86a63283a9a389e.txt\r\n",
+     "STOR 13d79e3bf93a4605b15386f35c7828a6.txt\r\n",
+     "STOR 10061c8c98c94193af18ffb79739a3d6.txt\r\n",
+     "STOR 1030affb80eb4efd83c1e87af8d53d02.txt\r\n",
+     "STOR 10ae41ae2ffe4c71bc8b700ff5097204.txt\r\n",
+     "STOR 121009daafe84e33ae1db198e87fcd4a.txt\r\n",
+     "STOR 17cae4f3b0114e7290317743e6087a8f.txt\r\n",
+     "STOR 14517795361147899fd56657e4217f98.txt\r\n",
+     "STOR 1460ad88f0e04defba986509b555eff1.txt\r\n",
+     "STOR 159bd44390fb425ca2bc2d7fd4469781.txt\r\n",
+     "STOR 15f1927bb210461aab3c1f09f5897283.txt\r\n",
+     "STOR 163d811ec65d442a9215a03c15be738d.txt\r\n",
+     "STOR 165e54150e3447b6a357bc3cab5c5d7c.txt\r\n",
+     "STOR 16731dc3f9764424bdb235aa27a463d4.txt\r\n",
+     "STOR 168a721af127441c985d1af3dbcf52f6.txt\r\n",
+     "STOR 173530b5056943a096ebc2770f0fd437.txt\r\n",
+     "STOR 174bc11d480b439c958b1ea44d3d7f20.txt\r\n",
+     "STOR 1841ab4cbfcf4a9aacbb6aa075f1982e.txt\r\n",
+     "STOR 1b14ebd8d09b44759bad9ec60511e1f7.txt\r\n",
+     "STOR 1be5880d9de648a689921ee8d44847db.txt\r\n",
+     "STOR 1d0a93b94ab744a1b59d34af66a04868.txt\r\n",
+     "STOR 1d6a0abaa7d84eb4ae35ec264ed287bb.txt\r\n",
+     "STOR 1d728a65ae744b2db04d393b83a68c31.txt\r\n",
+     "STOR 1edaecb6d4b0469d8c22523df2997b58.txt\r\n",
+     "STOR 209a9a72e3ec47ceb589bd02c5cb655f.txt\r\n",
+     "STOR 20fdcf3c64244703bd663395f19226ba.txt\r\n",
+     "STOR 224b5a8e82b34c72a9b92cfe73a39348.txt\r\n",
+     "STOR 224f3c6950cb4021aadfd592aa255651.txt\r\n",
+     "STOR 22d2b3f8a86c4e2ea84f7245fd99f304.txt\r\n",
+     "STOR 230dcbbc668547c0a684708caebfa172.txt\r\n",
+     "STOR 2407134c88f2423e97f5d9a020a8b179.txt\r\n",
+     "STOR 24140761e8b54680a67dbc974acadb3e.txt\r\n",
+     "STOR 25ab62b1dada414a8d3403e8d3c09f9f.txt\r\n",
+     "STOR 25cf9e32529942d790e5138fba68728a.txt\r\n",
+     "STOR 26d7b7a6b5054a87b01c20642bcfb4b9.txt\r\n",
+     "STOR 283a42df610342d38cbd5b8008631b71.txt\r\n",
+     "STOR 2972f7ef5e4c4974b7d28cf0a844e32e.txt\r\n",
+     "STOR 2cc81fcaf138438e8bda143f85eb662f.txt\r\n",
+     "STOR 2a94a5ec8f324b4680324735240ba19d.txt\r\n",
+     "STOR 2bcb968041fb40059cdaa626c93ff687.txt\r\n",
+     "STOR 2c2bc4bde3ba43fe813747089c161ae3.txt\r\n",
+     "STOR 2c4bcd683b8e4371aaca61df7ff09197.txt\r\n",
+     "STOR 2c9c887a10e54cd782e714fb093d7b1e.txt\r\n",
+     "STOR 2d1aab72105f44d795dff47d72a36fcc.txt\r\n",
+     "STOR 2dad50e2a15d4e388b5da53213509cd4.txt\r\n",
+     "STOR 2e7d8b59416a49ca9350554e68e53af3.txt\r\n",
+     "STOR 2ebce2a551e641d7ae68da05bb52ef9c.txt\r\n",
+     "STOR 2fe74a80e0e74b35865186b497efaaa4.txt\r\n",
+     "STOR 306e6fcc284b46d4bfa9c0c50a3748cc.txt\r\n",
+     "STOR 31cbab07db4f4fab903c5543a0a35868.txt\r\n",
+     "STOR 32aaca47a53d48f88ab2f9ca1002a0ba.txt\r\n",
+     "STOR 32fddd1a4d294a93b2d72dd821dc774b.txt\r\n",
+     "STOR 3418b96c154942f58fc6269bcb22aaf1.txt\r\n",
+     "STOR 3412d6958f52482886d88843dbd730cf.txt\r\n",
+     "STOR 34e1d4a971614b7181accdf9fd5a64fa.txt\r\n",
+     "STOR 35c7c13a55d94ce38ad85ee7cff50d51.txt\r\n",
+     "STOR 379989fad60a49888c5408d9df32e934.txt\r\n",
+     "STOR 38147768e2394f5885266c8cc0f4a74e.txt\r\n",
+     "STOR 38c0ee6ba94e420894852fbdc7b03526.txt\r\n",
+     "STOR 3969a1908ff54967b44aeb5f8e006fe7.txt\r\n",
+     "STOR 3cbb819eb8114388a84eb490c4c7f71d.txt\r\n",
+     "STOR 3cc80c674c584536a6b49ed5686acc01.txt\r\n",
+     "STOR 3a28f95e14624757899539bcee98a2f7.txt\r\n",
+     "STOR 3a3d8e4abeb04c85a5f7d696b81fa4aa.txt\r\n",
+     "STOR 3b0971f0195b489f8542f3b09d362614.txt\r\n",
+     "STOR 3b9d26a2985341bbbef28573a52b13c0.txt\r\n",
+     "STOR 3c3c1ed254b54b9ca1fb2217ac5db77e.txt\r\n",
+     "STOR 3d02585410af45aba84d7a08d8e5c748.txt\r\n",
+     "STOR 3d2a182969c04a52b8ca17f1489f857a.txt\r\n",
+     "STOR 3ddd6ac45d0347399099a13795967f5a.txt\r\n",
+     "STOR 3dee7cca20c449f79b4a49b12467e138.txt\r\n",
+     "STOR 3ef74a7b957f47e89fefee0b12d5b07f.txt\r\n",
+     "STOR 3fa032f34f024e4882add81cd69cd6cf.txt\r\n",
+     "STOR a3aab42294a741ba974c7fa9cb15dea1.txt\r\n",
+     "STOR a05673fa6f644100a096d2c66f73035e.txt\r\n",
+     "STOR a2806aa8ddcb47739deff90bd969e900.txt\r\n",
+     "STOR a342dccb5d2f489484ace938913b76e4.txt\r\n",
+     "STOR a39530a75b3a4a499699a2b30860d59b.txt\r\n",
+     "STOR a4de200966e6449eb3c9f4adba0500bd.txt\r\n",
+     "STOR a51a72fbf0814699b63ea5d42190bb8c.txt\r\n",
+     "STOR a5ee70e4504b4e16a9497228700eb8aa.txt\r\n",
+     "STOR a6905cb4e43547f2a2428ecf3d60cff2.txt\r\n",
+     "STOR a831c08797294d6a93e843002ade19bb.txt\r\n",
+     "STOR aa6fceb62d124e5d943eac9eaa91c209.txt\r\n",
+     "STOR aaa7a489bfe340b29093491870359751.txt\r\n",
+     "STOR aaac1facdb244afe946907695fa629ca.txt\r\n",
+     "STOR abc865cc832d44d3895385af1e656be5.txt\r\n",
+     "STOR ad75c281d7274263b80771b348056b70.txt\r\n",
+     "STOR adef9f671111499782fa3976a5315542.txt\r\n",
+     "STOR ae3739596bfd4faea6db042c73a4e249.txt\r\n",
+     "STOR ae9f650e63b24c7890da76e16f6467db.txt\r\n",
+     "STOR af9671788ba14062b434c81949e857af.txt\r\n",
+     "STOR afce63b42e6f43f4bedb6f8e07046fc1.txt\r\n",
+     "STOR b3bb2e19e03a44be8b66cd6de8f05069.txt\r\n",
+     "STOR b3cb279aade54e8897533fe684b8091b.txt\r\n",
+     "STOR b3f48fdf1b62408985dc335de9163a8a.txt\r\n",
+     "STOR b05559fda6ef4eaa885930e35b507333.txt\r\n",
+     "STOR b10df05e23b249a18200fb50d0a7d084.txt\r\n",
+     "STOR b13499e8b72146529382c230086a2263.txt\r\n",
+     "STOR b19254af9daa4c3db494270387fe6b77.txt\r\n",
+     "STOR b1eaab1f47124078928aa5376a22dfaa.txt\r\n",
+     "STOR b2586178c792474687bdbacf18504342.txt\r\n",
+     "STOR b251281ba04f48e2995b39fd979fb4b3.txt\r\n",
+     "STOR b265916395c24780b825bb66dcf4b88a.txt\r\n",
+     "STOR b2d8b583c14b410cac70d93c9205a273.txt\r\n",
+     "STOR b30f55f63947429ebde31ad35d2d4e12.txt\r\n",
+     "STOR b311d2ec742d4d35b47d9a1ddca783b1.txt\r\n",
+     "STOR b32751c13a2041628268806d2813520c.txt\r\n",
+     "STOR b350ddd734c244679e4a9f27d77e06aa.txt\r\n",
+     "STOR b35d2eca5b574041b5dcdccdcf590a5b.txt\r\n",
+     "STOR b38e115c8d834e00bf0089787a0f0a0a.txt\r\n",
+     "STOR b4146eb687fe4ca581f5157257923fd1.txt\r\n",
+     "STOR b4249382e9a845269c7521488513d6f7.txt\r\n",
+     "STOR b488f20fbd5143a1bf9800243bf02560.txt\r\n",
+     "STOR b5c7aaf9419642af85e2859e62ea3b49.txt\r\n",
+     "STOR b617b34189494d2b81921ccf4b667f5f.txt\r\n",
+     "STOR b63b399851e04ba5a1bb1a0608580b1c.txt\r\n",
+     "STOR b65cc16f67da41ac9d0653cd42fe786a.txt\r\n",
+     "STOR b796bb7cda734d5fb5472bc81743a6d1.txt\r\n",
+     "STOR b999c2e7080c4bad8a513b039f34fcc7.txt\r\n",
+     "STOR bccc4a55b7894ef0a9ee7d0eb5ea2e18.txt\r\n",
+     "STOR ba862bb5223e457283032ed6da1b20f6.txt\r\n",
+     "STOR bac0251072f841d9b0fd29bf07f32e4d.txt\r\n",
+     "STOR bb4efa7e377f40d2ba8ec5f6f78a3b6d.txt\r\n",
+     "STOR beb36082b9c142aa836d7e0193e0a64f.txt\r\n",
+     "STOR bf912b180413450bb6994f2f851ccbf9.txt\r\n",
+     "STOR c1962a3c965349c3866ccab1fe0519ae.txt\r\n",
+     "STOR c1fee323a64e40db9218c58c36dde619.txt\r\n",
+     "STOR c275b3e0cc514eba88ce035ecfb97fd4.txt\r\n",
+     "STOR c7e098387b4d41e092dd9726aa2a5cb4.txt\r\n",
+     "STOR c471e70dd10b4f4486c7d1daaab53fae.txt\r\n",
+     "STOR c4a34d69673442d4b7eae84eed44cb27.txt\r\n",
+     "STOR c4d224fc61d84294b397b8ef1132937b.txt\r\n",
+     "STOR c5019cde9cf04e08ac9636378b3f5667.txt\r\n",
+     "STOR c54048f82b11437290a78c32d60ef815.txt\r\n",
+     "STOR c5dadce0152b4283aaeb50db449642c2.txt\r\n",
+     "STOR c6581d1ede6e480fa21232606e1b5950.txt\r\n",
+     "STOR c70b353e82d747d9b8eddbe0bf535c15.txt\r\n",
+     "STOR c8aa090714b748a5914c781b24e3f307.txt\r\n",
+     "STOR c951c099d3f44f5ba708aa8a65af47dd.txt\r\n",
+     "STOR c970aaa63e2f45f9b5bb75a12cfd34c5.txt\r\n",
+     "STOR cb6e34f7d0c2414781c53622d76e675d.txt\r\n",
+     "STOR cd50e98affee443aa0f7113a1564d5d6.txt\r\n",
+     "STOR cd7057f9a1a645a6b00d86a29a04c655.txt\r\n",
+     "STOR cd9aa9a5f5d94f3f8cb90817b6354655.txt\r\n",
+     "STOR ce75bd9590ac467c9f7a3cc83a11aa31.txt\r\n",
+     "STOR d3f519fe1da64a19a57bc16a8ef022a5.txt\r\n",
+     "STOR d3feda59aa7c40eab1430f9b02f092ff.txt\r\n",
+     "STOR d0df72499241402d92cc48e8e1126450.txt\r\n",
+     "STOR d1b399661220450f91cb1be3fa87bcc1.txt\r\n",
+     "STOR d1d7d5ebf2b24b7d9673793b53ceec75.txt\r\n",
+     "STOR d210af257a1442229571de19b04bd42d.txt\r\n",
+     "STOR d223ca16a6b0455484d40e7ecd9f0019.txt\r\n",
+     "STOR d2e7da8e7a9c4755b8467d9cf5bff3cd.txt\r\n",
+     "STOR d35884f38deb4368be515530837419a7.txt\r\n",
+     "STOR d48dd98ed4764f018a3b5faa007bef4f.txt\r\n",
+     "STOR d548d8bca0784f538e82f1fa7e7c87fa.txt\r\n",
+     "STOR d94a9dade2194c43971e097de1d083ac.txt\r\n",
+     "STOR d98c8c154cc94533a2b98793deaa4078.txt\r\n",
+     "STOR dadccd39dfc44cfd8cc63671efe00f87.txt\r\n",
+     "STOR dafedaedce5c4f11b4350bb2c26d18a6.txt\r\n",
+     "STOR db8023f891ff4fe1b80c6fd22f4201d7.txt\r\n",
+     "STOR dc3cdd4c200a45d09845f36f7b939339.txt\r\n",
+     "STOR dd36370b6155488ea222b4872c044fb9.txt\r\n",
+     "STOR ddb586d4432d40b9a4ada276f22f98c6.txt\r\n",
+     "STOR de50f3ae03f142018d751b9cee652552.txt\r\n",
+     "STOR dee134e4033740988f250b266a9ffaf0.txt\r\n",
+     "STOR df755adfc5fc4b4886a04fe602c12ea0.txt\r\n",
+     "STOR e098dd62f2874d5eb8f9a325993d63e0.txt\r\n",
+     "STOR e12fab90492a4b9aacaa98c3f7faafe0.txt\r\n",
+     "STOR e1dfd1b2c858417fa900d03f790ff441.txt\r\n",
+     "STOR e20145694bde41dcb58a387a2885ec7d.txt\r\n",
+     "STOR e258a77f741a46029d4d327c835f6e10.txt\r\n",
+     "STOR e308c496181046918c94a9059fe8185b.txt\r\n",
+     "STOR e30f28b8d61245199b4c7233d1827d87.txt\r\n",
+     "STOR e314b67851eb4cc6bfc1a4eadcda11a8.txt\r\n",
+     "STOR e328e8f56eb041cabb576256c018da11.txt\r\n",
+     "STOR e32ff95643b4494e91d6e1746f1ad1d8.txt\r\n",
+     "STOR e357f914700444f0ba434c0cdc6a84c1.txt\r\n",
+     "STOR e7a0c7aa6bae48b29b47fd8107ead6ec.txt\r\n",
+     "STOR e7d2f6c7c22147278171e20780b54867.txt\r\n",
+     "STOR e4774a4df953470793835e40dc941b5b.txt\r\n",
+     "STOR e4a6713f2aad44b6b9d19be53c5bf3fe.txt\r\n",
+     "STOR e60a3b45ba1041f19f5f1643fc2fae17.txt\r\n",
+     "STOR e66b6aade7a1429e943329226c34bbae.txt\r\n",
+     "STOR e6aae596e42c47829dae48ad42a63203.txt\r\n",
+     "STOR e6af769a7de347719abdbeb236d0161e.txt\r\n",
+     "STOR e81fe0479adf4b30920b39fc8d3d2d0c.txt\r\n",
+     "STOR e8b3866c23f145299ea3481c09594f6a.txt\r\n",
+     "STOR ebc9ef92ccff4f5abc26c8d4e885b0c6.txt\r\n",
+     "STOR ec5e9db89a6d41d29b71c047321ce60a.txt\r\n",
+     "STOR ed8d50ddca0a4a96bf2b7f9cde860cc6.txt\r\n",
+     "STOR ee69d66fda4043a78d5aa614ac53d146.txt\r\n",
+     "STOR ef38de57fa9340bbbd1858b8ebb278b1.txt\r\n",
+     "STOR f0f66409b8924e469ef99f2deefebf04.txt\r\n",
+     "STOR f14c4beb52f147719789c77b24ac7ecc.txt\r\n",
+     "STOR f25e1ffa5cae4a21b55a80278fc03373.txt\r\n",
+     "STOR f2ebbdad45314404b15726bdaff932a8.txt\r\n",
+     "STOR f38b7c36fea4492a8236386c81500969.txt\r\n",
+     "STOR f41d11b6990748249b96aa39a6f4b392.txt\r\n",
+     "STOR f993e91694e746abbe2643dd7f61da5c.txt\r\n",
+     "STOR f99b788ca4f64899b67a1af26e8e9a54.txt\r\n",
+     "STOR f9de5ec4e4a14afdbd391db25f3a8407.txt\r\n",
+     "STOR fa9e0e0c97fc48c08e1aa50230d40dc7.txt\r\n",
+     "STOR fb468eca795940caa89f03c31e135021.txt\r\n",
+     "STOR fb4a16d2d0a44b2fbab9ea82321f75bb.txt\r\n",
+     "STOR fbfa81dbf5104602a782ae9e979f0d41.txt\r\n",
+     "STOR fc86364b45c842ffb028e17ab3367c2a.txt\r\n",
+     "STOR fdc1f981377c486db2d3610809bc8b73.txt\r\n",
+     "STOR fdd9464788414a2fb7b8f4aae4e0a5f2.txt\r\n",
+     "STOR fe330e89c168488db9f5ea98893c8a23.txt\r\n",
+     "STOR feec1f0847994530ab025f72bff461b7.txt\r\n"
+    ]
+   },
+   "p": 0.8997821350762527,
+   "count": 413,
+   "src": 22,
+   "dst": 9,
+   "symbol": "AP_>_Text:STOR",
+   "mu": [
+    0.024213075060532687,
+    43.0
+   ],
+   "cov": [
+    [
+     0.04310262439173445,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  }
+ ],
+ "noise": {
+  "none": 0.9990103908955963,
+  "deletion": 8.246742536698004e-05,
+  "reemission": 8.246742536698004e-05,
+  "transposition": 0.0007422068283028202,
+  "addition": 8.246742536698004e-05
+ },
+ "initial_state": 0,
+ "accepting_state": 12,
+ "protocol": "tcp",
+ "metadata": {
+  "service": "ftp",
+  "conn_state": "SF",
+  "input_file": "cicids17-train",
+  "creation_time": "2026-01-16 06:51:20.851132"
+ }
+}

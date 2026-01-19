@@ -1,0 +1,1860 @@
+{
+ "edges": [
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 1.0,
+   "count": 457,
+   "src": 0,
+   "dst": 1,
+   "symbol": "S_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 1.0,
+   "count": 457,
+   "src": 1,
+   "dst": 2,
+   "symbol": "SA_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 1.0,
+   "count": 457,
+   "src": 2,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.014112903225806451,
+   "count": 7,
+   "src": 5,
+   "dst": 6,
+   "symbol": "FA_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.8905908096280087,
+   "count": 407,
+   "src": 6,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.4824945295404814,
+   "count": 441,
+   "src": 3,
+   "dst": 7,
+   "symbol": "$",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "nal records, being exposed through loss or theft of laptops or backup drives. Encrypting such files at rest helps protect them should physical security measures fail. Digital rights management systems, which prevent unauthorized use or reproduction of copyrighted material and protect software against reverse engineering (see also copy protection), is another somewhat different example of using encryption on data at rest.[7]\r\n\r\nIn response to encryption of data at rest, cyber-adversaries have developed new types of attacks. These more recent threats to encryption of data at rest include cryptographic attacks,[8] stolen ciphertext attacks,[9] attacks on encryption keys,[10] insider attacks, data corruption or integrity attacks,[11] data destruction attacks, and ransomware attacks. Data fragmentation[12] and active defense[13] data protection technologies attempt to counter some of these attacks, by distributing, moving, or mutating ciphertext so it is more difficult to identify, steal, corrupt, or destroy.[14]\r\n\r\nEncryption is also used to protect data in transit, for example data being transferred via networks (e.g. the Internet, e-commerce), mobile telephones, wireless microphones, wireless intercom systems, Bluetooth devices and bank automatic teller machines. There have been numerous reports of data in transit being intercepted in recent years.[15] Data should also be encrypted when transmitted across networks in order to "
+    ]
+   },
+   "p": 0.9760765550239234,
+   "count": 204,
+   "src": 8,
+   "dst": 9,
+   "symbol": "A_>_Text:nal",
+   "mu": [
+    0.0,
+    1448.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.07258064516129033,
+   "count": 36,
+   "src": 5,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.0437636761487965,
+   "count": 20,
+   "src": 6,
+   "dst": 5,
+   "symbol": "FA_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "protect against eavesdropping of network traffic by unauthorized users.[16]\r\nMessage verification\r\n\r\nEncryption, by itself, can protect the confidentiality of messages, but other techniques are still needed to protect the integrity and authenticity of a message; for example, verification of a message authentication code (MAC) or a digital signature. Standards for cryptographic software and hardware to perform encryption are widely available, but successfully using encryption to ensure security may be a challenging problem. A single error in system design or execution can allow successful attacks. Sometimes an adversary can obtain unencrypted information without directly undoing the encryption. See, e.g., traffic analysis, TEMPEST, or Trojan horse.[17]\r\n\r\nDigital signature and encryption must be applied to the ciphertext when it is created (typically on the same device used to compose the message) to avoid tampering; otherwise any node between the sender and the encryption agent could potentially tamper with it. Encrypting at the time of creation is only secure if the encryption device itself has not been tampered with.\r\nSee also\r\n\r\n    iconCryptography portal \r\n\r\n    Substitution cipher\r\n    Rotor cipher machines\r\n    Brute-force attack\r\n    Cold boot attack\r\n    Export of cryptography\r\n    Cyberspace Electronic Security Act (in the US)\r\n    Disk encryption\r\n    Key management\r\n    Physical Layer Encryption\r\n    Geo-Blocking"
+    ]
+   },
+   "p": 0.0970873786407767,
+   "count": 20,
+   "src": 9,
+   "dst": 10,
+   "symbol": "A_>_Text:protect",
+   "mu": [
+    0.0,
+    1448.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "\r\n    Television encryption\r\n    Active defense\r\n\r\nReferences\r\n\r\nSymmetric-key encryption software\r\nBellare, Mihir. \"Public-Key Encryption in a Multi-user Setting: Security Proofs and Improvements.\" Springer Berlin Heidelberg, 2000. Page 1.\r\n\"Public-Key Encryption - how GCHQ got there first!\". gchq.gov.uk. Archived from the original on May 19, 2010.\r\nGoldreich, Oded. Foundations of Cryptography: Volume 2, Basic Applications. Vol. 2. Cambridge university press, 2004.\r\n\"Symantec buys encryption specialist PGP for $300M\". Computerworld. 2010-04-29. Retrieved 2010-04-29.\r\nRobert Richardson, 2008 CSI Computer Crime and Security Survey at 19.i.cmpnet.com\r\n\"DRM\". Electronic Frontier Foundation.\r\nDiscussion of encryption weaknesses for petabyte scale datasets: http://www.ssrc.ucsc.edu/Papers/li-fast13.pdf\r\n\"The Padding Oracle Attack - why crypto is terrifying\". Robert Heaton. Retrieved 2016-12-25.\r\n\"Researchers crack open unusually advanced malware that hid for 5 years\". Ars Technica. Retrieved 2016-12-25.\r\n\"New cloud attack takes full control of virtual machines with little effort\". Ars Technica. Retrieved 2016-12-25.\r\nExamples of data fragmentation technologies include Tahoe-LAFS and Storj.\r\nBurshteyn, Mike (2016-12-22). \"What does 'Active Defense' mean?\". CryptoMove. Retrieved 2016-12-25.\r\nCryptoMove is the first technology to continuously move, mutate, and re-encrypt ciphertext as a form of data protection.\r\nFiber Optic Networks"
+    ]
+   },
+   "p": 1.0,
+   "count": 20,
+   "src": 10,
+   "dst": 11,
+   "symbol": "A_>_Text:Television",
+   "mu": [
+    0.0,
+    1448.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.04032258064516129,
+   "count": 18,
+   "src": 5,
+   "dst": 5,
+   "symbol": "FA_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.005470459518599562,
+   "count": 5,
+   "src": 3,
+   "dst": 6,
+   "symbol": "FA_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.010940919037199124,
+   "count": 5,
+   "src": 6,
+   "dst": 7,
+   "symbol": "$",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "CQ0KRW5jcnlwdGlvbg0KRnJvbSBXaWtpcGVkaWEsIHRoZSBmcmVlIGVuY3ljbG9wZWRpYQ0KIkVuY3J5cHQiIHJlZGlyZWN0cyBoZXJlLiBGb3IgdGhlIGZpbG0sIHNlZSBFbmNyeXB0IChmaWxtKS4NClRoaXMgYXJ0aWNsZSBpcyBhYm91dCBhbGdvcml0aG1zIGZvciBlbmNyeXB0aW9uIGFuZCBkZWNyeXB0aW9uLiBGb3IgYW4gb3ZlcnZpZXcgb2YgY3J5cHRvZ3JhcGhpYyB0ZWNobm9sb2d5IGluIGdlbmVyYWwsIHNlZSBDcnlwdG9ncmFwaHkuDQoNCkluIGNyeXB0b2dyYXBoeSwgZW5jcnlwdGlvbiBpcyB0aGUgcHJvY2VzcyBvZiBlbmNvZGluZyBhIG1lc3NhZ2Ugb3IgaW5mb3JtYXRpb24gaW4gc3VjaCBhIHdheSB0aGF0IG9ubHkgYXV0aG9yaXplZCBwYXJ0aWVzIGNhbiBhY2Nlc3MgaXQuIEVuY3J5cHRpb24gZG9lcyBub3Qgb2YgaXRzZWxmIHByZXZlbnQgaW50ZXJmZXJlbmNlLCBidXQgZGVuaWVzIHRoZSBpbnRlbGxpZ2libGUgY29udGVudCB0byBhIHdvdWxkLWJlIGludGVyY2VwdG9yLiBJbiBhbiBlbmNyeXB0aW9uIHNjaGVtZSwgdGhlIGludGVuZGVkIGluZm9ybWF0aW9uIG9yIG1lc3NhZ2UsIHJlZmVycmVkIHRvIGFzIHBsYWludGV4dCwgaXMgZW5jcnlwdGVkIHVzaW5nIGFuIGVuY3J5cHRpb24gYWxnb3JpdGhtLCBnZW5lcmF0aW5nIGNpcGhlcnRleHQgdGhhdCBjYW4gb25seSBiZSByZWFkIGlmIGRlY3J5cHRlZC4gRm9yIHRlY2huaWNhbCByZWFzb25zLCBhbiBlbmNyeXB0aW9uIHNjaGVtZSB1c3VhbGx5IHVzZXMgYSBwc2V1ZG8tcmFuZG9tIGVuY3J5cHRpb24ga2V5IGdlbmVyYXRlZCBieSBhbiBhbGdvcml0aG0uIEl0IGlzIGluIHByaW5jaXBsZSBwb3NzaWJsZSB0byBkZWNyeXB0IHRoZSBtZXNzYWdlIHdpdGhvdXQgcG9zc2Vzc2luZyB0aGUga2V5LCBidXQsIGZvciBhIHdlbGwtZGVzaWduZWQgZW5jcnlwdGlvbiBzY2hlbWUsIGNvbnNpZGVyYWJsZSBjb21wdXRhdGlvbmFsIHJlc291cmNlcyBhbmQgc2tpbGxzIGFyZSByZXF1aXJlZC4gQW4gYXV0aG9yaXplZCByZWNpcGllbnQgY2FuIGVhc2lseSBkZWNyeXB0IHRoZSBtZXNzYWdlIHdpdGggdGhlIGtleSBwcm92aWRlZCBieSB0aGUgb3JpZ2luYXRvciB0byByZWNpcGllbnRzIGJ1dCBub3QgdG8gdW5hdXRob3JpemVkIHVzZXJzLg0KDQpDb250ZW50cw0KDQogICAgMSBUeXBlcw0KICAgICAgICAxLjEgU3ltbWV0cmljIGtleSAvIFByaXZhdGUga2V5DQogICAgICAgIDEuMiBQdWJsaWMga2V5DQogICAgMiBVc2VzDQogICAgICAgIDIuMSBNZXNzYWdlIHZlcmlmaWNhdGlvbg0KICAgIDMgU2VlIGFsc28NCiAgICA0IFJlZmVyZW5jZXMNCiAgICA1IEZ1cnRoZXIgcmVhZGluZw0KDQpUeXBlcw0KU3ltbWV0cmljIGtleSAvIFByaXZhdGUga2V5DQoNCkluIHN5bW1ldHJpYy1rZXkgc2NoZW1lcyxbMV0gdGhlIGVuY3J5cHRpb24gYW5kIGRlY3J5cHRpb24ga2V5cyBhcmUgdGhlIHNhbWUuIENvbW11bmk="
+    ]
+   },
+   "p": 0.23522975929978118,
+   "count": 215,
+   "src": 3,
+   "dst": 12,
+   "symbol": "A_>_Replay",
+   "mu": [
+    77.93023255813954,
+    1460.0
+   ],
+   "cov": [
+    [
+     46883.11193318865,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "OiAwMDU2MDI1MiANCg0KQ2F0ZWdvcmllczoNCg0KICAgIENyeXB0b2dyYXBoeQ0KDQpOYXZpZ2F0aW9uIG1lbnUNCg0KICAgIE5vdCBsb2dnZWQgaW4NCiAgICBUYWxrDQogICAgQ29udHJpYnV0aW9ucw0KICAgIENyZWF0ZSBhY2NvdW50DQogICAgTG9nIGluDQoNCiAgICBBcnRpY2xlDQogICAgVGFsaw0KDQogICAgUmVhZA0KICAgIEVkaXQNCiAgICBWaWV3IGhpc3RvcnkNCg0KU2VhcmNoDQoNCiAgICBNYWluIHBhZ2UNCiAgICBDb250ZW50cw0KICAgIEZlYXR1cmVkIGNvbnRlbnQNCiAgICBDdXJyZW50IGV2ZW50cw0KICAgIFJhbmRvbSBhcnRpY2xlDQogICAgRG9uYXRlIHRvIFdpa2lwZWRpYQ0KICAgIFdpa2lwZWRpYSBzdG9yZQ0KDQpJbnRlcmFjdGlvbg0KDQogICAgSGVscA0KICAgIEFib3V0IFdpa2lwZWRpYQ0KICAgIENvbW11bml0eSBwb3J0YWwNCiAgICBSZWNlbnQgY2hhbmdlcw0KICAgIENvbnRhY3QgcGFnZQ0KDQpUb29scw0KDQogICAgV2hhdCBsaW5rcyBoZXJlDQogICAgUmVsYXRlZCBjaGFuZ2VzDQogICAgVXBsb2FkIGZpbGUNCiAgICBTcGVjaWFsIHBhZ2VzDQogICAgUGVybWFuZW50IGxpbmsNCiAgICBQYWdlIGluZm9ybWF0aW9uDQogICAgV2lraWRhdGEgaXRlbQ0KICAgIENpdGUgdGhpcyBwYWdlDQoNClByaW50L2V4cG9ydA0KDQogICAgQ3JlYXRlIGEgYm9vaw0KICAgIERvd25sb2FkIGFzIFBERg0KICAgIFByaW50YWJsZSB2ZXJzaW9uDQoNCkluIG90aGVyIHByb2plY3RzDQoNCiAgICBXaWtpbWVkaWEgQ29tbW9ucw0KDQpMYW5ndWFnZXMNCg0KICAgIEFmcmlrYWFucw0KICAgID8/Pz8/Pz8NCiAgICBBej9yYmF5Y2FuY2ENCiAgICA/Pz8/Pw0KICAgID8/Pz8/Pz8/Pw0KICAgIEJvc2Fuc2tpDQogICAgQ2F0YWzgDQogICAgRGFuc2sNCiAgICBEZXV0c2NoDQogICAgRWVzdGkNCiAgICBFc3Bh8W9sDQogICAgRXNwZXJhbnRvDQogICAgPz8/Pz8NCiAgICBGcmFu52Fpcw0KICAgIEdhZWlsZ2UNCiAgICA/Pz8NCiAgICA/Pz8/Pz8NCiAgICBIcnZhdHNraQ0KICAgIEJhaGFzYSBJbmRvbmVzaWENCiAgICBJc2lYaG9zYQ0KICAgIM1zbGVuc2thDQogICAgPz8/Pz8/Pw0KICAgID8/Pz8/Pz8NCiAgICBMaW5n4WxhDQogICAgTWFneWFyDQogICAgPz8/Pz8/Pz8/Pw0KICAgIEJhaGFzYSBNZWxheXUNCiAgICBOZWRlcmxhbmRzDQogICAgPz8/DQogICAgTm9yc2sgbnlub3Jzaw0KICAgIE8/emJla2NoYS8/Pz8/Pz8/DQogICAgUG9ydHVndepzDQogICAgUm9t4m5hDQogICAgPz8/Pz8/Pw0KICAgID8/Pz8/DQogICAgU2ltcGxlIEVuZ2xpc2gNCiAgICBTbG92ZW6aY2luYQ0KICAgID8/Pz8/PyAvIHNycHNraQ0KICAgIFNycHNrb2hydmF0c2tpIC8gPz8/Pz8/Pz8/Pz8/Pz8NCiAgICBCYXNhIFN1bmRhDQogICAgU3VvbWkNCiAgICBTdmVuc2thDQogICAgVGFnYWxvZw0KICAgID8/Pz8/DQogICAgPz8/Pz8/DQogICAgPz8="
+    ]
+   },
+   "p": 0.00437636761487965,
+   "count": 2,
+   "src": 6,
+   "dst": 12,
+   "symbol": "A_>_Replay",
+   "mu": [
+    0.0,
+    1448.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.4529058116232465,
+   "count": 226,
+   "src": 12,
+   "dst": 5,
+   "symbol": "FA_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "CQ0KRW5jcnlwdGlvbg0KRnJvbSBXaWtpcGVkaWEsIHRoZSBmcmVlIGVuY3ljbG9wZWRpYQ0KIkVuY3J5cHQiIHJlZGlyZWN0cyBoZXJlLiBGb3IgdGhlIGZpbG0sIHNlZSBFbmNyeXB0IChmaWxtKS4NClRoaXMgYXJ0aWNsZSBpcyBhYm91dCBhbGdvcml0aG1zIGZvciBlbmNyeXB0aW9uIGFuZCBkZWNyeXB0aW9uLiBGb3IgYW4gb3ZlcnZpZXcgb2YgY3J5cHRvZ3JhcGhpYyB0ZWNobm9sb2d5IGluIGdlbmVyYWwsIHNlZSBDcnlwdG9ncmFwaHkuDQoNCkluIGNyeXB0b2dyYXBoeSwgZW5jcnlwdGlvbiBpcyB0aGUgcHJvY2VzcyBvZiBlbmNvZGluZyBhIG1lc3NhZ2Ugb3IgaW5mb3JtYXRpb24gaW4gc3VjaCBhIHdheSB0aGF0IG9ubHkgYXV0aG9yaXplZCBwYXJ0aWVzIGNhbiBhY2Nlc3MgaXQuIEVuY3J5cHRpb24gZG9lcyBub3Qgb2YgaXRzZWxmIHByZXZlbnQgaW50ZXJmZXJlbmNlLCBidXQgZGVuaWVzIHRoZSBpbnRlbGxpZ2libGUgY29udGVudCB0byBhIHdvdWxkLWJlIGludGVyY2VwdG9yLiBJbiBhbiBlbmNyeXB0aW9uIHNjaGVtZSwgdGhlIGludGVuZGVkIGluZm9ybWF0aW9uIG9yIG1lc3NhZ2UsIHJlZmVycmVkIHRvIGFzIHBsYWludGV4dCwgaXMgZW5jcnlwdGVkIHVzaW5nIGFuIGVuY3J5cHRpb24gYWxnb3JpdGhtLCBnZW5lcmF0aW5nIGNpcGhlcnRleHQgdGhhdCBjYW4gb25seSBiZSByZWFkIGlmIGRlY3J5cHRlZC4gRm9yIHRlY2huaWNhbCByZWFzb25zLCBhbiBlbmNyeXB0aW9uIHNjaGVtZSB1c3VhbGx5IHVzZXMgYSBwc2V1ZG8tcmFuZG9tIGVuY3J5cHRpb24ga2V5IGdlbmVyYXRlZCBieSBhbiBhbGdvcml0aG0uIEl0IGlzIGluIHByaW5jaXBsZSBwb3NzaWJsZSB0byBkZWNyeXB0IHRoZSBtZXNzYWdlIHdpdGhvdXQgcG9zc2Vzc2luZyB0aGUga2V5LCBidXQsIGZvciBhIHdlbGwtZGVzaWduZWQgZW5jcnlwdGlvbiBzY2hlbWUsIGNvbnNpZGVyYWJsZSBjb21wdXRhdGlvbmFsIHJlc291cmNlcyBhbmQgc2tpbGxzIGFyZSByZXF1aXJlZC4gQW4gYXV0aG9yaXplZCByZWNpcGllbnQgY2FuIGVhc2lseSBkZWNyeXB0IHRoZSBtZXNzYWdlIHdpdGggdGhlIGtleSBwcm92aWRlZCBieSB0aGUgb3JpZ2luYXRvciB0byByZWNpcGllbnRzIGJ1dCBub3QgdG8gdW5hdXRob3JpemVkIHVzZXJzLg0KDQpDb250ZW50cw0KDQogICAgMSBUeXBlcw0KICAgICAgICAxLjEgU3ltbWV0cmljIGtleSAvIFByaXZhdGUga2V5DQogICAgICAgIDEuMiBQdWJsaWMga2V5DQogICAgMiBVc2VzDQogICAgICAgIDIuMSBNZXNzYWdlIHZlcmlmaWNhdGlvbg0KICAgIDMgU2VlIGFsc28NCiAgICA0IFJlZmVyZW5jZXMNCiAgICA1IEZ1cnRoZXIgcmVhZGluZw0KDQpUeXBlcw0KU3ltbWV0cmljIGtleSAvIFByaXZhdGUga2V5DQoNCkluIHN5bW1ldHJpYy1rZXkgc2NoZW1lcyxbMV0gdGhlIGVuY3J5cHRpb24gYW5kIGRlY3J5cHRpb24ga2V5cyBhcmUgdGhlIHM="
+    ]
+   },
+   "p": 0.2647702407002188,
+   "count": 242,
+   "src": 3,
+   "dst": 13,
+   "symbol": "A_>_Replay",
+   "mu": [
+    18.41322314049587,
+    1448.0
+   ],
+   "cov": [
+    [
+     3502.260074385675,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "ame. Communicating parties must have the same key before they can achieve secure communication.\r\nPublic key\r\nIllustration of how encryption is used within servers Public key encryption.\r\n\r\nIn public-key encryption schemes, the encryption key is published for anyone to use and encrypt messages. However, only the receiving party has access to the decryption key that enables messages to be read.[2] Public-key encryption was first described in a secret document in 1973;[3] before then all encryption schemes were symmetric-key (also called private-key).[4]:478\r\n\r\nA publicly available public key encryption application called Pretty Good Privacy (PGP) was written in 1991 by Phil Zimmermann, and distributed free of charge with source code; it was purchased by Symantec in 2010 and is regularly updated.[5]\r\nUses\r\n\r\nEncryption has long been used by militaries and governments to facilitate secret communication. It is now commonly used in protecting information within many kinds of civilian systems. For example, the Computer Security Institute reported that in 2007, 71% of companies surveyed utilized encryption for some of their data in transit, and 53% utilized encryption for some of their data in storage.[6] Encryption can be used to protect data \"at rest\", such as information stored on computers and storage devices (e.g. USB flash drives). In recent years, there have been numerous reports of confidential data, such as customers' perso"
+    ]
+   },
+   "p": 0.8636363636363636,
+   "count": 209,
+   "src": 13,
+   "dst": 8,
+   "symbol": "A_>_Text:ame.",
+   "mu": [
+    0.0,
+    1448.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "\r\n    Television encryption\r\n    Active defense\r\n\r\nReferences\r\n\r\nSymmetric-key encryption software\r\nBellare, Mihir. \"Public-Key Encryption in a Multi-user Setting: Security Proofs and Improvements.\" Springer Berlin Heidelberg, 2000. Page 1.\r\n\"Public-Key Encryption - how GCHQ got there first!\". gchq.gov.uk. Archived from the original on May 19, 2010.\r\nGoldreich, Oded. Foundations of Cryptography: Volume 2, Basic Applications. Vol. 2. Cambridge university press, 2004.\r\n\"Symantec buys encryption specialist PGP for $300M\". Computerworld. 2010-04-29. Retrieved 2010-04-29.\r\nRobert Richardson, 2008 CSI Computer Crime and Security Survey at 19.i.cmpnet.com\r\n\"DRM\". Electronic Frontier Foundation.\r\nDiscussion of encryption weaknesses for petabyte scale datasets: http://www.ssrc.ucsc.edu/Papers/li-fast13.pdf\r\n\"The Padding Oracle Attack - why crypto is terrifying\". Robert Heaton. Retrieved 2016-12-25.\r\n\"Researchers crack open unusually advanced malware that hid for 5 years\". Ars Technica. Retrieved 2016-12-25.\r\n\"New cloud attack takes full control of virtual machines with little effort\". Ars Technica. Retrieved 2016-12-25.\r\nExamples of data fragmentation technologies include Tahoe-LAFS and Storj.\r\nBurshteyn, Mike (2016-12-22). \"What does 'Active Defense' mean?\". CryptoMove. Retrieved 2016-12-25.\r\nCryptoMove is the first technology to continuously move, mutate, and re-encrypt ciphertext as a form of data protection.\r\nFiber Optic Networks"
+    ]
+   },
+   "p": 0.008264462809917356,
+   "count": 2,
+   "src": 13,
+   "dst": 11,
+   "symbol": "A_>_Text:Television",
+   "mu": [
+    0.0,
+    1448.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.016713091922005572,
+   "count": 5,
+   "src": 14,
+   "dst": 5,
+   "symbol": "FA_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.052924791086350974,
+   "count": 19,
+   "src": 14,
+   "dst": 6,
+   "symbol": "FA_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.03064066852367688,
+   "count": 11,
+   "src": 14,
+   "dst": 7,
+   "symbol": "$",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.013927576601671309,
+   "count": 5,
+   "src": 14,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "nal records, being exposed through loss or theft of laptops or backup drives. Encrypting such files at rest helps protect them should physical security measures fail. Digital rights management systems, which prevent unauthorized use or reproduction of copyrighted material and protect software against reverse engineering (see also copy protection), is another somewhat different example of using encryption on data at rest.[7]\r\n\r\nIn response to encryption of data at rest, cyber-adversaries have developed new types of attacks. These more recent threats to encryption of data at rest include cryptographic attacks,[8] stolen ciphertext attacks,[9] attacks on encryption keys,[10] insider attacks, data corruption or integrity attacks,[11] data destruction attacks, and ransomware attacks. Data fragmentation[12] and active defense[13] data protection technologies attempt to counter some of these attacks, by distributing, moving, or mutating ciphertext so it is more difficult to identify, steal, corrupt, or destroy.[14]\r\n\r\nEncryption is also used to protect data in transit, for example data being transferred via networks (e.g. the Internet, e-commerce), mobile telephones, wireless microphones, wireless intercom systems, Bluetooth devices and bank automatic teller machines. There have been numerous reports of data in transit being intercepted in recent years.[15] Data should also be encrypted when transmitted across networks in order to "
+    ]
+   },
+   "p": 0.005571030640668524,
+   "count": 2,
+   "src": 14,
+   "dst": 9,
+   "symbol": "A_>_Text:nal",
+   "mu": [
+    0.0,
+    1448.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "OiAwMDU2MDI1MiANCg0KQ2F0ZWdvcmllczoNCg0KICAgIENyeXB0b2dyYXBoeQ0KDQpOYXZpZ2F0aW9uIG1lbnUNCg0KICAgIE5vdCBsb2dnZWQgaW4NCiAgICBUYWxrDQogICAgQ29udHJpYnV0aW9ucw0KICAgIENyZWF0ZSBhY2NvdW50DQogICAgTG9nIGluDQoNCiAgICBBcnRpY2xlDQogICAgVGFsaw0KDQogICAgUmVhZA0KICAgIEVkaXQNCiAgICBWaWV3IGhpc3RvcnkNCg0KU2VhcmNoDQoNCiAgICBNYWluIHBhZ2UNCiAgICBDb250ZW50cw0KICAgIEZlYXR1cmVkIGNvbnRlbnQNCiAgICBDdXJyZW50IGV2ZW50cw0KICAgIFJhbmRvbSBhcnRpY2xlDQogICAgRG9uYXRlIHRvIFdpa2lwZWRpYQ0KICAgIFdpa2lwZWRpYSBzdG9yZQ0KDQpJbnRlcmFjdGlvbg0KDQogICAgSGVscA0KICAgIEFib3V0IFdpa2lwZWRpYQ0KICAgIENvbW11bml0eSBwb3J0YWwNCiAgICBSZWNlbnQgY2hhbmdlcw0KICAgIENvbnRhY3QgcGFnZQ0KDQpUb29scw0KDQogICAgV2hhdCBsaW5rcyBoZXJlDQogICAgUmVsYXRlZCBjaGFuZ2VzDQogICAgVXBsb2FkIGZpbGUNCiAgICBTcGVjaWFsIHBhZ2VzDQogICAgUGVybWFuZW50IGxpbmsNCiAgICBQYWdlIGluZm9ybWF0aW9uDQogICAgV2lraWRhdGEgaXRlbQ0KICAgIENpdGUgdGhpcyBwYWdlDQoNClByaW50L2V4cG9ydA0KDQogICAgQ3JlYXRlIGEgYm9vaw0KICAgIERvd25sb2FkIGFzIFBERg0KICAgIFByaW50YWJsZSB2ZXJzaW9uDQoNCkluIG90aGVyIHByb2plY3RzDQoNCiAgICBXaWtpbWVkaWEgQ29tbW9ucw0KDQpMYW5ndWFnZXMNCg0KICAgIEFmcmlrYWFucw0KICAgID8/Pz8/Pz8NCiAgICBBej9yYmF5Y2FuY2ENCiAgICA/Pz8/Pw0KICAgID8/Pz8/Pz8/Pw0KICAgIEJvc2Fuc2tpDQogICAgQ2F0YWzgDQogICAgRGFuc2sNCiAgICBEZXV0c2NoDQogICAgRWVzdGkNCiAgICBFc3Bh8W9sDQogICAgRXNwZXJhbnRvDQogICAgPz8/Pz8NCiAgICBGcmFu52Fpcw0KICAgIEdhZWlsZ2UNCiAgICA/Pz8NCiAgICA/Pz8/Pz8NCiAgICBIcnZhdHNraQ0KICAgIEJhaGFzYSBJbmRvbmVzaWENCiAgICBJc2lYaG9zYQ0KICAgIM1zbGVuc2thDQogICAgPz8/Pz8/Pw0KICAgID8/Pz8/Pz8NCiAgICBMaW5n4WxhDQogICAgTWFneWFyDQogICAgPz8/Pz8/Pz8/Pw0KICAgIEJhaGFzYSBNZWxheXUNCiAgICBOZWRlcmxhbmRzDQogICAgPz8/DQogICAgTm9yc2sgbnlub3Jzaw0KICAgIE8/emJla2NoYS8/Pz8/Pz8/DQogICAgUG9ydHVndepzDQogICAgUm9t4m5hDQogICAgPz8/Pz8/Pw0KICAgID8/Pz8/DQogICAgU2ltcGxlIEVuZ2xpc2gNCiAgICBTbG92ZW6aY2luYQ0KICAgID8/Pz8/PyAvIHNycHNraQ0KICAgIFNycHNrb2hydmF0c2tpIC8gPz8/Pz8/Pz8/Pz8/Pz8NCiAgICBCYXNhIFN1bmRhDQogICAgU3VvbWkNCiAgICBTdmVuc2thDQogICAgVGFnYWxvZw0KICAgID8/Pz8/DQogICAgPz8/Pz8/DQogICAgPz8="
+    ]
+   },
+   "p": 0.10027855153203342,
+   "count": 36,
+   "src": 14,
+   "dst": 12,
+   "symbol": "A_>_Replay",
+   "mu": [
+    2.3055555555555554,
+    1448.0
+   ],
+   "cov": [
+    [
+     9.246826396825396,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "Pw0KICAgID8/Pz8/Pw0KICAgID8/Pz8/Pz8/Pz8NCiAgICA/Pz8/DQogICAgVGk/bmcgVmk/dA0KICAgID8/DQoNCkVkaXQgbGlua3MNCg0KICAgIFRoaXMgcGFnZSB3YXMgbGFzdCBtb2RpZmllZCBvbiAxNyBNYXJjaCAyMDE3LCBhdCAxNTo0NS4NCiAgICBUZXh0IGlzIGF2YWlsYWJsZSB1bmRlciB0aGUgQ3JlYXRpdmUgQ29tbW9ucyBBdHRyaWJ1dGlvbi1TaGFyZUFsaWtlIExpY2Vuc2U7IGFkZGl0aW9uYWwgdGVybXMgbWF5IGFwcGx5LiBCeSB1c2luZyB0aGlzIHNpdGUsIHlvdSBhZ3JlZSB0byB0aGUgVGVybXMgb2YgVXNlIGFuZCBQcml2YWN5IFBvbGljeS4gV2lraXBlZGlhriBpcyBhIHJlZ2lzdGVyZWQgdHJhZGVtYXJrIG9mIHRoZSBXaWtpbWVkaWEgRm91bmRhdGlvbiwgSW5jLiwgYSBub24tcHJvZml0IG9yZ2FuaXphdGlvbi4NCg0KICAgIFByaXZhY3kgcG9saWN5DQogICAgQWJvdXQgV2lraXBlZGlhDQogICAgRGlzY2xhaW1lcnMNCiAgICBDb250YWN0IFdpa2lwZWRpYQ0KICAgIERldmVsb3BlcnMNCiAgICBDb29raWUgc3RhdGVtZW50DQogICAgTW9iaWxlIHZpZXcNCg0KICAgIFdpa2ltZWRpYSBGb3VuZGF0aW9uCQ0KICAgIFBvd2VyZWQgYnkgTWVkaWFXaWtpCQ0KDQo=",
+     "Pw0KICAgID8/Pz8/Pz8/Pz8NCiAgICA/Pz8/DQogICAgVGk/bmcgVmk/dA0KICAgID8/DQoNCkVkaXQgbGlua3MNCg0KICAgIFRoaXMgcGFnZSB3YXMgbGFzdCBtb2RpZmllZCBvbiAxNyBNYXJjaCAyMDE3LCBhdCAxNTo0NS4NCiAgICBUZXh0IGlzIGF2YWlsYWJsZSB1bmRlciB0aGUgQ3JlYXRpdmUgQ29tbW9ucyBBdHRyaWJ1dGlvbi1TaGFyZUFsaWtlIExpY2Vuc2U7IGFkZGl0aW9uYWwgdGVybXMgbWF5IGFwcGx5LiBCeSB1c2luZyB0aGlzIHNpdGUsIHlvdSBhZ3JlZSB0byB0aGUgVGVybXMgb2YgVXNlIGFuZCBQcml2YWN5IFBvbGljeS4gV2lraXBlZGlhriBpcyBhIHJlZ2lzdGVyZWQgdHJhZGVtYXJrIG9mIHRoZSBXaWtpbWVkaWEgRm91bmRhdGlvbiwgSW5jLiwgYSBub24tcHJvZml0IG9yZ2FuaXphdGlvbi4NCg0KICAgIFByaXZhY3kgcG9saWN5DQogICAgQWJvdXQgV2lraXBlZGlhDQogICAgRGlzY2xhaW1lcnMNCiAgICBDb250YWN0IFdpa2lwZWRpYQ0KICAgIERldmVsb3BlcnMNCiAgICBDb29raWUgc3RhdGVtZW50DQogICAgTW9iaWxlIHZpZXcNCg0KICAgIFdpa2ltZWRpYSBGb3VuZGF0aW9uCQ0KICAgIFBvd2VyZWQgYnkgTWVkaWFXaWtpCQ0KDQo="
+    ],
+    "weights": [
+     11,
+     9
+    ]
+   },
+   "p": 0.0437636761487965,
+   "count": 20,
+   "src": 6,
+   "dst": 15,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    0.0,
+    611.6
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     37.5157904736842
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "IFZ1bG5lcmFibGUgdG8gQXR0YWNrLCBJbmZvcm1hdGlvbiBTZWN1cml0eSBNYWdhemluZSwgTm92ZW1iZXIgMTUsIDIwMDYsIFNhbmRyYSBLYXkgTWlsbGVyDQoiRGF0YSBFbmNyeXB0aW9uIGluIFRyYW5zaXQgR3VpZGVsaW5lIi4NCg0KICAgICJXaGF0IGlzIGEgVHJvamFuIFZpcnVzIC0gTWFsd2FyZSBQcm90ZWN0aW9uIC0gS2FzcGVyc2t5IExhYiBVUyIuDQoNCkZ1cnRoZXIgcmVhZGluZw0KDQogICAgRm91Y2jpIEdhaW5lcywgSGVsZW4gKDE5MzkpLCBDcnlwdGFuYWx5c2lzOiBBIFN0dWR5IG9mIENpcGhlcnMgYW5kIFRoZWlyIFNvbHV0aW9uLCBOZXcgWW9yazogRG92ZXIgUHVibGljYXRpb25zIEluYywgSVNCTiA5NzgtMDQ4NjIwMDk3Mg0KICAgIEthaG4sIERhdmlkLCBUaGUgQ29kZWJyZWFrZXJzIC0gVGhlIFN0b3J5IG9mIFNlY3JldCBXcml0aW5nIChJU0JOIDAtNjg0LTgzMTMwLTkpICgxOTY3KQ0KICAgIFByZW5lZWwsIEJhcnQsICJBZHZhbmNlcyBpbiBDcnlwdG9sb2d5IJcgRVVST0NSWVBUIDIwMDAiLCBTcHJpbmdlciBCZXJsaW4gSGVpZGVsYmVyZywgMjAwMCwgSVNCTiA5NzgtMy01NDAtNjc1MTctNA0KICAgIFNpbmtvdiwgQWJyYWhhbSwgRWxlbWVudGFyeSBDcnlwdGFuYWx5c2lzOiBBIE1hdGhlbWF0aWNhbCBBcHByb2FjaCwgTWF0aGVtYXRpY2FsIEFzc29jaWF0aW9uIG9mIEFtZXJpY2EsIDE5NjYuIElTQk4gMC04ODM4NS02MjItMA0KDQoJTG9vayB1cCBlbmNyeXB0aW9uIGluIFdpa3Rpb25hcnksIHRoZSBmcmVlIGRpY3Rpb25hcnkuDQoJV2lraW1lZGlhIENvbW1vbnMgaGFzIG1lZGlhIHJlbGF0ZWQgdG8gW1tjb21tb25zOkNhdGVnb3J5OkNyeXB0b2dyYXBoaWMgYWxnb3JpdGhtc3xdXS4NCg0KDQpbc2hvd10NCg0KICAgIHYgdCBlIA0KDQpDcnlwdG9ncmFwaHkNCkF1dGhvcml0eSBjb250cm9sIAkNCg0KICAgIEdORDogNDM1Mjg5My00IE5ETA=="
+    ]
+   },
+   "p": 0.5682451253481894,
+   "count": 204,
+   "src": 14,
+   "dst": 15,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    0.0,
+    952.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "Pw0KICAgID8/Pz8/Pw0KICAgID8/Pz8/Pz8/Pz8NCiAgICA/Pz8/DQogICAgVGk/bmcgVmk/dA0KICAgID8/DQoNCkVkaXQgbGlua3MNCg0KICAgIFRoaXMgcGFnZSB3YXMgbGFzdCBtb2RpZmllZCBvbiAxNyBNYXJjaCAyMDE3LCBhdCAxNTo0NS4NCiAgICBUZXh0IGlzIGF2YWlsYWJsZSB1bmRlciB0aGUgQ3JlYXRpdmUgQ29tbW9ucyBBdHRyaWJ1dGlvbi1TaGFyZUFsaWtlIExpY2Vuc2U7IGFkZGl0aW9uYWwgdGVybXMgbWF5IGFwcGx5LiBCeSB1c2luZyB0aGlzIHNpdGUsIHlvdSBhZ3JlZSB0byB0aGUgVGVybXMgb2YgVXNlIGFuZCBQcml2YWN5IFBvbGljeS4gV2lraXBlZGlhriBpcyBhIHJlZ2lzdGVyZWQgdHJhZGVtYXJrIG9mIHRoZSBXaWtpbWVkaWEgRm91bmRhdGlvbiwgSW5jLiwgYSBub24tcHJvZml0IG9yZ2FuaXphdGlvbi4NCg0KICAgIFByaXZhY3kgcG9saWN5DQogICAgQWJvdXQgV2lraXBlZGlhDQogICAgRGlzY2xhaW1lcnMNCiAgICBDb250YWN0IFdpa2lwZWRpYQ0KICAgIERldmVsb3BlcnMNCiAgICBDb29raWUgc3RhdGVtZW50DQogICAgTW9iaWxlIHZpZXcNCg0KICAgIFdpa2ltZWRpYSBGb3VuZGF0aW9uCQ0KICAgIFBvd2VyZWQgYnkgTWVkaWFXaWtpCQ0KDQo="
+    ]
+   },
+   "p": 0.07214428857715431,
+   "count": 36,
+   "src": 12,
+   "dst": 15,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    0.0,
+    617.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "",
+     "Pw0KICAgID8/Pz8/Pz8/Pz8NCiAgICA/Pz8/DQogICAgVGk/bmcgVmk/dA0KICAgID8/DQoNCkVkaXQgbGlua3MNCg0KICAgIFRoaXMgcGFnZSB3YXMgbGFzdCBtb2RpZmllZCBvbiAxNyBNYXJjaCAyMDE3LCBhdCAxNTo0NS4NCiAgICBUZXh0IGlzIGF2YWlsYWJsZSB1bmRlciB0aGUgQ3JlYXRpdmUgQ29tbW9ucyBBdHRyaWJ1dGlvbi1TaGFyZUFsaWtlIExpY2Vuc2U7IGFkZGl0aW9uYWwgdGVybXMgbWF5IGFwcGx5LiBCeSB1c2luZyB0aGlzIHNpdGUsIHlvdSBhZ3JlZSB0byB0aGUgVGVybXMgb2YgVXNlIGFuZCBQcml2YWN5IFBvbGljeS4gV2lraXBlZGlhriBpcyBhIHJlZ2lzdGVyZWQgdHJhZGVtYXJrIG9mIHRoZSBXaWtpbWVkaWEgRm91bmRhdGlvbiwgSW5jLiwgYSBub24tcHJvZml0IG9yZ2FuaXphdGlvbi4NCg0KICAgIFByaXZhY3kgcG9saWN5DQogICAgQWJvdXQgV2lraXBlZGlhDQogICAgRGlzY2xhaW1lcnMNCiAgICBDb250YWN0IFdpa2lwZWRpYQ0KICAgIERldmVsb3BlcnMNCiAgICBDb29raWUgc3RhdGVtZW50DQogICAgTW9iaWxlIHZpZXcNCg0KICAgIFdpa2ltZWRpYSBGb3VuZGF0aW9uCQ0KICAgIFBvd2VyZWQgYnkgTWVkaWFXaWtpCQ0KDQo="
+    ],
+    "weights": [
+     9,
+     31
+    ]
+   },
+   "p": 0.08064516129032258,
+   "count": 40,
+   "src": 5,
+   "dst": 15,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    0.0,
+    605.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "Pw0KICAgID8/Pz8/Pw0KICAgID8/Pz8/Pz8/Pz8NCiAgICA/Pz8/DQogICAgVGk/bmcgVmk/dA0KICAgID8/DQoNCkVkaXQgbGlua3MNCg0KICAgIFRoaXMgcGFnZSB3YXMgbGFzdCBtb2RpZmllZCBvbiAxNyBNYXJjaCAyMDE3LCBhdCAxNTo0NS4NCiAgICBUZXh0IGlzIGF2YWlsYWJsZSB1bmRlciB0aGUgQ3JlYXRpdmUgQ29tbW9ucyBBdHRyaWJ1dGlvbi1TaGFyZUFsaWtlIExpY2Vuc2U7IGFkZGl0aW9uYWwgdGVybXMgbWF5IGFwcGx5LiBCeSB1c2luZyB0aGlzIHNpdGUsIHlvdSBhZ3JlZSB0byB0aGUgVGVybXMgb2YgVXNlIGFuZCBQcml2YWN5IFBvbGljeS4gV2lraXBlZGlhriBpcyBhIHJlZ2lzdGVyZWQgdHJhZGVtYXJrIG9mIHRoZSBXaWtpbWVkaWEgRm91bmRhdGlvbiwgSW5jLiwgYSBub24tcHJvZml0IG9yZ2FuaXphdGlvbi4NCg0KICAgIFByaXZhY3kgcG9saWN5DQogICAgQWJvdXQgV2lraXBlZGlhDQogICAgRGlzY2xhaW1lcnMNCiAgICBDb250YWN0IFdpa2lwZWRpYQ0KICAgIERldmVsb3BlcnMNCiAgICBDb29raWUgc3RhdGVtZW50DQogICAgTW9iaWxlIHZpZXcNCg0KICAgIFdpa2ltZWRpYSBGb3VuZGF0aW9uCQ0KICAgIFBvd2VyZWQgYnkgTWVkaWFXaWtpCQ0KDQo="
+    ]
+   },
+   "p": 0.3790322580645161,
+   "count": 188,
+   "src": 5,
+   "dst": 15,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    0.0,
+    617.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "IFZ1bG5lcmFibGUgdG8gQXR0YWNrLCBJbmZvcm1hdGlvbiBTZWN1cml0eSBNYWdhemluZSwgTm92ZW1iZXIgMTUsIDIwMDYsIFNhbmRyYSBLYXkgTWlsbGVyDQoiRGF0YSBFbmNyeXB0aW9uIGluIFRyYW5zaXQgR3VpZGVsaW5lIi4NCg0KICAgICJXaGF0IGlzIGEgVHJvamFuIFZpcnVzIC0gTWFsd2FyZSBQcm90ZWN0aW9uIC0gS2FzcGVyc2t5IExhYiBVUyIuDQoNCkZ1cnRoZXIgcmVhZGluZw0KDQogICAgRm91Y2jpIEdhaW5lcywgSGVsZW4gKDE5MzkpLCBDcnlwdGFuYWx5c2lzOiBBIFN0dWR5IG9mIENpcGhlcnMgYW5kIFRoZWlyIFNvbHV0aW9uLCBOZXcgWW9yazogRG92ZXIgUHVibGljYXRpb25zIEluYywgSVNCTiA5NzgtMDQ4NjIwMDk3Mg0KICAgIEthaG4sIERhdmlkLCBUaGUgQ29kZWJyZWFrZXJzIC0gVGhlIFN0b3J5IG9mIFNlY3JldCBXcml0aW5nIChJU0JOIDAtNjg0LTgzMTMwLTkpICgxOTY3KQ0KICAgIFByZW5lZWwsIEJhcnQsICJBZHZhbmNlcyBpbiBDcnlwdG9sb2d5IJcgRVVST0NSWVBUIDIwMDAiLCBTcHJpbmdlciBCZXJsaW4gSGVpZGVsYmVyZywgMjAwMCwgSVNCTiA5NzgtMy01NDAtNjc1MTctNA0KICAgIFNpbmtvdiwgQWJyYWhhbSwgRWxlbWVudGFyeSBDcnlwdGFuYWx5c2lzOiBBIE1hdGhlbWF0aWNhbCBBcHByb2FjaCwgTWF0aGVtYXRpY2FsIEFzc29jaWF0aW9uIG9mIEFtZXJpY2EsIDE5NjYuIElTQk4gMC04ODM4NS02MjItMA0KDQoJTG9vayB1cCBlbmNyeXB0aW9uIGluIFdpa3Rpb25hcnksIHRoZSBmcmVlIGRpY3Rpb25hcnkuDQoJV2lraW1lZGlhIENvbW1vbnMgaGFzIG1lZGlhIHJlbGF0ZWQgdG8gW1tjb21tb25zOkNhdGVnb3J5OkNyeXB0b2dyYXBoaWMgYWxnb3JpdGhtc3xdXS4NCg0KDQpbc2hvd10NCg0KICAgIHYgdCBlIA0KDQpDcnlwdG9ncmFwaHkNCkF1dGhvcml0eSBjb250cm9sIAkNCg0KICAgIEdORDogNDM1Mjg5My00IE5ETA=="
+    ]
+   },
+   "p": 0.11165048543689321,
+   "count": 23,
+   "src": 9,
+   "dst": 15,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    0.0,
+    952.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "IFZ1bG5lcmFibGUgdG8gQXR0YWNrLCBJbmZvcm1hdGlvbiBTZWN1cml0eSBNYWdhemluZSwgTm92ZW1iZXIgMTUsIDIwMDYsIFNhbmRyYSBLYXkgTWlsbGVyDQoiRGF0YSBFbmNyeXB0aW9uIGluIFRyYW5zaXQgR3VpZGVsaW5lIi4NCg0KICAgICJXaGF0IGlzIGEgVHJvamFuIFZpcnVzIC0gTWFsd2FyZSBQcm90ZWN0aW9uIC0gS2FzcGVyc2t5IExhYiBVUyIuDQoNCkZ1cnRoZXIgcmVhZGluZw0KDQogICAgRm91Y2jpIEdhaW5lcywgSGVsZW4gKDE5MzkpLCBDcnlwdGFuYWx5c2lzOiBBIFN0dWR5IG9mIENpcGhlcnMgYW5kIFRoZWlyIFNvbHV0aW9uLCBOZXcgWW9yazogRG92ZXIgUHVibGljYXRpb25zIEluYywgSVNCTiA5NzgtMDQ4NjIwMDk3Mg0KICAgIEthaG4sIERhdmlkLCBUaGUgQ29kZWJyZWFrZXJzIC0gVGhlIFN0b3J5IG9mIFNlY3JldCBXcml0aW5nIChJU0JOIDAtNjg0LTgzMTMwLTkpICgxOTY3KQ0KICAgIFByZW5lZWwsIEJhcnQsICJBZHZhbmNlcyBpbiBDcnlwdG9sb2d5IJcgRVVST0NSWVBUIDIwMDAiLCBTcHJpbmdlciBCZXJsaW4gSGVpZGVsYmVyZywgMjAwMCwgSVNCTiA5NzgtMy01NDAtNjc1MTctNA0KICAgIFNpbmtvdiwgQWJyYWhhbSwgRWxlbWVudGFyeSBDcnlwdGFuYWx5c2lzOiBBIE1hdGhlbWF0aWNhbCBBcHByb2FjaCwgTWF0aGVtYXRpY2FsIEFzc29jaWF0aW9uIG9mIEFtZXJpY2EsIDE5NjYuIElTQk4gMC04ODM4NS02MjItMA0KDQoJTG9vayB1cCBlbmNyeXB0aW9uIGluIFdpa3Rpb25hcnksIHRoZSBmcmVlIGRpY3Rpb25hcnkuDQoJV2lraW1lZGlhIENvbW1vbnMgaGFzIG1lZGlhIHJlbGF0ZWQgdG8gW1tjb21tb25zOkNhdGVnb3J5OkNyeXB0b2dyYXBoaWMgYWxnb3JpdGhtc3xdXS4NCg0KDQpbc2hvd10NCg0KICAgIHYgdCBlIA0KDQpDcnlwdG9ncmFwaHkNCkF1dGhvcml0eSBjb250cm9sIAkNCg0KICAgIEdORDogNDM1Mjg5My00IE5ETA=="
+    ]
+   },
+   "p": 0.0371900826446281,
+   "count": 9,
+   "src": 13,
+   "dst": 15,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    0.0,
+    952.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "IFZ1bG5lcmFibGUgdG8gQXR0YWNrLCBJbmZvcm1hdGlvbiBTZWN1cml0eSBNYWdhemluZSwgTm92ZW1iZXIgMTUsIDIwMDYsIFNhbmRyYSBLYXkgTWlsbGVyDQoiRGF0YSBFbmNyeXB0aW9uIGluIFRyYW5zaXQgR3VpZGVsaW5lIi4NCg0KICAgICJXaGF0IGlzIGEgVHJvamFuIFZpcnVzIC0gTWFsd2FyZSBQcm90ZWN0aW9uIC0gS2FzcGVyc2t5IExhYiBVUyIuDQoNCkZ1cnRoZXIgcmVhZGluZw0KDQogICAgRm91Y2jpIEdhaW5lcywgSGVsZW4gKDE5MzkpLCBDcnlwdGFuYWx5c2lzOiBBIFN0dWR5IG9mIENpcGhlcnMgYW5kIFRoZWlyIFNvbHV0aW9uLCBOZXcgWW9yazogRG92ZXIgUHVibGljYXRpb25zIEluYywgSVNCTiA5NzgtMDQ4NjIwMDk3Mg0KICAgIEthaG4sIERhdmlkLCBUaGUgQ29kZWJyZWFrZXJzIC0gVGhlIFN0b3J5IG9mIFNlY3JldCBXcml0aW5nIChJU0JOIDAtNjg0LTgzMTMwLTkpICgxOTY3KQ0KICAgIFByZW5lZWwsIEJhcnQsICJBZHZhbmNlcyBpbiBDcnlwdG9sb2d5IJcgRVVST0NSWVBUIDIwMDAiLCBTcHJpbmdlciBCZXJsaW4gSGVpZGVsYmVyZywgMjAwMCwgSVNCTiA5NzgtMy01NDAtNjc1MTctNA0KICAgIFNpbmtvdiwgQWJyYWhhbSwgRWxlbWVudGFyeSBDcnlwdGFuYWx5c2lzOiBBIE1hdGhlbWF0aWNhbCBBcHByb2FjaCwgTWF0aGVtYXRpY2FsIEFzc29jaWF0aW9uIG9mIEFtZXJpY2EsIDE5NjYuIElTQk4gMC04ODM4NS02MjItMA0KDQoJTG9vayB1cCBlbmNyeXB0aW9uIGluIFdpa3Rpb25hcnksIHRoZSBmcmVlIGRpY3Rpb25hcnkuDQoJV2lraW1lZGlhIENvbW1vbnMgaGFzIG1lZGlhIHJlbGF0ZWQgdG8gW1tjb21tb25zOkNhdGVnb3J5OkNyeXB0b2dyYXBoaWMgYWxnb3JpdGhtc3xdXS4NCg0KDQpbc2hvd10NCg0KICAgIHYgdCBlIA0KDQpDcnlwdG9ncmFwaHkNCkF1dGhvcml0eSBjb250cm9sIAkNCg0KICAgIEdORDogNDM1Mjg5My00IE5ETA=="
+    ]
+   },
+   "p": 0.22727272727272727,
+   "count": 5,
+   "src": 11,
+   "dst": 15,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    0.0,
+    952.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "IFZ1bG5lcmFibGUgdG8gQXR0YWNrLCBJbmZvcm1hdGlvbiBTZWN1cml0eSBNYWdhemluZSwgTm92ZW1iZXIgMTUsIDIwMDYsIFNhbmRyYSBLYXkgTWlsbGVyDQoiRGF0YSBFbmNyeXB0aW9uIGluIFRyYW5zaXQgR3VpZGVsaW5lIi4NCg0KICAgICJXaGF0IGlzIGEgVHJvamFuIFZpcnVzIC0gTWFsd2FyZSBQcm90ZWN0aW9uIC0gS2FzcGVyc2t5IExhYiBVUyIuDQoNCkZ1cnRoZXIgcmVhZGluZw0KDQogICAgRm91Y2jpIEdhaW5lcywgSGVsZW4gKDE5MzkpLCBDcnlwdGFuYWx5c2lzOiBBIFN0dWR5IG9mIENpcGhlcnMgYW5kIFRoZWlyIFNvbHV0aW9uLCBOZXcgWW9yazogRG92ZXIgUHVibGljYXRpb25zIEluYywgSVNCTiA5NzgtMDQ4NjIwMDk3Mg0KICAgIEthaG4sIERhdmlkLCBUaGUgQ29kZWJyZWFrZXJzIC0gVGhlIFN0b3J5IG9mIFNlY3JldCBXcml0aW5nIChJU0JOIDAtNjg0LTgzMTMwLTkpICgxOTY3KQ0KICAgIFByZW5lZWwsIEJhcnQsICJBZHZhbmNlcyBpbiBDcnlwdG9sb2d5IJcgRVVST0NSWVBUIDIwMDAiLCBTcHJpbmdlciBCZXJsaW4gSGVpZGVsYmVyZywgMjAwMCwgSVNCTiA5NzgtMy01NDAtNjc1MTctNA0KICAgIFNpbmtvdiwgQWJyYWhhbSwgRWxlbWVudGFyeSBDcnlwdGFuYWx5c2lzOiBBIE1hdGhlbWF0aWNhbCBBcHByb2FjaCwgTWF0aGVtYXRpY2FsIEFzc29jaWF0aW9uIG9mIEFtZXJpY2EsIDE5NjYuIElTQk4gMC04ODM4NS02MjItMA0KDQoJTG9vayB1cCBlbmNyeXB0aW9uIGluIFdpa3Rpb25hcnksIHRoZSBmcmVlIGRpY3Rpb25hcnkuDQoJV2lraW1lZGlhIENvbW1vbnMgaGFzIG1lZGlhIHJlbGF0ZWQgdG8gW1tjb21tb25zOkNhdGVnb3J5OkNyeXB0b2dyYXBoaWMgYWxnb3JpdGhtc3xdXS4NCg0KDQpbc2hvd10NCg0KICAgIHYgdCBlIA0KDQpDcnlwdG9ncmFwaHkNCkF1dGhvcml0eSBjb250cm9sIAkNCg0KICAgIEdORDogNDM1Mjg5My00IE5ETA=="
+    ]
+   },
+   "p": 0.004784688995215311,
+   "count": 1,
+   "src": 8,
+   "dst": 15,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    0.0,
+    952.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.20278833967046894,
+   "count": 160,
+   "src": 15,
+   "dst": 5,
+   "symbol": "FA_>_Empty",
+   "mu": [
+    7.88125,
+    0.0
+   ],
+   "cov": [
+    [
+     339.41348370440306,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.005069708491761723,
+   "count": 4,
+   "src": 15,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "OiAwMDU2MDI1MiANCg0KQ2F0ZWdvcmllczoNCg0KICAgIENyeXB0b2dyYXBoeQ0KDQpOYXZpZ2F0aW9uIG1lbnUNCg0KICAgIE5vdCBsb2dnZWQgaW4NCiAgICBUYWxrDQogICAgQ29udHJpYnV0aW9ucw0KICAgIENyZWF0ZSBhY2NvdW50DQogICAgTG9nIGluDQoNCiAgICBBcnRpY2xlDQogICAgVGFsaw0KDQogICAgUmVhZA0KICAgIEVkaXQNCiAgICBWaWV3IGhpc3RvcnkNCg0KU2VhcmNoDQoNCiAgICBNYWluIHBhZ2UNCiAgICBDb250ZW50cw0KICAgIEZlYXR1cmVkIGNvbnRlbnQNCiAgICBDdXJyZW50IGV2ZW50cw0KICAgIFJhbmRvbSBhcnRpY2xlDQogICAgRG9uYXRlIHRvIFdpa2lwZWRpYQ0KICAgIFdpa2lwZWRpYSBzdG9yZQ0KDQpJbnRlcmFjdGlvbg0KDQogICAgSGVscA0KICAgIEFib3V0IFdpa2lwZWRpYQ0KICAgIENvbW11bml0eSBwb3J0YWwNCiAgICBSZWNlbnQgY2hhbmdlcw0KICAgIENvbnRhY3QgcGFnZQ0KDQpUb29scw0KDQogICAgV2hhdCBsaW5rcyBoZXJlDQogICAgUmVsYXRlZCBjaGFuZ2VzDQogICAgVXBsb2FkIGZpbGUNCiAgICBTcGVjaWFsIHBhZ2VzDQogICAgUGVybWFuZW50IGxpbmsNCiAgICBQYWdlIGluZm9ybWF0aW9uDQogICAgV2lraWRhdGEgaXRlbQ0KICAgIENpdGUgdGhpcyBwYWdlDQoNClByaW50L2V4cG9ydA0KDQogICAgQ3JlYXRlIGEgYm9vaw0KICAgIERvd25sb2FkIGFzIFBERg0KICAgIFByaW50YWJsZSB2ZXJzaW9uDQoNCkluIG90aGVyIHByb2plY3RzDQoNCiAgICBXaWtpbWVkaWEgQ29tbW9ucw0KDQpMYW5ndWFnZXMNCg0KICAgIEFmcmlrYWFucw0KICAgID8/Pz8/Pz8NCiAgICBBej9yYmF5Y2FuY2ENCiAgICA/Pz8/Pw0KICAgID8/Pz8/Pz8/Pw0KICAgIEJvc2Fuc2tpDQogICAgQ2F0YWzgDQogICAgRGFuc2sNCiAgICBEZXV0c2NoDQogICAgRWVzdGkNCiAgICBFc3Bh8W9sDQogICAgRXNwZXJhbnRvDQogICAgPz8/Pz8NCiAgICBGcmFu52Fpcw0KICAgIEdhZWlsZ2UNCiAgICA/Pz8NCiAgICA/Pz8/Pz8NCiAgICBIcnZhdHNraQ0KICAgIEJhaGFzYSBJbmRvbmVzaWENCiAgICBJc2lYaG9zYQ0KICAgIM1zbGVuc2thDQogICAgPz8/Pz8/Pw0KICAgID8/Pz8/Pz8NCiAgICBMaW5n4WxhDQogICAgTWFneWFyDQogICAgPz8/Pz8/Pz8/Pw0KICAgIEJhaGFzYSBNZWxheXUNCiAgICBOZWRlcmxhbmRzDQogICAgPz8/DQogICAgTm9yc2sgbnlub3Jzaw0KICAgIE8/emJla2NoYS8/Pz8/Pz8/DQogICAgUG9ydHVndepzDQogICAgUm9t4m5hDQogICAgPz8/Pz8/Pw0KICAgID8/Pz8/DQogICAgU2ltcGxlIEVuZ2xpc2gNCiAgICBTbG92ZW6aY2luYQ0KICAgID8/Pz8/PyAvIHNycHNraQ0KICAgIFNycHNrb2hydmF0c2tpIC8gPz8/Pz8/Pz8/Pz8/Pz8NCiAgICBCYXNhIFN1bmRhDQogICAgU3VvbWkNCiAgICBTdmVuc2thDQogICAgVGFnYWxvZw0KICAgID8/Pz8/DQogICAgPz8/Pz8/DQogICAgPz8="
+    ]
+   },
+   "p": 0.017743979721166033,
+   "count": 14,
+   "src": 15,
+   "dst": 12,
+   "symbol": "A_>_Replay",
+   "mu": [
+    8.214285714285714,
+    1448.0
+   ],
+   "cov": [
+    [
+     6.335165835164834,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "",
+     "OiAwMDU2MDI1MiANCg0KQ2F0ZWdvcmllczoNCg0KICAgIENyeXB0b2dyYXBoeQ0KDQpOYXZpZ2F0aW9uIG1lbnUNCg0KICAgIE5vdCBsb2dnZWQgaW4NCiAgICBUYWxrDQogICAgQ29udHJpYnV0aW9ucw0KICAgIENyZWF0ZSBhY2NvdW50DQogICAgTG9nIGluDQoNCiAgICBBcnRpY2xlDQogICAgVGFsaw0KDQogICAgUmVhZA0KICAgIEVkaXQNCiAgICBWaWV3IGhpc3RvcnkNCg0KU2VhcmNoDQoNCiAgICBNYWluIHBhZ2UNCiAgICBDb250ZW50cw0KICAgIEZlYXR1cmVkIGNvbnRlbnQNCiAgICBDdXJyZW50IGV2ZW50cw0KICAgIFJhbmRvbSBhcnRpY2xlDQogICAgRG9uYXRlIHRvIFdpa2lwZWRpYQ0KICAgIFdpa2lwZWRpYSBzdG9yZQ0KDQpJbnRlcmFjdGlvbg0KDQogICAgSGVscA0KICAgIEFib3V0IFdpa2lwZWRpYQ0KICAgIENvbW11bml0eSBwb3J0YWwNCiAgICBSZWNlbnQgY2hhbmdlcw0KICAgIENvbnRhY3QgcGFnZQ0KDQpUb29scw0KDQogICAgV2hhdCBsaW5rcyBoZXJlDQogICAgUmVsYXRlZCBjaGFuZ2VzDQogICAgVXBsb2FkIGZpbGUNCiAgICBTcGVjaWFsIHBhZ2VzDQogICAgUGVybWFuZW50IGxpbmsNCiAgICBQYWdlIGluZm9ybWF0aW9uDQogICAgV2lraWRhdGEgaXRlbQ0KICAgIENpdGUgdGhpcyBwYWdlDQoNClByaW50L2V4cG9ydA0KDQogICAgQ3JlYXRlIGEgYm9vaw0KICAgIERvd25sb2FkIGFzIFBERg0KICAgIFByaW50YWJsZSB2ZXJzaW9uDQoNCkluIG90aGVyIHByb2plY3RzDQoNCiAgICBXaWtpbWVkaWEgQ29tbW9ucw0KDQpMYW5ndWFnZXMNCg0KICAgIEFmcmlrYWFucw0KICAgID8/Pz8/Pz8NCiAgICBBej9yYmF5Y2FuY2ENCiAgICA/Pz8/Pw0KICAgID8/Pz8/Pz8/Pw0KICAgIEJvc2Fuc2tpDQogICAgQ2F0YWzgDQogICAgRGFuc2sNCiAgICBEZXV0c2NoDQogICAgRWVzdGkNCiAgICBFc3Bh8W9sDQogICAgRXNwZXJhbnRvDQogICAgPz8/Pz8NCiAgICBGcmFu52Fpcw0KICAgIEdhZWlsZ2UNCiAgICA/Pz8NCiAgICA/Pz8/Pz8NCiAgICBIcnZhdHNraQ0KICAgIEJhaGFzYSBJbmRvbmVzaWENCiAgICBJc2lYaG9zYQ0KICAgIM1zbGVuc2thDQogICAgPz8/Pz8/Pw0KICAgID8/Pz8/Pz8NCiAgICBMaW5n4WxhDQogICAgTWFneWFyDQogICAgPz8/Pz8/Pz8/Pw0KICAgIEJhaGFzYSBNZWxheXUNCiAgICBOZWRlcmxhbmRzDQogICAgPz8/DQogICAgTm9yc2sgbnlub3Jzaw0KICAgIE8/emJla2NoYS8/Pz8/Pz8/DQogICAgUG9ydHVndepzDQogICAgUm9t4m5hDQogICAgPz8/Pz8/Pw0KICAgID8/Pz8/DQogICAgU2ltcGxlIEVuZ2xpc2gNCiAgICBTbG92ZW6aY2luYQ0KICAgID8/Pz8/PyAvIHNycHNraQ0KICAgIFNycHNrb2hydmF0c2tpIC8gPz8/Pz8/Pz8/Pz8/Pz8NCiAgICBCYXNhIFN1bmRhDQogICAgU3VvbWkNCiAgICBTdmVuc2thDQogICAgVGFnYWxvZw0KICAgID8/Pz8/DQogICAgPz8/Pz8/DQogICAgPz8/DQogICAgPz8/Pz8="
+    ],
+    "weights": [
+     1,
+     48
+    ]
+   },
+   "p": 0.062103929024081114,
+   "count": 49,
+   "src": 15,
+   "dst": 12,
+   "symbol": "A_>_Replay",
+   "mu": [
+    18.877551020408163,
+    1460.0
+   ],
+   "cov": [
+    [
+     281.73469487755096,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "OiAwMDU2MDI1MiANCg0KQ2F0ZWdvcmllczoNCg0KICAgIENyeXB0b2dyYXBoeQ0KDQpOYXZpZ2F0aW9uIG1lbnUNCg0KICAgIE5vdCBsb2dnZWQgaW4NCiAgICBUYWxrDQogICAgQ29udHJpYnV0aW9ucw0KICAgIENyZWF0ZSBhY2NvdW50DQogICAgTG9nIGluDQoNCiAgICBBcnRpY2xlDQogICAgVGFsaw0KDQogICAgUmVhZA0KICAgIEVkaXQNCiAgICBWaWV3IGhpc3RvcnkNCg0KU2VhcmNoDQoNCiAgICBNYWluIHBhZ2UNCiAgICBDb250ZW50cw0KICAgIEZlYXR1cmVkIGNvbnRlbnQNCiAgICBDdXJyZW50IGV2ZW50cw0KICAgIFJhbmRvbSBhcnRpY2xlDQogICAgRG9uYXRlIHRvIFdpa2lwZWRpYQ0KICAgIFdpa2lwZWRpYSBzdG9yZQ0KDQpJbnRlcmFjdGlvbg0KDQogICAgSGVscA0KICAgIEFib3V0IFdpa2lwZWRpYQ0KICAgIENvbW11bml0eSBwb3J0YWwNCiAgICBSZWNlbnQgY2hhbmdlcw0KICAgIENvbnRhY3QgcGFnZQ0KDQpUb29scw0KDQogICAgV2hhdCBsaW5rcyBoZXJlDQogICAgUmVsYXRlZCBjaGFuZ2VzDQogICAgVXBsb2FkIGZpbGUNCiAgICBTcGVjaWFsIHBhZ2VzDQogICAgUGVybWFuZW50IGxpbmsNCiAgICBQYWdlIGluZm9ybWF0aW9uDQogICAgV2lraWRhdGEgaXRlbQ0KICAgIENpdGUgdGhpcyBwYWdlDQoNClByaW50L2V4cG9ydA0KDQogICAgQ3JlYXRlIGEgYm9vaw0KICAgIERvd25sb2FkIGFzIFBERg0KICAgIFByaW50YWJsZSB2ZXJzaW9uDQoNCkluIG90aGVyIHByb2plY3RzDQoNCiAgICBXaWtpbWVkaWEgQ29tbW9ucw0KDQpMYW5ndWFnZXMNCg0KICAgIEFmcmlrYWFucw0KICAgID8/Pz8/Pz8NCiAgICBBej9yYmF5Y2FuY2ENCiAgICA/Pz8/Pw0KICAgID8/Pz8/Pz8/Pw0KICAgIEJvc2Fuc2tpDQogICAgQ2F0YWzgDQogICAgRGFuc2sNCiAgICBEZXV0c2NoDQogICAgRWVzdGkNCiAgICBFc3Bh8W9sDQogICAgRXNwZXJhbnRvDQogICAgPz8/Pz8NCiAgICBGcmFu52Fpcw0KICAgIEdhZWlsZ2UNCiAgICA/Pz8NCiAgICA/Pz8/Pz8NCiAgICBIcnZhdHNraQ0KICAgIEJhaGFzYSBJbmRvbmVzaWENCiAgICBJc2lYaG9zYQ0KICAgIM1zbGVuc2thDQogICAgPz8/Pz8/Pw0KICAgID8/Pz8/Pz8NCiAgICBMaW5n4WxhDQogICAgTWFneWFyDQogICAgPz8/Pz8/Pz8/Pw0KICAgIEJhaGFzYSBNZWxheXUNCiAgICBOZWRlcmxhbmRzDQogICAgPz8/DQogICAgTm9yc2sgbnlub3Jzaw0KICAgIE8/emJla2NoYS8/Pz8/Pz8/DQogICAgUG9ydHVndepzDQogICAgUm9t4m5hDQogICAgPz8/Pz8/Pw0KICAgID8/Pz8/DQogICAgU2ltcGxlIEVuZ2xpc2gNCiAgICBTbG92ZW6aY2luYQ0KICAgID8/Pz8/PyAvIHNycHNraQ0KICAgIFNycHNrb2hydmF0c2tpIC8gPz8/Pz8/Pz8/Pz8/Pz8NCiAgICBCYXNhIFN1bmRhDQogICAgU3VvbWkNCiAgICBTdmVuc2thDQogICAgVGFnYWxvZw0KICAgID8/Pz8/DQogICAgPz8/Pz8/DQogICAgPz8="
+    ]
+   },
+   "p": 0.23193916349809887,
+   "count": 183,
+   "src": 15,
+   "dst": 12,
+   "symbol": "A_>_Replay",
+   "mu": [
+    1.3169398907103824,
+    1448.0
+   ],
+   "cov": [
+    [
+     0.8110860897736138,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.006564551422319475,
+   "count": 3,
+   "src": 6,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.04408817635270541,
+   "count": 22,
+   "src": 12,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.4112903225806452,
+   "count": 199,
+   "src": 5,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.0020161290322580645,
+   "count": 1,
+   "src": 5,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    7.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.12534818941504178,
+   "count": 24,
+   "src": 14,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.7912621359223301,
+   "count": 163,
+   "src": 9,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.7727272727272727,
+   "count": 17,
+   "src": 11,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.09090909090909091,
+   "count": 22,
+   "src": 13,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.012035010940919038,
+   "count": 11,
+   "src": 3,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.019138755980861243,
+   "count": 4,
+   "src": 8,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.41116751269035534,
+   "count": 81,
+   "src": 4,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "",
+     "ed through loss or theft of laptops or backup drives. Encrypting such files at rest helps protect them should physical security measures fail. Digital rights management systems, which prevent unauthorized use or reproduction of copyrighted material and protect software against reverse engineering (see also copy protection), is another somewhat different example of using encryption on data at rest.[7]\r\n\r\nIn response to encryption of data at rest, cyber-adversaries have developed new types of attacks. These more recent threats to encryption of data at rest include cryptographic attacks,[8] stolen ciphertext attacks,[9] attacks on encryption keys,[10] insider attacks, data corruption or integrity attacks,[11] data destruction attacks, and ransomware attacks. Data fragmentation[12] and active defense[13] data protection technologies attempt to counter some of these attacks, by distributing, moving, or mutating ciphertext so it is more difficult to identify, steal, corrupt, or destroy.[14]\r\n\r\nEncryption is also used to protect data in transit, for example data being transferred via networks (e.g. the Internet, e-commerce), mobile telephones, wireless microphones, wireless intercom systems, Bluetooth devices and bank automatic teller machines. There have been numerous reports of data in transit being intercepted in recent years.[15] Data should also be encrypted when transmitted across networks in order to protect against eavesdropping of net"
+    ],
+    "weights": [
+     2,
+     74
+    ]
+   },
+   "p": 0.06563039723661486,
+   "count": 76,
+   "src": 16,
+   "dst": 4,
+   "symbol": "A_>_Text:ed",
+   "mu": [
+    0.0,
+    1460.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.055267702936096716,
+   "count": 64,
+   "src": 16,
+   "dst": 5,
+   "symbol": "FA_>_Empty",
+   "mu": [
+    14.03125,
+    0.0
+   ],
+   "cov": [
+    [
+     642.5704375079365,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.36787564766839376,
+   "count": 426,
+   "src": 16,
+   "dst": 6,
+   "symbol": "FA_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.004317789291882556,
+   "count": 5,
+   "src": 16,
+   "dst": 3,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.307426597582038,
+   "count": 278,
+   "src": 16,
+   "dst": 14,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.0025906735751295338,
+   "count": 3,
+   "src": 16,
+   "dst": 14,
+   "symbol": "A_<_Empty",
+   "mu": [
+    24.333333333333332,
+    0.0
+   ],
+   "cov": [
+    [
+     120.33333433333333,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "",
+     "ZXIgMTUsIDIwMDYsIFNhbmRyYSBLYXkgTWlsbGVyDQoiRGF0YSBFbmNyeXB0aW9uIGluIFRyYW5zaXQgR3VpZGVsaW5lIi4NCg0KICAgICJXaGF0IGlzIGEgVHJvamFuIFZpcnVzIC0gTWFsd2FyZSBQcm90ZWN0aW9uIC0gS2FzcGVyc2t5IExhYiBVUyIuDQoNCkZ1cnRoZXIgcmVhZGluZw0KDQogICAgRm91Y2jpIEdhaW5lcywgSGVsZW4gKDE5MzkpLCBDcnlwdGFuYWx5c2lzOiBBIFN0dWR5IG9mIENpcGhlcnMgYW5kIFRoZWlyIFNvbHV0aW9uLCBOZXcgWW9yazogRG92ZXIgUHVibGljYXRpb25zIEluYywgSVNCTiA5NzgtMDQ4NjIwMDk3Mg0KICAgIEthaG4sIERhdmlkLCBUaGUgQ29kZWJyZWFrZXJzIC0gVGhlIFN0b3J5IG9mIFNlY3JldCBXcml0aW5nIChJU0JOIDAtNjg0LTgzMTMwLTkpICgxOTY3KQ0KICAgIFByZW5lZWwsIEJhcnQsICJBZHZhbmNlcyBpbiBDcnlwdG9sb2d5IJcgRVVST0NSWVBUIDIwMDAiLCBTcHJpbmdlciBCZXJsaW4gSGVpZGVsYmVyZywgMjAwMCwgSVNCTiA5NzgtMy01NDAtNjc1MTctNA0KICAgIFNpbmtvdiwgQWJyYWhhbSwgRWxlbWVudGFyeSBDcnlwdGFuYWx5c2lzOiBBIE1hdGhlbWF0aWNhbCBBcHByb2FjaCwgTWF0aGVtYXRpY2FsIEFzc29jaWF0aW9uIG9mIEFtZXJpY2EsIDE5NjYuIElTQk4gMC04ODM4NS02MjItMA0KDQoJTG9vayB1cCBlbmNyeXB0aW9uIGluIFdpa3Rpb25hcnksIHRoZSBmcmVlIGRpY3Rpb25hcnkuDQoJV2lraW1lZGlhIENvbW1vbnMgaGFzIG1lZGlhIHJlbGF0ZWQgdG8gW1tjb21tb25zOkNhdGVnb3J5OkNyeXB0b2dyYXBoaWMgYWxnb3JpdGhtc3xdXS4NCg0KDQpbc2hvd10NCg0KICAgIHYgdCBlIA0KDQpDcnlwdG9ncmFwaHkNCkF1dGhvcml0eSBjb250cm9sIAkNCg0KICAgIEdORDogNDM1Mjg5My00IE5ETA=="
+    ],
+    "weights": [
+     17,
+     109
+    ]
+   },
+   "p": 0.10880829015544041,
+   "count": 126,
+   "src": 16,
+   "dst": 15,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    0.0,
+    892.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.4714828897338403,
+   "count": 310,
+   "src": 15,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.008064516129032258,
+    0.0
+   ],
+   "cov": [
+    [
+     0.013412877228067378,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.008871989860583017,
+   "count": 7,
+   "src": 15,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    27.142857142857142,
+    0.0
+   ],
+   "cov": [
+    [
+     143.1428581428571,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "",
+     "work traffic by unauthorized users.[16]\r\nMessage verification\r\n\r\nEncryption, by itself, can protect the confidentiality of messages, but other techniques are still needed to protect the integrity and authenticity of a message; for example, verification of a message authentication code (MAC) or a digital signature. Standards for cryptographic software and hardware to perform encryption are widely available, but successfully using encryption to ensure security may be a challenging problem. A single error in system design or execution can allow successful attacks. Sometimes an adversary can obtain unencrypted information without directly undoing the encryption. See, e.g., traffic analysis, TEMPEST, or Trojan horse.[17]\r\n\r\nDigital signature and encryption must be applied to the ciphertext when it is created (typically on the same device used to compose the message) to avoid tampering; otherwise any node between the sender and the encryption agent could potentially tamper with it. Encrypting at the time of creation is only secure if the encryption device itself has not been tampered with.\r\nSee also\r\n\r\n    iconCryptography portal \r\n\r\n    Substitution cipher\r\n    Rotor cipher machines\r\n    Brute-force attack\r\n    Cold boot attack\r\n    Export of cryptography\r\n    Cyberspace Electronic Security Act (in the US)\r\n    Disk encryption\r\n    Key management\r\n    Physical Layer Encryption\r\n    Geo-Blocking\r\n    Television encryption\r\n    Active defense\r"
+    ],
+    "weights": [
+     1,
+     115
+    ]
+   },
+   "p": 0.5888324873096447,
+   "count": 116,
+   "src": 4,
+   "dst": 17,
+   "symbol": "A_>_Text:work",
+   "mu": [
+    0.0,
+    1460.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "work traffic by unauthorized users.[16]\r\nMessage verification\r\n\r\nEncryption, by itself, can protect the confidentiality of messages, but other techniques are still needed to protect the integrity and authenticity of a message; for example, verification of a message authentication code (MAC) or a digital signature. Standards for cryptographic software and hardware to perform encryption are widely available, but successfully using encryption to ensure security may be a challenging problem. A single error in system design or execution can allow successful attacks. Sometimes an adversary can obtain unencrypted information without directly undoing the encryption. See, e.g., traffic analysis, TEMPEST, or Trojan horse.[17]\r\n\r\nDigital signature and encryption must be applied to the ciphertext when it is created (typically on the same device used to compose the message) to avoid tampering; otherwise any node between the sender and the encryption agent could potentially tamper with it. Encrypting at the time of creation is only secure if the encryption device itself has not been tampered with.\r\nSee also\r\n\r\n    iconCryptography portal \r\n\r\n    Substitution cipher\r\n    Rotor cipher machines\r\n    Brute-force attack\r\n    Cold boot attack\r\n    Export of cryptography\r\n    Cyberspace Electronic Security Act (in the US)\r\n    Disk encryption\r\n    Key management\r\n    Physical Layer Encryption\r\n    Geo-Blocking\r\n    Television encryption\r\n    Active defense\r"
+    ]
+   },
+   "p": 0.036072144288577156,
+   "count": 18,
+   "src": 12,
+   "dst": 17,
+   "symbol": "A_>_Text:work",
+   "mu": [
+    0.0,
+    1460.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.9925373134328358,
+   "count": 133,
+   "src": 17,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.03759398496240601,
+    0.0
+   ],
+   "cov": [
+    [
+     0.18797092481202982,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "",
+     "cating parties must have the same key before they can achieve secure communication.\r\nPublic key\r\nIllustration of how encryption is used within servers Public key encryption.\r\n\r\nIn public-key encryption schemes, the encryption key is published for anyone to use and encrypt messages. However, only the receiving party has access to the decryption key that enables messages to be read.[2] Public-key encryption was first described in a secret document in 1973;[3] before then all encryption schemes were symmetric-key (also called private-key).[4]:478\r\n\r\nA publicly available public key encryption application called Pretty Good Privacy (PGP) was written in 1991 by Phil Zimmermann, and distributed free of charge with source code; it was purchased by Symantec in 2010 and is regularly updated.[5]\r\nUses\r\n\r\nEncryption has long been used by militaries and governments to facilitate secret communication. It is now commonly used in protecting information within many kinds of civilian systems. For example, the Computer Security Institute reported that in 2007, 71% of companies surveyed utilized encryption for some of their data in transit, and 53% utilized encryption for some of their data in storage.[6] Encryption can be used to protect data \"at rest\", such as information stored on computers and storage devices (e.g. USB flash drives). In recent years, there have been numerous reports of confidential data, such as customers' personal records, being expos"
+    ],
+    "weights": [
+     1,
+     196
+    ]
+   },
+   "p": 0.39478957915831664,
+   "count": 197,
+   "src": 12,
+   "dst": 18,
+   "symbol": "A_>_Text:cating",
+   "mu": [
+    0.0,
+    1460.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "",
+     "ed through loss or theft of laptops or backup drives. Encrypting such files at rest helps protect them should physical security measures fail. Digital rights management systems, which prevent unauthorized use or reproduction of copyrighted material and protect software against reverse engineering (see also copy protection), is another somewhat different example of using encryption on data at rest.[7]\r\n\r\nIn response to encryption of data at rest, cyber-adversaries have developed new types of attacks. These more recent threats to encryption of data at rest include cryptographic attacks,[8] stolen ciphertext attacks,[9] attacks on encryption keys,[10] insider attacks, data corruption or integrity attacks,[11] data destruction attacks, and ransomware attacks. Data fragmentation[12] and active defense[13] data protection technologies attempt to counter some of these attacks, by distributing, moving, or mutating ciphertext so it is more difficult to identify, steal, corrupt, or destroy.[14]\r\n\r\nEncryption is also used to protect data in transit, for example data being transferred via networks (e.g. the Internet, e-commerce), mobile telephones, wireless microphones, wireless intercom systems, Bluetooth devices and bank automatic teller machines. There have been numerous reports of data in transit being intercepted in recent years.[15] Data should also be encrypted when transmitted across networks in order to protect against eavesdropping of net"
+    ],
+    "weights": [
+     7,
+     114
+    ]
+   },
+   "p": 0.6142131979695431,
+   "count": 121,
+   "src": 18,
+   "dst": 4,
+   "symbol": "A_>_Text:ed",
+   "mu": [
+    0.0,
+    1460.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.38578680203045684,
+   "count": 76,
+   "src": 18,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.02631578947368421,
+    0.0
+   ],
+   "cov": [
+    [
+     0.05263257894736857,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "\n\r\nReferences\r\n\r\nSymmetric-key encryption software\r\nBellare, Mihir. \"Public-Key Encryption in a Multi-user Setting: Security Proofs and Improvements.\" Springer Berlin Heidelberg, 2000. Page 1.\r\n\"Public-Key Encryption - how GCHQ got there first!\". gchq.gov.uk. Archived from the original on May 19, 2010.\r\nGoldreich, Oded. Foundations of Cryptography: Volume 2, Basic Applications. Vol. 2. Cambridge university press, 2004.\r\n\"Symantec buys encryption specialist PGP for $300M\". Computerworld. 2010-04-29. Retrieved 2010-04-29.\r\nRobert Richardson, 2008 CSI Computer Crime and Security Survey at 19.i.cmpnet.com\r\n\"DRM\". Electronic Frontier Foundation.\r\nDiscussion of encryption weaknesses for petabyte scale datasets: http://www.ssrc.ucsc.edu/Papers/li-fast13.pdf\r\n\"The Padding Oracle Attack - why crypto is terrifying\". Robert Heaton. Retrieved 2016-12-25.\r\n\"Researchers crack open unusually advanced malware that hid for 5 years\". Ars Technica. Retrieved 2016-12-25.\r\n\"New cloud attack takes full control of virtual machines with little effort\". Ars Technica. Retrieved 2016-12-25.\r\nExamples of data fragmentation technologies include Tahoe-LAFS and Storj.\r\nBurshteyn, Mike (2016-12-22). \"What does 'Active Defense' mean?\". CryptoMove. Retrieved 2016-12-25.\r\nCryptoMove is the first technology to continuously move, mutate, and re-encrypt ciphertext as a form of data protection.\r\nFiber Optic Networks Vulnerable to Attack, Information Security Magazine, Novemb"
+    ]
+   },
+   "p": 0.08808290155440414,
+   "count": 102,
+   "src": 16,
+   "dst": 19,
+   "symbol": "A_>_Text:References",
+   "mu": [
+    0.0,
+    1460.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "\n\r\nReferences\r\n\r\nSymmetric-key encryption software\r\nBellare, Mihir. \"Public-Key Encryption in a Multi-user Setting: Security Proofs and Improvements.\" Springer Berlin Heidelberg, 2000. Page 1.\r\n\"Public-Key Encryption - how GCHQ got there first!\". gchq.gov.uk. Archived from the original on May 19, 2010.\r\nGoldreich, Oded. Foundations of Cryptography: Volume 2, Basic Applications. Vol. 2. Cambridge university press, 2004.\r\n\"Symantec buys encryption specialist PGP for $300M\". Computerworld. 2010-04-29. Retrieved 2010-04-29.\r\nRobert Richardson, 2008 CSI Computer Crime and Security Survey at 19.i.cmpnet.com\r\n\"DRM\". Electronic Frontier Foundation.\r\nDiscussion of encryption weaknesses for petabyte scale datasets: http://www.ssrc.ucsc.edu/Papers/li-fast13.pdf\r\n\"The Padding Oracle Attack - why crypto is terrifying\". Robert Heaton. Retrieved 2016-12-25.\r\n\"Researchers crack open unusually advanced malware that hid for 5 years\". Ars Technica. Retrieved 2016-12-25.\r\n\"New cloud attack takes full control of virtual machines with little effort\". Ars Technica. Retrieved 2016-12-25.\r\nExamples of data fragmentation technologies include Tahoe-LAFS and Storj.\r\nBurshteyn, Mike (2016-12-22). \"What does 'Active Defense' mean?\". CryptoMove. Retrieved 2016-12-25.\r\nCryptoMove is the first technology to continuously move, mutate, and re-encrypt ciphertext as a form of data protection.\r\nFiber Optic Networks Vulnerable to Attack, Information Security Magazine, Novemb"
+    ]
+   },
+   "p": 0.08635097493036212,
+   "count": 31,
+   "src": 14,
+   "dst": 19,
+   "symbol": "A_>_Text:References",
+   "mu": [
+    0.0,
+    1460.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Text",
+    "content": [
+     "\n\r\nReferences\r\n\r\nSymmetric-key encryption software\r\nBellare, Mihir. \"Public-Key Encryption in a Multi-user Setting: Security Proofs and Improvements.\" Springer Berlin Heidelberg, 2000. Page 1.\r\n\"Public-Key Encryption - how GCHQ got there first!\". gchq.gov.uk. Archived from the original on May 19, 2010.\r\nGoldreich, Oded. Foundations of Cryptography: Volume 2, Basic Applications. Vol. 2. Cambridge university press, 2004.\r\n\"Symantec buys encryption specialist PGP for $300M\". Computerworld. 2010-04-29. Retrieved 2010-04-29.\r\nRobert Richardson, 2008 CSI Computer Crime and Security Survey at 19.i.cmpnet.com\r\n\"DRM\". Electronic Frontier Foundation.\r\nDiscussion of encryption weaknesses for petabyte scale datasets: http://www.ssrc.ucsc.edu/Papers/li-fast13.pdf\r\n\"The Padding Oracle Attack - why crypto is terrifying\". Robert Heaton. Retrieved 2016-12-25.\r\n\"Researchers crack open unusually advanced malware that hid for 5 years\". Ars Technica. Retrieved 2016-12-25.\r\n\"New cloud attack takes full control of virtual machines with little effort\". Ars Technica. Retrieved 2016-12-25.\r\nExamples of data fragmentation technologies include Tahoe-LAFS and Storj.\r\nBurshteyn, Mike (2016-12-22). \"What does 'Active Defense' mean?\". CryptoMove. Retrieved 2016-12-25.\r\nCryptoMove is the first technology to continuously move, mutate, and re-encrypt ciphertext as a form of data protection.\r\nFiber Optic Networks Vulnerable to Attack, Information Security Magazine, Novemb"
+    ]
+   },
+   "p": 0.007462686567164179,
+   "count": 1,
+   "src": 17,
+   "dst": 19,
+   "symbol": "A_>_Text:References",
+   "mu": [
+    0.0,
+    1460.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "ZXIgMTUsIDIwMDYsIFNhbmRyYSBLYXkgTWlsbGVyDQoiRGF0YSBFbmNyeXB0aW9uIGluIFRyYW5zaXQgR3VpZGVsaW5lIi4NCg0KICAgICJXaGF0IGlzIGEgVHJvamFuIFZpcnVzIC0gTWFsd2FyZSBQcm90ZWN0aW9uIC0gS2FzcGVyc2t5IExhYiBVUyIuDQoNCkZ1cnRoZXIgcmVhZGluZw0KDQogICAgRm91Y2jpIEdhaW5lcywgSGVsZW4gKDE5MzkpLCBDcnlwdGFuYWx5c2lzOiBBIFN0dWR5IG9mIENpcGhlcnMgYW5kIFRoZWlyIFNvbHV0aW9uLCBOZXcgWW9yazogRG92ZXIgUHVibGljYXRpb25zIEluYywgSVNCTiA5NzgtMDQ4NjIwMDk3Mg0KICAgIEthaG4sIERhdmlkLCBUaGUgQ29kZWJyZWFrZXJzIC0gVGhlIFN0b3J5IG9mIFNlY3JldCBXcml0aW5nIChJU0JOIDAtNjg0LTgzMTMwLTkpICgxOTY3KQ0KICAgIFByZW5lZWwsIEJhcnQsICJBZHZhbmNlcyBpbiBDcnlwdG9sb2d5IJcgRVVST0NSWVBUIDIwMDAiLCBTcHJpbmdlciBCZXJsaW4gSGVpZGVsYmVyZywgMjAwMCwgSVNCTiA5NzgtMy01NDAtNjc1MTctNA0KICAgIFNpbmtvdiwgQWJyYWhhbSwgRWxlbWVudGFyeSBDcnlwdGFuYWx5c2lzOiBBIE1hdGhlbWF0aWNhbCBBcHByb2FjaCwgTWF0aGVtYXRpY2FsIEFzc29jaWF0aW9uIG9mIEFtZXJpY2EsIDE5NjYuIElTQk4gMC04ODM4NS02MjItMA0KDQoJTG9vayB1cCBlbmNyeXB0aW9uIGluIFdpa3Rpb25hcnksIHRoZSBmcmVlIGRpY3Rpb25hcnkuDQoJV2lraW1lZGlhIENvbW1vbnMgaGFzIG1lZGlhIHJlbGF0ZWQgdG8gW1tjb21tb25zOkNhdGVnb3J5OkNyeXB0b2dyYXBoaWMgYWxnb3JpdGhtc3xdXS4NCg0KDQpbc2hvd10NCg0KICAgIHYgdCBlIA0KDQpDcnlwdG9ncmFwaHkNCkF1dGhvcml0eSBjb250cm9sIAkNCg0KICAgIEdORDogNDM1Mjg5My00IE5ETA=="
+    ]
+   },
+   "p": 0.664179104477612,
+   "count": 89,
+   "src": 19,
+   "dst": 15,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    0.0,
+    892.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.3358208955223881,
+   "count": 45,
+   "src": 19,
+   "dst": 16,
+   "symbol": "A_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  }
+ ],
+ "noise": {
+  "none": 0.9917029379760609,
+  "deletion": 0.0001360174102285092,
+  "reemission": 0.0001360174102285092,
+  "transposition": 0.007889009793253536,
+  "addition": 0.0001360174102285092
+ },
+ "initial_state": 0,
+ "accepting_state": 7,
+ "protocol": "tcp",
+ "metadata": {
+  "service": "ftp-data",
+  "conn_state": "SF",
+  "input_file": "cicids17-train",
+  "creation_time": "2026-01-16 05:28:09.432196"
+ }
+}

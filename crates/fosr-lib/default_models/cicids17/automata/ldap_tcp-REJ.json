@@ -1,0 +1,273 @@
+{
+ "edges": [
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 1.0,
+   "count": 1,
+   "src": 0,
+   "dst": 1,
+   "symbol": "SA_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "MIQAAAouAgECZIQAAAolBAAwhAAACh0whAAAAFQEEXN1YnNjaGVtYVN1YmVudHJ5MYQAAAA7BDlDTj1BZ2dyZWdhdGUsQ049U2NoZW1hLENOPUNvbmZpZ3VyYXRpb24sREM9VGVzdGJlZDEsREM9Y2EwhAAAAH8EDWRzU2VydmljZU5hbWUxhAAAAGoEaENOPU5URFMgU2V0dGluZ3MsQ049REMsQ049U2VydmVycyxDTj1EZWZhdWx0LUZpcnN0LVNpdGUtTmFtZSxDTj1TaXRlcyxDTj1Db25maWd1cmF0aW9uLERDPVRlc3RiZWQxLERDPWNhMIQAAADFBA5uYW1pbmdDb250ZXh0czGEAAAArwQRREM9VGVzdGJlZDEsREM9Y2EEIkNOPUNvbmZpZ3VyYXRpb24sREM9VGVzdGJlZDEsREM9Y2EELENOPVNjaGVtYSxDTj1Db25maWd1cmF0aW9uLERDPVRlc3RiZWQxLERDPWNhBCNEQz1Gb3Jlc3REbnNab25lcyxEQz1UZXN0YmVkMSxEQz1jYQQjREM9RG9tYWluRG5zWm9uZXMsREM9VGVzdGJlZDEsREM9Y2EwhAAAAC8EFGRlZmF1bHROYW1pbmdDb250ZXh0MYQAAAATBBFEQz1UZXN0YmVkMSxEQz1jYTCEAAAASQQTc2NoZW1hTmFtaW5nQ29udGV4dDGEAAAALgQsQ049U2NoZW1hLENOPUNvbmZpZ3VyYXRpb24sREM9VGVzdGJlZDEsREM9Y2EwhAAAAEYEGmNvbmZpZ3VyYXRpb25OYW1pbmdDb250ZXh0MYQAAAAkBCJDTj1Db25maWd1cmF0aW9uLERDPVRlc3RiZWQxLERDPWNhMIQAAAAyBBdyb290RG9tYWluTmFtaW5nQ29udGV4dDGEAAAAEwQRREM9VGVzdGJlZDEsREM9Y2EwhAAAA8IEEHN1cHBvcnRlZENvbnRyb2wxhAAAA6oEFjEuMi44NDAuMTEzNTU2LjEuNC4zMTkEFjEuMi44NDAuMTEzNTU2LjEuNC44MDEEFjEuMi44NDAuMTEzNTU2LjEuNC40NzMEFjEuMi44NDAuMTEzNTU2LjEuNC41MjgEFjEuMi44NDAuMTEzNTU2LjEuNC40MTcEFjEuMi44NDAuMTEzNTU2LjEuNC42MTkEFjEuMi44NDAuMTEzNTU2LjEuNC44NDEEFjEuMi44NDAuMTEzNTU2LjEuNC41MjkEFjEuMi44NDAuMTEzNTU2LjEuNC44MDUEFjEuMi44NDAuMTEzNTU2LjEuNC41MjEEFjEuMi44NDAuMTEzNTU2LjEuNC45NzAEFzEuMi44NDAuMTEzNTU2LjEuNC4xMzM4BBYxLjIuODQwLjExMzU1Ni4xLjQuNDc0BBcxLjIuODQwLjExMzU1Ni4xLjQuMTMzOQQXMS4yLjg0MC4xMTM1NTYuMS40LjEzNDAEFzEuMi44NDAuMTEzNTU2LjEuNC4xNDEzBBcyLjE2Ljg0MC4xLjExMzczMC4zLjQuOQQYMi4xNi44NDAuMS4xMTM3MzAuMy40LjEwBBcxLjIuODQwLjExMzU1Ni4xLjQuMTUwNAQXMS4yLjg0MC4xMTM1NTYuMS40LjE4NTIEFjEuMi44NDAuMTEzNTU2LjEuNC44MDIEFzEuMi44NDAuMTEzNTU2LjEuNC4xOTA3BBcxLjIuODQwLjExMzU1Ni4xLjQuMTk0OAQXMS4yLjg0MC4xMTM1NTYuMS40LjE5NzQEFzEuMi44NDAuMTEzNTU2LjEuNC4xMzQxBBcxLjIuODQwLjExMzU1Ni4xLjQuMjAyNgQXMS4yLjg0MC4xMTM1NTYuMS40LjIwNjQEFzEuMi44NDAuMTEzNTU2LjEuNC4yMDY1BBcxLjIuODQwLjExMzU1Ni4xLjQuMjA2NgQXMS4="
+    ]
+   },
+   "p": 0.5,
+   "count": 1,
+   "src": 2,
+   "dst": 3,
+   "symbol": "A_<_Replay",
+   "mu": [
+    0.0,
+    1460.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.5,
+   "count": 1,
+   "src": 2,
+   "dst": 4,
+   "symbol": "RA_<_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 1.0,
+   "count": 1,
+   "src": 4,
+   "dst": 5,
+   "symbol": "$",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "MIQAAAFYAgECY4QAAAFPBAAKAQAKAQACAQACAXgBAQCHC29iamVjdGNsYXNzMIQAAAErBBFzdWJzY2hlbWFTdWJlbnRyeQQNZHNTZXJ2aWNlTmFtZQQObmFtaW5nQ29udGV4dHMEFGRlZmF1bHROYW1pbmdDb250ZXh0BBNzY2hlbWFOYW1pbmdDb250ZXh0BBpjb25maWd1cmF0aW9uTmFtaW5nQ29udGV4dAQXcm9vdERvbWFpbk5hbWluZ0NvbnRleHQEEHN1cHBvcnRlZENvbnRyb2wEFHN1cHBvcnRlZExEQVBWZXJzaW9uBBVzdXBwb3J0ZWRMREFQUG9saWNpZXMEF3N1cHBvcnRlZFNBU0xNZWNoYW5pc21zBAtkbnNIb3N0TmFtZQQPbGRhcFNlcnZpY2VOYW1lBApzZXJ2ZXJOYW1lBBVzdXBwb3J0ZWRDYXBhYmlsaXRpZXM="
+    ]
+   },
+   "p": 0.5,
+   "count": 1,
+   "src": 6,
+   "dst": 2,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    0.0,
+    350.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.5,
+   "count": 1,
+   "src": 6,
+   "dst": 3,
+   "symbol": "A_<_Empty",
+   "mu": [
+    177.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "MIQAAADMAgEEYYQAAADDCgEABAAEAIeCALihgbUwgbKgAwoBAKELBgkqhkiC9xIBAgKigZ0EgZpggZcGCSqGSIb3EgECAgIAb4GHMIGEoAMCAQWhAwIBD6J4MHagAwIBEqJvBG2fJ2Hggcz5LAS9awRHuA8Focku6JmAJu6XruTM890O4HMXeTMXrhNPLwoX4yh9iMITtlpX2WYw0sb+0x63/d0FGr3Y+chOBzkyPSLu91mnjpCnse6nZ2rdkRdZAjkI62UlKdUaxfW31s+J8+QL",
+     "Mi44NDAuMTEzNTU2LjEuNC4yMDkwBBcxLjIuODQwLjExMzU1Ni4xLjQuMjIwNQQXMS4yLjg0MC4xMTM1NTYuMS40LjIyMDQEFzEuMi44NDAuMTEzNTU2LjEuNC4yMjA2BBcxLjIuODQwLjExMzU1Ni4xLjQuMjIxMQQXMS4yLjg0MC4xMTM1NTYuMS40LjIyMzkEFzEuMi44NDAuMTEzNTU2LjEuNC4yMjU1BBcxLjIuODQwLjExMzU1Ni4xLjQuMjI1NgQXMS4yLjg0MC4xMTM1NTYuMS40LjIzMDkwhAAAACIEFHN1cHBvcnRlZExEQVBWZXJzaW9uMYQAAAAGBAEzBAEyMIQAAAGaBBVzdXBwb3J0ZWRMREFQUG9saWNpZXMxhAAAAX0EDk1heFBvb2xUaHJlYWRzBBlNYXhQZXJjZW50RGlyU3luY1JlcXVlc3RzBA9NYXhEYXRhZ3JhbVJlY3YEEE1heFJlY2VpdmVCdWZmZXIED0luaXRSZWN2VGltZW91dAQOTWF4Q29ubmVjdGlvbnMED01heENvbm5JZGxlVGltZQQLTWF4UGFnZVNpemUEFk1heEJhdGNoUmV0dXJuTWVzc2FnZXMEEE1heFF1ZXJ5RHVyYXRpb24EEk1heERpclN5bmNEdXJhdGlvbgQQTWF4VGVtcFRhYmxlU2l6ZQQQTWF4UmVzdWx0U2V0U2l6ZQQNTWluUmVzdWx0U2V0cwQUTWF4UmVzdWx0U2V0c1BlckNvbm4EFk1heE5vdGlmaWNhdGlvblBlckNvbm4EC01heFZhbFJhbmdlBBVNYXhWYWxSYW5nZVRyYW5zaXRpdmUEEVRocmVhZE1lbW9yeUxpbWl0BBhTeXN0ZW1NZW1vcnlMaW1pdFBlcmNlbnQwhAAAAEkEF3N1cHBvcnRlZFNBU0xNZWNoYW5pc21zMYQAAAAqBAZHU1NBUEkECkdTUy1TUE5FR08ECEVYVEVSTkFMBApESUdFU1QtTUQ1MIQAAAAjBAtkbnNIb3N0TmFtZTGEAAAAEAQOREMuVGVzdGJlZDEuY2EwhAAAADQED2xkYXBTZXJ2aWNlTmFtZTGEAAAAHQQbVGVzdGJlZDEuY2E6ZGMkQFRFU1RCRUQxLkNBMIQAAABrBApzZXJ2ZXJOYW1lMYQAAABZBFdDTj1EQyxDTj1TZXJ2ZXJzLENOPURlZmF1bHQtRmlyc3QtU2l0ZS1OYW1lLENOPVNpdGVzLENOPUNvbmZpZ3VyYXRpb24sREM9VGVzdGJlZDEsREM9Y2EwhAAAALIEFXN1cHBvcnRlZENhcGFiaWxpdGllczGEAAAAlQQWMS4yLjg0MC4xMTM1NTYuMS40LjgwMAQXMS4yLjg0MC4xMTM1NTYuMS40LjE2NzAEFzEuMi44NDAuMTEzNTU2LjEuNC4xNzkxBBcxLjIuODQwLjExMzU1Ni4xLjQuMTkzNQQXMS4yLjg0MC4xMTM1NTYuMS40LjIwODAEFzEuMi44NDAuMTEzNTU2LjEuNC4yMjM3MIQAAAAQAgECZYQAAAAHCgEABAAEAA=="
+    ]
+   },
+   "p": 1.0,
+   "count": 1,
+   "src": 3,
+   "dst": 7,
+   "symbol": "AP_<_Replay",
+   "mu": [
+    0.0,
+    692.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     464648.000001
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 1.0,
+   "count": 1,
+   "src": 1,
+   "dst": 7,
+   "symbol": "S_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "Base64",
+    "content": [
+     "AAAAJwUEBP8ADAAMAAAAAFr2aYBlgk8zw4vM0s7aBfUwhAAAAAUCAQVCAA=="
+    ]
+   },
+   "p": 0.3333333333333333,
+   "count": 1,
+   "src": 7,
+   "dst": 2,
+   "symbol": "AP_>_Replay",
+   "mu": [
+    8.0,
+    43.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.6666666666666666,
+   "count": 1,
+   "src": 7,
+   "dst": 6,
+   "symbol": "A_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  }
+ ],
+ "noise": {
+  "none": 0.7647058823529411,
+  "deletion": 0.05882352941176472,
+  "reemission": 0.05882352941176472,
+  "transposition": 0.05882352941176472,
+  "addition": 0.05882352941176472
+ },
+ "initial_state": 0,
+ "accepting_state": 5,
+ "protocol": "tcp",
+ "metadata": {
+  "service": "ldap_tcp",
+  "conn_state": "REJ",
+  "input_file": "cicids17-train",
+  "creation_time": "2026-01-14 16:35:17.379757"
+ }
+}
