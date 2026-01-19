@@ -23,7 +23,7 @@ pub struct Network {
 
 pub fn from_str(string: &str) -> Result<Network, String> {
     Ok(serde_xml_rs::from_str::<Bif>(string)
-        .map_err(|_| "Cannot parse the BIF file".to_string())?
+        .map_err(|e| format!("Cannot parse the BIF file: {e}"))?
         .network)
 }
 

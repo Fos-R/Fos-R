@@ -40,7 +40,7 @@ impl Models {
     pub fn with_config(mut self, path: &str) -> Result<Self, String> {
         let config = config::import_config(
             &fs::read_to_string(Path::new(path))
-                .map_err(|_| "Cannot open the configuration file".to_string())?,
+                .map_err(|e| format!("Cannot open the configuration file: {e}"))?,
         );
         self.bn.apply_config(&config)?;
         Ok(self)
@@ -884,7 +884,7 @@ impl ModelsSource {
             ModelsSource::UserDefined(path) => Ok(fs::read_to_string(
                 Path::new(path).join("time_profile.json").to_str().unwrap(),
             )
-            .map_err(|_| "Cannot open the time profile file".to_string())?),
+            .map_err(|e| format!("Cannot open the time profile file: {e}"))?),
         }
     }
 }

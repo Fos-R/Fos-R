@@ -256,7 +256,7 @@ pub struct TimeModel {
 impl TimeModel {
     pub fn from_source(m: &models::ModelsSource) -> Result<Self, String> {
         let profile: TimeModel = serde_json::from_str(&m.get_time_profile()?)
-            .map_err(|_| "Cannot parse the time model".to_string())?;
+            .map_err(|e| format!("Cannot parse the time model: {e}"))?;
         log::info!(
             "Time model learned on {} have been loaded",
             profile.metadata.input_file
