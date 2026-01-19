@@ -238,7 +238,9 @@ impl From<HostYaml> for Host {
             usage: h.usage.unwrap_or(1.0),
             host_type,
             interfaces: h.interfaces,
-            client: h.client.map(|v: Vec<String>| v.into_iter().map(|s: String| &*s.leak()).collect()),
+            client: h
+                .client
+                .map(|v: Vec<String>| v.into_iter().map(|s: String| &*s.leak()).collect()),
         }
     }
 }

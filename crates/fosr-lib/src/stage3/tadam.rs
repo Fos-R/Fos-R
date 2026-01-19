@@ -59,8 +59,9 @@ impl AutomataLibrary {
     pub fn import_from_str(&mut self, string: &str) -> Result<String, String> {
         let string = string.to_string();
         let a: automaton::JsonAutomaton =
-            serde_json::from_str::<automaton::JsonAutomaton>(string.leak()).map_err(|e| format!("Import error: {e}"))?;
-        let l7proto = a.l7protocol;
+            serde_json::from_str::<automaton::JsonAutomaton>(string.leak())
+                .map_err(|e| format!("Import error: {e}"))?;
+        let l7proto = a.metadata.service.clone().leak();
         match a.protocol {
             L4Proto::TCP => {
                 let a = automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(
