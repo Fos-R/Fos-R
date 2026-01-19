@@ -25,11 +25,11 @@ pub struct Configuration {
     /// The list of "servers" IPs
     pub servers: Vec<Ipv4Addr>,
     /// The list of services proposed in the configuration
-    pub services: Vec<L7Proto>,
+    pub services: Vec<&'static str>,
     /// Overridden listening ports
-    pub open_ports: HashMap<(Ipv4Addr, L7Proto), u16>,
-    servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
-    users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
+    pub open_ports: HashMap<(Ipv4Addr, &'static str), u16>,
+    servers_per_service: HashMap<&'static str, Vec<Ipv4Addr>>,
+    users_per_service: HashMap<&'static str, Vec<Ipv4Addr>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -69,10 +69,10 @@ impl From<ConfigurationYaml> for Configuration {
         }
 
         let mut mac_addr_map: HashMap<Ipv4Addr, MacAddr> = HashMap::new();
-        let mut services: HashSet<L7Proto> = HashSet::new();
-        let mut servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
-        let mut users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
-        let mut open_ports: HashMap<(Ipv4Addr, L7Proto), u16> = HashMap::new();
+        let mut services: HashSet<&'static str> = HashSet::new();
+        let mut servers_per_service: HashMap<&'static str, Vec<Ipv4Addr>> = HashMap::new();
+        let mut users_per_service: HashMap<&'static str, Vec<Ipv4Addr>> = HashMap::new();
+        let mut open_ports: HashMap<(Ipv4Addr, &'static str), u16> = HashMap::new();
 
         for interface in c.hosts.iter().flat_map(|h| &h.interfaces) {
             if let Some(mac_addr) = interface.mac_addr {
@@ -143,7 +143,7 @@ impl From<ConfigurationYaml> for Configuration {
 
 impl Configuration {
     /// Get the list of servers that provide a service
-    pub fn get_servers_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
+    pub fn get_servers_per_service(&self, service: &'static str) -> Vec<Ipv4Addr> {
         self.servers_per_service
             .get(service)
             .unwrap_or(&vec![])
@@ -151,7 +151,7 @@ impl Configuration {
     }
 
     /// Get the list of users that uses a service
-    pub fn get_users_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
+    pub fn get_users_per_service(&self, service: &'static str) -> Vec<Ipv4Addr> {
         self.users_per_service
             .get(service)
             .unwrap_or(&vec![])
@@ -195,7 +195,7 @@ pub struct Host {
     pub os: OS,
     /// Its usage. 1 is standard, less than 1 is less usage than standard, more than 1 is more usage than standrad
     pub usage: f64,
-    client: Option<Vec<L7Proto>>, // we keep the option here, because there is a difference
+    client: Option<Vec<&'static str>>, // we keep the option here, because there is a difference
     // between an empty list (no service is used) and nothing
     // (default services are used)
     host_type: HostType,
@@ -216,7 +216,7 @@ struct HostYaml {
     hostname: Option<String>,
     os: Option<OS>,
     usage: Option<f64>,
-    client: Option<Vec<L7Proto>>,
+    client: Option<Vec<String>>,
     #[serde(rename = "type")]
     host_type: Option<HostType>,
     interfaces: Vec<Interface>,
@@ -238,7 +238,7 @@ impl From<HostYaml> for Host {
             usage: h.usage.unwrap_or(1.0),
             host_type,
             interfaces: h.interfaces,
-            client: h.client,
+            client: h.client.map(|v: Vec<String>| v.into_iter().map(|s: String| &*s.leak()).collect()),
         }
     }
 }
@@ -251,11 +251,11 @@ pub struct Interface {
     /// Its MAC address
     pub mac_addr: Option<MacAddr>,
     /// The services it provides (may be empty)
-    pub services: Vec<L7Proto>,
+    pub services: Vec<&'static str>,
     /// Its IP address
     pub ip_addr: Ipv4Addr,
     /// The open ports of services, if they are not the default one
-    pub open_ports: HashMap<L7Proto, u16>,
+    pub open_ports: HashMap<&'static str, u16>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -270,12 +270,12 @@ impl TryFrom<InterfaceYaml> for Interface {
     type Error = String;
 
     fn try_from(i: InterfaceYaml) -> Result<Self, String> {
-        let mut open_ports: HashMap<L7Proto, u16> = HashMap::new();
+        let mut open_ports: HashMap<&'static str, u16> = HashMap::new();
         let mut services = vec![];
         for s in i.services.unwrap_or_default() {
             let v: Vec<String> = s.as_str().split(':').map(|s| s.to_string()).collect();
             assert!(!v.is_empty() && v.len() <= 2);
-            let service: L7Proto = v[0].clone().try_into()?;
+            let service: &'static str = v[0].clone().leak();
             if v.len() == 2 {
                 open_ports.insert(
                     service,
