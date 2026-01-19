@@ -23,7 +23,7 @@ const DURATION_THRESHOLD: Duration = Duration::from_secs(600);
 pub struct FlowStats {
     pub timestamp: Duration,
     pub duration: Duration,
-    pub protocol: Protocol,
+    pub protocol: L4Proto,
     pub src_ip: Ipv4Addr,
     pub dst_ip: Ipv4Addr,
     pub src_port: u16,
@@ -292,7 +292,7 @@ fn flow_id_from_packet(data: &[u8]) -> Option<FlowId> {
         IpNextHeaderProtocols::Tcp => {
             if let Some(tcp_packet) = tcp::TcpPacket::new(ip_packet.payload()) {
                 (
-                    Protocol::TCP,
+                    L4Proto::TCP,
                     tcp_packet.get_source(),
                     tcp_packet.get_destination(),
                 )
@@ -303,12 +303,12 @@ fn flow_id_from_packet(data: &[u8]) -> Option<FlowId> {
         IpNextHeaderProtocols::Udp => {
             let udp_packet = udp::UdpPacket::new(ip_packet.payload()).unwrap();
             (
-                Protocol::UDP,
+                L4Proto::UDP,
                 udp_packet.get_source(),
                 udp_packet.get_destination(),
             )
         }
-        IpNextHeaderProtocols::Icmp => (Protocol::ICMP, 0, 0),
+        IpNextHeaderProtocols::Icmp => (L4Proto::ICMP, 0, 0),
 
         _ => {
             // log::error!("Unsupported protocol: {proto}");

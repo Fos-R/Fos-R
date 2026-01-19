@@ -278,7 +278,7 @@ fn run_efficient<T: inject::NetEnabler>(
         // TODO: only create if online
         let mut tx_s4 = HashMap::new();
         let mut rx_s5 = HashMap::new();
-        for proto in Protocol::iter() {
+        for proto in L4Proto::iter() {
             let (tx, rx) = bounded::<Packets>(CHANNEL_SIZE);
             rx_s5.insert(proto, rx);
             tx_s4.insert(proto, tx);
@@ -362,7 +362,7 @@ fn run_efficient<T: inject::NetEnabler>(
 
                 let builder = thread::Builder::new().name(format!("Stage4-{proto:?}"));
                 match proto {
-                    Protocol::TCP => {
+                    L4Proto::TCP => {
                         let rx_s4_tcp = rx_s4_tcp.clone();
                         gen_threads.push(
                             builder
@@ -380,7 +380,7 @@ fn run_efficient<T: inject::NetEnabler>(
                                 .unwrap(),
                         );
                     }
-                    Protocol::UDP => {
+                    L4Proto::UDP => {
                         let rx_s4_udp = rx_s4_udp.clone();
                         gen_threads.push(
                             builder
@@ -398,7 +398,7 @@ fn run_efficient<T: inject::NetEnabler>(
                                 .unwrap(),
                         );
                     }
-                    Protocol::ICMP => {
+                    L4Proto::ICMP => {
                         let rx_s4_icmp = rx_s4_icmp.clone();
                         gen_threads.push(
                             builder

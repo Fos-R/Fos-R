@@ -31,7 +31,7 @@ struct IntermediateVector {
     fwd_packets_count: Option<usize>,
     bwd_packets_count: Option<usize>,
     timestamp: Option<Duration>,
-    proto: Option<Protocol>,
+    proto: Option<L4Proto>,
     tcp_flags: Option<TCPConnState>,
     src_ip: Option<Ipv4Addr>, // if None, randomly sampled
     dst_ip: Option<Ipv4Addr>, // if None, randomly sampled
@@ -58,7 +58,7 @@ impl From<IntermediateVector> for Flow {
 /// A node of the Bayesian network
 #[derive(Debug, Clone)]
 struct BayesianNetworkNode {
-    proto_specific: Option<Protocol>,
+    proto_specific: Option<L4Proto>,
     feature: Feature,
     removed_values: HashSet<usize>,
     cpt: Option<CPT>,    // TimeBin has no CPT
@@ -107,7 +107,7 @@ enum Feature {
     FwdPkt(Vec<Normal<f64>>), // the exact number is sampled from a Gaussian distribution afterward
     BwdPkt(Vec<Normal<f64>>), // idem
     L7Proto(Vec<L7Proto>),
-    L4Proto(Vec<Protocol>),
+    L4Proto(Vec<L4Proto>),
     EndFlags(Vec<TCPConnState>),
 }
 
@@ -355,10 +355,10 @@ impl BayesianModel {
         let mut bif_common = bifxml::from_str(&bn_strings[0])?;
         // log::info!("Loading TCP BN");
         let bif_tcp = bifxml::from_str(&bn_strings[1])?;
-        bif_common.merge(bif_tcp, Protocol::TCP);
+        bif_common.merge(bif_tcp, L4Proto::TCP);
         // log::info!("Loading UDP BN");
         let bif_udp = bifxml::from_str(&bn_strings[2])?;
-        bif_common.merge(bif_udp, Protocol::UDP);
+        bif_common.merge(bif_udp, L4Proto::UDP);
 
         let bn_common = bn_from_bif(bif_common, &bn_additional_data)?;
 

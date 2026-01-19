@@ -29,7 +29,7 @@ pub fn from_str(string: &str) -> Result<Network, String> {
 
 impl Network {
     /// Apply a suffix to the variables of "other" and merge the two networks
-    pub fn merge(&mut self, mut other: Network, proto: Protocol) {
+    pub fn merge(&mut self, mut other: Network, proto: L4Proto) {
         let outer_variable: Vec<String> = self.variable.iter().map(|v| v.name.clone()).collect();
         let suffix = " ".to_string() + &proto.to_string();
         for v in other.variable.iter_mut() {
@@ -64,7 +64,7 @@ pub struct Variable {
     pub name: String,
     property: Vec<String>,
     pub outcome: Vec<String>,
-    pub proto_specific: Option<Protocol>, // not present in the format but convenient
+    pub proto_specific: Option<L4Proto>, // not present in the format but convenient
 }
 
 #[derive(Deserialize, Debug, Clone)]

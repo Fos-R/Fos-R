@@ -27,8 +27,7 @@ pub struct TimePoint {
 /// A transport protocol
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Protocol {
-    // TODO: renommer en L4Protocol pour éviter toute confusion
+pub enum L4Proto {
     TCP,
     UDP,
     ICMP,
@@ -80,49 +79,49 @@ impl TryFrom<String> for TCPConnState {
 }
 
 // TODO: refaire proprement
-impl From<String> for Protocol {
-    fn from(s: String) -> Protocol {
+impl From<String> for L4Proto {
+    fn from(s: String) -> L4Proto {
         match s.as_str() {
-            "TCP" => Protocol::TCP,
-            "UDP" => Protocol::UDP,
-            "ICMP" => Protocol::ICMP,
+            "TCP" => L4Proto::TCP,
+            "UDP" => L4Proto::UDP,
+            "ICMP" => L4Proto::ICMP,
             _ => todo!(),
         }
     }
 }
 
-impl Display for Protocol {
+impl Display for L4Proto {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Protocol::TCP => write!(f, "TCP"),
-            Protocol::UDP => write!(f, "UDP"),
-            Protocol::ICMP => write!(f, "ICMP"),
+            L4Proto::TCP => write!(f, "TCP"),
+            L4Proto::UDP => write!(f, "UDP"),
+            L4Proto::ICMP => write!(f, "ICMP"),
         }
     }
 }
 
-impl Protocol {
-    pub fn iter() -> [Protocol; 2] {
+impl L4Proto {
+    pub fn iter() -> [L4Proto; 2] {
         // TODO: add the other protocols when they are implemented
-        [Protocol::TCP, Protocol::UDP] //, Protocol::ICMP]
+        [L4Proto::TCP, L4Proto::UDP] //, L4Proto::ICMP]
     }
 
     pub fn get_protocol_number(&self) -> u8 {
         match &self {
-            Protocol::TCP => 6,
-            Protocol::UDP => 17,
-            Protocol::ICMP => 1,
+            L4Proto::TCP => 6,
+            L4Proto::UDP => 17,
+            L4Proto::ICMP => 1,
         }
     }
 
     pub fn wrap(&self, d: FlowData, c: Option<TCPConnState>) -> Flow {
         match &self {
-            Protocol::TCP => Flow::TCP(d, c.unwrap()),
-            Protocol::UDP => {
+            L4Proto::TCP => Flow::TCP(d, c.unwrap()),
+            L4Proto::UDP => {
                 assert!(c.is_none());
                 Flow::UDP(d)
             }
-            Protocol::ICMP => {
+            L4Proto::ICMP => {
                 assert!(c.is_none());
                 Flow::ICMP(d)
             }
@@ -247,11 +246,11 @@ impl Flow {
         }
     }
 
-    pub fn get_proto(&self) -> Protocol {
+    pub fn get_proto(&self) -> L4Proto {
         match &self {
-            Flow::TCP(_, _) => Protocol::TCP,
-            Flow::UDP(_) => Protocol::UDP,
-            Flow::ICMP(_) => Protocol::ICMP,
+            Flow::TCP(_, _) => L4Proto::TCP,
+            Flow::UDP(_) => L4Proto::UDP,
+            Flow::ICMP(_) => L4Proto::ICMP,
         }
     }
 }
@@ -478,7 +477,7 @@ impl Recycle<Packets> for PacketsRecycler {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 /// A 5-uplet typically used to identify a flow
 pub struct FlowId {
-    pub protocol: Protocol,
+    pub protocol: L4Proto,
     pub src_ip: Ipv4Addr,
     pub dst_ip: Ipv4Addr,
     pub src_port: u16,

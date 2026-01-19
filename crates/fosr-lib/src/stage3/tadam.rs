@@ -61,7 +61,7 @@ impl AutomataLibrary {
             serde_json::from_str(string).map_err(|_| "Import error".to_string())?;
         let l7proto = a.l7protocol;
         match a.protocol {
-            Protocol::TCP => {
+            L4Proto::TCP => {
                 let a = automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(
                     a,
                     parse_tcp_symbol,
@@ -70,7 +70,7 @@ impl AutomataLibrary {
                 self.tcp_automata.insert(l7proto, a.clone());
                 self.cons_tcp_automata.insert(l7proto, a.into());
             }
-            Protocol::UDP => {
+            L4Proto::UDP => {
                 let a = automaton::TimedAutomaton::<UDPEdgeTuple>::import_timed_automaton(
                     a,
                     parse_udp_symbol,
@@ -79,7 +79,7 @@ impl AutomataLibrary {
                 self.udp_automata.insert(l7proto, a.clone());
                 self.cons_udp_automata.insert(l7proto, a.into());
             }
-            Protocol::ICMP => {
+            L4Proto::ICMP => {
                 let a = automaton::TimedAutomaton::<ICMPEdgeTuple>::import_timed_automaton(
                     a,
                     parse_icmp_symbol,
