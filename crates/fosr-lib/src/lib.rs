@@ -14,6 +14,7 @@ pub mod structs;
 #[doc(inline)]
 pub use structs::*;
 
+/// The default models included in the binary
 pub mod models;
 
 /// ICMP-specific fonctions
