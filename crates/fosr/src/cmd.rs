@@ -45,12 +45,16 @@ impl fmt::Display for InjectionAlgo {
 #[derive(ValueEnum, Debug, Clone)]
 pub enum DefaultModels {
     Legacy,
+    CICIDS17,
+    CUPID,
 }
 
 impl DefaultModels {
     pub fn get_source(&self) -> models::ModelsSource {
         match &self {
             DefaultModels::Legacy => models::ModelsSource::Legacy,
+            DefaultModels::CICIDS17 => models::ModelsSource::CICIDS17,
+            DefaultModels::CUPID => models::ModelsSource::CUPID,
         }
     }
 }
@@ -188,7 +192,6 @@ pub enum Command {
         seed: Option<u64>,
         #[arg(
             long,
-            // default_value_t = DefaultModels::Legacy,
             help = "Use a default model"
         )]
         default_models: Option<DefaultModels>,

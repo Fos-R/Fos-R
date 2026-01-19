@@ -38,10 +38,8 @@ hex = "0.4.3"
 sha2 = "0.10.9"
 
 [features]
-default = []
+default = ["fosr-lib/models_cupid", "fosr-lib/models_cicids17"]
 net_injection = ["pnet/std", "fosr-lib/net_injection"]
-models_cupid = ["fosr-lib/models_cupid"]
-models_cicids17 = ["fosr-lib/models_cicids17"]
 
 # Linux only
 iptables = ["net_injection", "fosr-lib/iptables"]
