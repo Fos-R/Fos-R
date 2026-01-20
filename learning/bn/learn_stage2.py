@@ -48,7 +48,7 @@ def cluster_to_string(n):
     return "cluster-"+f'{n:03}'
 
 
-bin_count = 24*4
+bin_count = 24
 
 def categorize_time(t):
     n = int(t % (60*60*24) // (60*60*24 / bin_count))
