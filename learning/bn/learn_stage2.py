@@ -1,5 +1,3 @@
-# Data to generate: src_ip, dst_ip, src_port, dst_port, ttl_client, ttl_server, fwd_pckets_count, bwd_packets_count, proto
-
 import argparse
 import numpy as np
 import pandas as pd
@@ -11,6 +9,8 @@ import os
 import sys
 import csv
 import functools
+
+pd.options.mode.copy_on_write = True
 
 def group_ip_dst(value):
     value = str(value)
@@ -33,14 +33,24 @@ def get_network_role(ip, clients, servers):
     else:
         return "Internet"
 
-def to_string(n):
+rare_ports = None
+
+def port_to_string(n):
+    if n in rare_ports:
+        return "unique"
     return "port-"+str(int(n))
+
+def cluster_to_string(n):
+    return "cluster-"+str(n)
+
 
 bin_count = 24*4
 
 def categorize_time(t):
     n = int(t % (60*60*24) // (60*60*24 / bin_count))
     return "bin-"+f'{n:03}'
+
+full_domains = {}
 
 # Adapted from https://pyagrum.readthedocs.io/en/1.13.0/notebooks/17-Examples_parametersLearningWithPandas.html#A-global-method-for-estimating-Bayesian-network-parameters-from-CSV-file-using-PANDAS
 def computeCPTfromDF(bn,df,name):
@@ -49,8 +59,15 @@ def computeCPTfromDF(bn,df,name):
     """
     id=bn.idFromName(name)
     parents=list(reversed(bn.cpt(id).names))
-    domains=[bn[name].domainSize()
-             for name in parents]
+    # domains=[bn[name].domainSize()
+             # for name in parents]
+    domains = [len(full_domains[name]) for name in parents]
+
+    # create a tensor with the correct dimensions
+    # tensor = gum.Tensor()
+    # for p in parents:
+    #     tensor = tensor.add(gum.LabelizedVariable(p,p,full_domains[p]))
+    #     print(tensor)
     parents.pop()
 
     if (len(parents)>0):
@@ -60,13 +77,18 @@ def computeCPTfromDF(bn,df,name):
         s=df[name].value_counts(normalize=True)
 
     s.fillna(0, inplace=True)
+    # change the tensor to the correct one
+    # bn.changeTensor(id, tensor)
+    # fill it
     bn.cpt(id)[:]=np.array((s).transpose()).reshape(*domains)
+    # bn.cpt(id).fillWith(np.array((s).transpose()).reshape(*domains))
 
-def ParametersLearning(bn,df):
+def parameters_learning(bn,df):
     """
     Compute the CPTs of every varaible in the BN bn from the database df
     Use no prior and replace NaN with 0.
     """
+    bn.generateCPTs() # to set the correct size of the CPT
     for name in bn.names():
         computeCPTfromDF(bn,df,name)
 
@@ -147,7 +169,7 @@ if __name__ == '__main__':
 
     # get all the services detected
     services = [s for s in flow['Applicative Proto'].unique() if ":" in s]
-    print("Recognized services:",services)
+    # print("Recognized services:",services)
     # some flow’s protocols may not be corrected infered (S0’s for example). We use the other flows to infer the service
     flow["Applicative Proto"] = flow["Applicative Proto"].apply(functools.partial(complete_proto,services))
     # we remove flows with unknown service
@@ -181,7 +203,10 @@ if __name__ == '__main__':
     # anonymise public IP
     flow['Src IP Addr'] = flow['id.orig_h'].apply(remove_public_ip)
     flow['Dst IP Addr'] = flow['id.resp_h'].apply(remove_public_ip)
-    flow['Dst Pt'] = flow['id.resp_p'].apply(to_string)
+
+    # Modify destination ports that only appears once in their own category
+    rare_ports = flow["id.resp_p"].value_counts()[flow["id.resp_p"].value_counts() == 1]
+    flow['Dst Pt'] = flow['id.resp_p'].apply(port_to_string)
 
     # get all the local IP addresses
     ips = list(set(flow["Src IP Addr"].tolist()).union(set(flow["Dst IP Addr"].tolist())))
@@ -239,7 +264,7 @@ if __name__ == '__main__':
             except Exception as e:
                 print("Error during GaussianMixture:",e)
         assert best_bic is not None
-        best_labels = list(map(str,best_labels)) # make the variable discrete
+        best_labels = list(map(cluster_to_string,best_labels)) # make the variable discrete
         return best_model.means_.reshape(1,-1)[0], best_model.covariances_, best_labels
 
     if tcp_fosr is not None:
@@ -266,6 +291,11 @@ if __name__ == '__main__':
 
     flow = flow.replace("-", "none") # "-" causes pyagrum to parse the value as a number, leading to an exception
 
+    # Extract domains
+    for c in ["Time", "Src IP Role", "Dst IP Role", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Cat Out Packet", "Cat In Packet", "Connection State"]:
+        full_domains[c] = [str(s) for s in pd.unique(flow[c])]
+        full_domains[c].sort()
+
     # Common variables:
         # Time
         # Src IP Role
@@ -273,6 +303,9 @@ if __name__ == '__main__':
         # Applicative Protocol
     common_vars = ["Time", "Src IP Role", "Dst IP Role", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt"]
     common_data = flow[common_vars]
+    for c in common_vars:
+        common_data[c] = common_data[c].astype('category')
+        common_data[c] = common_data[c].cat.set_categories(full_domains[c])
 
     vars_without_children = ["Src IP Addr", "Dst IP Addr", "Dst Pt"]
 
@@ -283,8 +316,16 @@ if __name__ == '__main__':
 
     tcp_vars = ["Cat Out Packet", "Cat In Packet", "Connection State"]
     tcp_data = flow[flow['Proto']=="TCP"]
+
+    # this variable only exist in the TCP BN, so we can restrict its domain to the values appearing in TCP flows
+    full_domains["Connection State"] = [str(s) for s in pd.unique(tcp_data["Connection State"])]
+    full_domains["Connection State"].sort()
+
     tcp_data = tcp_data[tcp_vars + common_vars]
     tcp_data = tcp_data.dropna()
+    for c in tcp_vars + common_vars:
+        tcp_data[c] = tcp_data[c].astype('category')
+        tcp_data[c] = tcp_data[c].cat.set_categories(full_domains[c])
 
     # UDP-only variables:
         # In Pkt Count
@@ -293,6 +334,9 @@ if __name__ == '__main__':
     udp_vars = ["Cat Out Packet", "Cat In Packet"]
     udp_data = flow[flow['Proto']=="UDP"]
     udp_data = udp_data[udp_vars + common_vars]
+    for c in udp_vars + common_vars:
+        udp_data[c] = udp_data[c].astype('category')
+        udp_data[c] = udp_data[c].cat.set_categories(full_domains[c])
 
     # Variables not used during structure learning (saved as dictionaries alongside the BN)
         # Dst Port
@@ -309,10 +353,13 @@ if __name__ == '__main__':
         learner_common.addNoChildrenNode(var) # variable with no children
 
     learner_common.useMIIC()
+    print("Learning common")
     bn_common = learner_common.learnBN()
-    ParametersLearning(bn_common, common_data)
+    # not nead to add labels: "common" already use all the values
+    parameters_learning(bn_common, common_data)
 
     if udp_fosr is not None:
+        print("Learning UDP")
         learner_udp = gum.BNLearner(udp_data)
         for var in common_vars:
             learner_udp.addNoParentNode(var) # variable with no parent
@@ -321,9 +368,23 @@ if __name__ == '__main__':
 
         learner_udp.useMIIC()
         bn_udp = learner_udp.learnBN()
-        ParametersLearning(bn_udp, udp_data)
+
+        # we recreate the bayesian network with the same structure but the full domain
+        bn_udp_full = gum.BayesNet('UDP model')
+        for i in bn_udp.nodes():
+            var = bn_udp.variable(i).name()
+            bn_udp_full.add(gum.LabelizedVariable(var, var, full_domains[var]))
+
+        for i in bn_udp.nodes():
+            parents = bn_udp.parents(i)
+            for p in parents:
+                bn_udp_full.addArc(p, i)
+
+        parameters_learning(bn_udp_full, udp_data)
+        bn_udp = bn_udp_full
 
     if tcp_fosr is not None:
+        print("Learning TCP")
         learner_tcp = gum.BNLearner(tcp_data)
         for var in common_vars:
             learner_tcp.addNoParentNode(var) # variable with no parent
@@ -332,7 +393,20 @@ if __name__ == '__main__':
 
         learner_tcp.useMIIC()
         bn_tcp = learner_tcp.learnBN()
-        ParametersLearning(bn_tcp, tcp_data)
+
+        # we recreate the bayesian network with the same structure but the full domain
+        bn_tcp_full = gum.BayesNet('TCP model')
+        for i in bn_tcp.nodes():
+            var = bn_tcp.variable(i).name()
+            bn_tcp_full.add(gum.LabelizedVariable(var, var, full_domains[var]))
+
+        for i in bn_tcp.nodes():
+            parents = bn_tcp.parents(i)
+            for p in parents:
+                bn_tcp_full.addArc(p, i)
+
+        parameters_learning(bn_tcp_full, tcp_data)
+        bn_tcp = bn_tcp_full
 
     print("Model export")
 

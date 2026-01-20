@@ -71,6 +71,7 @@ pub struct CrossProductTimedAutomaton<T: EdgeType> {
     initial_state: usize,
     accepting_states: KdTree<([i64; 2], usize)>, // to quickly find the closest possible accepting
     // state
+    #[allow(unused)]
     metadata: AutomatonMetaData,
 }
 
@@ -306,14 +307,12 @@ pub struct TimedAutomaton<T: EdgeType> {
 impl<T: EdgeType> Display for TimedAutomaton<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self.metadata.conn_state {
-            Some(s) =>
-            write!(
+            Some(s) => write!(
                 f,
                 "automaton {:?} for state {s:?} learned from {} on {}",
                 self.metadata.service, self.metadata.input_file, self.metadata.creation_time
             ),
-            None => 
-            write!(
+            None => write!(
                 f,
                 "automaton {:?} learned from {} on {}",
                 self.metadata.service, self.metadata.input_file, self.metadata.creation_time

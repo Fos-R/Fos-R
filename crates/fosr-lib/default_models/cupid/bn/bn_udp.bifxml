@@ -2,37 +2,37 @@
 
 <BIF VERSION="0.3">
 <NETWORK>
-<NAME>unnamedBN</NAME>
+<NAME>UDP model</NAME>
 <PROPERTY>software aGrUM</PROPERTY>
 
 <!-- Variables -->
 <VARIABLE TYPE="nature">
 	<NAME>Cat Out Packet</NAME>
-	<PROPERTY>description = </PROPERTY>
-	<PROPERTY>fast = Cat Out Packet[5]</PROPERTY>
+	<PROPERTY>description = Cat Out Packet</PROPERTY>
+	<PROPERTY>fast = Cat Out Packet{cluster-0|cluster-1|cluster-2|cluster-3|cluster-4}</PROPERTY>
 <!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
-	<OUTCOME>0</OUTCOME>
-	<OUTCOME>1</OUTCOME>
-	<OUTCOME>2</OUTCOME>
-	<OUTCOME>3</OUTCOME>
-	<OUTCOME>4</OUTCOME>
+	<OUTCOME>cluster-0</OUTCOME>
+	<OUTCOME>cluster-1</OUTCOME>
+	<OUTCOME>cluster-2</OUTCOME>
+	<OUTCOME>cluster-3</OUTCOME>
+	<OUTCOME>cluster-4</OUTCOME>
 </VARIABLE>
 
 <VARIABLE TYPE="nature">
 	<NAME>Cat In Packet</NAME>
-	<PROPERTY>description = </PROPERTY>
-	<PROPERTY>fast = Cat In Packet[5]</PROPERTY>
+	<PROPERTY>description = Cat In Packet</PROPERTY>
+	<PROPERTY>fast = Cat In Packet{cluster-0|cluster-1|cluster-2|cluster-3|cluster-4}</PROPERTY>
 <!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
-	<OUTCOME>0</OUTCOME>
-	<OUTCOME>1</OUTCOME>
-	<OUTCOME>2</OUTCOME>
-	<OUTCOME>3</OUTCOME>
-	<OUTCOME>4</OUTCOME>
+	<OUTCOME>cluster-0</OUTCOME>
+	<OUTCOME>cluster-1</OUTCOME>
+	<OUTCOME>cluster-2</OUTCOME>
+	<OUTCOME>cluster-3</OUTCOME>
+	<OUTCOME>cluster-4</OUTCOME>
 </VARIABLE>
 
 <VARIABLE TYPE="nature">
 	<NAME>Time</NAME>
-	<PROPERTY>description = </PROPERTY>
+	<PROPERTY>description = Time</PROPERTY>
 	<PROPERTY>fast = Time{bin-000|bin-001|bin-002|bin-003|bin-004|bin-005|bin-006|bin-007|bin-008|bin-009|bin-010|bin-011|bin-012|bin-013|bin-014|bin-015|bin-016|bin-017|bin-018|bin-019|bin-020|bin-021|bin-022|bin-023|bin-024|bin-025|bin-026|bin-027|bin-028|bin-029|bin-030|bin-031|bin-032|bin-033|bin-034|bin-035|bin-036|bin-037|bin-038|bin-039|bin-040|bin-041|bin-042|bin-043|bin-044|bin-045|bin-046|bin-047|bin-048|bin-049|bin-050|bin-051|bin-052|bin-053|bin-054|bin-055|bin-056|bin-057|bin-058|bin-059|bin-060|bin-061|bin-062|bin-063|bin-064|bin-065|bin-066|bin-067|bin-068|bin-069|bin-070|bin-071|bin-072|bin-073|bin-074|bin-075|bin-076|bin-077|bin-078|bin-079|bin-080|bin-081|bin-082|bin-083|bin-084|bin-085|bin-086|bin-087|bin-088|bin-089|bin-090|bin-091|bin-092|bin-093|bin-094|bin-095}</PROPERTY>
 <!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
 	<OUTCOME>bin-000</OUTCOME>
@@ -135,7 +135,7 @@
 
 <VARIABLE TYPE="nature">
 	<NAME>Src IP Role</NAME>
-	<PROPERTY>description = </PROPERTY>
+	<PROPERTY>description = Src IP Role</PROPERTY>
 	<PROPERTY>fast = Src IP Role{Internet|Server|User}</PROPERTY>
 <!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
 	<OUTCOME>Internet</OUTCOME>
@@ -145,7 +145,7 @@
 
 <VARIABLE TYPE="nature">
 	<NAME>Dst IP Role</NAME>
-	<PROPERTY>description = </PROPERTY>
+	<PROPERTY>description = Dst IP Role</PROPERTY>
 	<PROPERTY>fast = Dst IP Role{Internet|Server|User}</PROPERTY>
 <!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
 	<OUTCOME>Internet</OUTCOME>
@@ -155,26 +155,41 @@
 
 <VARIABLE TYPE="nature">
 	<NAME>Applicative Proto</NAME>
-	<PROPERTY>description = </PROPERTY>
-	<PROPERTY>fast = Applicative Proto{dns|krb|ldap_udp|ntp}</PROPERTY>
+	<PROPERTY>description = Applicative Proto</PROPERTY>
+	<PROPERTY>fast = Applicative Proto{dce_rpc|dns|gssapi,dce_rpc|gssapi,dce_rpc,ntlm|gssapi,ntlm,smb|gssapi,smb|gssapi,smb,dce_rpc|gssapi,smb,krb|gssapi,smb,ntlm|http|krb|krb_tcp|ldap_tcp|ldap_udp|ntlm,dce_rpc|ntp|smtp|ssl}</PROPERTY>
 <!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
+	<OUTCOME>dce_rpc</OUTCOME>
 	<OUTCOME>dns</OUTCOME>
+	<OUTCOME>gssapi,dce_rpc</OUTCOME>
+	<OUTCOME>gssapi,dce_rpc,ntlm</OUTCOME>
+	<OUTCOME>gssapi,ntlm,smb</OUTCOME>
+	<OUTCOME>gssapi,smb</OUTCOME>
+	<OUTCOME>gssapi,smb,dce_rpc</OUTCOME>
+	<OUTCOME>gssapi,smb,krb</OUTCOME>
+	<OUTCOME>gssapi,smb,ntlm</OUTCOME>
+	<OUTCOME>http</OUTCOME>
 	<OUTCOME>krb</OUTCOME>
+	<OUTCOME>krb_tcp</OUTCOME>
+	<OUTCOME>ldap_tcp</OUTCOME>
 	<OUTCOME>ldap_udp</OUTCOME>
+	<OUTCOME>ntlm,dce_rpc</OUTCOME>
 	<OUTCOME>ntp</OUTCOME>
+	<OUTCOME>smtp</OUTCOME>
+	<OUTCOME>ssl</OUTCOME>
 </VARIABLE>
 
 <VARIABLE TYPE="nature">
 	<NAME>Proto</NAME>
-	<PROPERTY>description = </PROPERTY>
-	<PROPERTY>fast = Proto{UDP}</PROPERTY>
+	<PROPERTY>description = Proto</PROPERTY>
+	<PROPERTY>fast = Proto{TCP|UDP}</PROPERTY>
 <!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
+	<OUTCOME>TCP</OUTCOME>
 	<OUTCOME>UDP</OUTCOME>
 </VARIABLE>
 
 <VARIABLE TYPE="nature">
 	<NAME>Src IP Addr</NAME>
-	<PROPERTY>description = </PROPERTY>
+	<PROPERTY>description = Src IP Addr</PROPERTY>
 	<PROPERTY>fast = Src IP Addr{192.168.1.101|192.168.1.105|192.168.1.106|192.168.1.107|192.168.1.108|192.168.1.109|192.168.1.11|192.168.1.120|192.168.1.121|192.168.1.127|192.168.1.13|192.168.1.14|192.168.1.3|192.168.1.31|192.168.1.34|192.168.1.35|192.168.1.36|192.168.1.37|192.168.1.38|192.168.1.39|192.168.1.4|192.168.1.40|192.168.1.42|192.168.1.43|192.168.1.45|192.168.1.46|192.168.1.47|192.168.1.48|192.168.1.49|192.168.1.5|192.168.1.50|192.168.1.51|192.168.1.52|192.168.1.53|192.168.1.54|192.168.1.7|192.168.1.9|Internet}</PROPERTY>
 <!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
 	<OUTCOME>192.168.1.101</OUTCOME>
@@ -219,26 +234,48 @@
 
 <VARIABLE TYPE="nature">
 	<NAME>Dst IP Addr</NAME>
-	<PROPERTY>description = </PROPERTY>
-	<PROPERTY>fast = Dst IP Addr{192.168.1.255|192.168.1.31|192.168.1.7|Internet}</PROPERTY>
+	<PROPERTY>description = Dst IP Addr</PROPERTY>
+	<PROPERTY>fast = Dst IP Addr{172.217.1.35|172.217.6.100|172.217.6.14|172.217.8.202|192.168.1.11|192.168.1.121|192.168.1.13|192.168.1.255|192.168.1.31|192.168.1.4|192.168.1.5|192.168.1.7|192.168.1.9|Internet}</PROPERTY>
 <!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
+	<OUTCOME>172.217.1.35</OUTCOME>
+	<OUTCOME>172.217.6.100</OUTCOME>
+	<OUTCOME>172.217.6.14</OUTCOME>
+	<OUTCOME>172.217.8.202</OUTCOME>
+	<OUTCOME>192.168.1.11</OUTCOME>
+	<OUTCOME>192.168.1.121</OUTCOME>
+	<OUTCOME>192.168.1.13</OUTCOME>
 	<OUTCOME>192.168.1.255</OUTCOME>
 	<OUTCOME>192.168.1.31</OUTCOME>
+	<OUTCOME>192.168.1.4</OUTCOME>
+	<OUTCOME>192.168.1.5</OUTCOME>
 	<OUTCOME>192.168.1.7</OUTCOME>
+	<OUTCOME>192.168.1.9</OUTCOME>
 	<OUTCOME>Internet</OUTCOME>
 </VARIABLE>
 
 <VARIABLE TYPE="nature">
 	<NAME>Dst Pt</NAME>
-	<PROPERTY>description = </PROPERTY>
-	<PROPERTY>fast = Dst Pt{port-123|port-137|port-389|port-53|port-5353|port-5355|port-88}</PROPERTY>
+	<PROPERTY>description = Dst Pt</PROPERTY>
+	<PROPERTY>fast = Dst Pt{port-123|port-135|port-137|port-139|port-25|port-3268|port-389|port-443|port-445|port-49666|port-49669|port-49675|port-49692|port-53|port-5353|port-5355|port-5985|port-80|port-88}</PROPERTY>
 <!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
 	<OUTCOME>port-123</OUTCOME>
+	<OUTCOME>port-135</OUTCOME>
 	<OUTCOME>port-137</OUTCOME>
+	<OUTCOME>port-139</OUTCOME>
+	<OUTCOME>port-25</OUTCOME>
+	<OUTCOME>port-3268</OUTCOME>
 	<OUTCOME>port-389</OUTCOME>
+	<OUTCOME>port-443</OUTCOME>
+	<OUTCOME>port-445</OUTCOME>
+	<OUTCOME>port-49666</OUTCOME>
+	<OUTCOME>port-49669</OUTCOME>
+	<OUTCOME>port-49675</OUTCOME>
+	<OUTCOME>port-49692</OUTCOME>
 	<OUTCOME>port-53</OUTCOME>
 	<OUTCOME>port-5353</OUTCOME>
 	<OUTCOME>port-5355</OUTCOME>
+	<OUTCOME>port-5985</OUTCOME>
+	<OUTCOME>port-80</OUTCOME>
 	<OUTCOME>port-88</OUTCOME>
 </VARIABLE>
 
@@ -284,13 +321,13 @@
 <DEFINITION>
 	<FOR>Applicative Proto</FOR>
 	<TABLE>
-		0.377161 0.343155 0.276931 0.00275341
+		0.377161 0.343155 0.276931 0.00275341 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 	</TABLE>
 </DEFINITION>
 <DEFINITION>
 	<FOR>Proto</FOR>
 	<TABLE>
-		1
+		1 0
 	</TABLE>
 </DEFINITION>
 <DEFINITION>
@@ -302,13 +339,13 @@
 <DEFINITION>
 	<FOR>Dst IP Addr</FOR>
 	<TABLE>
-		0.618113 0.371086 0.00909762 0.00170314
+		0.618113 0.371086 0.00909762 0.00170314 0 0 0 0 0 0 0 0 0 0
 	</TABLE>
 </DEFINITION>
 <DEFINITION>
 	<FOR>Dst Pt</FOR>
 	<TABLE>
-		0.354537 0.343155 0.276931 0.0138522 0.00671322 0.00275341 0.00205796
+		0.354537 0.343155 0.276931 0.0138522 0.00671322 0.00275341 0.00205796 0 0 0 0 0 0 0 0 0 0 0 0
 	</TABLE>
 </DEFINITION>
 
