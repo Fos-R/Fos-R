@@ -15,7 +15,7 @@ struct Bif {
 #[serde(rename_all = "UPPERCASE")]
 pub struct Network {
     #[allow(unused)]
-    name: String, // TODO paramétrer dans agrum
+    name: String,
     #[allow(unused)]
     property: String, // learning software
     pub variable: Vec<Variable>,

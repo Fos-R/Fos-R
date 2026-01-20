@@ -695,6 +695,7 @@ fn bn_from_bif(
     struct TopologicalNode {
         parents: HashSet<String>,
         children: Vec<String>,
+        proto_specific: bool,
     }
 
     let mut processed_bn = BayesianNetwork { nodes: vec![] };
@@ -704,12 +705,14 @@ fn bn_from_bif(
     let mut roots = vec![];
 
     // convert def to TopologicalNode
-    for def in network.definition.iter() {
+    for (i,def) in network.definition.iter().enumerate() {
+        assert!(def.variable == network.variable[i].name);
         nodes.insert(
             def.variable.clone(),
             TopologicalNode {
                 parents: HashSet::new(),
                 children: vec![],
+                proto_specific: network.variable[i].proto_specific.is_some()
             },
         );
         // identify nodes without parents
@@ -735,15 +738,14 @@ fn bn_from_bif(
         }
     }
 
-    // TODO we verify "Src Ip OR Dst Ip => no children", i.e., "(not Src Ip AND not Dst Ip) OR no children"
-    // if !network.definition.iter().map(|d| (d.variable.as_str() != "Src IP Addr" && d.variable.as_str() != "Dst IP Addr" && d.variable.as_str() != "Dst Pt") || d.children.is_empty()).all() {
-    //     panic!("The variables \"Src IP Addr\", \"Dst IP Addr\" and \"Dst Pt\" must have no children in the Bayesian network");
-    // }
-
     let mut topo_order: Vec<String> = vec![];
 
     // Kahn’s algorithm
-    while let Some(v) = roots.pop() {
+    while !roots.is_empty() {
+        // we start with the common variables, and then the protocol-specific.
+        // That way, we are sure that "Proto" appears before the protocol-specific variables
+        let index = roots.iter().position(|r| !nodes[r].proto_specific).unwrap_or(0usize);
+        let v = roots.swap_remove(index);
         let children = nodes[&v].children.clone();
         for c in children {
             let parents = &mut nodes.get_mut(&c.clone()).unwrap().parents;
@@ -758,11 +760,6 @@ fn bn_from_bif(
     if let Some(p) = topo_order.iter().position(|s| s.as_str() == "Time") {
         let v = topo_order.remove(p);
         topo_order.insert(0, v); // insert at the start
-    }
-
-    if let Some(p) = topo_order.iter().position(|s| s.as_str() == "Proto") {
-        let v = topo_order.remove(p);
-        topo_order.insert(1, v); // put the L4 protool just after time
     }
 
     // If "Src IP" (or similar) is present, is must be at the end of the list because its parents may change
@@ -806,7 +803,7 @@ fn bn_from_bif(
                 var_names
                     .iter_mut()
                     .position(|s| s.as_str() == v)
-                    .expect("Not in topological order!")
+                    .expect("Not in topological order!") // FIXME: change to Result
             })
             .collect();
 
