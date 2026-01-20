@@ -64,29 +64,18 @@ def computeCPTfromDF(bn,df,name):
     """
     id=bn.idFromName(name)
     parents=list(reversed(bn.cpt(id).names))
-    # domains=[bn[name].domainSize()
-             # for name in parents]
     domains = [len(full_domains[name]) for name in parents]
 
-    # create a tensor with the correct dimensions
-    # tensor = gum.Tensor()
-    # for p in parents:
-    #     tensor = tensor.add(gum.LabelizedVariable(p,p,full_domains[p]))
-    #     print(tensor)
     parents.pop()
 
     if (len(parents)>0):
         c=pd.crosstab(df[name],[df[parent] for parent in parents], dropna=False)
         s=c/c.sum().apply(np.float32)
     else:
-        s=df[name].value_counts(normalize=True)
+        s=df[name].value_counts(normalize=True, sort=False)
 
     s.fillna(0, inplace=True)
-    # change the tensor to the correct one
-    # bn.changeTensor(id, tensor)
-    # fill it
     bn.cpt(id)[:]=np.array((s).transpose()).reshape(*domains)
-    # bn.cpt(id).fillWith(np.array((s).transpose()).reshape(*domains))
 
 def parameters_learning(bn,df):
     """
@@ -362,7 +351,21 @@ if __name__ == '__main__':
     print("Learning common")
     bn_common = learner_common.learnBN()
     # not nead to add labels: "common" already use all the values
-    parameters_learning(bn_common, common_data)
+    # parameters_learning(bn_common, common_data)
+
+    # we recreate the bayesian network with the same structure but the full domain
+    bn_common_full = gum.BayesNet('Common model')
+    for i in bn_common.nodes():
+        var = bn_common.variable(i).name()
+        bn_common_full.add(gum.LabelizedVariable(var, var, full_domains[var]))
+
+    for i in bn_common.nodes():
+        parents = bn_common.parents(i)
+        for p in parents:
+            bn_common_full.addArc(p, i)
+
+    parameters_learning(bn_common_full, common_data)
+    bn_common = bn_common_full
 
     if udp_fosr is not None:
         print("Learning UDP")
