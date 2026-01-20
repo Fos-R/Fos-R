@@ -162,7 +162,7 @@ build-wasm32:
   image: rust
   script:
     - rustup target add wasm32-unknown-unknown
-    - cargo install wasm-bindgen-cli
+    - cargo install wasm-bindgen-cli --version 0.2.108
     - cargo build -p fosr-gui -r --target wasm32-unknown-unknown --no-default-features
     - wasm-bindgen --out-dir public --target web target/wasm32-unknown-unknown/release/fosr_gui.wasm --no-typescript
   artifacts:
