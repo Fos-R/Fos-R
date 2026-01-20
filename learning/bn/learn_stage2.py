@@ -88,7 +88,6 @@ def parameters_learning(bn,df):
     Compute the CPTs of every varaible in the BN bn from the database df
     Use no prior and replace NaN with 0.
     """
-    bn.generateCPTs() # to set the correct size of the CPT
     for name in bn.names():
         computeCPTfromDF(bn,df,name)
 
@@ -184,18 +183,16 @@ if __name__ == '__main__':
     print("Export for automata learning")
     automata = []
     for s in flow["Applicative Proto"].unique():
-        if not flow[flow["Applicative Proto"] == s].isnull().all(axis=0)["Connection State"]: # TCP
-            for conn_state in flow[flow["Applicative Proto"] == s]["Connection State"].unique():
-                if str(conn_state) != "NaN":
-                    flows = list(flow[(flow["Applicative Proto"] == s) & (flow["Connection State"] == conn_state)]["uid"])
-                    if len(flows) > 0:
-                        d = { "service": s, "conn_state": conn_state, "flows": flows, "proto": "tcp" }
-                        automata.append(d)
-        else: # not TCP
-            flows = list(flow[flow["Applicative Proto"] == s]["uid"])
-            if len(flows) > 0:
-                d = { "service": s, "flows": flows, "proto": "udp" }
-                automata.append(d)
+        for conn_state in flow[flow["Applicative Proto"] == s]["Connection State"].unique():
+            if str(conn_state) != "NaN":
+                flows = list(flow[(flow["Applicative Proto"] == s) & (flow["Connection State"] == conn_state) & (flow["Proto"] == "TCP")]["uid"])
+                if len(flows) > 0:
+                    d = { "service": s, "conn_state": conn_state, "flows": flows, "proto": "tcp" }
+                    automata.append(d)
+        flows = list(flow[(flow["Applicative Proto"] == s) & (flow["Proto"] == "UDP")]["uid"])
+        if len(flows) > 0:
+            d = { "service": s, "flows": flows, "proto": "udp" }
+            automata.append(d)
 
     out_file = open(os.path.join(args.output, "automata-flows.json"), "w")
     json.dump(automata, out_file, indent=1)
@@ -301,6 +298,7 @@ if __name__ == '__main__':
         # Src IP Role
         # Dst IP Role
         # Applicative Protocol
+
     common_vars = ["Time", "Src IP Role", "Dst IP Role", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt"]
     common_data = flow[common_vars]
     for c in common_vars:
