@@ -510,17 +510,23 @@ fn run_fast(
         let chunk_iter = vec.chunks(chunk_size);
         let (tx, rx) = channel();
 
+        // Handle ctrl+C
+        ctrlc::set_handler(move || {
+            process::exit(1);
+        })
+        .expect("Error setting Ctrl-C handler");
+
         let mut threads = vec![];
 
-        {
-            let stats = Arc::clone(&stats);
-            let builder = thread::Builder::new().name("Monitoring".into());
-            threads.push(
-                builder
-                    .spawn(move || stats::show_progression(stats))
-                    .unwrap(),
-            );
-        }
+        // {
+        //     let stats = Arc::clone(&stats);
+        //     let builder = thread::Builder::new().name("Monitoring".into());
+        //     threads.push(
+        //         builder
+        //             .spawn(move || stats::show_progression(stats))
+        //             .unwrap(),
+        //     );
+        // }
 
         for chunk in chunk_iter {
             let tx = tx.clone();
