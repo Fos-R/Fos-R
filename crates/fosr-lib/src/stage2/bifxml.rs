@@ -13,9 +13,10 @@ struct Bif {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "UPPERCASE")]
-#[allow(unused)]
 pub struct Network {
-    name: String,     // TODO paramétrer dans agrum
+    #[allow(unused)]
+    name: String, // TODO paramétrer dans agrum
+    #[allow(unused)]
     property: String, // learning software
     pub variable: Vec<Variable>,
     pub definition: Vec<Definition>,
@@ -59,9 +60,9 @@ impl Network {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "UPPERCASE")]
-#[allow(unused)]
 pub struct Variable {
     pub name: String,
+    #[allow(unused)]
     property: Vec<String>,
     pub outcome: Vec<String>,
     pub proto_specific: Option<L4Proto>, // not present in the format but convenient

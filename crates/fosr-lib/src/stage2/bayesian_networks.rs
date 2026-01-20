@@ -95,6 +95,12 @@ enum AnonymizedIpv4Addr {
 }
 
 #[derive(Debug, Clone)]
+enum DstPt {
+    Random,
+    Fixed(u16),
+}
+
+#[derive(Debug, Clone)]
 /// The set of random variables that can appear in a Bayesian network
 enum Feature {
     // for each feature, we associate a domain
@@ -103,7 +109,7 @@ enum Feature {
     DstIpRole(Vec<IpRole>),
     SrcIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the config
     DstIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the config
-    DstPt(Vec<u16>), // the port comes from the config (must be chosen after the dest IP)
+    DstPt(Vec<DstPt>), // the port comes from the config (must be chosen after the dest IP)
     FwdPkt(Vec<Normal<f64>>), // the exact number is sampled from a Gaussian distribution afterward
     BwdPkt(Vec<Normal<f64>>), // idem
     L7Proto(Vec<&'static str>),
@@ -243,7 +249,10 @@ impl BayesianNetwork {
                                         domain_vector.dst_ip = Some(sample_random_ip(rng))
                                     }
                                 },
-                                Feature::DstPt(v) => domain_vector.dst_port = Some(v[i]),
+                                Feature::DstPt(v) => match v[i] {
+                                    DstPt::Random => domain_vector.dst_port = None,
+                                    DstPt::Fixed(p) => domain_vector.dst_port = Some(p),
+                                },
                                 Feature::FwdPkt(v) => {
                                     domain_vector.fwd_packets_count =
                                         Some(v[i].sample(rng) as usize)
@@ -365,13 +374,14 @@ impl BayesianModel {
         log::info!("Bayesian networks have been loaded");
 
         // log::info!("{bn_common}");
-        let mut model = BayesianModel {
+        let model = BayesianModel {
             bn: bn_common,
             bn_additional_data,
             open_ports: HashMap::new(),
         };
 
-        model.remove_impossible_values()?;
+        // TODO: c’est normal que Proto=TCP aboutisse à des valeurs impossibles dans le RB d’UDP
+        // model.remove_impossible_values()?;
         Ok(model)
     }
 
@@ -746,9 +756,13 @@ fn bn_from_bif(
 
     // If time is present, it should be the first one
     if let Some(p) = topo_order.iter().position(|s| s.as_str() == "Time") {
-        // topo_order.swap(p, 0);
         let v = topo_order.remove(p);
         topo_order.insert(0, v); // insert at the start
+    }
+
+    if let Some(p) = topo_order.iter().position(|s| s.as_str() == "Proto") {
+        let v = topo_order.remove(p);
+        topo_order.insert(1, v); // put the L4 protool just after time
     }
 
     // If "Src IP" (or similar) is present, is must be at the end of the list because its parents may change
@@ -857,7 +871,13 @@ fn bn_from_bif(
                 v.outcome
                     .clone()
                     .into_iter()
-                    .map(|s| u16::from_str(s.strip_prefix("port-").unwrap()).unwrap())
+                    .map(|s| {
+                        if s == "unique" {
+                            DstPt::Random
+                        } else {
+                            DstPt::Fixed(u16::from_str(s.strip_prefix("port-").unwrap()).unwrap())
+                        }
+                    })
                     .collect(),
             )),
 
@@ -867,7 +887,7 @@ fn bn_from_bif(
             "Cat In Packet TCP" => Some(Feature::BwdPkt(
                 bn_additional_data.tcp_in_pkt_gaussians.to_normals(),
             )),
-            "End Flags TCP" => Some(Feature::EndFlags(
+            "Connection State TCP" => Some(Feature::EndFlags(
                 v.outcome
                     .clone()
                     .into_iter()
@@ -881,10 +901,8 @@ fn bn_from_bif(
             "Cat In Packet UDP" => Some(Feature::BwdPkt(
                 bn_additional_data.udp_in_pkt_gaussians.to_normals(),
             )),
-            _ => None,
+            _ => None, // some duplicated features are deliberately ignored (such as Dst Pt UDP/TCP)
         };
-
-        // log::info!("Cardinality of {}: {}", def.variable, feature.get_cardinality());
 
         if let Some(feature) = feature {
             // this feature is duplicated (for example "Time UDP"), so we do not include it
@@ -956,12 +974,17 @@ impl Stage2 for BNGenerator {
         domain_vector.timestamp = Some(ts.data.unix_time);
         let uniform = Uniform::new(32000, 65535).unwrap();
         domain_vector.src_port = Some(uniform.sample(&mut rng) as u16);
-        if let Some(port) = self.model.open_ports.get(&(
-            domain_vector.dst_ip.unwrap(),
-            domain_vector.l7_proto.unwrap(),
-        )) {
-            domain_vector.dst_port = Some(*port);
+        if domain_vector.dst_port.is_none() {
+            // Some protocol have random destination port, like FTP-data
+            domain_vector.dst_port = Some(uniform.sample(&mut rng) as u16);
         }
+        // TODO: allow that again
+        // if let Some(port) = self.model.open_ports.get(&(
+        //     domain_vector.dst_ip.unwrap(),
+        //     domain_vector.l7_proto.unwrap(),
+        // )) {
+        //     domain_vector.dst_port = Some(*port);
+        // }
         domain_vector.ttl_client = Some(
             *self
                 .model

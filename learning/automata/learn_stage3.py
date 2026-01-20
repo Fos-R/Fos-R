@@ -14,6 +14,7 @@ import numpy as np
 import sys
 import csv
 import time
+import random
 
 def add_payload_type(payload_type, row):
     # if row['protocol'] == "ICMP":
@@ -267,6 +268,7 @@ if __name__ == '__main__':
         exit(1)
 
     for d in flows:
+        random.seed(0)
         protocol = d["proto"]
         conn_state = d.get("conn_state")
         service = d["service"]
