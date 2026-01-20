@@ -65,6 +65,11 @@ impl ModelsSource {
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/automata/dns.json",
+                            1
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/automata/ftp-data-SF.json",
                             1
                         ))
@@ -161,6 +166,11 @@ impl ModelsSource {
                     vec![
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/automata/dns-SF.json",
+                            22
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/automata/dns.json",
                             22
                         ))
                         .unwrap(),

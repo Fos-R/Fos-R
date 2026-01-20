@@ -9,6 +9,9 @@ import os
 import sys
 import csv
 import functools
+import pyagrum.lib.image as gumimage
+from IPython.display import Image
+import time
 
 pd.options.mode.copy_on_write = True
 
@@ -38,16 +41,18 @@ rare_ports = None
 def port_to_string(n):
     if n in rare_ports:
         return "unique"
-    return "port-"+str(int(n))
+    return "port-"+f'{n:05}'
 
 def cluster_to_string(n):
-    return "cluster-"+str(n)
+    # to ensure alphabetical order = numerical order
+    return "cluster-"+f'{n:03}'
 
 
 bin_count = 24*4
 
 def categorize_time(t):
     n = int(t % (60*60*24) // (60*60*24 / bin_count))
+    # to ensure alphabetical order = numerical order
     return "bin-"+f'{n:03}'
 
 full_domains = {}
@@ -105,6 +110,7 @@ if __name__ == '__main__':
     parser.add_argument('--output', help="Select the output directory.")
     args = parser.parse_args()
 
+    start = time.time()
     conn_input = os.path.join(args.input, "conn.log")
 
     tcp_input = os.path.join(args.input, "fosr_tcp.log")
@@ -247,11 +253,12 @@ if __name__ == '__main__':
 
     def categorize(pkt_count):
         best_bic = None
-        for i in range(5): # limit on the number of components
+        # pkt_count = np.array([c + random.random() - 0.5 for c in pkt_count])
+        for i in range(20): # limit on the number of components
             if i+1 > len(pkt_count): # at most as many components as the number of points
                 break
             try:
-                m = GaussianMixture(n_components=i+1, random_state=42, covariance_type="spherical")
+                m = GaussianMixture(n_components=i + 1, random_state=42, covariance_type="spherical")
                 labels = m.fit_predict(pkt_count)
                 bic = m.bic(pkt_count)
                 if best_bic is None or best_bic > bic:
@@ -262,28 +269,29 @@ if __name__ == '__main__':
                 print("Error during GaussianMixture:",e)
         assert best_bic is not None
         best_labels = list(map(cluster_to_string,best_labels)) # make the variable discrete
-        return best_model.means_.reshape(1,-1)[0], best_model.covariances_, best_labels
+        return best_model.means_.reshape(1,-1)[0].tolist(), best_model.covariances_.tolist(), best_labels
+        # return best_model.means_.reshape(1,-1)[0].tolist(), [max(1e-6, v - 1/12) for v in best_model.covariances_], best_labels
 
     if tcp_fosr is not None:
         print("Gaussian mixture for TCP out packet count")
         mu, cov, labels = categorize(TCP_out_pkt_count)
-        output["tcp_out_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
+        output["tcp_out_pkt_gaussians"] = {"mu": mu, "cov": cov}
         flow.loc[flow['Proto']=="TCP", ["Cat Out Packet"]] = labels
 
         print("Gaussian mixture for TCP in packet count")
         mu, cov, labels = categorize(TCP_in_pkt_count)
-        output["tcp_in_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
+        output["tcp_in_pkt_gaussians"] = {"mu": mu, "cov": cov}
         flow.loc[flow['Proto']=="TCP", ["Cat In Packet"]] = labels
 
     if udp_fosr is not None:
         print("Gaussian mixture for UDP out packet count")
         mu, cov, labels = categorize(UDP_out_pkt_count)
-        output["udp_out_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
+        output["udp_out_pkt_gaussians"] = {"mu": mu, "cov": cov}
         flow.loc[flow['Proto']=="UDP", ["Cat Out Packet"]] = labels
 
         print("Gaussian mixture for UDP in packet count")
         mu, cov, labels = categorize(UDP_in_pkt_count)
-        output["udp_in_pkt_gaussians"] = {"mu": mu.tolist(), "cov": cov.tolist()}
+        output["udp_in_pkt_gaussians"] = {"mu": mu, "cov": cov}
         flow.loc[flow['Proto']=="UDP", ["Cat In Packet"]] = labels
 
     flow = flow.replace("-", "none") # "-" causes pyagrum to parse the value as a number, leading to an exception
@@ -406,15 +414,19 @@ if __name__ == '__main__':
         parameters_learning(bn_tcp_full, tcp_data)
         bn_tcp = bn_tcp_full
 
+    print("Learning time:", time.time() - start)
     print("Model export")
 
     args.output = args.output or "."
     if not os.path.exists(args.output):
         os.makedirs(args.output)
+    gumimage.export(bn_common, os.path.join(args.output, "bn_common.pdf"))
     bn_common.saveBIFXML(os.path.join(args.output, "bn_common.bifxml"))
     if udp_fosr is not None:
+        gumimage.export(bn_udp, os.path.join(args.output, "bn_udp.pdf"))
         bn_udp.saveBIFXML(os.path.join(args.output, "bn_udp.bifxml"))
     if tcp_fosr is not None:
+        gumimage.export(bn_tcp, os.path.join(args.output, "bn_tcp.pdf"))
         bn_tcp.saveBIFXML(os.path.join(args.output, "bn_tcp.bifxml"))
 
     try:
