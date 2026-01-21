@@ -8,11 +8,11 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct AutomataLibrary {
-    cons_tcp_automata: HashMap<&'static str, automaton::CrossProductTimedAutomaton<TCPEdgeTuple>>,
+    cons_tcp_automata: HashMap<(&'static str, TCPConnState), automaton::CrossProductTimedAutomaton<TCPEdgeTuple>>,
     cons_udp_automata: HashMap<&'static str, automaton::CrossProductTimedAutomaton<UDPEdgeTuple>>,
     cons_icmp_automata: HashMap<&'static str, automaton::CrossProductTimedAutomaton<ICMPEdgeTuple>>,
 
-    tcp_automata: HashMap<&'static str, automaton::TimedAutomaton<TCPEdgeTuple>>,
+    tcp_automata: HashMap<(&'static str, TCPConnState), automaton::TimedAutomaton<TCPEdgeTuple>>,
     udp_automata: HashMap<&'static str, automaton::TimedAutomaton<UDPEdgeTuple>>,
     icmp_automata: HashMap<&'static str, automaton::TimedAutomaton<ICMPEdgeTuple>>,
 }
@@ -58,6 +58,7 @@ impl AutomataLibrary {
             serde_json::from_str::<automaton::JsonAutomaton>(string.leak())
                 .map_err(|e| format!("Import error: {e}"))?;
         let l7proto = a.metadata.service.clone().leak();
+        let conn_state = a.metadata.conn_state;
         match a.protocol {
             L4Proto::TCP => {
                 let a = automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(
@@ -65,8 +66,8 @@ impl AutomataLibrary {
                     parse_tcp_symbol,
                 )?;
                 log::debug!("Import TCP {a}");
-                self.tcp_automata.insert(l7proto, a.clone());
-                self.cons_tcp_automata.insert(l7proto, a.into());
+                self.tcp_automata.insert((l7proto,conn_state.unwrap()), a.clone());
+                self.cons_tcp_automata.insert((l7proto,conn_state.unwrap()), a.into());
             }
             L4Proto::UDP => {
                 let a = automaton::TimedAutomaton::<UDPEdgeTuple>::import_timed_automaton(
@@ -121,8 +122,7 @@ impl Stage3 for TadamGenerator {
         conn_state: TCPConnState,
     ) -> Option<SeededData<PacketsIR<TCPPacketInfo>>> {
         let mut rng = Pcg32::seed_from_u64(flow.seed);
-        let a = self.lib.cons_tcp_automata.get(&flow.data.l7_proto); // FIXME use conn state as
-        // well
+        let a = self.lib.cons_tcp_automata.get(&(flow.data.l7_proto, conn_state));
 
         // automata is found
         if let Some(a) = a {
