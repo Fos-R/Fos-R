@@ -184,8 +184,15 @@ struct BayesianNetwork {
 fn sample_random_global_ip(rng: &mut impl RngCore) -> Ipv4Addr {
     let mut addr = Ipv4Addr::from_bits(rng.next_u32());
     // rejection sampling
-    while addr.octets()[0] == 0 || addr.is_multicast() || addr.is_broadcast() || addr.is_documentation() || addr.is_link_local() || addr.is_loopback() || addr.is_private() {
-    // while !addr.is_global() { // TODO: use when not experimental anymore
+    while addr.octets()[0] == 0
+        || addr.is_multicast()
+        || addr.is_broadcast()
+        || addr.is_documentation()
+        || addr.is_link_local()
+        || addr.is_loopback()
+        || addr.is_private()
+    {
+        // while !addr.is_global() { // TODO: use when not experimental anymore
         addr = Ipv4Addr::from_bits(rng.next_u32());
     }
     addr
@@ -711,14 +718,14 @@ fn bn_from_bif(
     let mut roots = vec![];
 
     // convert def to TopologicalNode
-    for (i,def) in network.definition.iter().enumerate() {
+    for (i, def) in network.definition.iter().enumerate() {
         assert!(def.variable == network.variable[i].name);
         nodes.insert(
             def.variable.clone(),
             TopologicalNode {
                 parents: HashSet::new(),
                 children: vec![],
-                proto_specific: network.variable[i].proto_specific.is_some()
+                proto_specific: network.variable[i].proto_specific.is_some(),
             },
         );
         // identify nodes without parents
@@ -750,7 +757,10 @@ fn bn_from_bif(
     while !roots.is_empty() {
         // we start with the common variables, and then the protocol-specific.
         // That way, we are sure that "Proto" appears before the protocol-specific variables
-        let index = roots.iter().position(|r| !nodes[r].proto_specific).unwrap_or(0usize);
+        let index = roots
+            .iter()
+            .position(|r| !nodes[r].proto_specific)
+            .unwrap_or(0usize);
         let v = roots.swap_remove(index);
         let children = nodes[&v].children.clone();
         for c in children {
@@ -967,27 +977,40 @@ impl Stage2 for BNGenerator {
         ts: SeededData<TimePoint>,
     ) -> Result<impl Iterator<Item = SeededData<Flow>>, String> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
+        let mut domain_vector: IntermediateVector = IntermediateVector::default();
         let mut discrete_vector: Vec<Option<usize>> = vec![];
-        discrete_vector.push(Some(min(
-            self.model.bn_additional_data.s0_bin_count - 1,
-            (ts.data.date_time.num_seconds_from_midnight() as usize) / 86400
-                * self.model.bn_additional_data.s0_bin_count,
-        )));
-        let mut domain_vector = self.model.bn.sample(&mut rng, &mut discrete_vector)?;
-        domain_vector.timestamp = Some(ts.data.unix_time);
-        let uniform = Uniform::new(32000, 65535).unwrap();
-        domain_vector.src_port = Some(uniform.sample(&mut rng) as u16);
-        if domain_vector.dst_port.is_none() {
-            // Some protocol have random destination port, like FTP-data
-            domain_vector.dst_port = Some(uniform.sample(&mut rng) as u16);
+
+        let mut restart = true;
+        while restart {
+            restart = false;
+            discrete_vector.clear();
+            discrete_vector.push(Some(min(
+                self.model.bn_additional_data.s0_bin_count - 1,
+                (ts.data.date_time.num_seconds_from_midnight() as usize) / 86400
+                    * self.model.bn_additional_data.s0_bin_count,
+            )));
+            domain_vector = self.model.bn.sample(&mut rng, &mut discrete_vector)?;
+
+            if domain_vector.src_ip == domain_vector.dst_ip {
+                restart = true;
+                continue;
+            }
+
+            domain_vector.timestamp = Some(ts.data.unix_time);
+            let uniform = Uniform::new(32000, 65535).unwrap();
+            domain_vector.src_port = Some(uniform.sample(&mut rng) as u16);
+            if domain_vector.dst_port.is_none() {
+                // Some protocol have random destination port, like FTP-data
+                domain_vector.dst_port = Some(uniform.sample(&mut rng) as u16);
+            }
+            // TODO: allow that again
+            // if let Some(port) = self.model.open_ports.get(&(
+            //     domain_vector.dst_ip.unwrap(),
+            //     domain_vector.l7_proto.unwrap(),
+            // )) {
+            //     domain_vector.dst_port = Some(*port);
+            // }
         }
-        // TODO: allow that again
-        // if let Some(port) = self.model.open_ports.get(&(
-        //     domain_vector.dst_ip.unwrap(),
-        //     domain_vector.l7_proto.unwrap(),
-        // )) {
-        //     domain_vector.dst_port = Some(*port);
-        // }
         domain_vector.ttl_client = Some(
             *self
                 .model
