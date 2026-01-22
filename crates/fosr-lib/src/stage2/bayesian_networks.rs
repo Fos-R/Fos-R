@@ -181,8 +181,14 @@ struct BayesianNetwork {
     nodes: Vec<BayesianNetworkNode>,
 }
 
-fn sample_random_ip(rng: &mut impl RngCore) -> Ipv4Addr {
-    Ipv4Addr::from_bits(rng.next_u32())
+fn sample_random_global_ip(rng: &mut impl RngCore) -> Ipv4Addr {
+    let mut addr = Ipv4Addr::from_bits(rng.next_u32());
+    // rejection sampling
+    while addr.octets()[0] == 0 || addr.is_multicast() || addr.is_broadcast() || addr.is_documentation() || addr.is_link_local() || addr.is_loopback() || addr.is_private() {
+    // while !addr.is_global() { // TODO: use when not experimental anymore
+        addr = Ipv4Addr::from_bits(rng.next_u32());
+    }
+    addr
 }
 
 impl Display for BayesianNetwork {
@@ -240,13 +246,13 @@ impl BayesianNetwork {
                                 Feature::SrcIp(v) => match v[i] {
                                     AnonymizedIpv4Addr::Local(p) => domain_vector.src_ip = Some(p),
                                     AnonymizedIpv4Addr::Public => {
-                                        domain_vector.src_ip = Some(sample_random_ip(rng))
+                                        domain_vector.src_ip = Some(sample_random_global_ip(rng))
                                     }
                                 },
                                 Feature::DstIp(v) => match v[i] {
                                     AnonymizedIpv4Addr::Local(p) => domain_vector.dst_ip = Some(p),
                                     AnonymizedIpv4Addr::Public => {
-                                        domain_vector.dst_ip = Some(sample_random_ip(rng))
+                                        domain_vector.dst_ip = Some(sample_random_global_ip(rng))
                                     }
                                 },
                                 Feature::DstPt(v) => match v[i] {
