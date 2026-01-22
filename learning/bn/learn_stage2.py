@@ -15,9 +15,12 @@ import time
 
 pd.options.mode.copy_on_write = True
 
+local_net = ['192.168.', '10.', '0.', '127.', '192.0.0', '198.18', '198.19']
+for i in range(16,32):
+    local_net.append("172."+str(i)+".")
+
 def group_ip_dst(value):
     value = str(value)
-    local_net = ['192.168.', '10.', '0.', '127.', '172.', '192.0.0', '198.18', '198.19']
     for ip in local_net:
         if value.startswith(ip):
             return 'Local'
@@ -243,7 +246,7 @@ if __name__ == '__main__':
     def categorize(pkt_count):
         best_bic = None
         # pkt_count = np.array([c + random.random() - 0.5 for c in pkt_count])
-        for i in range(20): # limit on the number of components
+        for i in range(5): # limit on the number of components
             if i+1 > len(pkt_count): # at most as many components as the number of points
                 break
             try:
@@ -348,6 +351,9 @@ if __name__ == '__main__':
         learner_common.addNoChildrenNode(var) # variable with no children
 
     learner_common.useMIIC()
+    learner_common.useScoreBIC()
+    learner_common.useSmoothingPrior()
+
     print("Learning common")
     bn_common = learner_common.learnBN()
     # not nead to add labels: "common" already use all the values
@@ -376,6 +382,8 @@ if __name__ == '__main__':
             learner_udp.addNoChildrenNode(var) # variable with no children
 
         learner_udp.useMIIC()
+        learner_udp.useScoreBIC()
+        learner_udp.useSmoothingPrior()
         bn_udp = learner_udp.learnBN()
 
         # we recreate the bayesian network with the same structure but the full domain
@@ -401,6 +409,8 @@ if __name__ == '__main__':
             learner_tcp.addNoChildrenNode(var) # variable with no children
 
         learner_tcp.useMIIC()
+        learner_tcp.useScoreBIC()
+        learner_tcp.useSmoothingPrior()
         bn_tcp = learner_tcp.learnBN()
 
         # we recreate the bayesian network with the same structure but the full domain
