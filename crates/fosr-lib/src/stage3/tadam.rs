@@ -119,10 +119,16 @@ impl Stage3 for TadamGenerator {
     fn generate_tcp_packets_info(
         &self,
         mut flow: SeededData<FlowData>,
-        conn_state: TCPConnState,
+        mut conn_state: TCPConnState,
     ) -> Option<SeededData<PacketsIR<TCPPacketInfo>>> {
         let mut rng = Pcg32::seed_from_u64(flow.seed);
-        let a = self.lib.cons_tcp_automata.get(&(flow.data.l7_proto, conn_state));
+        let mut a = self.lib.cons_tcp_automata.get(&(flow.data.l7_proto, conn_state));
+        if a.is_none() {
+            a = self.lib.cons_tcp_automata.get(&(flow.data.l7_proto, TCPConnState::SF));
+            if a.is_some() {
+                conn_state = TCPConnState::SF;
+            }
+        }
 
         // automata is found
         if let Some(a) = a {
@@ -138,7 +144,7 @@ impl Stage3 for TadamGenerator {
                 },
             })
         } else {
-            log::error!("No TCP automaton for service {:?}", flow.data.l7_proto);
+            log_once::error_once!("No TCP automaton for service {:?} with {:?}", flow.data.l7_proto, conn_state);
             None
         }
     }
