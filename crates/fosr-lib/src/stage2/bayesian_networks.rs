@@ -320,7 +320,7 @@ pub struct BNGenerator {
 
 #[derive(Deserialize, Debug, Clone)]
 struct AdditionalData {
-    s0_bin_count: usize,
+    bin_count: usize,
     ttl: HashMap<Ipv4Addr, u8>,
     tcp_out_pkt_gaussians: GaussianDistribs,
     tcp_in_pkt_gaussians: GaussianDistribs,
@@ -839,7 +839,7 @@ fn bn_from_bif(
 
         // println!("{}", def.variable);
         let feature: Option<Feature> = match v.name.as_str() {
-            "Time" => Some(Feature::TimeBin(bn_additional_data.s0_bin_count)),
+            "Time" => Some(Feature::TimeBin(bn_additional_data.bin_count)),
             "Src IP Role" => Some(Feature::SrcIpRole(
                 v.outcome
                     .clone()
@@ -985,9 +985,9 @@ impl Stage2 for BNGenerator {
             restart = false;
             discrete_vector.clear();
             discrete_vector.push(Some(min(
-                self.model.bn_additional_data.s0_bin_count - 1,
-                (ts.data.date_time.num_seconds_from_midnight() as usize) / 86400
-                    * self.model.bn_additional_data.s0_bin_count,
+                self.model.bn_additional_data.bin_count - 1,
+                (ts.data.date_time.num_seconds_from_midnight() as usize) / (3600 * 24)
+                    * self.model.bn_additional_data.bin_count,
             )));
             domain_vector = self.model.bn.sample(&mut rng, &mut discrete_vector)?;
 
