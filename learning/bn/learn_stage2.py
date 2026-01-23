@@ -26,6 +26,9 @@ def group_ip_dst(value):
             return 'Local'
     return 'Internet'
 
+def keep_first_service(value):
+    return value.split(",")[0]
+
 def remove_public_ip(value):
     if group_ip_dst(value) == "Internet":
         return "Internet"
@@ -114,7 +117,7 @@ if __name__ == '__main__':
     gum.initRandom(seed=42)
 
     output = {}
-    output["s0_bin_count"] = bin_count
+    output["bin_count"] = bin_count
 
     print("Loading files")
 
@@ -171,8 +174,9 @@ if __name__ == '__main__':
     flow["Applicative Proto"] = flow["Applicative Proto"].apply(functools.partial(complete_proto,services))
     # we remove flows with unknown service
     flow = flow.dropna(subset="Applicative Proto")
+    flow['Applicative Proto'] = flow['Applicative Proto'].apply(keep_first_service)
 
-    m = 0.001 * len(flow) # remove services that appear less than 0.1% of the time
+    m = 50 # at least 50 examples
     print("Removed rare services:\n",flow["Applicative Proto"].value_counts()[flow["Applicative Proto"].value_counts() <= m])
     flow = flow[flow["Applicative Proto"].isin(flow["Applicative Proto"].value_counts()[flow["Applicative Proto"].value_counts() > m].index)]
 
