@@ -312,7 +312,6 @@ if __name__ == '__main__':
 
         if args.subsample and len(df) > args.subsample:
             df = df.sample(n=args.subsample, random_state=0)
-            # print("Subsampling to",args.subsample,"examples")
 
         df["time_sequence"] = df.apply(partial(add_payload_type,None), axis=1)
         df = df.reset_index(drop=True)

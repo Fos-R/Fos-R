@@ -42,8 +42,8 @@ impl Network {
             d.variable = d.variable.clone() + &suffix;
             // if the parent is exist in the "self" network, keep it as is
             // otherwise, apply the suffix
-            if d.given.is_some() {
-                for v in d.given.as_mut().unwrap().iter_mut() {
+            if let Some(given) = &mut d.given {
+                for v in given.iter_mut() {
                     if !outer_variable.contains(v) {
                         *v = v.clone() + &suffix;
                     }
