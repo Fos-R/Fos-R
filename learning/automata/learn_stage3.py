@@ -16,6 +16,8 @@ import csv
 import time
 import random
 
+pd.options.mode.copy_on_write = True
+
 def add_payload_type(payload_type, row):
     # if row['protocol'] == "ICMP":
     #     return row["time_sequence"] # no payload to analyze
@@ -212,6 +214,7 @@ if __name__ == '__main__':
     parser.add_argument('--subsample', type=int, help="How many flows to learn from at most.")
     parser.add_argument('--output', help="Select the output directory (by default the local directory)")
     # parser.add_argument('--output-dot', help="Select the dot output file for visualization.")
+    parser.add_argument('--force', help="Learn even if the output file already exists.", action="store_true")
     parser.add_argument('--verbose', help="Increase TADAM’s verbosity.", action="store_true")
     args = parser.parse_args()
     args.output = args.output or "."
@@ -284,7 +287,7 @@ if __name__ == '__main__':
         else:
             output_name = os.path.join(args.output, service+"-"+conn_state+".json")
 
-        if os.path.isfile(output_name):
+        if os.path.isfile(output_name) and not args.force:
             print(f"File {output_name} already exists: skipping")
             continue
 
@@ -301,6 +304,7 @@ if __name__ == '__main__':
 
         if len(df) == 0:
             print("Input file is empty, skipping")
+            continue
 
         all_df = df
 
@@ -315,7 +319,7 @@ if __name__ == '__main__':
 
         print("Learning from",len(df),"examples")
 
-        noise_model = NoiseModel(deletion_possible=False, addition_possible=False, reemission_possible=False)
+        noise_model = NoiseModel(deletion_possible=False, addition_possible=False, reemission_possible=False, transposition_possible=True)
         parsers = { "tcp": parse_TCP, "udp": parse_UDP, "icmp": parse_ICMP }
 
         options = Options(filename=None,
