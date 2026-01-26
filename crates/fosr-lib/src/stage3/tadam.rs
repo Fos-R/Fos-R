@@ -144,7 +144,11 @@ impl Stage3 for TadamGenerator {
                 },
             })
         } else {
-            log_once::error_once!("No TCP automaton for service {:?} with {:?}", flow.data.l7_proto, conn_state);
+            log_once::warn_once!(
+                "No TCP automaton for {:?} with {:?}",
+                flow.data.l7_proto,
+                conn_state
+            );
             None
         }
     }
@@ -170,14 +174,14 @@ impl Stage3 for TadamGenerator {
                 },
             })
         } else {
-            log::error!("No UDP automaton for service {:?}", flow.data.l7_proto);
+            log_once::warn_once!("No UDP automaton for {:?}", flow.data.l7_proto);
             None
         }
     }
 
     fn generate_icmp_packets_info(
         &self,
-        flow: SeededData<FlowData>,
+        _flow: SeededData<FlowData>,
     ) -> Option<SeededData<PacketsIR<ICMPPacketInfo>>> {
         todo!()
     }
