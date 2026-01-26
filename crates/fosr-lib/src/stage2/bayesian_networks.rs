@@ -780,12 +780,12 @@ fn bn_from_bif(
 
     // If "Src IP" (or similar) is present, is must be at the end of the list because its parents may change
     // Since it never has any children, the topological order will still be valid
-    for var_name in ["Src IP Addr", "Dst IP Addr", "Dst Pt"] {
-        if let Some(p) = topo_order.iter().position(|s| s.as_str() == var_name) {
-            let v = topo_order.remove(p);
-            topo_order.push(v); // push at the end
-        }
-    }
+    // for var_name in ["Src IP Addr", "Dst IP Addr", "Dst Pt"] {
+    //     if let Some(p) = topo_order.iter().position(|s| s.as_str() == var_name) {
+    //         let v = topo_order.remove(p);
+    //         topo_order.push(v); // push at the end
+    //     }
+    // }
 
     // log::info!("Topological order: {topo_order:?}");
 
