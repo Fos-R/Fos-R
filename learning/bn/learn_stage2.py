@@ -309,7 +309,8 @@ if __name__ == '__main__':
         common_data[c] = common_data[c].astype('category')
         common_data[c] = common_data[c].cat.set_categories(full_domains[c])
 
-    vars_without_children = ["Src IP Addr", "Dst IP Addr", "Dst Pt"]
+    # vars_without_children = ["Src IP Addr", "Dst IP Addr", "Dst Pt"]
+    vars_without_children = []
 
     # TCP-only variables:
         # In Pkt Count
