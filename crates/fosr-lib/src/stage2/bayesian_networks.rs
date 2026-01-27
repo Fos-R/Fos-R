@@ -46,8 +46,8 @@ impl From<IntermediateVector> for Flow {
             dst_port: p.dst_port.unwrap(),
             ttl_client: p.ttl_client.unwrap(),
             ttl_server: p.ttl_server.unwrap(),
-            fwd_packets_count: p.fwd_packets_count.unwrap(),
-            bwd_packets_count: p.bwd_packets_count.unwrap(),
+            fwd_packets_count: 0, //p.fwd_packets_count.unwrap(), FIXME
+            bwd_packets_count: 0, //p.bwd_packets_count.unwrap(), FIXME
             timestamp: p.timestamp.unwrap(),
             l7_proto: p.l7_proto.unwrap(),
         };
@@ -322,10 +322,10 @@ pub struct BNGenerator {
 struct AdditionalData {
     bin_count: usize,
     ttl: HashMap<Ipv4Addr, u8>,
-    tcp_out_pkt_gaussians: GaussianDistribs,
-    tcp_in_pkt_gaussians: GaussianDistribs,
-    udp_out_pkt_gaussians: GaussianDistribs,
-    udp_in_pkt_gaussians: GaussianDistribs,
+    // tcp_out_pkt_gaussians: GaussianDistribs,
+    // tcp_in_pkt_gaussians: GaussianDistribs,
+    // udp_out_pkt_gaussians: GaussianDistribs,
+    // udp_in_pkt_gaussians: GaussianDistribs,
 }
 
 impl GaussianDistribs {
@@ -376,11 +376,11 @@ impl BayesianModel {
         // log::info!("Loading high-level BN");
         let mut bif_common = bifxml::from_str(&bn_strings[0])?;
         // log::info!("Loading TCP BN");
-        let bif_tcp = bifxml::from_str(&bn_strings[1])?;
-        bif_common.merge(bif_tcp, L4Proto::TCP);
-        // log::info!("Loading UDP BN");
-        let bif_udp = bifxml::from_str(&bn_strings[2])?;
-        bif_common.merge(bif_udp, L4Proto::UDP);
+        // let bif_tcp = bifxml::from_str(&bn_strings[1])?;
+        // bif_common.merge(bif_tcp, L4Proto::TCP);
+        // // log::info!("Loading UDP BN");
+        // let bif_udp = bifxml::from_str(&bn_strings[2])?;
+        // bif_common.merge(bif_udp, L4Proto::UDP);
 
         let bn_common = bn_from_bif(bif_common, &bn_additional_data)?;
 
@@ -894,13 +894,14 @@ fn bn_from_bif(
                     .collect(),
             )),
 
-            "Cat Out Packet TCP" => Some(Feature::FwdPkt(
-                bn_additional_data.tcp_out_pkt_gaussians.to_normals(),
-            )),
-            "Cat In Packet TCP" => Some(Feature::BwdPkt(
-                bn_additional_data.tcp_in_pkt_gaussians.to_normals(),
-            )),
-            "Connection State TCP" => Some(Feature::EndFlags(
+            // "Cat Out Packet TCP" => Some(Feature::FwdPkt(
+            //     bn_additional_data.tcp_out_pkt_gaussians.to_normals(),
+            // )),
+            // "Cat In Packet TCP" => Some(Feature::BwdPkt(
+            //     bn_additional_data.tcp_in_pkt_gaussians.to_normals(),
+            // )),
+            // "Connection State TCP" => Some(Feature::EndFlags(
+            "Connection State" => Some(Feature::EndFlags(
                 v.outcome
                     .clone()
                     .into_iter()
@@ -908,12 +909,12 @@ fn bn_from_bif(
                     .collect::<Result<Vec<TCPConnState>, String>>()?,
             )),
 
-            "Cat Out Packet UDP" => Some(Feature::FwdPkt(
-                bn_additional_data.udp_out_pkt_gaussians.to_normals(),
-            )),
-            "Cat In Packet UDP" => Some(Feature::BwdPkt(
-                bn_additional_data.udp_in_pkt_gaussians.to_normals(),
-            )),
+            // "Cat Out Packet UDP" => Some(Feature::FwdPkt(
+            //     bn_additional_data.udp_out_pkt_gaussians.to_normals(),
+            // )),
+            // "Cat In Packet UDP" => Some(Feature::BwdPkt(
+            //     bn_additional_data.udp_in_pkt_gaussians.to_normals(),
+            // )),
             _ => None, // some duplicated features are deliberately ignored (such as Dst Pt UDP/TCP)
         };
 

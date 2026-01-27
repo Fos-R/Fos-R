@@ -268,32 +268,36 @@ if __name__ == '__main__':
         return best_model.means_.reshape(1,-1)[0].tolist(), best_model.covariances_.tolist(), best_labels
         # return best_model.means_.reshape(1,-1)[0].tolist(), [max(1e-6, v - 1/12) for v in best_model.covariances_], best_labels
 
-    if tcp_fosr is not None:
-        print("Gaussian mixture for TCP out packet count")
-        mu, cov, labels = categorize(TCP_out_pkt_count)
-        output["tcp_out_pkt_gaussians"] = {"mu": mu, "cov": cov}
-        flow.loc[flow['Proto']=="TCP", ["Cat Out Packet"]] = labels
+    # if tcp_fosr is not None:
+    #     print("Gaussian mixture for TCP out packet count")
+    #     mu, cov, labels = categorize(TCP_out_pkt_count)
+    #     output["tcp_out_pkt_gaussians"] = {"mu": mu, "cov": cov}
+    #     flow.loc[flow['Proto']=="TCP", ["Cat Out Packet"]] = labels
 
-        print("Gaussian mixture for TCP in packet count")
-        mu, cov, labels = categorize(TCP_in_pkt_count)
-        output["tcp_in_pkt_gaussians"] = {"mu": mu, "cov": cov}
-        flow.loc[flow['Proto']=="TCP", ["Cat In Packet"]] = labels
+    #     print("Gaussian mixture for TCP in packet count")
+    #     mu, cov, labels = categorize(TCP_in_pkt_count)
+    #     output["tcp_in_pkt_gaussians"] = {"mu": mu, "cov": cov}
+    #     flow.loc[flow['Proto']=="TCP", ["Cat In Packet"]] = labels
 
-    if udp_fosr is not None:
-        print("Gaussian mixture for UDP out packet count")
-        mu, cov, labels = categorize(UDP_out_pkt_count)
-        output["udp_out_pkt_gaussians"] = {"mu": mu, "cov": cov}
-        flow.loc[flow['Proto']=="UDP", ["Cat Out Packet"]] = labels
+    # if udp_fosr is not None:
+    #     print("Gaussian mixture for UDP out packet count")
+    #     mu, cov, labels = categorize(UDP_out_pkt_count)
+    #     output["udp_out_pkt_gaussians"] = {"mu": mu, "cov": cov}
+    #     flow.loc[flow['Proto']=="UDP", ["Cat Out Packet"]] = labels
 
-        print("Gaussian mixture for UDP in packet count")
-        mu, cov, labels = categorize(UDP_in_pkt_count)
-        output["udp_in_pkt_gaussians"] = {"mu": mu, "cov": cov}
-        flow.loc[flow['Proto']=="UDP", ["Cat In Packet"]] = labels
+    #     print("Gaussian mixture for UDP in packet count")
+    #     mu, cov, labels = categorize(UDP_in_pkt_count)
+    #     output["udp_in_pkt_gaussians"] = {"mu": mu, "cov": cov}
+    #     flow.loc[flow['Proto']=="UDP", ["Cat In Packet"]] = labels
 
     flow = flow.replace("-", "none") # "-" causes pyagrum to parse the value as a number, leading to an exception
 
+
+    flow["Connection State"] = flow["Connection State"].fillna("none")
+
     # Extract domains
-    for c in ["Time", "Src IP Role", "Dst IP Role", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Cat Out Packet", "Cat In Packet", "Connection State"]:
+    for c in ["Time", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Connection State"]:
+    # for c in ["Time", "Src IP Role", "Dst IP Role", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Cat Out Packet", "Cat In Packet", "Connection State"]:
         full_domains[c] = [str(s) for s in pd.unique(flow[c])]
         full_domains[c].sort()
 
@@ -303,7 +307,9 @@ if __name__ == '__main__':
         # Dst IP Role
         # Applicative Protocol
 
-    common_vars = ["Time", "Src IP Role", "Dst IP Role", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt"]
+    # common_vars = ["Time", "Src IP Role", "Dst IP Role", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt"]
+    common_vars = ["Time", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Connection State"]
+
     common_data = flow[common_vars]
     for c in common_vars:
         common_data[c] = common_data[c].astype('category')
@@ -317,29 +323,31 @@ if __name__ == '__main__':
         # Out Pkt Count
         # Connection State
 
-    tcp_vars = ["Cat Out Packet", "Cat In Packet", "Connection State"]
+    # tcp_vars = ["Cat Out Packet", "Cat In Packet", "Connection State"]
+    tcp_vars = ["Connection State"]
     tcp_data = flow[flow['Proto']=="TCP"]
 
     # this variable only exist in the TCP BN, so we can restrict its domain to the values appearing in TCP flows
-    full_domains["Connection State"] = [str(s) for s in pd.unique(tcp_data["Connection State"])]
-    full_domains["Connection State"].sort()
+    # full_domains["Connection State"] = [str(s) for s in pd.unique(tcp_data["Connection State"])]
+    # full_domains["Connection State"].sort()
 
-    tcp_data = tcp_data[tcp_vars + common_vars]
-    tcp_data = tcp_data.dropna()
-    for c in tcp_vars + common_vars:
-        tcp_data[c] = tcp_data[c].astype('category')
-        tcp_data[c] = tcp_data[c].cat.set_categories(full_domains[c])
+    # tcp_data = tcp_data[tcp_vars + common_vars]
+    # tcp_data = tcp_data.dropna()
+    # for c in tcp_vars + common_vars:
+    #     tcp_data[c] = tcp_data[c].astype('category')
+    #     tcp_data[c] = tcp_data[c].cat.set_categories(full_domains[c])
 
     # UDP-only variables:
         # In Pkt Count
         # Out Pkt Count
 
-    udp_vars = ["Cat Out Packet", "Cat In Packet"]
-    udp_data = flow[flow['Proto']=="UDP"]
-    udp_data = udp_data[udp_vars + common_vars]
-    for c in udp_vars + common_vars:
-        udp_data[c] = udp_data[c].astype('category')
-        udp_data[c] = udp_data[c].cat.set_categories(full_domains[c])
+    # udp_vars = ["Cat Out Packet", "Cat In Packet"]
+    # udp_vars = []
+    # udp_data = flow[flow['Proto']=="UDP"]
+    # udp_data = udp_data[udp_vars + common_vars]
+    # for c in udp_vars + common_vars:
+    #     udp_data[c] = udp_data[c].astype('category')
+    #     udp_data[c] = udp_data[c].cat.set_categories(full_domains[c])
 
     # Variables not used during structure learning (saved as dictionaries alongside the BN)
         # Dst Port
@@ -361,7 +369,7 @@ if __name__ == '__main__':
 
     print("Learning common")
     bn_common = learner_common.learnBN()
-    # not nead to add labels: "common" already use all the values
+    # not need to add labels: "common" already use all the values
     # parameters_learning(bn_common, common_data)
 
     # we recreate the bayesian network with the same structure but the full domain
@@ -378,59 +386,59 @@ if __name__ == '__main__':
     parameters_learning(bn_common_full, common_data)
     bn_common = bn_common_full
 
-    if udp_fosr is not None:
-        print("Learning UDP")
-        learner_udp = gum.BNLearner(udp_data)
-        for var in common_vars:
-            learner_udp.addNoParentNode(var) # variable with no parent
-        for var in vars_without_children:
-            learner_udp.addNoChildrenNode(var) # variable with no children
+    # if udp_fosr is not None:
+    #     print("Learning UDP")
+    #     learner_udp = gum.BNLearner(udp_data)
+    #     for var in common_vars:
+    #         learner_udp.addNoParentNode(var) # variable with no parent
+    #     for var in vars_without_children:
+    #         learner_udp.addNoChildrenNode(var) # variable with no children
 
-        learner_udp.useMIIC()
-        learner_udp.useScoreBIC()
-        learner_udp.useSmoothingPrior()
-        bn_udp = learner_udp.learnBN()
+    #     learner_udp.useMIIC()
+    #     learner_udp.useScoreBIC()
+    #     learner_udp.useSmoothingPrior()
+    #     bn_udp = learner_udp.learnBN()
 
-        # we recreate the bayesian network with the same structure but the full domain
-        bn_udp_full = gum.BayesNet('UDP model')
-        for i in bn_udp.nodes():
-            var = bn_udp.variable(i).name()
-            bn_udp_full.add(gum.LabelizedVariable(var, var, full_domains[var]))
+    #     # we recreate the bayesian network with the same structure but the full domain
+    #     bn_udp_full = gum.BayesNet('UDP model')
+    #     for i in bn_udp.nodes():
+    #         var = bn_udp.variable(i).name()
+    #         bn_udp_full.add(gum.LabelizedVariable(var, var, full_domains[var]))
 
-        for i in bn_udp.nodes():
-            parents = bn_udp.parents(i)
-            for p in parents:
-                bn_udp_full.addArc(p, i)
+    #     for i in bn_udp.nodes():
+    #         parents = bn_udp.parents(i)
+    #         for p in parents:
+    #             bn_udp_full.addArc(p, i)
 
-        parameters_learning(bn_udp_full, udp_data)
-        bn_udp = bn_udp_full
+    #     parameters_learning(bn_udp_full, udp_data)
+    #     bn_udp = bn_udp_full
 
-    if tcp_fosr is not None:
-        print("Learning TCP")
-        learner_tcp = gum.BNLearner(tcp_data)
-        for var in common_vars:
-            learner_tcp.addNoParentNode(var) # variable with no parent
-        for var in vars_without_children:
-            learner_tcp.addNoChildrenNode(var) # variable with no children
+    # if tcp_fosr is not None:
+    #     print("Learning TCP")
+    #     learner_tcp = gum.BNLearner(tcp_data)
+    #     for var in common_vars:
+    #         learner_tcp.addNoParentNode(var) # variable with no parent
+    #     for var in vars_without_children:
+    #         learner_tcp.addNoChildrenNode(var) # variable with no children
 
-        learner_tcp.useMIIC()
-        learner_tcp.useScoreBIC()
-        learner_tcp.useSmoothingPrior()
-        bn_tcp = learner_tcp.learnBN()
+    #     learner_tcp.useMIIC()
+    #     learner_tcp.useScoreBIC()
+    #     learner_tcp.useSmoothingPrior()
+    #     bn_tcp = learner_tcp.learnBN()
 
-        # we recreate the bayesian network with the same structure but the full domain
-        bn_tcp_full = gum.BayesNet('TCP model')
-        for i in bn_tcp.nodes():
-            var = bn_tcp.variable(i).name()
-            bn_tcp_full.add(gum.LabelizedVariable(var, var, full_domains[var]))
+    #     # we recreate the bayesian network with the same structure but the full domain
+    #     bn_tcp_full = gum.BayesNet('TCP model')
+    #     for i in bn_tcp.nodes():
+    #         var = bn_tcp.variable(i).name()
+    #         bn_tcp_full.add(gum.LabelizedVariable(var, var, full_domains[var]))
 
-        for i in bn_tcp.nodes():
-            parents = bn_tcp.parents(i)
-            for p in parents:
-                bn_tcp_full.addArc(p, i)
+    #     for i in bn_tcp.nodes():
+    #         parents = bn_tcp.parents(i)
+    #         for p in parents:
+    #             bn_tcp_full.addArc(p, i)
 
-        parameters_learning(bn_tcp_full, tcp_data)
-        bn_tcp = bn_tcp_full
+    #     parameters_learning(bn_tcp_full, tcp_data)
+    #     bn_tcp = bn_tcp_full
 
     print("Learning time:", time.time() - start)
     print("Model export")
@@ -440,12 +448,12 @@ if __name__ == '__main__':
         os.makedirs(args.output)
     gumimage.export(bn_common, os.path.join(args.output, "bn_common.pdf"))
     bn_common.saveBIFXML(os.path.join(args.output, "bn_common.bifxml"))
-    if udp_fosr is not None:
-        gumimage.export(bn_udp, os.path.join(args.output, "bn_udp.pdf"))
-        bn_udp.saveBIFXML(os.path.join(args.output, "bn_udp.bifxml"))
-    if tcp_fosr is not None:
-        gumimage.export(bn_tcp, os.path.join(args.output, "bn_tcp.pdf"))
-        bn_tcp.saveBIFXML(os.path.join(args.output, "bn_tcp.bifxml"))
+    # if udp_fosr is not None:
+    #     gumimage.export(bn_udp, os.path.join(args.output, "bn_udp.pdf"))
+    #     bn_udp.saveBIFXML(os.path.join(args.output, "bn_udp.bifxml"))
+    # if tcp_fosr is not None:
+    #     gumimage.export(bn_tcp, os.path.join(args.output, "bn_tcp.pdf"))
+    #     bn_tcp.saveBIFXML(os.path.join(args.output, "bn_tcp.bifxml"))
 
     try:
         out_file = open(os.path.join(args.output, "bn_additional_data.json"), "w")
@@ -454,3 +462,6 @@ if __name__ == '__main__':
     except Exception as e:
         print("Error during json save:",e)
 
+
+    # import pyagrum.lib.notebook as gnb
+    # gnb.showPosterior(bn_tcp, evs={}, target="Connection State")
