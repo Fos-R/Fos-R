@@ -52,19 +52,21 @@ pub enum TCPConnState {
     S0,
     /// Connection attempt rejected
     REJ,
+    /// For non-TCP communication
+    NoState,
 }
 
-impl TCPConnState {
-    pub fn iter() -> [TCPConnState; 5] {
-        [
-            TCPConnState::SF,
-            TCPConnState::SH,
-            TCPConnState::RST,
-            TCPConnState::S0,
-            TCPConnState::REJ,
-        ]
-    }
-}
+// impl TCPConnState {
+//     pub fn iter() -> [TCPConnState; 5] {
+//         [
+//             TCPConnState::SF,
+//             TCPConnState::SH,
+//             TCPConnState::RST,
+//             TCPConnState::S0,
+//             TCPConnState::REJ,
+//         ]
+//     }
+// }
 
 // TODO: refaire proprement
 impl TryFrom<String> for TCPConnState {
@@ -77,6 +79,7 @@ impl TryFrom<String> for TCPConnState {
             "RST" => Ok(TCPConnState::RST),
             "S0" => Ok(TCPConnState::S0),
             "REJ" => Ok(TCPConnState::REJ),
+            "NONE" => Ok(TCPConnState::NoState),
             _ => Err(format!("Unknown connection state: {s}")),
         }
     }
@@ -122,11 +125,11 @@ impl L4Proto {
         match &self {
             L4Proto::TCP => Flow::TCP(d, c.unwrap()),
             L4Proto::UDP => {
-                assert!(c.is_none());
+                // assert!(c.is_none());
                 Flow::UDP(d)
             }
             L4Proto::ICMP => {
-                assert!(c.is_none());
+                // assert!(c.is_none());
                 Flow::ICMP(d)
             }
         }

@@ -597,16 +597,18 @@ impl ModelsSource {
                             1
                         ))
                         .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/bn/bn_tcp.bifxml",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/bn/bn_udp.bifxml",
-                            1
-                        ))
-                        .unwrap(),
+                        String::new(),
+                        String::new(),
+                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        //     "default_models/cicids17/bn/bn_tcp.bifxml",
+                        //     1
+                        // ))
+                        // .unwrap(),
+                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        //     "default_models/cicids17/bn/bn_udp.bifxml",
+                        //     1
+                        // ))
+                        // .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/bn/bn_additional_data.json",
                             1
@@ -622,16 +624,18 @@ impl ModelsSource {
                             22
                         ))
                         .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/bn/bn_tcp.bifxml",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/bn/bn_udp.bifxml",
-                            22
-                        ))
-                        .unwrap(),
+                        String::new(),
+                        String::new(),
+                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        //     "default_models/cicids17/bn/bn_tcp.bifxml",
+                        //     22
+                        // ))
+                        // .unwrap(),
+                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        //     "default_models/cicids17/bn/bn_udp.bifxml",
+                        //     22
+                        // ))
+                        // .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/bn/bn_additional_data.json",
                             22
@@ -650,16 +654,18 @@ impl ModelsSource {
                             1
                         ))
                         .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/bn/bn_tcp.bifxml",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/bn/bn_udp.bifxml",
-                            1
-                        ))
-                        .unwrap(),
+                        String::new(),
+                        String::new(),
+                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        //     "default_models/cupid/bn/bn_tcp.bifxml",
+                        //     1
+                        // ))
+                        // .unwrap(),
+                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        //     "default_models/cupid/bn/bn_udp.bifxml",
+                        //     1
+                        // ))
+                        // .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cupid/bn/bn_additional_data.json",
                             1
@@ -675,15 +681,17 @@ impl ModelsSource {
                             22
                         ))
                         .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/bn/bn_tcp.bifxml",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/bn/bn_udp.bifxml",
-                            22
-                        ))
+                        String::new(),
+                        String::new(),
+                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        //     "default_models/cupid/bn/bn_tcp.bifxml",
+                        //     22
+                        // ))
+                        // .unwrap(),
+                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        //     "default_models/cupid/bn/bn_udp.bifxml",
+                        //     22
+                        // ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cupid/bn/bn_additional_data.json",
@@ -698,8 +706,8 @@ impl ModelsSource {
                 let p = Path::new(path);
                 Ok(vec![
                     fs::read_to_string(p.join("bn/bn_common.bifxml").to_str().unwrap())?,
-                    fs::read_to_string(p.join("bn/bn_tcp.bifxml").to_str().unwrap())?,
-                    fs::read_to_string(p.join("bn/bn_udp.bifxml").to_str().unwrap())?,
+                    // fs::read_to_string(p.join("bn/bn_tcp.bifxml").to_str().unwrap())?,
+                    // fs::read_to_string(p.join("bn/bn_udp.bifxml").to_str().unwrap())?,
                     fs::read_to_string(p.join("bn/bn_additional_data.json").to_str().unwrap())?,
                 ])
             }
