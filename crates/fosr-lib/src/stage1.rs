@@ -35,7 +35,7 @@ pub struct BinBasedGenerator {
     initial_ts: Duration,
     remaining_flows: u64,
     lambdas: Vec<f64>,
-    current_distrib: Poisson<f64>,
+    current_distrib: Option<Poisson<f64>>,
     total_flow_count: u64,
     time_distrib: Uniform<u64>,
     window_rng: Pcg32,
@@ -90,7 +90,7 @@ impl Iterator for BinBasedGenerator {
     }
 }
 
-fn get_poisson(lambdas: &[f64], dest_tz_offset: FixedOffset, ts: Duration) -> Poisson<f64> {
+fn get_poisson(lambdas: &[f64], dest_tz_offset: FixedOffset, ts: Duration) -> Option<Poisson<f64>> {
     let secs = DateTime::from_timestamp_secs(ts.as_secs() as i64)
         .unwrap()
         .with_timezone(&dest_tz_offset)
@@ -99,7 +99,8 @@ fn get_poisson(lambdas: &[f64], dest_tz_offset: FixedOffset, ts: Duration) -> Po
     // log::info!("Hours since midnight: {}", secs/3600);
     let secs_per_bin = (60 * 60 * 24 / lambdas.len()) as u32;
     let index = ((secs / secs_per_bin) as usize).min(lambdas.len() - 1);
-    Poisson::new(lambdas[index]).unwrap()
+    // return None if lambda is 0
+    Poisson::new(lambdas[index]).ok()
 }
 
 /// Compute the parameters of the Poisson distribution from the bins
@@ -157,7 +158,7 @@ impl BinBasedGenerator {
             initial_ts,
             next_ts,
             lambdas,
-            current_distrib: Poisson::new(1.).unwrap(), // it will be overwritten
+            current_distrib: None, // it will be overwritten
             remaining_flows: 0,
             total_flow_count: 0,
             window_rng,
@@ -209,7 +210,7 @@ impl BinBasedGenerator {
             initial_ts: next_ts,
             next_ts,
             lambdas,
-            current_distrib: Poisson::new(1.).unwrap(), // it will be overwritten
+            current_distrib: None, // it will be overwritten
             remaining_flows: 0,
             total_flow_count: 0,
             window_rng,
@@ -235,7 +236,7 @@ impl BinBasedGenerator {
         }
 
         self.current_distrib = get_poisson(&self.lambdas, self.dest_tz_offset, self.next_ts);
-        self.remaining_flows = self.current_distrib.sample(&mut self.flow_rng.clone()) as u64;
+        self.remaining_flows = self.current_distrib.map_or(0, |s| s.sample(&mut self.flow_rng.clone()) as u64);
         self.time_distrib = Uniform::new(
             self.next_ts.as_millis() as u64,
             self.next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS,
