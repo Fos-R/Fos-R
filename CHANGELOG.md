@@ -9,7 +9,6 @@
 - New stage 1 with realistic time distribution
 - New stage 2 with Bayesian networks
 - New default models (CICIDS17 and CUPID)
-- Models customizing with configuration
 
 #### fosr
 
@@ -26,7 +25,7 @@
 
 #### other
 
-- A Zeek script for feature extraction
+- Added a Zeek script for feature extraction
 - Reworked learning algorithms
 
 ### Changed
@@ -37,7 +36,6 @@
 - Stage renaming (0->1, 1->2, 2->3, 3->4)
 - `stage4` module renamed to `inject`
 - Created the `export` module
-- Significantly modified the configuration file format
 - Transformed panics into `Result`s
 - Slight modification of automata json format
 - Better library documentation
