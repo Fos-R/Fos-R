@@ -4,10 +4,34 @@
    "payloads": {
     "type": "NoPayload"
    },
+   "p": 1.0,
+   "count": 18,
+   "src": 0,
+   "dst": 1,
+   "symbol": "S_>_Empty",
+   "mu": [
+    0.0,
+    0.0
+   ],
+   "cov": [
+    [
+     1e-06,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
    "p": 0.3333333333333333,
    "count": 9,
-   "src": 3,
-   "dst": 2,
+   "src": 1,
+   "dst": 1,
    "symbol": "S_>_Empty",
    "mu": [
     3026.3333333333335,
@@ -28,59 +52,11 @@
    "payloads": {
     "type": "NoPayload"
    },
-   "p": 1.0,
-   "count": 18,
-   "src": 2,
-   "dst": 3,
-   "symbol": "S_>_Empty",
-   "mu": [
-    0.0,
-    0.0
-   ],
-   "cov": [
-    [
-     1e-06,
-     0.0
-    ],
-    [
-     0.0,
-     1e-06
-    ]
-   ]
-  },
-  {
-   "payloads": {
-    "type": "NoPayload"
-   },
    "p": 0.6666666666666666,
    "count": 18,
-   "src": 3,
-   "dst": 1,
-   "symbol": "$",
-   "mu": [
-    0.0,
-    0.0
-   ],
-   "cov": [
-    [
-     1e-06,
-     0.0
-    ],
-    [
-     0.0,
-     1e-06
-    ]
-   ]
-  },
-  {
-   "payloads": {
-    "type": "NoPayload"
-   },
-   "p": 1.0,
-   "count": 18,
-   "src": 0,
+   "src": 1,
    "dst": 2,
-   "symbol": "S_>_Empty",
+   "symbol": "$",
    "mu": [
     0.0,
     0.0
@@ -98,19 +74,19 @@
   }
  ],
  "noise": {
-  "none": 0.948051948051948,
-  "deletion": 0.01298701298701299,
-  "reemission": 0.01298701298701299,
-  "transposition": 0.01298701298701299,
-  "addition": 0.01298701298701299
+  "none": 0.92,
+  "deletion": 0.020000000000000004,
+  "reemission": 0.020000000000000004,
+  "transposition": 0.020000000000000004,
+  "addition": 0.020000000000000004
  },
  "initial_state": 0,
- "accepting_state": 1,
+ "accepting_state": 2,
  "protocol": "tcp",
  "metadata": {
   "service": "http",
   "conn_state": "S0",
   "input_file": "cupid-train",
-  "creation_time": "2026-01-15 00:41:11.183841"
+  "creation_time": "2026-01-24 17:31:43.124322"
  }
 }

@@ -4,10 +4,10 @@
    "payloads": {
     "type": "NoPayload"
    },
-   "p": 0.2222222222222222,
+   "p": 1.0,
    "count": 1,
    "src": 0,
-   "dst": 0,
+   "dst": 1,
    "symbol": "S_>_Empty",
    "mu": [
     0.0,
@@ -28,10 +28,10 @@
    "payloads": {
     "type": "NoPayload"
    },
-   "p": 0.2222222222222222,
+   "p": 1.0,
    "count": 1,
-   "src": 0,
-   "dst": 0,
+   "src": 1,
+   "dst": 2,
    "symbol": "A_>_Empty",
    "mu": [
     0.0,
@@ -55,10 +55,10 @@
      "AAAA22qB2DCB1aEDAgEFogMCAQqjFTATMBGhBAICAICiCQQHMAWgAwEB/6SBsTCBrqAHAwUAQIEAEKEYMBagAwIBAaEPMA0bC2RzLXRvd2VyLTEkoggbBkRTLkxBQqMbMBmgAwIBAqESMBAbBmtyYnRndBsGRFMuTEFCpREYDzIwMzcwOTEzMDI0ODA1WqYRGA8yMDM3MDkxMzAyNDgwNVqnBgIETuibPqgVMBMCARICARECARcCARgCAv95AgEDqR0wGzAZoAMCARShEgQQRFMtVE9XRVItMSAgICAgIA=="
     ]
    },
-   "p": 0.2222222222222222,
+   "p": 1.0,
    "count": 1,
-   "src": 0,
-   "dst": 0,
+   "src": 2,
+   "dst": 3,
    "symbol": "AP_>_Replay",
    "mu": [
     0.0,
@@ -79,10 +79,10 @@
    "payloads": {
     "type": "NoPayload"
    },
-   "p": 0.2222222222222222,
+   "p": 1.0,
    "count": 1,
-   "src": 0,
-   "dst": 0,
+   "src": 3,
+   "dst": 4,
    "symbol": "FA_>_Empty",
    "mu": [
     0.0,
@@ -103,10 +103,10 @@
    "payloads": {
     "type": "NoPayload"
    },
-   "p": 0.1111111111111111,
+   "p": 1.0,
    "count": 1,
-   "src": 0,
-   "dst": 1,
+   "src": 4,
+   "dst": 5,
    "symbol": "$",
    "mu": [
     0.0,
@@ -132,12 +132,12 @@
   "addition": 0.0625
  },
  "initial_state": 0,
- "accepting_state": 1,
+ "accepting_state": 5,
  "protocol": "tcp",
  "metadata": {
   "service": "krb_tcp",
   "conn_state": "SH",
   "input_file": "cupid-train",
-  "creation_time": "2026-01-15 01:33:24.823476"
+  "creation_time": "2026-01-24 18:06:55.960175"
  }
 }

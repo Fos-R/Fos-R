@@ -5,7 +5,7 @@
     "type": "NoPayload"
    },
    "p": 1.0,
-   "count": 500,
+   "count": 936,
    "src": 0,
    "dst": 1,
    "symbol": "S_>_Empty",
@@ -28,18 +28,42 @@
    "payloads": {
     "type": "NoPayload"
    },
-   "p": 0.9960159362549801,
-   "count": 500,
+   "p": 0.003194888178913738,
+   "count": 3,
    "src": 1,
-   "dst": 2,
-   "symbol": "RA_<_Empty",
+   "dst": 1,
+   "symbol": "S_>_Empty",
    "mu": [
-    119.374,
+    2994.6666666666665,
     0.0
    ],
    "cov": [
     [
-     5818.727580158316,
+     1.3333343333333332,
+     0.0
+    ],
+    [
+     0.0,
+     1e-06
+    ]
+   ]
+  },
+  {
+   "payloads": {
+    "type": "NoPayload"
+   },
+   "p": 0.9968051118210862,
+   "count": 936,
+   "src": 1,
+   "dst": 3,
+   "symbol": "RA_<_Empty",
+   "mu": [
+    118.2681623931624,
+    0.0
+   ],
+   "cov": [
+    [
+     6028.594323181091,
      0.0
     ],
     [
@@ -53,9 +77,9 @@
     "type": "NoPayload"
    },
    "p": 1.0,
-   "count": 500,
-   "src": 2,
-   "dst": 3,
+   "count": 936,
+   "src": 3,
+   "dst": 2,
    "symbol": "$",
    "mu": [
     0.0,
@@ -71,46 +95,22 @@
      1e-06
     ]
    ]
-  },
-  {
-   "payloads": {
-    "type": "NoPayload"
-   },
-   "p": 0.00398406374501992,
-   "count": 2,
-   "src": 1,
-   "dst": 1,
-   "symbol": "S_>_Empty",
-   "mu": [
-    2994.0,
-    0.0
-   ],
-   "cov": [
-    [
-     1e-06,
-     0.0
-    ],
-    [
-     0.0,
-     1e-06
-    ]
-   ]
   }
  ],
  "noise": {
-  "none": 0.9973457199734572,
-  "deletion": 0.0006635700066357002,
-  "reemission": 0.0006635700066357002,
-  "transposition": 0.0006635700066357002,
-  "addition": 0.0006635700066357002
+  "none": 0.9985795454545454,
+  "deletion": 0.0003551136363636366,
+  "reemission": 0.0003551136363636366,
+  "transposition": 0.0003551136363636366,
+  "addition": 0.0003551136363636366
  },
  "initial_state": 0,
- "accepting_state": 3,
+ "accepting_state": 2,
  "protocol": "tcp",
  "metadata": {
   "service": "ssl",
   "conn_state": "REJ",
   "input_file": "cicids17-train",
-  "creation_time": "2026-01-16 05:23:26.647762"
+  "creation_time": "2026-01-26 12:05:53.047990"
  }
 }

@@ -60,6 +60,11 @@ impl ModelsSource {
                 {
                     vec![
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/automata/dce_rpc-SF.json",
+                            1
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/automata/dns-SF.json",
                             1
                         ))
@@ -76,6 +81,16 @@ impl ModelsSource {
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/automata/ftp-SF.json",
+                            1
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/automata/gssapi-RST.json",
+                            1
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/automata/gssapi-SF.json",
                             1
                         ))
                         .unwrap(),
@@ -110,6 +125,16 @@ impl ModelsSource {
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/automata/krb_tcp-RST.json",
+                            1
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/automata/krb-SF.json",
+                            1
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/automata/ldap_tcp-REJ.json",
                             1
                         ))
@@ -119,6 +144,12 @@ impl ModelsSource {
                             1
                         ))
                         .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/automata/ldap_udp.json",
+                            1
+                        ))
+                        .unwrap(),
+
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/automata/ntp.json",
                             1
@@ -165,6 +196,11 @@ impl ModelsSource {
                 {
                     vec![
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/automata/dce_rpc-SF.json",
+                            22
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/automata/dns-SF.json",
                             22
                         ))
@@ -181,6 +217,16 @@ impl ModelsSource {
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/automata/ftp-SF.json",
+                            22
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/automata/gssapi-RST.json",
+                            22
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/automata/gssapi-SF.json",
                             22
                         ))
                         .unwrap(),
@@ -215,6 +261,16 @@ impl ModelsSource {
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/automata/krb_tcp-RST.json",
+                            22
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/automata/krb-SF.json",
+                            22
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/automata/ldap_tcp-REJ.json",
                             22
                         ))
@@ -224,6 +280,12 @@ impl ModelsSource {
                             22
                         ))
                         .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/automata/ldap_udp.json",
+                            22
+                        ))
+                        .unwrap(),
+
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/automata/ntp.json",
                             22
@@ -278,62 +340,22 @@ impl ModelsSource {
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cupid/automata/dhcp.json",
+                            1
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cupid/automata/dns.json",
                             1
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,dce_rpc,ntlm-SF.json",
+                            "default_models/cupid/automata/gssapi-SF.json",
                             1
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,dce_rpc-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,ntlm,smb-RST.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,ntlm,smb-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb,dce_rpc-RST.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb,krb-RST.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb,krb-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb,ntlm-RST.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb,ntlm-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb-RST.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb-SF.json",
+                            "default_models/cupid/automata/gssapi-RST.json",
                             1
                         ))
                         .unwrap(),
@@ -349,6 +371,11 @@ impl ModelsSource {
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cupid/automata/http-SF.json",
+                            1
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cupid/automata/krb-SF.json",
                             1
                         ))
                         .unwrap(),
@@ -383,7 +410,7 @@ impl ModelsSource {
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ntlm,dce_rpc-SF.json",
+                            "default_models/cupid/automata/ntlm-SF.json",
                             1
                         ))
                         .unwrap(),
@@ -428,62 +455,22 @@ impl ModelsSource {
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cupid/automata/dhcp.json",
+                            22
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cupid/automata/dns.json",
                             22
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,dce_rpc,ntlm-SF.json",
+                            "default_models/cupid/automata/gssapi-SF.json",
                             22
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,dce_rpc-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,ntlm,smb-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,ntlm,smb-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb,dce_rpc-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb,krb-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb,krb-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb,ntlm-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb,ntlm-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb-SF.json",
+                            "default_models/cupid/automata/gssapi-RST.json",
                             22
                         ))
                         .unwrap(),
@@ -499,6 +486,11 @@ impl ModelsSource {
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cupid/automata/http-SF.json",
+                            22
+                        ))
+                        .unwrap(),
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cupid/automata/krb-SF.json",
                             22
                         ))
                         .unwrap(),
@@ -533,7 +525,7 @@ impl ModelsSource {
                         ))
                         .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ntlm,dce_rpc-SF.json",
+                            "default_models/cupid/automata/ntlm-SF.json",
                             22
                         ))
                         .unwrap(),
@@ -568,6 +560,7 @@ impl ModelsSource {
                         ))
                         .unwrap(),
                     ]
+
                 },
             ),
             ModelsSource::UserDefined(path) => {
