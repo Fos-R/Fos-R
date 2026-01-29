@@ -3795,6 +3795,6 @@
   "service": "ftp",
   "conn_state": "SF",
   "input_file": "cicids17-train",
-  "creation_time": "2026-01-16 06:51:20.851132"
+  "creation_time": "2026-01-26 13:23:24.974575"
  }
 }

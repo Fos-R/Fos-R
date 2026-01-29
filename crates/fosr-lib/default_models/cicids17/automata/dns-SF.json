@@ -237,6 +237,6 @@
   "service": "dns",
   "conn_state": "SF",
   "input_file": "cicids17-train",
-  "creation_time": "2026-01-15 09:59:03.284280"
+  "creation_time": "2026-01-23 10:43:30.782140"
  }
 }

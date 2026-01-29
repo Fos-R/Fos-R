@@ -1855,6 +1855,6 @@
   "service": "ftp-data",
   "conn_state": "SF",
   "input_file": "cicids17-train",
-  "creation_time": "2026-01-16 05:28:09.432196"
+  "creation_time": "2026-01-26 12:12:39.210426"
  }
 }
