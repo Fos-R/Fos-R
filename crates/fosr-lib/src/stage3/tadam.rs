@@ -65,6 +65,7 @@ impl AutomataLibrary {
             L4Proto::TCP => {
                 let a = automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(
                     a,
+                    automaton::IatPrecision::MILLI,
                     parse_tcp_symbol,
                 )?;
                 log::debug!("Import TCP {a}");
@@ -76,6 +77,7 @@ impl AutomataLibrary {
             L4Proto::UDP => {
                 let a = automaton::TimedAutomaton::<UDPEdgeTuple>::import_timed_automaton(
                     a,
+                    automaton::IatPrecision::MICRO,
                     parse_udp_symbol,
                 )?;
                 log::debug!("Import UDP {a}");
@@ -85,6 +87,7 @@ impl AutomataLibrary {
             L4Proto::ICMP => {
                 let a = automaton::TimedAutomaton::<ICMPEdgeTuple>::import_timed_automaton(
                     a,
+                    automaton::IatPrecision::MICRO,
                     parse_icmp_symbol,
                 )?;
                 log::debug!("Import ICMP {a}");

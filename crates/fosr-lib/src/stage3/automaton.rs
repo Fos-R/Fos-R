@@ -54,19 +54,36 @@ impl EdgeDistribution {
         match &self {
             EdgeDistribution::Normal => {
                 let normal = Normal::new(cond_mu, cond_var.sqrt()).unwrap();
-                normal.sample(rng).max(0.)
+                normal.sample(rng).max(0.001)
             }
             EdgeDistribution::Poisson => {
                 let poisson = Poisson::new((cond_mu + cond_var) / 2.0).unwrap();
-                poisson.sample(rng).max(0.)
+                poisson.sample(rng).max(0.001)
             }
             EdgeDistribution::Gamma => todo!(),
         }
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum IatPrecision {
+    MILLI,
+    MICRO,
+}
+
+impl IatPrecision {
+
+    fn iat_to_duration(&self, iat: f32) -> Duration {
+        match self {
+            IatPrecision::MILLI => Duration::from_nanos((iat * 1e6) as u64),
+            IatPrecision::MICRO => Duration::from_nanos((iat * 1e3) as u64),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct CrossProductTimedAutomaton<T: EdgeType> {
+    precision: IatPrecision,
     graph: Vec<CrossProductTimedNode<T>>,
     initial_state: usize,
     accepting_states: KdTree<([i64; 2], usize)>, // to quickly find the closest possible accepting
@@ -170,6 +187,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
             graph.push(CrossProductTimedNode { in_edges, dist });
         }
         CrossProductTimedAutomaton {
+            precision: automaton.precision,
             graph,
             initial_state: 0,
             accepting_states: KdTree::build(accepting_states),
@@ -179,6 +197,8 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
 }
 
 pub trait Automaton<T: EdgeType> {
+    fn iat_to_duration(&self, iat: f32) -> Duration;
+
     fn get_initial_state(&self, fwd_packets_count: usize, bwd_packets_count: usize) -> usize;
 
     fn is_final(&self, n: usize) -> bool;
@@ -189,6 +209,11 @@ pub trait Automaton<T: EdgeType> {
 }
 
 impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
+
+    fn iat_to_duration(&self, iat: f32) -> Duration {
+        self.precision.iat_to_duration(iat)
+    }
+
     fn is_final(&self, n: usize) -> bool {
         n == self.initial_state
     }
@@ -221,6 +246,11 @@ impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
 }
 
 impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
+
+    fn iat_to_duration(&self, iat: f32) -> Duration {
+        self.precision.iat_to_duration(iat)
+    }
+
     fn is_final(&self, n: usize) -> bool {
         n == self.accepting_state
     }
@@ -283,7 +313,7 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
             let data = header_creator(
                 payload,
                 NoiseType::None,
-                Duration::from_nanos(iat as u64),
+                automaton.iat_to_duration(iat),
                 data,
             );
             output.push(data);
@@ -296,6 +326,7 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
 
 #[derive(Debug, Clone)]
 pub struct TimedAutomaton<T: EdgeType> {
+    precision: IatPrecision,
     graph: Vec<TimedNode<T>>,
     metadata: AutomatonMetaData,
     #[allow(unused)]
@@ -503,6 +534,7 @@ impl TryFrom<JsonPayload> for PayloadType {
 impl<T: EdgeType> TimedAutomaton<T> {
     pub fn import_timed_automaton(
         a: JsonAutomaton,
+        precision: IatPrecision,
         symbol_parser: impl Fn(String, PayloadType) -> T,
     ) -> Result<Self, String> {
         let mut nodes_nb = 0;
@@ -545,6 +577,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
         graph.truncate(nodes_nb);
         // dbg!(&graph);
         Ok(TimedAutomaton::<T> {
+            precision,
             graph,
             metadata: a.metadata,
             noise: a.noise,
