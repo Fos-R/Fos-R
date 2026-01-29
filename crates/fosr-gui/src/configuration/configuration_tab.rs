@@ -250,27 +250,27 @@ fn ui_single_host(
     let header_type = host.r#type.clone().unwrap_or_else(|| "<auto>".to_string());
     let if_count = host.interfaces.len();
 
-    egui::CollapsingHeader::new(host_name)
-        .id_salt(("host", index))
-        .default_open(index == 0)
-        .show(ui, |ui| {
-            // Header Info & Remove Button
+    let id = ui.make_persistent_id(("host", index));
+    egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, index == 0)
+        .show_header(ui, |ui| {
+            ui.label(host_name);
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.button("Remove host").clicked() {
+                    *remove_request = Some(index);
+                }
+            });
+        })
+        .body(|ui| {
             ui.horizontal(|ui| {
                 ui.strong(format!(
                     "{header_name} | type: {header_type} | interfaces: {if_count}"
                 ));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("Remove host").clicked() {
-                        *remove_request = Some(index);
-                    }
-                });
             });
 
-            // Editable Fields
-            edit_optional_string(ui, "Hostname (optional):", &mut host.hostname, "host1");
             ui_host_os_selector(ui, index, &mut host.os);
+            edit_optional_string(ui, "Hostname (optional):", &mut host.hostname, "host1");
 
-            // Usage DragValue
             ui.horizontal(|ui| {
                 ui.label("Usage (optional):");
                 let mut usage_val = host.usage.unwrap_or(1.0);
@@ -278,7 +278,6 @@ fn ui_single_host(
                     .add(egui::DragValue::new(&mut usage_val).speed(0.1))
                     .changed()
                 {
-                    // Avoid saving 1.0 if it's the default
                     host.usage = if (usage_val - 1.0).abs() < f32::EPSILON {
                         None
                     } else {
@@ -290,15 +289,9 @@ fn ui_single_host(
                 }
             });
 
-            // Type Selection
             ui_host_type_selector(ui, index, host);
-
-            // Client Protocols
             ui_host_client_protocols(ui, host);
-
             ui.separator();
-
-            // Interfaces
             ui_interfaces_section(ui, index, host, used_ips);
         });
 }
@@ -431,17 +424,20 @@ fn ui_interfaces_section(
 
     for (if_idx, iface) in host.interfaces.iter_mut().enumerate() {
         let ip_label = iface.ip_addr.clone();
+        let id = ui.make_persistent_id(("iface", host_idx, if_idx));
 
-        egui::CollapsingHeader::new(format!("Interface — {ip_label}"))
-            .id_salt(("iface", host_idx, if_idx))
-            .default_open(if_idx == 0)
-            .show(ui, |ui| {
-                if ui.button("Remove interface").clicked() {
-                    iface_to_remove = Some(if_idx);
-                }
+        egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, if_idx == 0)
+            .show_header(ui, |ui| {
+                ui.label(format!("Interface — {ip_label}"));
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("Remove interface").clicked() {
+                        iface_to_remove = Some(if_idx);
+                    }
+                });
+            })
+            .body(|ui| {
                 ui.add_space(4.0);
-
-                // IP & MAC
                 ui.horizontal(|ui| {
                     ui.label("IP (mandatory):");
                     ui.text_edit_singleline(&mut iface.ip_addr);
@@ -452,11 +448,8 @@ fn ui_interfaces_section(
                     &mut iface.mac_addr,
                     "00:14:2A:3F:47:D8",
                 );
-
-                // Services
                 ui_services_section(ui, if_idx, iface);
             });
-
         ui.add_space(6.0);
     }
 
