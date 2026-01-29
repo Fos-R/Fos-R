@@ -6,6 +6,34 @@ use crate::shared::ui_utils::{edit_optional_multiline_string, edit_optional_stri
 use chrono::NaiveDate;
 use eframe::egui;
 use egui_extras::DatePickerButton;
+use std::collections::HashSet;
+
+fn next_free_ip(used_ips: &HashSet<String>) -> Option<String> {
+    for x in 1..=254 {
+        let candidate = format!("192.168.0.{x}");
+        if !used_ips.contains(&candidate) {
+            return Some(candidate);
+        }
+    }
+
+    None
+}
+
+fn host_display_name(host: &Host) -> String {
+    if let Some(name) = host.hostname.as_deref() {
+        if !name.trim().is_empty() {
+            return name.to_string();
+        }
+    }
+
+    if let Some(iface) = host.interfaces.first() {
+        if !iface.ip_addr.trim().is_empty() {
+            return iface.ip_addr.clone();
+        }
+    }
+
+    "Unconfigured host".to_string()
+}
 
 const KNOWN_SERVICES: &[(&str, Option<u16>)] = &[
     ("http", Some(80)),
@@ -150,6 +178,12 @@ pub fn show_configuration_tab_content(
         if model.hosts.is_empty() {
             ui.label("No hosts in this configuration.");
         } else {
+            let mut used_ips = HashSet::new();
+            for h in &model.hosts {
+                for iface in &h.interfaces {
+                    used_ips.insert(iface.ip_addr.clone());
+                }
+            }
             let mut host_to_remove: Option<usize> = None;
             for (host_idx, host) in model.hosts.iter_mut().enumerate() {
                 let hostname_for_header = host
@@ -167,7 +201,11 @@ pub fn show_configuration_tab_content(
                 // egui::CollapsingHeader::new(header)
                 //     .default_open(host_idx == 0) // optionnel: ouvre le premier host par défaut
                 //     .show(ui, |ui| {
-                egui::CollapsingHeader::new(format!("Host #{host_idx}"))
+
+                let host_name = host_display_name(host);
+
+                egui::CollapsingHeader::new(host_name)
+                    .id_salt(("host", host_idx))
                     .default_open(host_idx == 0)
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
@@ -291,12 +329,18 @@ pub fn show_configuration_tab_content(
                         ui.horizontal(|ui| {
                             ui.label("Interfaces:");
                             if ui.button("+ Add interface").clicked() {
-                                // IP is mandatory, so give a placeholder that user must edit
-                                host.interfaces.push(Interface {
-                                    ip_addr: "192.168.0.1".to_string(),
-                                    mac_addr: None,
-                                    services: Vec::new(),
-                                });
+                                if let Some(ip) = next_free_ip(&used_ips) {
+                                    host.interfaces.push(Interface {
+                                        ip_addr: ip,
+                                        mac_addr: None,
+                                        services: Vec::new(),
+                                    });
+                                } else {
+                                    ui.colored_label(
+                                        egui::Color32::RED,
+                                        "No free IP available in 192.168.0.0/24",
+                                    );
+                                }
                             }
                         });
 
@@ -307,7 +351,8 @@ pub fn show_configuration_tab_content(
 
                             for (if_idx, iface) in host.interfaces.iter_mut().enumerate() {
                                 let ip_for_header = iface.ip_addr.clone();
-                                egui::CollapsingHeader::new(format!("Interface #{if_idx} — {ip_for_header}"))
+                                egui::CollapsingHeader::new(format!("Interface — {ip_for_header}"))
+                                    .id_salt(("iface", host_idx, if_idx))
                                     .default_open(if_idx == 0)
                                     .show(ui, |ui| {
                                         // Remove interface (mark for removal)
