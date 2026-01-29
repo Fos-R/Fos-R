@@ -123,7 +123,7 @@ impl L4Proto {
 
     pub fn wrap(&self, d: FlowData, c: Option<TCPConnState>) -> Flow {
         match &self {
-            L4Proto::TCP => Flow::TCP(d, c.unwrap()),
+            L4Proto::TCP => Flow::TCP(d, c.unwrap_or(TCPConnState::SF)), // FIXME
             L4Proto::UDP => {
                 // assert!(c.is_none());
                 Flow::UDP(d)
