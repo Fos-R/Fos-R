@@ -7,6 +7,31 @@ use chrono::NaiveDate;
 use eframe::egui;
 use egui_extras::DatePickerButton;
 
+const KNOWN_SERVICES: &[(&str, Option<u16>)] = &[
+    ("http", Some(80)),
+    ("https", Some(443)),
+    ("ssh", Some(22)),
+    ("ftp", Some(21)),
+    ("smtp", Some(25)),
+    ("dns", Some(53)),
+];
+
+fn parse_service(s: &str) -> (String, Option<u16>) {
+    if let Some((name, port)) = s.split_once(':') {
+        if let Ok(p) = port.parse::<u16>() {
+            return (name.to_string(), Some(p));
+        }
+    }
+    (s.to_string(), None)
+}
+
+fn format_service(name: &str, port: Option<u16>) -> String {
+    match port {
+        Some(p) => format!("{name}:{p}"),
+        None => name.to_string(),
+    }
+}
+
 /**
 * Represents the state of the configuration tab.
 */
@@ -306,12 +331,68 @@ pub fn show_configuration_tab_content(
                                         egui::CollapsingHeader::new(format!("Services ({svc_count})"))
                                             .default_open(false)
                                             .show(ui, |ui| {
-                                                if iface.services.is_empty() {
-                                                    ui.monospace("<none>");
-                                                } else {
-                                                    for svc in &iface.services {
-                                                        ui.monospace(format!("- {svc}"));
-                                                    }
+                                                if ui.button("+ Add service").clicked() {
+                                                    iface.services.push("http".to_string());
+                                                }
+
+                                                ui.add_space(4.0);
+
+                                                let mut svc_to_remove: Option<usize> = None;
+
+                                                for (svc_idx, svc_raw) in iface.services.iter_mut().enumerate() {
+                                                    let (mut svc_name, mut svc_port) = parse_service(svc_raw);
+
+                                                    egui::Frame::group(ui.style())
+                                                        .show(ui, |ui| {
+                                                            ui.horizontal(|ui| {
+                                                                // --- Service name combo
+                                                                egui::ComboBox::from_id_salt((if_idx, svc_idx, "service_name"))
+                                                                    .selected_text(&svc_name)
+                                                                    .show_ui(ui, |ui| {
+                                                                        for (name, default_port) in KNOWN_SERVICES {
+                                                                            if ui.selectable_label(&svc_name == name, *name).clicked() {
+                                                                                svc_name = name.to_string();
+                                                                                svc_port = *default_port;
+                                                                            }
+                                                                        }
+                                                                    });
+
+                                                                // --- Port editor (optional)
+                                                                ui.label("Port:");
+                                                                let mut port_val = svc_port.unwrap_or(0);
+                                                                let resp = ui.add(
+                                                                    egui::DragValue::new(&mut port_val)
+                                                                        .speed(1)
+                                                                        .range(0..=65535),
+                                                                );
+
+                                                                if resp.changed() {
+                                                                    svc_port = if port_val == 0 {
+                                                                        None
+                                                                    } else {
+                                                                            Some(port_val)
+                                                                        };
+                                                                }
+
+                                                                if ui.button("Clear port").clicked() {
+                                                                    svc_port = None;
+                                                                }
+
+                                                                // --- Remove service
+                                                                if ui.button("✕").clicked() {
+                                                                    svc_to_remove = Some(svc_idx);
+                                                                }
+                                                            });
+                                                        });
+
+                                                    // Write back to YAML-compatible string
+                                                    *svc_raw = format_service(&svc_name, svc_port);
+
+                                                    ui.add_space(4.0);
+                                                }
+
+                                                if let Some(idx) = svc_to_remove {
+                                                    iface.services.remove(idx);
                                                 }
                                             });
                                     });
