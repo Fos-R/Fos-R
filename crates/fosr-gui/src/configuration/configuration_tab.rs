@@ -268,7 +268,7 @@ fn ui_single_host(
 
             // Editable Fields
             edit_optional_string(ui, "Hostname (optional):", &mut host.hostname, "host1");
-            edit_optional_string(ui, "OS (optional):", &mut host.os, "Linux");
+            ui_host_os_selector(ui, index, &mut host.os);
 
             // Usage DragValue
             ui.horizontal(|ui| {
@@ -301,6 +301,42 @@ fn ui_single_host(
             // Interfaces
             ui_interfaces_section(ui, index, host, used_ips);
         });
+}
+
+/// Dropdown selector for the Operating System
+fn ui_host_os_selector(ui: &mut egui::Ui, host_idx: usize, host_os: &mut Option<String>) {
+    ui.horizontal(|ui| {
+        ui.label("OS (optional):");
+
+        let selected_text = host_os.as_deref().unwrap_or("<none>");
+
+        egui::ComboBox::from_id_salt((host_idx, "host_os_combo"))
+            .selected_text(selected_text)
+            .show_ui(ui, |ui| {
+                if ui.selectable_label(host_os.is_none(), "<none>").clicked() {
+                    *host_os = None;
+                }
+
+                ui.separator();
+
+                if ui
+                    .selectable_label(host_os.as_deref() == Some("Linux"), "Linux")
+                    .clicked()
+                {
+                    *host_os = Some("Linux".to_string());
+                }
+                if ui
+                    .selectable_label(host_os.as_deref() == Some("Windows"), "Windows")
+                    .clicked()
+                {
+                    *host_os = Some("Windows".to_string());
+                }
+            });
+
+        if host_os.is_some() && ui.button("Clear OS").clicked() {
+            *host_os = None;
+        }
+    });
 }
 
 /// Type of host rendering
