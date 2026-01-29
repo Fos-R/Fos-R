@@ -81,34 +81,36 @@ pub fn show_configuration_tab_content(
     _tab_state: &mut ConfigurationTabState,
     file_state: &mut ConfigurationFileState,
 ) {
-    // File Selection
-    configuration_file_picker(ui, file_state);
-    ui.separator();
-
-    ui_parsing_status(ui, file_state);
-
-    // Editor (if model is loaded)
-    if let Some(model) = file_state.config_model.as_mut() {
-        ui_metadata(ui, model);
-        ui.separator();
-        ui_hosts_section(ui, model);
+    egui::ScrollArea::vertical().show(ui, |ui| {
+        // File Selection
+        configuration_file_picker(ui, file_state);
         ui.separator();
 
-        // YAML Preview Button
-        if ui.button("Export YAML (preview)").clicked() {
-            match serde_yaml::to_string(&*model) {
-                Ok(yaml) => {
-                    file_state.config_file_content = Some(yaml);
-                    file_state.parse_error = None;
-                }
-                Err(e) => {
-                    file_state.parse_error = Some(e.to_string());
+        ui_parsing_status(ui, file_state);
+
+        // Editor (if model is loaded)
+        if let Some(model) = file_state.config_model.as_mut() {
+            ui_metadata(ui, model);
+            ui.separator();
+            ui_hosts_section(ui, model);
+            ui.separator();
+
+            // YAML Preview Button
+            if ui.button("Export YAML (preview)").clicked() {
+                match serde_yaml::to_string(&*model) {
+                    Ok(yaml) => {
+                        file_state.config_file_content = Some(yaml);
+                        file_state.parse_error = None;
+                    }
+                    Err(e) => {
+                        file_state.parse_error = Some(e.to_string());
+                    }
                 }
             }
         }
-    }
 
-    ui_yaml_preview(ui, file_state);
+        ui_yaml_preview(ui, file_state);
+    });
 }
 
 /// Status & Feedback
@@ -526,8 +528,6 @@ fn ui_yaml_preview(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
 
         layout_job.wrap.max_width = ui.available_width();
 
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            ui.add(egui::Label::new(layout_job).selectable(true));
-        });
+        ui.add(egui::Label::new(layout_job).selectable(true));
     }
 }
