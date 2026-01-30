@@ -114,12 +114,28 @@ pub fn show_generation_tab_content(
     ui.horizontal(|ui| {
         ui.label("Duration");
 
-        let response = egui::TextEdit::singleline(&mut state.duration_str)
+        // The only way to set the slider width currently is to set it globally.
+        // If we need another slider at some point, this value should be mutated
+        // again before adding it.
+        ui.style_mut().spacing.slider_width = 150.0;
+        let slider_response = ui.add(
+            egui::Slider::new(&mut state.duration_slider_value, 0.0..=1.0)
+                .show_value(false)
+                .clamping(SliderClamping::Never),
+        );
+
+        if slider_response.changed() {
+            let s = duration_string_from_slider(state.duration_slider_value);
+            state.duration_str = s;
+            state.duration_validation.set_ok();
+        }
+
+        let text_response = egui::TextEdit::singleline(&mut state.duration_str)
             .desired_width(100.0)
             .hint_text("ex: 30m, 1h, 2d")
             .ui(ui);
 
-        if response.changed() {
+        if text_response.changed() {
             match validate_duration(&state.duration_str) {
                 Ok(d) => {
                     state.duration_validation.set_ok();
@@ -133,22 +149,6 @@ pub fn show_generation_tab_content(
 
         show_field_error(ui, &state.duration_validation);
     });
-
-    // The only way to set the slider width currently is to set it globally.
-    // If we need another slider at some point, this value should be mutated
-    // again before adding it.
-    ui.style_mut().spacing.slider_width = 250.0;
-    let response = ui.add(
-        egui::Slider::new(&mut state.duration_slider_value, 0.0..=1.0)
-            .show_value(false)
-            .clamping(SliderClamping::Never),
-    );
-
-    if response.changed() {
-        let s = duration_string_from_slider(state.duration_slider_value);
-        state.duration_str = s;
-        state.duration_validation.set_ok();
-    }
 
     ui.add_space(10.0);
 
@@ -249,8 +249,8 @@ pub fn show_generation_tab_content(
             let stop_button = egui::Button::new(
                 egui::RichText::new("Stop").size(13.0),
             )
-            .fill(egui::Color32::from_rgb(200, 80, 80))
-            .min_size(egui::vec2(75.0, 24.0));
+                .fill(egui::Color32::from_rgb(200, 80, 80))
+                .min_size(egui::vec2(75.0, 24.0));
             if ui.add(stop_button).clicked() {
                 state.cancelled.store(true, Ordering::Relaxed);
                 state.status = UiStatus::Idle;
@@ -261,103 +261,105 @@ pub fn show_generation_tab_content(
             }
         }
 
-        if !is_generating { ui.add_enabled_ui(can_generate, |ui| {
-            let accent = ui.visuals().selection.bg_fill;
-            let generate_button = egui::Button::new(
-                egui::RichText::new("Generate").size(13.0),
-            )
-            .fill(accent)
-            .min_size(egui::vec2(75.0, 24.0));
-            if ui.add(generate_button).clicked() {
-                state.status = UiStatus::Generating;
+        if !is_generating {
+            ui.add_enabled_ui(can_generate, |ui| {
+                let accent = ui.visuals().selection.bg_fill;
+                let generate_button = egui::Button::new(
+                    egui::RichText::new("Generate").size(13.0),
+                )
+                    .fill(accent)
+                    .min_size(egui::vec2(75.0, 24.0));
+                if ui.add(generate_button).clicked() {
+                    state.status = UiStatus::Generating;
 
-                // Reset state
-                state.progress = 0.0;
-                state.cancelled = Arc::new(AtomicBool::new(false));
+                    // Reset state
+                    state.progress = 0.0;
+                    state.cancelled = Arc::new(AtomicBool::new(false));
 
-                let (progress_sender, progress_receiver) = channel();
-                state.progress_receiver = Some(progress_receiver);
+                    let (progress_sender, progress_receiver) = channel();
+                    state.progress_receiver = Some(progress_receiver);
 
-                let (pcap_sender, pcap_receiver) = channel();
-                state.pcap_receiver = Some(pcap_receiver);
+                    let (pcap_sender, pcap_receiver) = channel();
+                    state.pcap_receiver = Some(pcap_receiver);
 
-                let (throughput_sender, throughput_receiver) = channel();
-                state.throughput_receiver = Some(throughput_receiver);
-                state.throughput = None;
+                    let (throughput_sender, throughput_receiver) = channel();
+                    state.throughput_receiver = Some(throughput_receiver);
+                    state.throughput = None;
 
-                let seed = if state.use_seed {
-                    state.seed_input.parse::<u64>().ok()
-                } else {
-                    None
-                };
-                let order_pcap = state.order_pcap;
-                let start_time = if state.use_current_time {
-                    None
-                } else {
-                    Some(format!(
-                        "{}T{}Z",
-                        state.start_date.format("%Y-%m-%d"),
-                        state.start_hour.format("%H:%M:%S")
-                    ))
-                };
-                let duration = state.duration_str.clone();
-                let taint = state.taint;
-                let timezone = if state.timezone_input.is_empty() {
-                    None
-                } else {
-                    Some(state.timezone_input.clone())
-                };
-                let ctx = ui.ctx().clone();
-                let file_handle = configuration_file_state.picked_config_file.clone();
-                let cancelled = state.cancelled.clone();
+                    let seed = if state.use_seed {
+                        state.seed_input.parse::<u64>().ok()
+                    } else {
+                        None
+                    };
+                    let order_pcap = state.order_pcap;
+                    let start_time = if state.use_current_time {
+                        None
+                    } else {
+                        Some(format!(
+                            "{}T{}Z",
+                            state.start_date.format("%Y-%m-%d"),
+                            state.start_hour.format("%H:%M:%S")
+                        ))
+                    };
+                    let duration = state.duration_str.clone();
+                    let taint = state.taint;
+                    let timezone = if state.timezone_input.is_empty() {
+                        None
+                    } else {
+                        Some(state.timezone_input.clone())
+                    };
+                    let ctx = ui.ctx().clone();
+                    let file_handle = configuration_file_state.picked_config_file.clone();
+                    let cancelled = state.cancelled.clone();
 
-                #[cfg(target_arch = "wasm32")]
-                {
-                    wasm_bindgen_futures::spawn_local(async move {
-                        let profile = if let Some(file) = file_handle.as_ref() {
-                            Some(read_file_wasm(file).await)
-                        } else {
-                            None
-                        };
-                        generate(
-                            seed,
-                            profile,
-                            order_pcap,
-                            start_time,
-                            duration,
-                            taint,
-                            timezone,
-                            Some(progress_sender),
-                            Some(pcap_sender),
-                            Some(throughput_sender),
-                            cancelled,
-                        );
-                        ctx.request_repaint();
-                    });
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        wasm_bindgen_futures::spawn_local(async move {
+                            let profile = if let Some(file) = file_handle.as_ref() {
+                                Some(read_file_wasm(file).await)
+                            } else {
+                                None
+                            };
+                            generate(
+                                seed,
+                                profile,
+                                order_pcap,
+                                start_time,
+                                duration,
+                                taint,
+                                timezone,
+                                Some(progress_sender),
+                                Some(pcap_sender),
+                                Some(throughput_sender),
+                                cancelled,
+                            );
+                            ctx.request_repaint();
+                        });
+                    }
+
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        std::thread::spawn(move || {
+                            let profile = file_handle.as_ref().map(|file| read_file_desktop(file));
+                            generate(
+                                seed,
+                                profile,
+                                order_pcap,
+                                start_time,
+                                duration,
+                                taint,
+                                timezone,
+                                Some(progress_sender),
+                                Some(pcap_sender),
+                                Some(throughput_sender),
+                                cancelled,
+                            );
+                            ctx.request_repaint();
+                        });
+                    }
                 }
-
-                #[cfg(not(target_arch = "wasm32"))]
-                {
-                    std::thread::spawn(move || {
-                        let profile = file_handle.as_ref().map(|file| read_file_desktop(file));
-                        generate(
-                            seed,
-                            profile,
-                            order_pcap,
-                            start_time,
-                            duration,
-                            taint,
-                            timezone,
-                            Some(progress_sender),
-                            Some(pcap_sender),
-                            Some(throughput_sender),
-                            cancelled,
-                        );
-                        ctx.request_repaint();
-                    });
-                }
-            }
-        }); }
+            });
+        }
 
         // Poll receivers (must be outside add_enabled_ui to run while generating)
         if let Some(receiver) = &state.progress_receiver {
@@ -398,7 +400,7 @@ pub fn show_generation_tab_content(
             let save_button = egui::Button::new(
                 egui::RichText::new(save_button_label).size(13.0),
             )
-            .min_size(egui::vec2(75.0, 24.0));
+                .min_size(egui::vec2(75.0, 24.0));
             if ui.add(save_button).clicked() {
                 let pcap_bytes = state.pcap_bytes.clone();
                 #[cfg(not(target_arch = "wasm32"))]
