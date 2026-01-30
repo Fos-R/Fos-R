@@ -55,6 +55,7 @@ pub struct GenerationTabState {
     pub use_seed: bool,
     pub seed_input: String,
     pub timezone_input: String,
+    pub use_current_time: bool,
     pub use_local_timezone: bool,
     pub start_date: NaiveDate,
     pub start_hour: String,
@@ -85,6 +86,7 @@ impl Default for GenerationTabState {
             use_seed: false,
             seed_input: String::new(),
             timezone_input: String::new(),
+            use_current_time: true,
             use_local_timezone: true,
             start_date: NaiveDate::from_ymd_opt(2025, 1, 1).unwrap(),
             start_hour: "00:00:00".to_string(),
@@ -143,54 +145,58 @@ pub fn show_generation_tab_content(
 
     ui.add_space(10.0);
 
-    ui.horizontal(|ui| {
-        ui.label("Start time");
+    ui.checkbox(&mut state.use_current_time, "Use current time for start time");
 
-        ui.add(DatePickerButton::new(&mut state.start_date));
+    if !state.use_current_time {
+        ui.horizontal(|ui| {
+            ui.label("Start time");
 
-        let response = egui::TextEdit::singleline(&mut state.start_hour)
-            .hint_text("HH:MM")
-            .desired_width(50.0)
-            .ui(ui);
+            ui.add(DatePickerButton::new(&mut state.start_date));
 
-        if response.changed() {
-            match validate_start_hour(&state.start_hour) {
-                Ok(()) => state.start_hour_validation.set_ok(),
-                Err(msg) => state.start_hour_validation.set_err(msg),
+            let response = egui::TextEdit::singleline(&mut state.start_hour)
+                .hint_text("HH:MM")
+                .desired_width(50.0)
+                .ui(ui);
+
+            if response.changed() {
+                match validate_start_hour(&state.start_hour) {
+                    Ok(()) => state.start_hour_validation.set_ok(),
+                    Err(msg) => state.start_hour_validation.set_err(msg),
+                }
             }
-        }
 
-        show_field_error(ui, &state.start_hour_validation);
-    });
+            show_field_error(ui, &state.start_hour_validation);
+        });
 
-    ui.add_space(10.0);
+        ui.add_space(10.0);
 
-    ui.horizontal(|ui| {
-        if ui
-            .checkbox(&mut state.use_local_timezone, "Use local timezone")
-            .clicked()
-        {
-            if state.use_local_timezone {
-                // Reset the timezone
-                state.timezone_input = String::new();
-                state.timezone_validation.set_ok();
-            } else {
-                // Set the default timezone
-                state.timezone_input = Tz::CET.to_string();
+        ui.horizontal(|ui| {
+            if ui
+                .checkbox(&mut state.use_local_timezone, "Use local timezone")
+                .clicked()
+            {
+                if state.use_local_timezone {
+                    state.timezone_input = String::new();
+                    state.timezone_validation.set_ok();
+                } else {
+                    state.timezone_input = Tz::CET.to_string();
+                }
             }
-        }
-        if !state.use_local_timezone {
-            // Display the dropdown button
-            timezone_picker(ui, state);
+            if !state.use_local_timezone {
+                timezone_picker(ui, state);
 
-            let result = validate_timezone(&state.timezone_input);
-            if result.is_ok() {
-                state.timezone_validation.set_ok();
-            } else {
-                state.timezone_validation.set_err(result.err().unwrap());
+                let result = validate_timezone(&state.timezone_input);
+                if result.is_ok() {
+                    state.timezone_validation.set_ok();
+                } else {
+                    state.timezone_validation.set_err(result.err().unwrap());
+                }
             }
-        }
-    });
+        });
+    } else {
+        state.start_hour_validation.set_ok();
+        state.timezone_validation.set_ok();
+    }
 
     ui.add_space(10.0);
 
@@ -262,11 +268,15 @@ pub fn show_generation_tab_content(
                     None
                 };
                 let order_pcap = state.order_pcap;
-                let start_time = Some(format!(
-                    "{}T{}Z",
-                    state.start_date.format("%Y-%m-%d"),
-                    state.start_hour
-                ));
+                let start_time = if state.use_current_time {
+                    None
+                } else {
+                    Some(format!(
+                        "{}T{}Z",
+                        state.start_date.format("%Y-%m-%d"),
+                        state.start_hour
+                    ))
+                };
                 let duration = state.duration_str.clone();
                 let taint = state.taint;
                 let timezone = if state.timezone_input.is_empty() {
