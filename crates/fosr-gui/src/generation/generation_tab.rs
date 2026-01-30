@@ -100,20 +100,6 @@ pub fn show_generation_tab_content(
 
     ui.separator();
 
-    // --- Output file name ---
-    // This is only required for WASM. On desktop, a file dialog is opened instead.
-    #[cfg(target_arch = "wasm32")]
-    {
-        ui.horizontal(|ui| {
-            ui.label("Output file name:");
-            egui::TextEdit::singleline(&mut state.output_file_name)
-                .desired_width(180.0)
-                .ui(ui);
-        });
-
-        ui.separator();
-    }
-
     ui.horizontal(|ui| {
         ui.label("Duration");
 
