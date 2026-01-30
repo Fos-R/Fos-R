@@ -444,9 +444,11 @@ pub fn show_generation_tab_content(
 
     ui.add_space(10.0);
 
-    let progress = egui::ProgressBar::new(state.progress)
-        .text("")
-        .fill(egui::Color32::from_rgb(144, 238, 144));
+    if !matches!(state.status, UiStatus::Idle) {
+        let progress = egui::ProgressBar::new(state.progress)
+            .text("")
+            .fill(egui::Color32::from_rgb(144, 238, 144));
 
-    ui.add_sized([ui.available_width(), 20.0], progress);
+        ui.add_sized([ui.available_width(), 20.0], progress);
+    }
 }
