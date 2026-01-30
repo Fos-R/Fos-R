@@ -242,6 +242,7 @@ pub enum PayloadType {
 
 pub(crate) trait EdgeType: Debug + Clone {
     fn get_payload_type(&self) -> &PayloadType;
+    #[allow(unused)]
     fn get_direction(&self) -> PacketDirection;
 }
 

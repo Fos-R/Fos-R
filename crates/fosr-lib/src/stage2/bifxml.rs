@@ -30,6 +30,7 @@ pub fn from_str(string: &str) -> Result<Network, String> {
 
 impl Network {
     /// Apply a suffix to the variables of "other" and merge the two networks
+    #[allow(unused)]
     pub fn merge(&mut self, mut other: Network, proto: L4Proto) {
         let outer_variable: Vec<String> = self.variable.iter().map(|v| v.name.clone()).collect();
         let suffix = " ".to_string() + &proto.to_string();
