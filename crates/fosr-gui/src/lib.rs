@@ -6,6 +6,7 @@ mod generation;
 #[cfg(not(target_arch = "wasm32"))]
 mod injection_tab;
 mod shared;
+mod timepicker;
 mod visualization;
 
 use app::FosrApp;
