@@ -42,6 +42,8 @@ pub struct GenerationTabState {
     pub progress_receiver: Option<Receiver<f32>>,
     pub pcap_bytes: Option<Vec<u8>>,
     pub pcap_receiver: Option<Receiver<Vec<u8>>>,
+    pub throughput_receiver: Option<Receiver<String>>,
+    pub throughput: Option<String>,
     pub status: UiStatus,
     // Validation states
     pub duration_validation: FieldValidation,
@@ -72,6 +74,8 @@ impl Default for GenerationTabState {
             progress_receiver: None,
             pcap_bytes: None,
             pcap_receiver: None,
+            throughput_receiver: None,
+            throughput: None,
             status: UiStatus::Idle,
             // Validation states
             duration_validation: FieldValidation::default(),
@@ -221,6 +225,9 @@ pub fn show_generation_tab_content(
     ui.add_space(20.0);
 
     show_status(ui, &state.status);
+    if let Some(throughput) = &state.throughput {
+        ui.label(format!("Throughput: {throughput}"));
+    }
     if let Some((name, spec, err)) = first_invalid_param(state) {
         ui.colored_label(
             egui::Color32::RED,
@@ -245,6 +252,10 @@ pub fn show_generation_tab_content(
 
                 let (pcap_sender, pcap_receiver) = channel();
                 state.pcap_receiver = Some(pcap_receiver);
+
+                let (throughput_sender, throughput_receiver) = channel();
+                state.throughput_receiver = Some(throughput_receiver);
+                state.throughput = None;
 
                 let seed = if state.use_seed {
                     state.seed_input.parse::<u64>().ok()
@@ -289,6 +300,7 @@ pub fn show_generation_tab_content(
                             timezone,
                             Some(progress_sender),
                             Some(pcap_sender),
+                            Some(throughput_sender),
                         );
                         ctx.request_repaint();
                     });
@@ -308,6 +320,7 @@ pub fn show_generation_tab_content(
                             timezone,
                             Some(progress_sender),
                             Some(pcap_sender),
+                            Some(throughput_sender),
                         );
                         ctx.request_repaint();
                     });
@@ -327,6 +340,13 @@ pub fn show_generation_tab_content(
             if let Some(receiver) = &state.pcap_receiver {
                 if let Ok(pcap_bytes) = receiver.try_recv() {
                     state.pcap_bytes = Some(pcap_bytes);
+                }
+            }
+
+            if let Some(receiver) = &state.throughput_receiver {
+                if let Ok(throughput) = receiver.try_recv() {
+                    state.throughput = Some(throughput);
+                    state.throughput_receiver = None;
                 }
             }
 

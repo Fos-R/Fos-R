@@ -18,6 +18,7 @@ pub fn generate(
     timezone: Option<String>,
     progress_sender: Option<Sender<f32>>,
     pcap_sender: Option<Sender<Vec<u8>>>,
+    throughput_sender: Option<Sender<String>>,
 ) {
     // Create a closure to send progress updates
     let send_progress = |progress: f32| {
@@ -104,7 +105,7 @@ pub fn generate(
     let s2 = TadamGenerator::new(automata_library);
     let s3 = stage3::Stage3::new(taint);
     log::info!("Run single thread");
-    run_single_thread(order_pcap, s0, s1, s2, s3, send_progress, send_pcap);
+    run_single_thread(order_pcap, s0, s1, s2, s3, send_progress, send_pcap, throughput_sender);
 }
 
 fn run_single_thread(
@@ -115,6 +116,7 @@ fn run_single_thread(
     s3: stage3::Stage3,
     send_progress: impl Fn(f32),
     send_pcap: impl Fn(Vec<u8>),
+    throughput_sender: Option<Sender<String>>,
 ) {
     let start = Instant::now();
 
@@ -148,10 +150,11 @@ fn run_single_thread(
 
     let gen_duration = start.elapsed().as_secs_f64();
     let total_size = all_packets.iter().map(|p| p.data.len()).sum::<usize>() as u64;
-    log::info!(
-        "Generation throughput: {}/s",
-        HumanBytes(((total_size as f64) / gen_duration) as u64)
-    );
+    let throughput_str = format!("{}/s", HumanBytes(((total_size as f64) / gen_duration) as u64));
+    log::info!("Generation throughput: {throughput_str}");
+    if let Some(sender) = &throughput_sender {
+        let _ = sender.send(throughput_str);
+    }
 
     if order_pcap {
         log::info!("Sorting the packets");
