@@ -110,7 +110,9 @@ enum Feature {
     SrcIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the config
     DstIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the config
     DstPt(Vec<DstPt>), // the port comes from the config (must be chosen after the dest IP)
+    #[allow(unused)]
     FwdPkt(Vec<Normal<f64>>), // the exact number is sampled from a Gaussian distribution afterward
+    #[allow(unused)]
     BwdPkt(Vec<Normal<f64>>), // idem
     L7Proto(Vec<&'static str>),
     L4Proto(Vec<L4Proto>),
@@ -329,6 +331,7 @@ struct AdditionalData {
 }
 
 impl GaussianDistribs {
+    #[allow(unused)]
     fn to_normals(&self) -> Vec<Normal<f64>> {
         self.mu
             .iter()
@@ -339,6 +342,7 @@ impl GaussianDistribs {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[allow(unused)]
 struct GaussianDistribs {
     mu: Vec<f64>,
     cov: Vec<f64>,
@@ -374,7 +378,7 @@ impl BayesianModel {
             .map_err(|e| format!("Cannot parse the additional_data file: {e}"))?;
 
         // log::info!("Loading high-level BN");
-        let mut bif_common = bifxml::from_str(&bn_strings[0])?;
+        let bif_common = bifxml::from_str(&bn_strings[0])?;
         // log::info!("Loading TCP BN");
         // let bif_tcp = bifxml::from_str(&bn_strings[1])?;
         // bif_common.merge(bif_tcp, L4Proto::TCP);

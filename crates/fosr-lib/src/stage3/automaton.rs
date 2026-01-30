@@ -14,6 +14,7 @@ use std::time::Duration;
 // Automaton are graphs. Graphs are not straightforward in Rust due to ownership, so we reference nodes by their index in the graph.
 
 #[derive(Debug, Clone)]
+#[allow(unused)]
 struct CrossProductTimedNode<T: EdgeType> {
     in_edges: Vec<TimedEdge<T>>,
     dist: Option<WeightedIndex<u32>>,
@@ -41,6 +42,7 @@ pub struct TimedEdge<T: EdgeType> {
     dst_node: usize,
     data: Option<Arc<T>>,  // no data if transition to sink state
     transition_proba: f32, // not used
+    #[allow(unused)]
     count: u32,
     mu: [f32; 2],
     cov: [[f32; 2]; 2], // TODO: créer directement loi normale / poisson
@@ -82,6 +84,7 @@ impl IatPrecision {
 }
 
 #[derive(Debug)]
+#[allow(unused)]
 pub struct CrossProductTimedAutomaton<T: EdgeType> {
     precision: IatPrecision,
     graph: Vec<CrossProductTimedNode<T>>,
@@ -105,6 +108,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
         }
 
         impl CrossProductNode {
+            #[allow(unused)]
             fn get_index(&self) -> usize {
                 // Cantor pairing function: https://en.wikipedia.org/wiki/Pairing_function
                 self.state * (MAX_FWD_BWD_INDEX + 1)
