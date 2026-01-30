@@ -16,7 +16,8 @@ use std::fmt;
 use std::net::Ipv4Addr;
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, RwLock};
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use web_time::Instant;
 
 /// Special IP address representing "The Internet" node
 pub const INTERNET_IP: Ipv4Addr = Ipv4Addr::new(0, 0, 0, 1);

@@ -379,7 +379,7 @@ impl FlowStreamer {
                 }
             }
 
-            web_time::sleep(check_interval).await;
+            gloo_timers::future::TimeoutFuture::new(check_interval.as_millis() as u32).await;
         }
     }
 }
