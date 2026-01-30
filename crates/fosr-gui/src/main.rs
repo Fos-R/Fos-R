@@ -19,8 +19,8 @@ fn main() -> eframe::Result {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let shared_viewport = egui::ViewportBuilder::default()
-        .with_inner_size([500.0, 440.0])
-        .with_min_inner_size([400.0, 350.0])
+        .with_inner_size([700.0, 600.0])
+        .with_min_inner_size([500.0, 450.0])
         .with_title("Fos-R");
 
     #[cfg(target_os = "macos")]
