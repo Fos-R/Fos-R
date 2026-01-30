@@ -5,20 +5,21 @@ use super::generation_utils::{
 };
 use super::generation_validation::{
     FieldValidation, first_invalid_param, validate_duration, validate_optional_u64,
-    validate_start_hour, validate_timezone,
+    validate_timezone,
 };
 use crate::shared::configuration_file::{ConfigurationFileState, configuration_file_picker};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::{read_file_desktop, save_file_desktop};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::{read_file_wasm, save_file_wasm};
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveTime};
 use chrono_tz::Tz;
 use eframe::egui;
 use eframe::egui::{SliderClamping, Widget};
 use egui_extras::DatePickerButton;
 use std::sync::mpsc::{Receiver, channel};
 use std::time::Duration;
+use crate::timepicker::TimePickerButton;
 
 // Time interval for the slider.
 pub const DURATION_MIN: Duration = Duration::from_secs(60); // 1 min
@@ -44,7 +45,6 @@ pub struct GenerationTabState {
     pub status: UiStatus,
     // Validation states
     pub duration_validation: FieldValidation,
-    pub start_hour_validation: FieldValidation,
     pub seed_validation: FieldValidation,
     pub timezone_validation: FieldValidation,
     // Parameters
@@ -58,7 +58,7 @@ pub struct GenerationTabState {
     pub use_current_time: bool,
     pub use_local_timezone: bool,
     pub start_date: NaiveDate,
-    pub start_hour: String,
+    pub start_hour: NaiveTime,
     pub output_file_name: String,
 }
 
@@ -75,7 +75,6 @@ impl Default for GenerationTabState {
             status: UiStatus::Idle,
             // Validation states
             duration_validation: FieldValidation::default(),
-            start_hour_validation: FieldValidation::default(),
             seed_validation: FieldValidation::default(),
             timezone_validation: FieldValidation::default(),
             // Parameters
@@ -89,7 +88,7 @@ impl Default for GenerationTabState {
             use_current_time: true,
             use_local_timezone: true,
             start_date: NaiveDate::from_ymd_opt(2025, 1, 1).unwrap(),
-            start_hour: "00:00:00".to_string(),
+            start_hour: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
             output_file_name: "output.pcap".to_string(),
         }
     }
@@ -150,22 +149,8 @@ pub fn show_generation_tab_content(
     if !state.use_current_time {
         ui.horizontal(|ui| {
             ui.label("Start time");
-
             ui.add(DatePickerButton::new(&mut state.start_date));
-
-            let response = egui::TextEdit::singleline(&mut state.start_hour)
-                .hint_text("HH:MM")
-                .desired_width(50.0)
-                .ui(ui);
-
-            if response.changed() {
-                match validate_start_hour(&state.start_hour) {
-                    Ok(()) => state.start_hour_validation.set_ok(),
-                    Err(msg) => state.start_hour_validation.set_err(msg),
-                }
-            }
-
-            show_field_error(ui, &state.start_hour_validation);
+            ui.add(TimePickerButton::new(&mut state.start_hour).show_seconds(true).use_dragvalue(true));
         });
 
         ui.add_space(10.0);
@@ -194,7 +179,6 @@ pub fn show_generation_tab_content(
             }
         });
     } else {
-        state.start_hour_validation.set_ok();
         state.timezone_validation.set_ok();
     }
 
@@ -274,7 +258,7 @@ pub fn show_generation_tab_content(
                     Some(format!(
                         "{}T{}Z",
                         state.start_date.format("%Y-%m-%d"),
-                        state.start_hour
+                        state.start_hour.format("%H:%M:%S")
                     ))
                 };
                 let duration = state.duration_str.clone();
