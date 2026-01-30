@@ -17,6 +17,8 @@ use chrono_tz::Tz;
 use eframe::egui;
 use eframe::egui::{SliderClamping, Widget};
 use egui_extras::DatePickerButton;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, channel};
 use std::time::Duration;
 use crate::timepicker::TimePickerButton;
@@ -44,6 +46,7 @@ pub struct GenerationTabState {
     pub pcap_receiver: Option<Receiver<Vec<u8>>>,
     pub throughput_receiver: Option<Receiver<String>>,
     pub throughput: Option<String>,
+    pub cancelled: Arc<AtomicBool>,
     pub status: UiStatus,
     // Validation states
     pub duration_validation: FieldValidation,
@@ -76,6 +79,7 @@ impl Default for GenerationTabState {
             pcap_receiver: None,
             throughput_receiver: None,
             throughput: None,
+            cancelled: Arc::new(AtomicBool::new(false)),
             status: UiStatus::Idle,
             // Validation states
             duration_validation: FieldValidation::default(),
@@ -238,9 +242,26 @@ pub fn show_generation_tab_content(
     ui.add_space(8.0);
 
     let can_generate = first_invalid_param(&state).is_none();
+    let is_generating = matches!(state.status, UiStatus::Generating);
 
     ui.horizontal(|ui| {
-        ui.add_enabled_ui(can_generate, |ui| {
+        if is_generating {
+            let stop_button = egui::Button::new(
+                egui::RichText::new("Stop").size(13.0),
+            )
+            .fill(egui::Color32::from_rgb(200, 80, 80))
+            .min_size(egui::vec2(75.0, 24.0));
+            if ui.add(stop_button).clicked() {
+                state.cancelled.store(true, Ordering::Relaxed);
+                state.status = UiStatus::Idle;
+                state.progress = 0.0;
+                state.progress_receiver = None;
+                state.pcap_receiver = None;
+                state.throughput_receiver = None;
+            }
+        }
+
+        if !is_generating { ui.add_enabled_ui(can_generate, |ui| {
             let accent = ui.visuals().selection.bg_fill;
             let generate_button = egui::Button::new(
                 egui::RichText::new("Generate").size(13.0),
@@ -250,8 +271,9 @@ pub fn show_generation_tab_content(
             if ui.add(generate_button).clicked() {
                 state.status = UiStatus::Generating;
 
-                // Reset the progress value
+                // Reset state
                 state.progress = 0.0;
+                state.cancelled = Arc::new(AtomicBool::new(false));
 
                 let (progress_sender, progress_receiver) = channel();
                 state.progress_receiver = Some(progress_receiver);
@@ -287,6 +309,7 @@ pub fn show_generation_tab_content(
                 };
                 let ctx = ui.ctx().clone();
                 let file_handle = configuration_file_state.picked_config_file.clone();
+                let cancelled = state.cancelled.clone();
 
                 #[cfg(target_arch = "wasm32")]
                 {
@@ -307,6 +330,7 @@ pub fn show_generation_tab_content(
                             Some(progress_sender),
                             Some(pcap_sender),
                             Some(throughput_sender),
+                            cancelled,
                         );
                         ctx.request_repaint();
                     });
@@ -327,97 +351,95 @@ pub fn show_generation_tab_content(
                             Some(progress_sender),
                             Some(pcap_sender),
                             Some(throughput_sender),
+                            cancelled,
                         );
                         ctx.request_repaint();
                     });
                 }
             }
+        }); }
 
-            if let Some(receiver) = &state.progress_receiver {
-                if let Ok(progress) = receiver.try_recv() {
-                    state.progress = progress;
-                    // Remove the progress receiver if the generation is done
-                    if progress >= 1.0 {
-                        state.progress_receiver = None;
-                    }
+        // Poll receivers (must be outside add_enabled_ui to run while generating)
+        if let Some(receiver) = &state.progress_receiver {
+            if let Ok(progress) = receiver.try_recv() {
+                state.progress = progress;
+                if progress >= 1.0 {
+                    state.progress_receiver = None;
                 }
             }
+        }
 
-            if let Some(receiver) = &state.pcap_receiver {
-                if let Ok(pcap_bytes) = receiver.try_recv() {
-                    state.pcap_bytes = Some(pcap_bytes);
-                }
+        if let Some(receiver) = &state.pcap_receiver {
+            if let Ok(pcap_bytes) = receiver.try_recv() {
+                state.pcap_bytes = Some(pcap_bytes);
             }
+        }
 
-            if let Some(receiver) = &state.throughput_receiver {
-                if let Ok(throughput) = receiver.try_recv() {
-                    state.throughput = Some(throughput);
-                    state.throughput_receiver = None;
-                }
+        if let Some(receiver) = &state.throughput_receiver {
+            if let Ok(throughput) = receiver.try_recv() {
+                state.throughput = Some(throughput);
+                state.throughput_receiver = None;
             }
+        }
 
-            if state.pcap_bytes.is_some() && state.progress == 1.0 {
+        if state.pcap_bytes.is_some() && state.progress == 1.0 {
+            #[cfg(not(target_arch = "wasm32"))]
+            if !matches!(state.status, UiStatus::Saved(_) | UiStatus::Error(_)) {
+                state.status = UiStatus::Generated;
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                state.status = UiStatus::Generated;
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            let save_button_label = "Save";
+            #[cfg(target_arch = "wasm32")]
+            let save_button_label = "Download";
+            let save_button = egui::Button::new(
+                egui::RichText::new(save_button_label).size(13.0),
+            )
+            .min_size(egui::vec2(75.0, 24.0));
+            if ui.add(save_button).clicked() {
+                let pcap_bytes = state.pcap_bytes.clone();
                 #[cfg(not(target_arch = "wasm32"))]
-                if !matches!(state.status, UiStatus::Saved(_) | UiStatus::Error(_)) {
-                    state.status = UiStatus::Generated;
-                }
-                #[cfg(target_arch = "wasm32")]
                 {
-                    state.status = UiStatus::Generated;
-                }
-                #[cfg(not(target_arch = "wasm32"))]
-                let save_button_label = "Save";
-                #[cfg(target_arch = "wasm32")]
-                let save_button_label = "Download";
-                let save_button = egui::Button::new(
-                    egui::RichText::new(save_button_label).size(13.0),
-                )
-                .min_size(egui::vec2(75.0, 24.0));
-                if ui.add(save_button).clicked() {
-                    // --- Save file ---
-                    let pcap_bytes = state.pcap_bytes.clone();
-                    #[cfg(not(target_arch = "wasm32"))]
-                    {
-                        let data = pcap_bytes.as_ref().unwrap().as_slice();
-                        match save_file_desktop(data, &state.output_file_name) {
-                            Ok(file_handle) => {
-                                log::info!(
-                                    "Successfully wrote to file: {}",
-                                    file_handle.path().to_string_lossy()
-                                );
-                                state.status = UiStatus::Saved(format!(
-                                    "Saved to: {}",
-                                    file_handle.path().to_string_lossy()
-                                ));
-                            }
-                            Err(e) => {
-                                log::error!("Failed to save file: {:?}", e);
-                                state.status = UiStatus::Error(format!("Failed to save file: {e}"));
-                            }
+                    let data = pcap_bytes.as_ref().unwrap().as_slice();
+                    match save_file_desktop(data, &state.output_file_name) {
+                        Ok(file_handle) => {
+                            log::info!(
+                                "Successfully wrote to file: {}",
+                                file_handle.path().to_string_lossy()
+                            );
+                            state.status = UiStatus::Saved(format!(
+                                "Saved to: {}",
+                                file_handle.path().to_string_lossy()
+                            ));
+                        }
+                        Err(e) => {
+                            log::error!("Failed to save file: {:?}", e);
+                            state.status = UiStatus::Error(format!("Failed to save file: {e}"));
                         }
                     }
+                }
 
-                    #[cfg(target_arch = "wasm32")]
-                    {
-                        // Spawn a local async task to run the file write operation.
-                        let file_name = state.output_file_name.clone();
-                        wasm_bindgen_futures::spawn_local(async move {
-                            let data = pcap_bytes.as_ref().unwrap().as_slice();
-                            log::info!("Attempting to write file on WASM...");
-                            // Perform the asynchronous write operation. This triggers the browser's saving dialog.
-                            match save_file_wasm(data, &file_name).await {
-                                Ok(_) => {
-                                    log::info!("File written successfully!");
-                                }
-                                Err(e) => {
-                                    log::error!("Failed to write file: {:?}", e);
-                                }
+                #[cfg(target_arch = "wasm32")]
+                {
+                    let file_name = state.output_file_name.clone();
+                    wasm_bindgen_futures::spawn_local(async move {
+                        let data = pcap_bytes.as_ref().unwrap().as_slice();
+                        log::info!("Attempting to write file on WASM...");
+                        match save_file_wasm(data, &file_name).await {
+                            Ok(_) => {
+                                log::info!("File written successfully!");
                             }
-                        });
-                    }
+                            Err(e) => {
+                                log::error!("Failed to write file: {:?}", e);
+                            }
+                        }
+                    });
                 }
             }
-        });
+        }
     });
 
     ui.add_space(10.0);
