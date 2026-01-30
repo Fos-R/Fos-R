@@ -4,7 +4,9 @@ use fosr_lib::{
     models, stage0, stage1, stage2, stage2::tadam::TadamGenerator, stage3, stats::Target,
 };
 use indicatif::HumanBytes;
-use std::sync::{Arc, mpsc::Sender};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::Sender;
 use std::time::UNIX_EPOCH as STD_UNIX_EPOCH;
 use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -19,6 +21,7 @@ pub fn generate(
     progress_sender: Option<Sender<f32>>,
     pcap_sender: Option<Sender<Vec<u8>>>,
     throughput_sender: Option<Sender<String>>,
+    cancelled: Arc<AtomicBool>,
 ) {
     // Create a closure to send progress updates
     let send_progress = |progress: f32| {
@@ -105,7 +108,7 @@ pub fn generate(
     let s2 = TadamGenerator::new(automata_library);
     let s3 = stage3::Stage3::new(taint);
     log::info!("Run single thread");
-    run_single_thread(order_pcap, s0, s1, s2, s3, send_progress, send_pcap, throughput_sender);
+    run_single_thread(order_pcap, s0, s1, s2, s3, send_progress, send_pcap, throughput_sender, cancelled);
 }
 
 fn run_single_thread(
@@ -117,19 +120,25 @@ fn run_single_thread(
     send_progress: impl Fn(f32),
     send_pcap: impl Fn(Vec<u8>),
     throughput_sender: Option<Sender<String>>,
+    cancelled: Arc<AtomicBool>,
 ) {
+    let is_cancelled = || cancelled.load(Ordering::Relaxed);
+
     let start = Instant::now();
 
     log::info!("Stage 0 generation");
     let vec = stage0::run_vec(s0);
+    if is_cancelled() { log::info!("Generation cancelled after stage 0"); return; }
     send_progress(0.2);
 
     log::info!("Stage 1 generation");
     let vec = stage1::run_vec(s1, vec).unwrap();
+    if is_cancelled() { log::info!("Generation cancelled after stage 1"); return; }
     send_progress(0.4);
 
     log::info!("Stage 2 generation");
     let vec = stage2::run_vec(s2, vec);
+    if is_cancelled() { log::info!("Generation cancelled after stage 2"); return; }
     send_progress(0.6);
 
     let mut all_packets = vec![];
@@ -138,14 +147,17 @@ fn run_single_thread(
         |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
         vec.udp,
     ));
+    if is_cancelled() { log::info!("Generation cancelled during stage 3"); return; }
     all_packets.append(&mut stage3::run_vec(
         |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
         vec.tcp,
     ));
+    if is_cancelled() { log::info!("Generation cancelled during stage 3"); return; }
     all_packets.append(&mut stage3::run_vec(
         |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
         vec.icmp,
     ));
+    if is_cancelled() { log::info!("Generation cancelled during stage 3"); return; }
     send_progress(0.8);
 
     let gen_duration = start.elapsed().as_secs_f64();
@@ -156,10 +168,14 @@ fn run_single_thread(
         let _ = sender.send(throughput_str);
     }
 
+    if is_cancelled() { log::info!("Generation cancelled"); return; }
+
     if order_pcap {
         log::info!("Sorting the packets");
         all_packets.sort_unstable();
     }
+
+    if is_cancelled() { log::info!("Generation cancelled"); return; }
 
     let pcap_bytes = stage3::to_pcap_vec(&all_packets).expect("Error converting to pcap");
     send_pcap(pcap_bytes);
