@@ -77,7 +77,7 @@ impl Default for GenerationTabState {
             seed_validation: FieldValidation::default(),
             timezone_validation: FieldValidation::default(),
             // Parameters
-            order_pcap: false,
+            order_pcap: true,
             taint: false,
             duration_str: default_duration,
             duration_slider_value,
@@ -218,9 +218,10 @@ pub fn show_generation_tab_content(
 
     ui.add_space(15.0);
 
-    ui.checkbox(&mut state.taint, "Taint the packets");
-
-    ui.checkbox(&mut state.order_pcap, "Order temporally");
+    ui.horizontal(|ui| {
+        ui.checkbox(&mut state.taint, "Taint the packets");
+        ui.checkbox(&mut state.order_pcap, "Order temporally");
+    });
 
     ui.add_space(20.0);
 
