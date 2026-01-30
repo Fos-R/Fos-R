@@ -29,9 +29,12 @@ impl Default for CurrentTab {
     }
 }
 
+pub const DEFAULT_ZOOM: f32 = 1.4;
+
 #[derive(Default)]
 pub struct FosrApp {
     current_tab: CurrentTab,
+    zoom_initialized: bool,
     configuration_file_state: ConfigurationFileState,
     configuration_tab_state: ConfigurationTabState,
     visualization_tab_state: VisualizationTabState,
@@ -40,6 +43,12 @@ pub struct FosrApp {
 
 impl eframe::App for FosrApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Set default zoom once
+        if !self.zoom_initialized {
+            ctx.options_mut(|option| option.zoom_factor = DEFAULT_ZOOM);
+            self.zoom_initialized = true;
+        }
+
         // Set the image loaders
         // Required for egui to display images
         egui_extras::install_image_loaders(ctx);
