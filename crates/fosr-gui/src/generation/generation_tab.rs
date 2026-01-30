@@ -52,6 +52,7 @@ pub struct GenerationTabState {
     pub taint: bool,
     pub duration_str: String,
     pub duration_slider_value: f32,
+    pub use_seed: bool,
     pub seed_input: String,
     pub timezone_input: String,
     pub use_local_timezone: bool,
@@ -81,6 +82,7 @@ impl Default for GenerationTabState {
             taint: false,
             duration_str: default_duration,
             duration_slider_value,
+            use_seed: false,
             seed_input: String::new(),
             timezone_input: String::new(),
             use_local_timezone: true,
@@ -193,27 +195,30 @@ pub fn show_generation_tab_content(
     ui.add_space(10.0);
 
     ui.horizontal(|ui| {
-        ui.label("Seed (optional)");
+        ui.checkbox(&mut state.use_seed, "Seed");
 
-        let response = ui.add(
-            egui::TextEdit::singleline(&mut state.seed_input)
-                .hint_text("leave empty for random")
-                .desired_width(160.0),
-        );
+        if state.use_seed {
+            let response = ui.add(
+                egui::TextEdit::singleline(&mut state.seed_input)
+                    .hint_text("enter a seed value")
+                    .desired_width(160.0),
+            );
 
-        if response.changed() {
-            // Convert String to Option<u64>
-            match validate_optional_u64(&state.seed_input) {
-                Ok(_) => {
-                    state.seed_validation.set_ok();
-                }
-                Err(msg) => {
-                    state.seed_validation.set_err(msg);
+            if response.changed() {
+                match validate_optional_u64(&state.seed_input) {
+                    Ok(_) => {
+                        state.seed_validation.set_ok();
+                    }
+                    Err(msg) => {
+                        state.seed_validation.set_err(msg);
+                    }
                 }
             }
-        }
 
-        show_field_error(ui, &state.seed_validation);
+            show_field_error(ui, &state.seed_validation);
+        } else {
+            state.seed_validation.set_ok();
+        }
     });
 
     ui.add_space(15.0);
@@ -251,7 +256,11 @@ pub fn show_generation_tab_content(
                 let (pcap_sender, pcap_receiver) = channel();
                 state.pcap_receiver = Some(pcap_receiver);
 
-                let seed = state.seed_input.parse::<u64>().ok();
+                let seed = if state.use_seed {
+                    state.seed_input.parse::<u64>().ok()
+                } else {
+                    None
+                };
                 let order_pcap = state.order_pcap;
                 let start_time = Some(format!(
                     "{}T{}Z",
