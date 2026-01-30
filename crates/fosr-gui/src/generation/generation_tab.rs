@@ -241,7 +241,13 @@ pub fn show_generation_tab_content(
 
     ui.horizontal(|ui| {
         ui.add_enabled_ui(can_generate, |ui| {
-            if ui.button("Generate").clicked() {
+            let accent = ui.visuals().selection.bg_fill;
+            let generate_button = egui::Button::new(
+                egui::RichText::new("Generate").size(13.0),
+            )
+            .fill(accent)
+            .min_size(egui::vec2(75.0, 24.0));
+            if ui.add(generate_button).clicked() {
                 state.status = UiStatus::Generating;
 
                 // Reset the progress value
@@ -363,7 +369,11 @@ pub fn show_generation_tab_content(
                 let save_button_label = "Save";
                 #[cfg(target_arch = "wasm32")]
                 let save_button_label = "Download";
-                if ui.button(save_button_label).clicked() {
+                let save_button = egui::Button::new(
+                    egui::RichText::new(save_button_label).size(13.0),
+                )
+                .min_size(egui::vec2(75.0, 24.0));
+                if ui.add(save_button).clicked() {
                     // --- Save file ---
                     let pcap_bytes = state.pcap_bytes.clone();
                     #[cfg(not(target_arch = "wasm32"))]
