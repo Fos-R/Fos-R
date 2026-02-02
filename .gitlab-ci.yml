@@ -193,10 +193,10 @@ cupid-dataset:
   script:
     - apk add graphviz
     - mkdir public/cupid
-    - cd crates/fosr-lib/default-models/cupid/automata
+    - cd crates/fosr-lib/default_models/cupid/automata
     - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/cupid/$file.png -Gdip=150; echo - \[$file\]\(cupid/$file.png\) >> ../../../../../public/dataset-cupid.md; done
     - cd ../../../../..
-    - cp crates/fosr-lib/default-models/cupid/bn/bn_common.png public/cupid/bn.png
+    - cp crates/fosr-lib/default_models/cupid/bn/bn_common.png public/cupid/bn.png
     - echo "\n## Bayesian network\n![](cupid/bn.png)" >> public/dataset-cupid.md
     # TODO: add evaluation
   artifacts:
@@ -212,10 +212,10 @@ cicids17-dataset:
   script:
     - apk add graphviz
     - mkdir public/cicids17
-    - cd crates/fosr-lib/default-models/cicids17/automata
+    - cd crates/fosr-lib/default_models/cicids17/automata
     - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/cicids17/$file.png -Gdip=150; echo - \[$file\]\(cicids17/$file.png\) >> ../../../../../public/dataset-cicids17.md; done
     - cd ../../../../..
-    - cp crates/fosr-lib/default-models/cicids17/bn/bn_common.png public/cicids17/bn.png
+    - cp crates/fosr-lib/default_models/cicids17/bn/bn_common.png public/cicids17/bn.png
     - echo "\n## Bayesian network\n![](cicids17/bn.png)" >> public/dataset-cicids17.md
     # TODO: add evaluation
   artifacts:
