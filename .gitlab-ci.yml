@@ -242,9 +242,6 @@ analysis:
   artifacts:
     paths:
       - analysis.zip
-  artifacts:
-    paths:
-      - public
 
 pages:
   image: debian:bookworm # required to run fosr
