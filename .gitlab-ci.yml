@@ -285,8 +285,8 @@ pages:
     publish: public
     path_prefix: "$PAGES_PREFIX"
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - if: $CI_COMMIT_BRANCH == "next"
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_REF_NAME == "next"
       variables:
         PAGES_PREFIX: 'experimental'
   script:

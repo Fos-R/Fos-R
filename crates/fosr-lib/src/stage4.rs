@@ -551,7 +551,7 @@ pub fn run_vec<T: PacketInfo>(
     all_packets
 }
 
-/// Convert a Vec<Packet> into a Vec<u8> containing the bytes of a pcap file
+/// Convert a `Vec<Packet>` into a `Vec<u8>` containing the bytes of a pcap file
 pub fn to_pcap_vec(vec: &Vec<Packet>) -> Result<Vec<u8>, PcapError> {
     let mut pcap_writer = PcapWriter::new(BufWriter::new(Vec::new()))?;
     for packet in vec {
