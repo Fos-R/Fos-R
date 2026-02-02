@@ -18,11 +18,11 @@ fn deterministic_fast_generation() -> Result<(), Box<dyn std::error::Error>> {
     cmd.arg("create-pcap")
         .args(["-o", &file_path])
         .args(["-s", "0"])
-        .args(["-d", "1min"])
+        .args(["-d", "1h"])
         .args(["-t", "0"])
         .args(["-p", "fast"])
         .args(["--tz", "CET"])
-        .args(["-c", "tests/test_config.yaml"])
+        .args(["-m", "cupid"])
         .env("RUST_LOG", "trace")
         .spawn()?;
     cmd.assert().success();
@@ -49,11 +49,11 @@ fn deterministic_efficient_generation() -> Result<(), Box<dyn std::error::Error>
     cmd.arg("create-pcap")
         .args(["-o", &file_path])
         .args(["-s", "0"])
-        .args(["-d", "1min"])
+        .args(["-d", "1h"])
         .args(["-t", "0"])
-        .args(["-p", "efficient"])
+        .args(["-p", "fast"])
         .args(["--tz", "CET"])
-        .args(["-c", "tests/test_config.yaml"])
+        .args(["-m", "cupid"])
         .env("RUST_LOG", "trace")
         .spawn()?;
     cmd.assert().success();
