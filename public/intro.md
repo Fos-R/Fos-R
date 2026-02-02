@@ -22,19 +22,3 @@ Fos-R is a high-quality and high-throughput network traffic generator based on A
 
 # Get Fos-R
 
-The sources are available on the [GitLab repository](https://gitlab.inria.fr/pirat-public/Fos-R) or the [GitHub mirror](https://github.com/Fos-R/Fos-R).
-
-## Cargo features
-
-Fos-R make use of Cargo features for conditional compilation. The available features:
-
-- `iptables`: a method for network injection (Linux only)
-- `ebpf`: a method for network injection (Windows and Linux) [default]
-
-If you do not enable `iptables` or `ebpf`, Fos-R won’t be able to inject traffic on the network. Generation is always available.
-
-## Stable binaries
-
-The binaries of the last stable versions are stored on [GitHub](https://github.com/Fos-R/Fos-R/releases).
-
-## Experimental binaries

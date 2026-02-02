@@ -446,7 +446,7 @@ if __name__ == '__main__':
     args.output = args.output or "."
     if not os.path.exists(args.output):
         os.makedirs(args.output)
-    gumimage.export(bn_common, os.path.join(args.output, "bn_common.pdf"))
+    gumimage.export(bn_common, os.path.join(args.output, "bn_common.png"))
     bn_common.saveBIFXML(os.path.join(args.output, "bn_common.bifxml"))
     # if udp_fosr is not None:
     #     gumimage.export(bn_udp, os.path.join(args.output, "bn_udp.pdf"))
