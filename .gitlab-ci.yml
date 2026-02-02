@@ -279,10 +279,16 @@ pages:
     - ci.inria.fr
     - small
   stage: deploy
+  variables:
+    PAGES_PREFIX: ""
   pages:
     publish: public
+    path_prefix: "$PAGES_PREFIX"
   rules:
-    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH == "next"
+      variables:
+        PAGES_PREFIX: 'experimental'
   script:
     - apt update
     - apt install -y pandoc
@@ -310,4 +316,6 @@ pages:
   artifacts:
     paths:
       - public
-
+  only:
+    - main
+    - next
