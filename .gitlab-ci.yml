@@ -32,7 +32,7 @@ build-linux-x86-64:
       - target/debian/*.deb
       - doc
 
-build-linux-x86-32:
+.build-linux-x86-32:
   tags:
     - ci.inria.fr
     - large
@@ -51,7 +51,7 @@ build-linux-x86-32:
       - target/*/release/fosr
       - target/debian/*.deb
 
-build-linux-raspberry-pi:
+.build-linux-raspberry-pi:
   # a build targeting old rapsberry pi with armv6 processors
   tags:
     - ci.inria.fr
@@ -73,7 +73,7 @@ build-linux-raspberry-pi:
       - target/*/release/fosr
       - target/debian/*.deb
 
-build-linux-arm-32:
+.build-linux-arm-32:
   tags:
     - ci.inria.fr
     - large
@@ -93,7 +93,7 @@ build-linux-arm-32:
       - target/*/release/fosr
       - target/debian/*.deb
 
-build-linux-arm-64:
+.build-linux-arm-64:
   tags:
     - ci.inria.fr
     - large
@@ -113,7 +113,7 @@ build-linux-arm-64:
       - target/*/release/fosr
       - target/debian/*.deb
 
-build-win64-x86:
+.build-win64-x86:
   tags:
     - ci.inria.fr
     - large
@@ -128,7 +128,7 @@ build-win64-x86:
     paths:
       - target/*/release/fosr.exe
 
-build-win32-x86:
+.build-win32-x86:
   tags:
     - ci.inria.fr
     - large
@@ -143,7 +143,7 @@ build-win32-x86:
     paths:
       - target/*/release/fosr.exe
 
-test-audit:
+.test-audit:
   tags:
     - ci.inria.fr
     - large
@@ -154,7 +154,7 @@ test-audit:
     - cargo audit -D unsound -D yanked
   allow_failure: true
 
-test-publish:
+.test-publish:
   tags:
     - ci.inria.fr
     - large
@@ -184,6 +184,22 @@ tests:
       - sample.pcap
   allow_failure: true
 
+cupid-dataset:
+  image: alpine
+  tags:
+    - ci.inria.fr
+    - small
+  stage: analyze
+  script:
+    - apk add graphviz
+    - mkdir -p public/cupid/
+    - cd crates/fosr-lib/default-models/cupid/automata
+    - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/cupid/$file.png -Gdip=150; echo - \[$file\]\(cupid/$file.png\) >> ../../../../../public/dataset-cupid.md; done
+    - cd ../../../../..
+    - cp crates/fosr-lib/default-models/cupid/bn/bn_common.png public/cupid/bn.png
+    - echo "\n## Bayesian network\n![](cupid/bn.png)" >> public/dataset-cupid.md
+    # TODO: add evaluation
+
 analysis:
   image: zeek/zeek
   tags:
@@ -196,15 +212,17 @@ analysis:
     - mkdir analysis
     - zeek -r sample.pcap Log::default_logdir="analysis"
     - capinfos sample.pcap > analysis/capinfos.txt
-    - tshark -r output.pcap -T fields -E header=y -E separator=, -e ip.len -e ip.ttl -e ip.src -e ip.dst -e ip.proto "eth.type == 0x0800" > analysis/ip.csv
-    - tshark -r output.pcap -T fields -E header=y -E separator=, -e tcp.flags "ip.proto == 6" > analysis/tcp.csv
-    - tshark -r output.pcap -z expert,warn -q > analysis/expert_info.txt
+    - tshark -r sample.pcap -T fields -E header=y -E separator=, -e ip.len -e ip.ttl -e ip.src -e ip.dst -e ip.proto "eth.type == 0x0800" > analysis/ip.csv
+    - tshark -r sample.pcap -T fields -E header=y -E separator=, -e tcp.flags "ip.proto == 6" > analysis/tcp.csv
+    - tshark -r sample.pcap -z expert,warn -q > analysis/expert_info.txt
     - suricata -c /etc/suricata/suricata.yaml -r sample.pcap > analysis/suricata.txt
     - zip -r analysis.zip analysis
   artifacts:
     paths:
       - analysis.zip
-
+  artifacts:
+    paths:
+      - public
 pages:
   image: debian:bookworm # required to run fosr
   tags:
@@ -244,6 +262,7 @@ pages:
     - sed -i -e "s/FOSR_VERSION/$(./bin/x86_64-unknown-linux-gnu/release/fosr -V | cut -d" " -f 2)/g" compile.md
     - pandoc intro.md compile.md howto-pcap.md howto-inject.md howto-untaint.md config_doc.md other_software.md schema.md lib.md roadmap.md usecases.md analysis.md limitations.md refs.md footer.md -o index.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
     - pandoc changelog.md -o changelog.html --template template.html --include-after-body footer.html --standalone --toc
+    - pandoc dataset-cupid.md -o cupid.html --template template.html --include-after-body footer.html --standalone --toc
     - rm *.md
   artifacts:
     paths:
