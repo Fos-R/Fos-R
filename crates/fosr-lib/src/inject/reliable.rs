@@ -38,7 +38,7 @@ const SESSION_TIMEOUT_IN_SECS: u64 = 10; // minimum amount of time after the the
 #[cfg(feature = "net_injection")]
 fn receive_packets(
     s4net: impl NetEnabler,
-    proto: Protocol,
+    proto: L4Proto,
     mut rx: TransportReceiver,
     current_flows: Arc<Mutex<Vec<Packets>>>,
     stats: Arc<Stats>,
@@ -305,7 +305,7 @@ fn send_packets(
 #[cfg(feature = "net_injection")]
 pub fn start_reliable(
     s4net: impl NetEnabler,
-    incoming_flows: HashMap<Protocol, Receiver<Packets>>,
+    incoming_flows: HashMap<L4Proto, Receiver<Packets>>,
     stats: Arc<Stats>,
 ) {
     log::trace!("Start injection");
