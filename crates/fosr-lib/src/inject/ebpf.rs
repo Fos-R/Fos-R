@@ -27,7 +27,7 @@ impl NetEnabler for EBPFNetEnabler {
 /// # Parameters
 ///
 /// - `local_interfaces`: List of used (by Fos-R) network interfaces.
-fn load_ebpf_program(local_interfaces: &[datalink::NetworkInterface]) {
+fn load_ebpf_program(local_interfaces: &[datalink::NetworkInterface], program_name: &str) {
     use aya::programs::{Xdp, XdpFlags};
 
     // Retrieve the stored eBPF program that where stored, at compilation, into the binary
@@ -36,7 +36,7 @@ fn load_ebpf_program(local_interfaces: &[datalink::NetworkInterface]) {
     let mut ebpf =
         aya::Ebpf::load(fosr_ebpf::EBPF_PROGRAM).expect("Couldn't retrieve eBPF program");
     let program: &mut Xdp = ebpf
-        .program_mut("fosr_ebpf")
+        .program_mut(program_name)
         .expect("Failed to get mut reference of program")
         .try_into()
         .expect("Failed to get Xdp program reference");
@@ -57,7 +57,13 @@ fn load_ebpf_program(local_interfaces: &[datalink::NetworkInterface]) {
 
 impl EBPFNetEnabler {
     pub fn new(fast: bool, local_interfaces: &[datalink::NetworkInterface]) -> Self {
-        load_ebpf_program(local_interfaces);
+        if fast {
+            log::info!("Loading \"drop\" eBPF program");
+            load_ebpf_program(local_interfaces, "fosr_ebpf_drop");
+        } else {
+            log::info!("Loading \"redirect\" eBPF program");
+            load_ebpf_program(local_interfaces, "fosr_ebpf_redirect");
+        }
         EBPFNetEnabler { fast }
     }
 }

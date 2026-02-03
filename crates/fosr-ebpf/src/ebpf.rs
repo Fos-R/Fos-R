@@ -1,15 +1,23 @@
 use core::mem;
 
 use aya_ebpf::{
-    bindings::xdp_action::{self, XDP_PASS},
+    bindings::xdp_action,
     macros::xdp,
     programs::XdpContext,
 };
 use network_types::{eth::EthHdr, ip::Ipv4Hdr};
 
 #[xdp]
-pub fn fosr_ebpf(ctx: XdpContext) -> u32 {
-    match try_fosr_ebpf(ctx) {
+pub fn fosr_ebpf_redirect(ctx: XdpContext) -> u32 {
+    match try_fosr_ebpf_redirect(ctx) {
+        Ok(ret) => ret,
+        Err(_) => xdp_action::XDP_ABORTED,
+    }
+}
+
+#[xdp]
+pub fn fosr_ebpf_drop(ctx: XdpContext) -> u32 {
+    match try_fosr_ebpf_drop(ctx) {
         Ok(ret) => ret,
         Err(_) => xdp_action::XDP_ABORTED,
     }
@@ -50,7 +58,7 @@ unsafe fn mut_ptr_at<T>(ctx: &XdpContext, offset: usize) -> Result<*mut T, ()> {
 }
 
 /// Main function, where all the processing is happening.
-fn try_fosr_ebpf(ctx: XdpContext) -> Result<u32, ()> {
+fn try_fosr_ebpf_redirect(ctx: XdpContext) -> Result<u32, ()> {
     // We parse the ethernet header first (mutable)
     let ethernet_header: *mut EthHdr = unsafe { mut_ptr_at(&ctx, 0)? };
     // Fos-R only supports IPv4
@@ -67,8 +75,29 @@ fn try_fosr_ebpf(ctx: XdpContext) -> Result<u32, ()> {
     }
 
     // We always accept the packet
-    Ok(XDP_PASS)
+    Ok(xdp_action::XDP_PASS)
 }
+
+/// Main function, where all the processing is happening.
+fn try_fosr_ebpf_drop(ctx: XdpContext) -> Result<u32, ()> {
+    // We parse the ethernet header first (mutable)
+    let ethernet_header: *mut EthHdr = unsafe { mut_ptr_at(&ctx, 0)? };
+    // Fos-R only supports IPv4
+    if let Ok(network_types::eth::EtherType::Ipv4) = unsafe { *ethernet_header }.ether_type() {
+        // Retrieve the packet header
+        let ipv4_header: *const Ipv4Hdr = unsafe { mut_ptr_at(&ctx, EthHdr::LEN)? };
+
+        // Check if the Fos-R flag is enabled
+        if unsafe { get_fosr_flag(ipv4_header) } {
+            // drop the packet
+            return Ok(xdp_action::XDP_DROP);
+        }
+    }
+
+    // Otherwise, we accept the packet
+    Ok(xdp_action::XDP_PASS)
+}
+
 
 #[unsafe(link_section = "license")]
 #[unsafe(no_mangle)]

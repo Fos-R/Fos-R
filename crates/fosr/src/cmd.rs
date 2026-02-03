@@ -69,6 +69,12 @@ pub enum Command {
     #[cfg(feature = "net_injection")]
     /// This mode requires the `iptables` or `ebpf` feature. In this mode, Fos-R generates and injects network traffic between different computers in the same network.
     /// Fos-R needs to be executed on each computer and provided a configuration file.
+    #[clap(group(
+    clap::ArgGroup::new("models")
+        .required(true)
+        .args(&["default_models", "custom_models"]),
+
+    ))]
     Inject {
         #[arg(short, long, help = "Output pcap file of the generated packets")]
         outfile: Option<String>,
