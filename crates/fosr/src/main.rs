@@ -111,7 +111,7 @@ fn main() {
                 default_models.unwrap().get_source() // we are sure it contains something
             };
 
-            let model = models::Models::from_source(source).unwrap().with_config(&config).unwrap();
+            let model = models::Models::from_source(source).unwrap();//.with_config(&config).unwrap(); // FIXME
             let automata_library = Arc::new(model.automata);
             // let patterns = Arc::new(model.patterns);
             let bn = Arc::new(model.bn);
@@ -151,7 +151,7 @@ fn main() {
                 #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
                 cmd::NetEnabler::Ebpf => {
                     let s4net = InjectParam {
-                        net_enabler: inject::ebpf::EBPFNetEnabler::new(false, &local_interfaces),
+                        net_enabler: inject::ebpf::EBPFNetEnabler::new(matches!(injection_algo, cmd::InjectionAlgo::Fast), &local_interfaces),
                         injection_algo,
                     };
                     run_efficient(
