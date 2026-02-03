@@ -218,7 +218,7 @@ fn send_packets(
 #[cfg(feature = "net_injection")]
 pub fn start_fast(
     s4net: impl NetEnabler,
-    incoming_flows: HashMap<Protocol, Receiver<Packets>>,
+    incoming_flows: HashMap<L4Proto, Receiver<Packets>>,
     stats: Arc<Stats>,
 ) {
     log::trace!("Start injection");
