@@ -57,6 +57,139 @@ fn main() {
     let args = cmd::Args::parse();
 
     match args.command {
+        #[cfg(feature = "net_injection")]
+        cmd::Command::Inject {
+             #[cfg(all(target_os = "linux", feature = "iptables"))]
+            stealthy,
+            seed,
+            config,
+            outfile,
+            no_order_pcap,
+            flow_per_day,
+            net_enabler,
+            duration,
+            jobs,
+            deterministic,
+            injection_algo,
+            default_models,
+            custom_models,
+        } => {
+        // Extract all IPv4 local interfaces (except loopback)
+            let extract_addr = |iface: datalink::NetworkInterface| {
+                iface
+                    .ips
+                    .into_iter()
+                    .filter(IpNetwork::is_ipv4)
+                    .map(|i| match i {
+                        IpNetwork::V4(data) => data.ip(),
+                        _ => unreachable!(),
+                    })
+            };
+            // the local interfaces are used by the stage 4 and to identify local IPs
+            // we do not include loopback interfaces or interfaces without an IPv4 address
+            let local_interfaces: Vec<datalink::NetworkInterface> = datalink::interfaces()
+                .into_iter()
+                .filter(|iface| !iface.is_loopback() && iface.ips.iter().any(IpNetwork::is_ipv4))
+                .collect();
+            // for each interface, we extract its addresses
+            let local_ips: Vec<Ipv4Addr> = local_interfaces
+                .clone()
+                .into_iter()
+                .flat_map(extract_addr)
+                .filter(|i| !i.is_loopback())
+                .collect();
+            log::debug!("IPv4 interfaces: {:?}", &local_ips);
+
+
+            #[cfg(not(all(target_os = "linux", feature = "iptables")))]
+            let stealthy = false;
+
+            // load the models
+            let source = if let Some(custom_models) = custom_models {
+                models::ModelsSource::UserDefined(custom_models)
+            } else {
+                default_models.unwrap().get_source() // we are sure it contains something
+            };
+
+            let model = models::Models::from_source(source).unwrap().with_config(&config).unwrap();
+            let automata_library = Arc::new(model.automata);
+            // let patterns = Arc::new(model.patterns);
+            let bn = Arc::new(model.bn);
+
+            // TODO verify if the current IP has a role in the config
+            // if !has_role {
+            //     log::error!("This computer has no traffic to inject with this configuration file! Exiting.");
+            //     process::exit(1);
+            // }
+
+            // load the models
+            let s1 = stage1::BinBasedGenerator::new_for_injection(
+                seed,
+                duration
+                    .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed.")),
+                flow_per_day,
+                model.time_bins,
+                deterministic,
+            );
+
+            let s2 = stage2::bayesian_networks::BNGenerator::new(bn, false);
+            let s2 = stage2::FilterForOnline::new(local_ips.clone(), s2);
+            // let s2 = stage2::flowchronicle::FCGenerator::new(patterns, model.config.clone(), false);
+            let s3 = stage3::tadam::TadamGenerator::new(automata_library);
+            let s4 = stage4::Stage4::new(!stealthy);
+
+            // run
+            let jobs = jobs.unwrap_or(max(1, num_cpus::get() / 2));
+            let (s2_count, s3_count, s4_count) = (
+                max(1, jobs / 3),
+                max(1, jobs / 3),
+                max(1, jobs - (2 * jobs) / 3),
+            );
+
+            log::info!("Network enabler: {net_enabler:?}");
+            match net_enabler {
+                #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
+                cmd::NetEnabler::Ebpf => {
+                    let s4net = InjectParam {
+                        net_enabler: inject::ebpf::EBPFNetEnabler::new(false, &local_interfaces),
+                        injection_algo,
+                    };
+                    run_efficient(
+                        local_ips,
+                        outfile.map(|o| ExportParams {
+                            outfile: o,
+                            order_pcap: !no_order_pcap,
+                        }),
+                        s1,
+                        (s2, s2_count),
+                        (s3, s3_count),
+                        (s4, s4_count),
+                        Arc::new(stats::Stats::new(stats::Target::None)),
+                        Some(s4net),
+                    );
+                }
+                #[cfg(all(target_os = "linux", feature = "iptables"))]
+                cmd::NetEnabler::Iptables => {
+                    let s4net = InjectParam {
+                        net_enabler: inject::iptables::IPTablesNetEnabler::new(!stealthy, false),
+                        injection_algo,
+                    };
+                    run_efficient(
+                        local_ips,
+                        outfile.map(|o| ExportParams {
+                            outfile: o,
+                            order_pcap: !no_order_pcap,
+                        }),
+                        s1,
+                        (s2, s2_count),
+                        (s3, s3_count),
+                        (s4, s4_count),
+                        Arc::new(stats::Stats::new(stats::Target::None)),
+                        Some(s4net),
+                    );
+                }
+            };
+        },
         cmd::Command::CreatePcap {
             seed,
             outfile,
@@ -241,7 +374,7 @@ struct ExportParams {
 /// - `s3`: a stage 2 implementation
 /// - `s4`: a stage 3 implementation
 /// - `stats`: an Arc to a structure containing generation statistics
-/// - `s5net`: an optional network enable
+/// - `s5net`: an optional network enabler
 #[allow(clippy::too_many_arguments)]
 fn run_efficient<T: inject::NetEnabler>(
     local_interfaces: Vec<Ipv4Addr>,
@@ -251,7 +384,8 @@ fn run_efficient<T: inject::NetEnabler>(
     s3: (impl stage3::Stage3, usize),
     s4: (stage4::Stage4, usize),
     stats: Arc<stats::Stats>,
-    #[allow(unused)] s5net: Option<InjectParam<T>>,
+    #[allow(unused)]
+    s5net: Option<InjectParam<T>>,
 ) {
     let (s2, s2_count) = s2;
     let (s3, s3_count) = s3;
@@ -489,7 +623,8 @@ fn run_efficient<T: inject::NetEnabler>(
     }
 }
 
-/// Run the generation with very little contention, but the generated dataset must fit in RAM
+/// Run the generation with very little contention, but the generated dataset must fit in RAM.
+/// Cannot be used for injection
 fn run_fast(
     export: ExportParams,
     s1: impl stage1::Stage1,

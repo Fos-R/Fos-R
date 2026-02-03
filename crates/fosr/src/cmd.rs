@@ -78,6 +78,12 @@ pub enum Command {
             help = "Disable the temporal sorting of the generated pcap"
         )]
         no_order_pcap: bool,
+        #[arg(short = 'm', long, help = "Use a default model")]
+        default_models: Option<DefaultModels>,
+        #[arg(long, help = "Use a custom model")]
+        custom_models: Option<String>,
+        #[arg(short, long, help = "Path to the configuration file")]
+        config: String,
         #[cfg(all(target_os = "linux", feature = "iptables"))]
         #[arg(
             long,
@@ -109,6 +115,12 @@ pub enum Command {
             help = "Method to avoid kernel interactions with the injected traffic"
         )]
         net_enabler: NetEnabler,
+        #[arg(
+            short,
+            long,
+            help = "Number of generation jobs. By default, use half the available cores"
+        )]
+        jobs: Option<usize>,
         #[arg(
             short = 'a',
             long,
