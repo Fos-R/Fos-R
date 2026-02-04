@@ -80,6 +80,7 @@ pub enum Command {
         outfile: Option<String>,
         #[arg(
             long,
+            requires = "outfile",
             default_value_t = false,
             help = "Disable the temporal sorting of the generated pcap"
         )]
@@ -156,6 +157,7 @@ pub enum Command {
         outfile: Option<String>,
         #[arg(
             long,
+            requires = "outfile",
             default_value_t = false,
             help = "Disable the temporal sorting of the generated pcap"
         )]

@@ -103,7 +103,7 @@ fn send_packets(
     rx_s4: Receiver<Packets>,
 ) {
     log::info!("Start injection tx");
-    let mut heap: BinaryHeap<Elem> = BinaryHeap::with_capacity(10000);
+    let mut heap: BinaryHeap<Elem> = BinaryHeap::with_capacity(10_000);
     // Send and receive packets in this thread
     let mut last_sent: Option<Duration> = None;
     loop {

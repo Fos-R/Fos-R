@@ -136,7 +136,6 @@ fn main() {
                 model = model.with_config(&config).unwrap();
             }
             let automata_library = Arc::new(model.automata);
-            // let patterns = Arc::new(model.patterns);
             let bn = Arc::new(model.bn);
             // handle the parameters: either there is a packet count target or a duration
             let (target, duration) = match (packets_count, duration) {
@@ -217,7 +216,6 @@ fn main() {
                 tz_offset,
             );
             let s2 = stage2::bayesian_networks::BNGenerator::new(bn, false);
-            // let s2 = stage2::flowchronicle::FCGenerator::new(patterns, model.config.clone(), false);
             let s3 = stage3::tadam::TadamGenerator::new(automata_library);
             let s4 = stage4::Stage4::new(taint); //, model.config);
             let jobs = jobs.unwrap_or(max(1, num_cpus::get() / 2));
@@ -243,8 +241,6 @@ fn main() {
                         max(1, jobs / 3),
                         max(1, jobs - (2 * jobs) / 3),
                     );
-                    // the total is indeed larger than cpu_count. This has been empirically assessed to be a correct heuristic to maximise the performances
-
                     run_efficient(
                         vec![],
                         Some(ExportParams {
@@ -310,7 +306,6 @@ fn net_injection(
 
     let model = models::Models::from_source(source).unwrap();//.with_config(&config).unwrap(); // FIXME
     let automata_library = Arc::new(model.automata);
-    // let patterns = Arc::new(model.patterns);
     let bn = Arc::new(model.bn);
 
     // TODO verify if the current IP has a role in the config
@@ -330,7 +325,6 @@ fn net_injection(
 
     let s2 = stage2::bayesian_networks::BNGenerator::new(bn, false);
     let s2 = stage2::FilterForOnline::new(local_ips.clone(), s2);
-    // let s2 = stage2::flowchronicle::FCGenerator::new(patterns, model.config.clone(), false);
     let s3 = stage3::tadam::TadamGenerator::new(automata_library);
     let s4 = stage4::Stage4::new(!stealthy);
 
