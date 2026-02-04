@@ -32,7 +32,7 @@ build-linux-x86-64:
       - target/debian/*.deb
       - doc
 
-.build-linux-x86-32:
+build-linux-x86-32:
   tags:
     - ci.inria.fr
     - large
@@ -51,7 +51,7 @@ build-linux-x86-64:
       - target/*/release/fosr
       - target/debian/*.deb
 
-.build-linux-raspberry-pi:
+build-linux-raspberry-pi:
   # a build targeting old rapsberry pi with armv6 processors
   tags:
     - ci.inria.fr
@@ -73,7 +73,7 @@ build-linux-x86-64:
       - target/*/release/fosr
       - target/debian/*.deb
 
-.build-linux-arm-32:
+build-linux-arm-32:
   tags:
     - ci.inria.fr
     - large
@@ -93,7 +93,7 @@ build-linux-x86-64:
       - target/*/release/fosr
       - target/debian/*.deb
 
-.build-linux-arm-64:
+build-linux-arm-64:
   tags:
     - ci.inria.fr
     - large
@@ -113,7 +113,7 @@ build-linux-x86-64:
       - target/*/release/fosr
       - target/debian/*.deb
 
-.build-win64-x86:
+build-win64-x86:
   tags:
     - ci.inria.fr
     - large
@@ -128,7 +128,7 @@ build-linux-x86-64:
     paths:
       - target/*/release/fosr.exe
 
-.build-win32-x86:
+build-win32-x86:
   tags:
     - ci.inria.fr
     - large
@@ -143,7 +143,7 @@ build-linux-x86-64:
     paths:
       - target/*/release/fosr.exe
 
-.test-audit:
+test-audit:
   tags:
     - ci.inria.fr
     - large
@@ -154,7 +154,7 @@ build-linux-x86-64:
     - cargo audit -D unsound -D yanked
   allow_failure: true
 
-.test-publish:
+test-publish:
   tags:
     - ci.inria.fr
     - large
@@ -254,11 +254,9 @@ pages:
     - small
   stage: deploy
   pages:
-    path_prefix: "$CI_COMMIT_REF_NAME"
     publish: public
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
-    - if: $CI_COMMIT_REF_NAME == "next"
   script:
     - apt update
     - apt install -y pandoc
