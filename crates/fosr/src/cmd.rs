@@ -67,15 +67,15 @@ impl fmt::Display for DefaultModels {
 #[derive(Debug, Subcommand, Clone)]
 pub enum Command {
     #[cfg(feature = "net_injection")]
-    /// This mode requires the `iptables` or `ebpf` feature. In this mode, Fos-R generates and injects network traffic between different computers in the same network.
-    /// Fos-R needs to be executed on each computer and provided a configuration file.
+    /// This mode generates and injects network traffic between different computers in the same network.
+    /// Fos-R needs to be executed on each computer.
     #[clap(group(
     clap::ArgGroup::new("models")
         .required(true)
         .args(&["default_models", "custom_models"]),
 
     ))]
-    Inject {
+    InjectWithin {
         #[arg(short, long, help = "Output pcap file of the generated packets")]
         outfile: Option<String>,
         #[arg(
@@ -141,6 +141,57 @@ pub enum Command {
         )]
         deterministic: bool,
     },
+
+    #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
+    /// This mode injects traffic from two network interfaces, across some network equipment to analyse.
+    #[clap(group(
+    clap::ArgGroup::new("models")
+        .required(true)
+        .args(&["default_models", "custom_models"]),
+
+    ))]
+    InjectAcross {
+        // TODO: ajouter les deux interfaces
+        #[arg(short, long, help = "Output pcap file of the generated packets")]
+        outfile: Option<String>,
+        #[arg(
+            long,
+            default_value_t = false,
+            help = "Disable the temporal sorting of the generated pcap"
+        )]
+        no_order_pcap: bool,
+        #[arg(short = 'm', long, help = "Use a default model")]
+        default_models: Option<DefaultModels>,
+        #[arg(long, help = "Use a custom model")]
+        custom_models: Option<String>,
+        #[arg(short, long, help = "Path to the configuration file")]
+        config: String,
+        #[arg(
+            short,
+            long,
+            help = "Seed for random number generation"
+        )]
+        seed: Option<u64>,
+        #[arg(
+            short,
+            long,
+            help = "Average number of flows to generate per day. Actual number of generated flows can be lower or higher"
+        )]
+        flow_per_day: Option<u64>,
+        #[arg(
+            short = 'd',
+            long,
+            help = "Automatically stop the generation after this time. You can use human-friendly time, such as \"15days 30min 5s\""
+        )]
+        duration: Option<String>,
+        #[arg(
+            short,
+            long,
+            help = "Number of generation jobs. By default, use half the available cores"
+        )]
+        jobs: Option<usize>,
+    },
+
     /// Create a pcap file. If you require deterministic generation,
     /// you must specify -d, -t, --tz and --seed.
     #[clap(group(
