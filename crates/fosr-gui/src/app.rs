@@ -106,37 +106,40 @@ impl eframe::App for FosrApp {
 
         // The Central Panel is the region left after adding the Top, Bottom and Side panels.
         egui::CentralPanel::default().show(ctx, |ui| {
-            // Display the tab content depending on the currently select tab
-            match self.current_tab {
-                CurrentTab::Generation => {
-                    show_generation_tab_content(
-                        ui,
-                        &mut self.generation_tab_state,
-                        &mut self.configuration_file_state,
-                    );
+            // Wrap in ScrollArea for vertical scrolling
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                // Display the tab content depending on the currently select tab
+                match self.current_tab {
+                    CurrentTab::Generation => {
+                        show_generation_tab_content(
+                            ui,
+                            &mut self.generation_tab_state,
+                            &mut self.configuration_file_state,
+                        );
+                    }
+                    CurrentTab::Configuration => {
+                        show_configuration_tab_content(
+                            ui,
+                            &mut self.configuration_tab_state,
+                            &mut self.configuration_file_state,
+                        );
+                    }
+                    CurrentTab::Visualization => {
+                        show_visualization_tab_content(
+                            ui,
+                            &mut self.visualization_tab_state,
+                            &self.configuration_file_state,
+                        );
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    CurrentTab::Injection => {
+                        show_injection_tab_content(ui);
+                    }
+                    CurrentTab::About => {
+                        show_about_tab_content(ui);
+                    }
                 }
-                CurrentTab::Configuration => {
-                    show_configuration_tab_content(
-                        ui,
-                        &mut self.configuration_tab_state,
-                        &mut self.configuration_file_state,
-                    );
-                }
-                CurrentTab::Visualization => {
-                    show_visualization_tab_content(
-                        ui,
-                        &mut self.visualization_tab_state,
-                        &self.configuration_file_state,
-                    );
-                }
-                #[cfg(not(target_arch = "wasm32"))]
-                CurrentTab::Injection => {
-                    show_injection_tab_content(ui);
-                }
-                CurrentTab::About => {
-                    show_about_tab_content(ui);
-                }
-            }
+            });
         });
     }
 }
