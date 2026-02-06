@@ -8,12 +8,15 @@ use crate::shared::configuration_file::ConfigurationFileState;
 use eframe::egui;
 use egui_graphs::{
     FruchtermanReingoldState, FruchtermanReingoldWithCenterGravity,
-    FruchtermanReingoldWithCenterGravityState, LayoutForceDirected, set_layout_state,
+    FruchtermanReingoldWithCenterGravityState, LayoutForceDirected, SettingsInteraction,
+    events::{Event, PayloadNodeClick}, set_layout_state,
 };
 use fosr_lib::{config, config::HostType, L7Proto, OS};
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::net::Ipv4Addr;
+use std::rc::Rc;
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
@@ -154,6 +157,12 @@ pub struct VisualizationTabState {
     visualization_start: Option<Instant>,
     /// Speed multiplier (0.5 to 4.0) - shared for runtime updates
     pub speed: Arc<RwLock<f32>>,
+    /// Buffer for graph events (clicks, etc.)
+    events_buffer: Rc<RefCell<Vec<Event>>>,
+    /// Clicked node for info modal display
+    pub clicked_node: Option<petgraph::graph::NodeIndex>,
+    /// Node info modal open state
+    pub node_info_modal_open: bool,
 }
 
 impl Default for VisualizationTabState {
@@ -271,6 +280,9 @@ impl VisualizationTabState {
             ip_to_node,
             visualization_start: None,
             speed: Arc::new(RwLock::new(1.0)),
+            events_buffer: Rc::new(RefCell::new(Vec::new())),
+            clicked_node: None,
+            node_info_modal_open: false,
         }
     }
 
@@ -424,6 +436,10 @@ pub fn show_visualization_tab_content(
     // Render UI
     render_control_panel(ui, state);
     render_graph_view(ui, state);
+
+    // Process node click events and render info modal
+    process_graph_events(state);
+    render_node_info_modal(ui.ctx(), state);
 }
 
 /// Handle configuration file changes
@@ -679,6 +695,94 @@ fn render_control_panel(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
     });
 }
 
+/// Process graph click events from the event buffer
+fn process_graph_events(state: &mut VisualizationTabState) {
+    let events: Vec<Event> = state.events_buffer.borrow_mut().drain(..).collect();
+
+    for event in events {
+        if let Event::NodeClick(PayloadNodeClick { id }) = event {
+            let node_idx = petgraph::graph::NodeIndex::new(id);
+            state.clicked_node = Some(node_idx);
+            state.node_info_modal_open = true;
+        }
+    }
+}
+
+/// Render the node information modal for the clicked node
+fn render_node_info_modal(ctx: &egui::Context, state: &mut VisualizationTabState) {
+    if !state.node_info_modal_open {
+        return;
+    }
+
+    let Some(node_idx) = state.clicked_node else {
+        return;
+    };
+
+    let Some(node) = state.graph.g().node_weight(node_idx) else {
+        state.node_info_modal_open = false;
+        state.clicked_node = None;
+        return;
+    };
+
+    let node_data = node.payload().clone();
+
+    let modal = egui::Modal::new(egui::Id::new("node_info_modal")).show(ctx, |ui| {
+        ui.set_width(250.0);
+        ui.heading("Node Information");
+
+        ui.separator();
+
+        // Node type with colored indicator
+        ui.horizontal(|ui| {
+            let (color, type_str) = match node_data.node_type {
+                NodeType::Server => (COLOR_SERVER, "Server"),
+                NodeType::User => (COLOR_USER, "User"),
+                NodeType::Internet => (COLOR_INTERNET, "Internet"),
+            };
+            let rect = ui.allocate_space(egui::vec2(12.0, 12.0)).1;
+            ui.painter().circle_filled(rect.center(), 6.0, color);
+            ui.label(egui::RichText::new(type_str).strong());
+        });
+
+        ui.add_space(4.0);
+
+        if let Some(ref hostname) = node_data.hostname {
+            ui.horizontal(|ui| {
+                ui.label("Hostname:");
+                ui.label(egui::RichText::new(hostname).monospace());
+            });
+        }
+
+        ui.label("IP Addresses:");
+        for ip in &node_data.ip_addrs {
+            ui.horizontal(|ui| {
+                ui.add_space(16.0);
+                ui.label(egui::RichText::new(ip.to_string()).monospace());
+            });
+        }
+
+        ui.add_space(4.0);
+        ui.horizontal(|ui| {
+            ui.label("OS:");
+            ui.label(egui::RichText::new(format!("{:?}", node_data.os)).monospace());
+        });
+
+        ui.add_space(8.0);
+
+        ui.vertical_centered(|ui| {
+            if ui.button("Close").clicked() {
+                ui.close();
+            }
+        });
+    });
+
+    // Close on Escape or click outside
+    if modal.should_close() {
+        state.node_info_modal_open = false;
+        state.clicked_node = None;
+    }
+}
+
 /// Helper to render a single legend item inline
 fn legend_item_inline(ui: &mut egui::Ui, label: &str, color: egui::Color32) {
     // Allocate space first
@@ -692,6 +796,11 @@ fn legend_item_inline(ui: &mut egui::Ui, label: &str, color: egui::Color32) {
 /// Render the graph view
 fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
     egui::CentralPanel::default().show(ui.ctx(), |ui| {
+        // Enable node clicking and dragging
+        let interactions = SettingsInteraction::new()
+            .with_node_clicking_enabled(true)
+            .with_dragging_enabled(true);
+
         let mut graph_view = egui_graphs::GraphView::<
             NodeData,
             EdgeData,
@@ -702,6 +811,8 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
             FruchtermanReingoldWithCenterGravityState,
             LayoutForceDirected<FruchtermanReingoldWithCenterGravity>,
         >::new(&mut state.graph)
+            .with_interactions(&interactions)
+            .with_event_sink(&state.events_buffer)
             .with_styles(&egui_graphs::SettingsStyle::new().with_labels_always(true));
 
         // Disable force-directed layout to preserve circle layout
