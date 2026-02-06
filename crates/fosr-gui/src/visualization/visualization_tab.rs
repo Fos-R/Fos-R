@@ -1,6 +1,6 @@
 use super::visualization_shapes::{
     NetworkEdgeShape, NetworkNodeShape, COLOR_DNS, COLOR_HTTP, COLOR_HTTPS, COLOR_INACTIVE,
-    COLOR_INTERNET, COLOR_SERVER, COLOR_SSH, COLOR_USER,
+    COLOR_OTHER, COLOR_SMTP, COLOR_SSH,
 };
 use super::visualization_stream::{FlowEvent, FlowStreamer};
 use super::visualization_utils::distribute_nodes_circle;
@@ -194,7 +194,7 @@ pub struct VisualizationTabState {
     /// Frames to wait before auto-starting.
     /// Using a countdown instead of a boolean allows to render the UI before starting the visualization.
     /// This avoids lag when clicking on the Visualization tab.
-    /// Note: 2 frames minimum required for all UI elements to display properly on first tab visit.
+    /// Note: 10 frames is an arbitrary value that gives enough time for the UI to render and images to load.
     auto_start_countdown: Option<u8>,
     /// Total number of flows processed since visualization started
     total_flows: u32,
@@ -320,7 +320,7 @@ impl VisualizationTabState {
             events_buffer: Rc::new(RefCell::new(Vec::new())),
             clicked_node: None,
             node_info_modal_open: false,
-            auto_start_countdown: Some(2),
+            auto_start_countdown: Some(10),
             total_flows: 0,
         }
     }
@@ -480,8 +480,11 @@ impl VisualizationTabState {
 pub fn show_visualization_tab_content(
     ui: &mut egui::Ui,
     state: &mut VisualizationTabState,
-    configuration_file_state: &ConfigurationFileState,
+    configuration_file_state: &mut ConfigurationFileState,
 ) {
+    // Load config file contents if a file is selected but content not yet loaded
+    crate::shared::configuration_file::load_config_file_contents(configuration_file_state);
+
     // Handle config changes
     handle_config_changes(state, configuration_file_state);
 
@@ -555,7 +558,7 @@ fn handle_config_changes(
             let config = config::import_config(config_content);
             state.update_from_config(&config);
             state.config_content = Some(config_content.clone());
-            state.auto_start_countdown = Some(2);
+            state.auto_start_countdown = Some(10);
         }
     }
 }
@@ -834,19 +837,24 @@ fn render_control_panel(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
             // Row 3: Legend - Node types
             ui.horizontal(|ui| {
                 ui.label("Node Types:");
-                legend_item_inline(ui, "Server", COLOR_SERVER);
-                legend_item_inline(ui, "User", COLOR_USER);
-                legend_item_inline(ui, "Internet", COLOR_INTERNET);
+                legend_item_with_image(ui, "Server", egui::include_image!("../../assets/server.png"));
+                legend_item_with_image(ui, "User", egui::include_image!("../../assets/computer.png"));
+                legend_item_with_image(ui, "Internet", egui::include_image!("../../assets/internet.png"));
             });
 
-            // Row 4: Legend - Edge states
+            // Row 4-5: Legend - Edge states
             ui.horizontal(|ui| {
                 ui.label("Edge States:");
                 legend_item_inline(ui, "Inactive", COLOR_INACTIVE);
                 legend_item_inline(ui, "HTTP", COLOR_HTTP);
                 legend_item_inline(ui, "HTTPS", COLOR_HTTPS);
                 legend_item_inline(ui, "SSH", COLOR_SSH);
+            });
+            ui.horizontal(|ui| {
+                ui.add_space(80.0); // Align with items above
                 legend_item_inline(ui, "DNS", COLOR_DNS);
+                legend_item_inline(ui, "SMTP", COLOR_SMTP);
+                legend_item_inline(ui, "Other", COLOR_OTHER);
             });
         });
     });
@@ -889,15 +897,14 @@ fn render_node_info_modal(ctx: &egui::Context, state: &mut VisualizationTabState
 
         ui.separator();
 
-        // Node type with colored indicator
+        // Node type with icon
         ui.horizontal(|ui| {
-            let (color, type_str) = match node_data.node_type {
-                NodeType::Server => (COLOR_SERVER, "Server"),
-                NodeType::User => (COLOR_USER, "User"),
-                NodeType::Internet => (COLOR_INTERNET, "Internet"),
+            let (image, type_str) = match node_data.node_type {
+                NodeType::Server => (egui::include_image!("../../assets/server.png"), "Server"),
+                NodeType::User => (egui::include_image!("../../assets/computer.png"), "User"),
+                NodeType::Internet => (egui::include_image!("../../assets/internet.png"), "Internet"),
             };
-            let rect = ui.allocate_space(egui::vec2(12.0, 12.0)).1;
-            ui.painter().circle_filled(rect.center(), 6.0, color);
+            ui.add(egui::Image::new(image).fit_to_exact_size(egui::vec2(20.0, 20.0)));
             ui.label(egui::RichText::new(type_str).strong());
         });
 
@@ -940,14 +947,24 @@ fn render_node_info_modal(ctx: &egui::Context, state: &mut VisualizationTabState
     }
 }
 
-/// Helper to render a single legend item inline
+/// Helper to render a single legend item inline (for edges)
 fn legend_item_inline(ui: &mut egui::Ui, label: &str, color: egui::Color32) {
     // Allocate space first
     let rect = ui.allocate_space(egui::vec2(12.0, 12.0)).1;
     // Then get painter and draw
     let painter = ui.painter();
     painter.circle_filled(rect.center(), 6.0, color);
+    ui.add_space(-2.0);
     ui.label(label);
+    ui.add_space(6.0);
+}
+
+/// Helper to render a legend item with an image (for nodes)
+fn legend_item_with_image(ui: &mut egui::Ui, label: &str, image: egui::ImageSource) {
+    ui.add(egui::Image::new(image).fit_to_exact_size(egui::vec2(20.0, 20.0)));
+    ui.add_space(-2.0);
+    ui.label(label);
+    ui.add_space(6.0);
 }
 
 /// Render the graph view

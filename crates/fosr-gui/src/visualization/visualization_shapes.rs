@@ -2,14 +2,14 @@
 
 use crate::visualization::visualization_tab::{EdgeData, EdgeState, LinkDirection, NodeData, NodeType};
 use eframe::egui;
-use egui::{Color32, Pos2, Shape, Vec2};
+use egui::{Color32, Pos2, Rect, Shape, TextureOptions, Vec2, load::SizeHint};
 use egui_graphs::{DisplayEdge, DisplayNode, DrawContext, Node, NodeProps};
 use fosr_lib::L7Proto;
 
-// Color constants for node types
-pub const COLOR_SERVER: Color32 = Color32::from_rgb(46, 204, 113); // Green
-pub const COLOR_USER: Color32 = Color32::from_rgb(52, 152, 219); // Blue
-pub const COLOR_INTERNET: Color32 = Color32::from_rgb(231, 76, 60); // Red
+// Embedded node images
+const IMG_SERVER: egui::ImageSource = egui::include_image!("../../assets/server.png");
+const IMG_COMPUTER: egui::ImageSource = egui::include_image!("../../assets/computer.png");
+const IMG_INTERNET: egui::ImageSource = egui::include_image!("../../assets/internet.png");
 
 // Color constants for edge states
 pub const COLOR_INACTIVE: Color32 = Color32::from_rgb(200, 200, 200); // Light gray
@@ -17,9 +17,11 @@ pub const COLOR_HTTP: Color32 = Color32::from_rgb(52, 152, 219); // Blue
 pub const COLOR_HTTPS: Color32 = Color32::from_rgb(46, 204, 113); // Green
 pub const COLOR_SSH: Color32 = Color32::from_rgb(155, 89, 182); // Purple
 pub const COLOR_DNS: Color32 = Color32::from_rgb(230, 126, 34); // Orange
+pub const COLOR_SMTP: Color32 = Color32::from_rgb(241, 196, 15); // Yellow
+pub const COLOR_OTHER: Color32 = Color32::from_rgb(149, 165, 166); // Gray
 
 // Node radius constants - all nodes grow with flow count
-const RADIUS_MIN: f32 = 5.0;       // Starting size for all nodes
+const RADIUS_MIN: f32 = 15.0;      // Starting size for all nodes
 const RADIUS_MAX: f32 = 25.0;       // Maximum size
 const FLOW_SCALE_FACTOR: f32 = 0.3; // Radius increase per flow
 
@@ -27,19 +29,18 @@ const EDGE_WIDTH_MIN: f32 = 0.2;
 const EDGE_WIDTH_MAX: f32 = 3.0;
 const EDGE_FLOW_SCALE: f32 = 0.1; // Width increase per flow (linear phase)
 
-/// Custom node shape that displays hostname and IP, with color based on node type
+/// Custom node shape that displays hostname and IP, with icon based on node type
 #[derive(Clone)]
 pub struct NetworkNodeShape {
     radius: f32,
-    color: Color32,
     label: String,
     location: Pos2,
-    is_internet: bool,
+    node_type: NodeType,
 }
 
 impl NetworkNodeShape {
     /// Compute node style from payload data.
-    fn style_from_payload(payload: &NodeData) -> (f32, Color32, bool, String) {
+    fn style_from_payload(payload: &NodeData) -> (f32, NodeType, String) {
         // Hybrid linear/proportional radius scaling
         let max_linear = RADIUS_MIN + payload.max_flow_count as f32 * FLOW_SCALE_FACTOR;
         let radius = if max_linear < RADIUS_MAX {
@@ -55,25 +56,27 @@ impl NetworkNodeShape {
             RADIUS_MIN + ratio * (RADIUS_MAX - RADIUS_MIN)
         };
 
-        let (color, is_internet) = match payload.node_type {
-            NodeType::Internet => (COLOR_INTERNET, true),
-            NodeType::Server => (COLOR_SERVER, false),
-            NodeType::User => (COLOR_USER, false),
-        };
+        (radius, payload.node_type.clone(), payload.to_string())
+    }
 
-        (radius, color, is_internet, payload.to_string())
+    /// Get the image source for this node type
+    fn image_for_node_type(node_type: &NodeType) -> egui::ImageSource<'static> {
+        match node_type {
+            NodeType::Internet => IMG_INTERNET,
+            NodeType::Server => IMG_SERVER,
+            NodeType::User => IMG_COMPUTER,
+        }
     }
 }
 
 impl From<NodeProps<NodeData>> for NetworkNodeShape {
     fn from(props: NodeProps<NodeData>) -> Self {
-        let (radius, color, is_internet, label) = Self::style_from_payload(&props.payload);
+        let (radius, node_type, label) = Self::style_from_payload(&props.payload);
         Self {
             radius,
-            color,
             label,
             location: props.location(),
-            is_internet,
+            node_type,
         }
     }
 }
@@ -97,19 +100,21 @@ for NetworkNodeShape
         let pos = ctx.meta.canvas_to_screen_pos(self.location);
         let radius = ctx.meta.canvas_to_screen_size(self.radius);
 
-        // Draw filled circle
-        shapes.push(Shape::circle_filled(pos, radius, self.color));
+        // Load and draw node icon
+        let image_source = Self::image_for_node_type(&self.node_type);
+        let size = radius * 2.0;
+        let rect = Rect::from_center_size(pos, Vec2::splat(size));
 
-        // Draw circle stroke (thicker for Internet node)
-        let stroke_width = if self.is_internet { 2.5 } else { 1.5 };
-        shapes.push(Shape::circle_stroke(
-            pos,
-            radius,
-            egui::Stroke::new(stroke_width, Color32::DARK_GRAY),
-        ));
+        if let Ok(egui::load::TexturePoll::Ready { texture }) =
+            image_source.load(ctx.ctx, TextureOptions::default(), SizeHint::default())
+        {
+            let uv = Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
+            shapes.push(Shape::image(texture.id, rect, uv, Color32::WHITE));
+        }
 
         // Draw text label
-        let font_size = if self.is_internet { 14.0 } else { 10.0 };
+        let is_internet = matches!(self.node_type, NodeType::Internet);
+        let font_size = if is_internet { 14.0 } else { 10.0 };
         let font_id = egui::FontId::proportional(font_size);
 
         let job = egui::text::LayoutJob::simple(
@@ -129,10 +134,9 @@ for NetworkNodeShape
     }
 
     fn update(&mut self, state: &NodeProps<NodeData>) {
-        let (radius, color, is_internet, label) = Self::style_from_payload(&state.payload);
+        let (radius, node_type, label) = Self::style_from_payload(&state.payload);
         self.radius = radius;
-        self.color = color;
-        self.is_internet = is_internet;
+        self.node_type = node_type;
         self.label = label;
         self.location = state.location();
     }
@@ -165,11 +169,12 @@ fn edge_style(edge_data: &EdgeData) -> (Color32, f32, bool, bool) {
         }
         EdgeState::Active { protocol, direction, .. } => {
             let color = match protocol {
-                L7Proto::HTTP => Color32::from_rgb(52, 152, 219),  // Blue
-                L7Proto::HTTPS => Color32::from_rgb(46, 204, 113), // Green
-                L7Proto::SSH => Color32::from_rgb(155, 89, 182),   // Purple
-                L7Proto::DNS => Color32::from_rgb(230, 126, 34),   // Orange
-                _ => Color32::from_rgb(149, 165, 166),             // Gray
+                L7Proto::HTTP => COLOR_HTTP,
+                L7Proto::HTTPS => COLOR_HTTPS,
+                L7Proto::SSH => COLOR_SSH,
+                L7Proto::DNS => COLOR_DNS,
+                L7Proto::SMTP => COLOR_SMTP,
+                _ => COLOR_OTHER,
             };
             let (arrow_start, arrow_end) = match direction {
                 LinkDirection::Forward => (false, true),
@@ -249,12 +254,18 @@ DisplayEdge<
 
         let arrow_size = ctx.meta.canvas_to_screen_size(16.0);
         let arrow_angle = std::f32::consts::PI / 6.0;
+        // Extend arrow tip past the line to avoid square appearance due to line width
+        let arrow_tip_offset = ctx.meta.canvas_to_screen_size(self.width);
 
         if self.arrow_end {
-            shapes.push(arrow_head(start_pos, end_pos, arrow_size, arrow_angle, self.color));
+            let dir = (end_pos - start_pos).normalized();
+            let extended_end = end_pos + dir * arrow_tip_offset;
+            shapes.push(arrow_head(start_pos, extended_end, arrow_size, arrow_angle, self.color));
         }
         if self.arrow_start {
-            shapes.push(arrow_head(end_pos, start_pos, arrow_size, arrow_angle, self.color));
+            let dir = (start_pos - end_pos).normalized();
+            let extended_start = start_pos + dir * arrow_tip_offset;
+            shapes.push(arrow_head(end_pos, extended_start, arrow_size, arrow_angle, self.color));
         }
 
         shapes
