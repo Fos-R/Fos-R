@@ -105,6 +105,19 @@ impl Default for GenerationTabState {
     }
 }
 
+/// Display a small info icon with a tooltip.
+fn info_icon(ui: &mut egui::Ui, tooltip: &str) {
+    // Reduce spacing before the icon
+    ui.add_space(-4.0);
+    // Reduce tooltip delay
+    ui.ctx().style_mut(|s| s.interaction.tooltip_delay = 0.1);
+    ui.label(egui::RichText::new("ℹ").color(egui::Color32::GRAY).size(14.0))
+        .on_hover_ui(|ui| {
+            ui.set_max_width(300.0);
+            ui.label(tooltip);
+        });
+}
+
 pub fn show_generation_tab_content(
     ui: &mut egui::Ui,
     state: &mut GenerationTabState,
@@ -116,6 +129,7 @@ pub fn show_generation_tab_content(
 
     ui.horizontal(|ui| {
         ui.label("Duration");
+        info_icon(ui, "Minimum pcap traffic duration described in human-friendly time, such as \"30m\", \"1h\", \"2d\" or \"15days 30min 5s\".");
 
         // The only way to set the slider width currently is to set it globally.
         // If we need another slider at some point, this value should be mutated
@@ -155,7 +169,10 @@ pub fn show_generation_tab_content(
 
     ui.add_space(10.0);
 
-    ui.checkbox(&mut state.use_current_time, "Use current time for start time");
+    ui.horizontal(|ui| {
+        ui.checkbox(&mut state.use_current_time, "Use current time for start time");
+        info_icon(ui, "Beginning time of the pcap. By default, use the current time. For deterministic generation, you must specify this along with duration, timezone and seed.");
+    });
 
     if !state.use_current_time {
         ui.horizontal(|ui| {
@@ -178,6 +195,7 @@ pub fn show_generation_tab_content(
                     state.timezone_input = Tz::CET.to_string();
                 }
             }
+            info_icon(ui, "Timezone used for realistic work hours. Use an IANA time zone (like Europe/Paris) or an abbreviation (like CET). The offset is assumed constant during the generation time range.");
             if !state.use_local_timezone {
                 timezone_picker(ui, state);
 
@@ -197,6 +215,7 @@ pub fn show_generation_tab_content(
 
     ui.horizontal(|ui| {
         ui.checkbox(&mut state.use_seed, "Seed");
+        info_icon(ui, "Seed for random number generation. For deterministic generation, you must also specify duration, start time, and timezone.");
 
         if state.use_seed {
             let response = ui.add(
@@ -226,23 +245,13 @@ pub fn show_generation_tab_content(
 
     ui.horizontal(|ui| {
         ui.checkbox(&mut state.taint, "Taint the packets");
+        info_icon(ui, "Taint the packets with special markers for identification.");
+        ui.add_space(10.0);
         ui.checkbox(&mut state.order_pcap, "Order temporally");
+        info_icon(ui, "Enable temporal sorting of the generated pcap. Disable to reduce significantly the RAM usage.");
     });
 
     ui.add_space(20.0);
-
-    show_status(ui, &state.status);
-    if let Some(throughput) = &state.throughput {
-        ui.label(format!("Throughput: {throughput}"));
-    }
-    if let Some((name, spec, err)) = first_invalid_param(state) {
-        ui.colored_label(
-            egui::Color32::RED,
-            format!("Invalid parameter: {name}. Expected: {spec}. ({err})"),
-        );
-        ui.add_space(8.0);
-    }
-    ui.add_space(8.0);
 
     let can_generate = first_invalid_param(&state).is_none();
     let is_generating = matches!(state.status, UiStatus::Generating);
@@ -366,6 +375,8 @@ pub fn show_generation_tab_content(
 
         // Poll receivers (must be outside add_enabled_ui to run while generating)
         if let Some(receiver) = &state.progress_receiver {
+            // Request repaint to keep polling while generating
+            ui.ctx().request_repaint();
             if let Ok(progress) = receiver.try_recv() {
                 state.progress = progress;
                 if progress >= 1.0 {
@@ -455,5 +466,18 @@ pub fn show_generation_tab_content(
             .fill(egui::Color32::from_rgb(144, 238, 144));
 
         ui.add_sized([ui.available_width(), 20.0], progress);
+    }
+
+    show_status(ui, &state.status);
+
+    if let Some(throughput) = &state.throughput {
+        ui.label(format!("Throughput: {throughput}"));
+    }
+
+    if let Some((name, spec, err)) = first_invalid_param(state) {
+        ui.colored_label(
+            egui::Color32::RED,
+            format!("Invalid parameter: {name}. Expected: {spec}. ({err})"),
+        );
     }
 }
