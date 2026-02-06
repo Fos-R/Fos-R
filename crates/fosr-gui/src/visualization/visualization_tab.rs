@@ -101,25 +101,45 @@ impl fmt::Display for NodeData {
     }
 }
 
-/// Edge data: communication state
+/// Edge data: communication state with cumulative flow count for thickness
+#[derive(Clone, Debug)]
+pub struct EdgeData {
+    /// Current visual state (active with protocol or inactive)
+    pub state: EdgeState,
+    /// Cumulative flow count - persists even when inactive, used for edge thickness
+    pub flow_count: u32,
+    /// Maximum flow count among all edges (for proportional sizing)
+    pub max_flow_count: u32,
+}
+
+impl Default for EdgeData {
+    fn default() -> Self {
+        Self {
+            state: EdgeState::Inactive,
+            flow_count: 0,
+            max_flow_count: 0,
+        }
+    }
+}
+
+/// Visual state of an edge
 #[derive(Clone, Debug, Default)]
-pub enum EdgeData {
+pub enum EdgeState {
     #[default]
     Inactive,
     Active {
         protocol: L7Proto,
         #[allow(dead_code)] // Kept for possible future animation effects?
         start_time: Instant,
-        #[allow(dead_code)] // Kept for directional arrows
         direction: LinkDirection,
     },
 }
 
 impl fmt::Display for EdgeData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            EdgeData::Inactive => write!(f, ""),
-            EdgeData::Active { protocol, .. } => write!(f, "{:?}", protocol),
+        match &self.state {
+            EdgeState::Inactive => write!(f, ""),
+            EdgeState::Active { protocol, .. } => write!(f, "{:?}", protocol),
         }
     }
 }
@@ -176,6 +196,8 @@ pub struct VisualizationTabState {
     /// This avoids lag when clicking on the Visualization tab.
     /// Note: 2 frames minimum required for all UI elements to display properly on first tab visit.
     auto_start_countdown: Option<u8>,
+    /// Total number of flows processed since visualization started
+    total_flows: u32,
 }
 
 impl Default for VisualizationTabState {
@@ -270,17 +292,17 @@ impl VisualizationTabState {
             for (server_ip, _) in &servers {
                 let user_idx = ip_to_node[user_ip];
                 let server_idx = ip_to_node[server_ip];
-                graph.add_edge(user_idx, server_idx, EdgeData::Inactive);
+                graph.add_edge(user_idx, server_idx, EdgeData::default());
             }
             // Add edge to Internet for each user
             let user_idx = ip_to_node[user_ip];
-            graph.add_edge(user_idx, internet_idx, EdgeData::Inactive);
+            graph.add_edge(user_idx, internet_idx, EdgeData::default());
         }
 
         // Add edges from servers to Internet
         for (server_ip, _) in &servers {
             let server_idx = ip_to_node[server_ip];
-            graph.add_edge(server_idx, internet_idx, EdgeData::Inactive);
+            graph.add_edge(server_idx, internet_idx, EdgeData::default());
         }
 
         Self {
@@ -299,6 +321,7 @@ impl VisualizationTabState {
             clicked_node: None,
             node_info_modal_open: false,
             auto_start_countdown: Some(2),
+            total_flows: 0,
         }
     }
 
@@ -357,18 +380,18 @@ impl VisualizationTabState {
             if let Some(&user_idx) = ip_to_node.get(&user_ip) {
                 for &server_ip in &config.servers {
                     if let Some(&server_idx) = ip_to_node.get(&server_ip) {
-                        graph.add_edge(user_idx, server_idx, EdgeData::Inactive);
+                        graph.add_edge(user_idx, server_idx, EdgeData::default());
                     }
                 }
                 // Add edge to Internet for each user
-                graph.add_edge(user_idx, internet_idx, EdgeData::Inactive);
+                graph.add_edge(user_idx, internet_idx, EdgeData::default());
             }
         }
 
         // Add edges from servers to Internet
         for &server_ip in &config.servers {
             if let Some(&server_idx) = ip_to_node.get(&server_ip) {
-                graph.add_edge(server_idx, internet_idx, EdgeData::Inactive);
+                graph.add_edge(server_idx, internet_idx, EdgeData::default());
             }
         }
 
@@ -380,14 +403,39 @@ impl VisualizationTabState {
         self.known_ips.contains(&ip)
     }
 
+    /// Reset all flow counts on nodes and edges
+    fn reset_flow_counts(&mut self) {
+        self.total_flows = 0;
+        for idx in self.graph.g().node_indices().collect::<Vec<_>>() {
+            if let Some(node) = self.graph.g_mut().node_weight_mut(idx) {
+                let payload = node.payload_mut();
+                payload.flow_count = 0;
+                payload.max_flow_count = 0;
+            }
+        }
+        for idx in self.graph.g().edge_indices().collect::<Vec<_>>() {
+            if let Some(edge) = self.graph.g_mut().edge_weight_mut(idx) {
+                let payload = edge.payload_mut();
+                payload.flow_count = 0;
+                payload.max_flow_count = 0;
+            }
+        }
+    }
+
     /// Start visualization
     /// If config_content is None, the FlowStreamer uses the default BN model (no config applied)
     /// Speed controls how fast flows are emitted (1.0 = real-time, 2.0 = 2x faster) - can be updated at runtime via slider
+    /// If reset is true, flow counts are reset to zero before starting
     pub fn start_visualization(
         &mut self,
         config_content: Option<&str>,
         speed: Arc<RwLock<f32>>,
+        reset: bool,
     ) -> Result<(), String> {
+        if reset {
+            self.reset_flow_counts();
+        }
+
         log::debug!("Starting visualization with {} known IPs:", self.known_ips.len());
         for ip in &self.known_ips {
             log::debug!("  - {}", ip);
@@ -444,7 +492,7 @@ pub fn show_visualization_tab_content(
         } else if !state.visualization_running {
             let config = state.config_content.clone();
             let speed = state.speed.clone();
-            if let Err(e) = state.start_visualization(config.as_deref(), speed) {
+            if let Err(e) = state.start_visualization(config.as_deref(), speed, true) {
                 log::error!("Failed to auto-start visualization: {}", e);
             }
             state.auto_start_countdown = None;
@@ -544,6 +592,9 @@ fn process_flow_events(state: &mut VisualizationTabState) {
             continue;
         }
 
+        // Increment total flows counter
+        state.total_flows += 1;
+
         // Map IPs to display IPs (unknown -> INTERNET_IP)
         let display_src = if src_known {
             event.src_ip
@@ -581,28 +632,36 @@ fn process_flow_events(state: &mut VisualizationTabState) {
             },
         );
 
-        // Increment flow counters only if an edge exists between the nodes
+        // Increment flow counters on nodes and edges
         if let (Some(&src_idx), Some(&dst_idx)) = (
             state.ip_to_node.get(&display_src),
             state.ip_to_node.get(&display_dst),
         ) {
-            // Check if edge exists (undirected graph, so check both directions)
-            let edge_exists = state.graph.g().find_edge(src_idx, dst_idx).is_some()
-                || state.graph.g().find_edge(dst_idx, src_idx).is_some();
+            // Find the edge (undirected graph, so check both directions)
+            let edge_idx = state
+                .graph
+                .g()
+                .find_edge(src_idx, dst_idx)
+                .or_else(|| state.graph.g().find_edge(dst_idx, src_idx));
 
-            if edge_exists {
+            if let Some(edge_idx) = edge_idx {
+                // Increment node flow counters
                 if let Some(node) = state.graph.g_mut().node_weight_mut(src_idx) {
                     node.payload_mut().flow_count += 1;
                 }
                 if let Some(node) = state.graph.g_mut().node_weight_mut(dst_idx) {
                     node.payload_mut().flow_count += 1;
                 }
+                // Increment edge flow counter (for thickness)
+                if let Some(edge) = state.graph.g_mut().edge_weight_mut(edge_idx) {
+                    edge.payload_mut().flow_count += 1;
+                }
             }
         }
     }
 
     // Update max_flow_count for all nodes (for proportional sizing)
-    let max_flow = state
+    let max_node_flow = state
         .graph
         .g()
         .node_indices()
@@ -613,7 +672,23 @@ fn process_flow_events(state: &mut VisualizationTabState) {
 
     for idx in state.graph.g().node_indices().collect::<Vec<_>>() {
         if let Some(node) = state.graph.g_mut().node_weight_mut(idx) {
-            node.payload_mut().max_flow_count = max_flow;
+            node.payload_mut().max_flow_count = max_node_flow;
+        }
+    }
+
+    // Update max_flow_count for all edges (for proportional sizing)
+    let max_edge_flow = state
+        .graph
+        .g()
+        .edge_indices()
+        .filter_map(|idx| state.graph.g().edge_weight(idx))
+        .map(|e| e.payload().flow_count)
+        .max()
+        .unwrap_or(0);
+
+    for idx in state.graph.g().edge_indices().collect::<Vec<_>>() {
+        if let Some(edge) = state.graph.g_mut().edge_weight_mut(idx) {
+            edge.payload_mut().max_flow_count = max_edge_flow;
         }
     }
 }
@@ -650,7 +725,7 @@ fn update_graph_edges(state: &mut VisualizationTabState) {
 
     for (edge, src_ips, dst_ips) in edges_data {
         // Check all IP combinations for an active link
-        let mut new_edge_data = EdgeData::Inactive;
+        let mut new_state = EdgeState::Inactive;
 
         'outer: for src_ip in &src_ips {
             for dst_ip in &dst_ips {
@@ -658,14 +733,14 @@ fn update_graph_edges(state: &mut VisualizationTabState) {
                 let reverse_key = (*dst_ip, *src_ip);
 
                 if let Some(link) = state.active_links.get(&forward_key) {
-                    new_edge_data = EdgeData::Active {
+                    new_state = EdgeState::Active {
                         protocol: link.protocol,
                         start_time: link.start_time,
                         direction: link.direction.clone(),
                     };
                     break 'outer;
                 } else if let Some(link) = state.active_links.get(&reverse_key) {
-                    new_edge_data = EdgeData::Active {
+                    new_state = EdgeState::Active {
                         protocol: link.protocol,
                         start_time: link.start_time,
                         // we are using the reverse key, so we need to reverse the direction
@@ -680,9 +755,9 @@ fn update_graph_edges(state: &mut VisualizationTabState) {
             }
         }
 
-        // Update the edge data
+        // Update edge state (flow_count is preserved)
         if let Some(edge_mut) = graph.g_mut().edge_weight_mut(edge) {
-            *edge_mut.payload_mut() = new_edge_data;
+            edge_mut.payload_mut().state = new_state;
         }
     }
 }
@@ -691,15 +766,27 @@ fn update_graph_edges(state: &mut VisualizationTabState) {
 fn render_control_panel(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
     egui::TopBottomPanel::top("visualization_controls").show(ui.ctx(), |ui| {
         ui.vertical(|ui| {
-            // Row 1: Button + label
+            // Row 1: Buttons + label
             ui.horizontal(|ui| {
                 if !state.visualization_running {
-                    if ui.button("Start Visualization").clicked() {
+                    // Continue: resume without resetting flow counts
+                    if ui.button("Continue").clicked() {
                         // Clone config to avoid borrow issues
                         // Pass the user config if loaded, otherwise None (uses default BN model)
                         let config = state.config_content.clone();
                         let speed = state.speed.clone();
-                        if let Err(e) = state.start_visualization(config.as_deref(), speed) {
+                        if let Err(e) = state.start_visualization(config.as_deref(), speed, false) {
+                            log::error!("Failed to start flow streamer: {}", e);
+                        }
+                    }
+
+                    // Restart: reset all flow counts and start fresh
+                    if ui.button("Restart").clicked() {
+                        // Clone config to avoid borrow issues
+                        // Pass the user config if loaded, otherwise None (uses default BN model)
+                        let config = state.config_content.clone();
+                        let speed = state.speed.clone();
+                        if let Err(e) = state.start_visualization(config.as_deref(), speed, true) {
                             log::error!("Failed to start flow streamer: {}", e);
                         }
                     }
@@ -735,7 +822,11 @@ fn render_control_panel(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
                 }
 
                 ui.separator();
-                ui.label(format!("Active links: {}", state.active_links.len()));
+                ui.label(format!(
+                    "Active links: {} | Total flows: {}",
+                    state.active_links.len(),
+                    state.total_flows
+                ));
             });
 
             ui.separator();
