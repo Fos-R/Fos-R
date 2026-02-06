@@ -35,6 +35,7 @@ pub const DEFAULT_ZOOM: f32 = 1.4;
 pub struct FosrApp {
     current_tab: CurrentTab,
     zoom_initialized: bool,
+    images_preloaded: bool,
     configuration_file_state: ConfigurationFileState,
     configuration_tab_state: ConfigurationTabState,
     visualization_tab_state: VisualizationTabState,
@@ -52,6 +53,15 @@ impl eframe::App for FosrApp {
         // Set the image loaders
         // Required for egui to display images
         egui_extras::install_image_loaders(ctx);
+
+        // Preload all images to avoid spinners/fallbacks on first visit
+        if !self.images_preloaded {
+            let _ = egui::include_image!("../assets/server.png").load(ctx, Default::default(), Default::default());
+            let _ = egui::include_image!("../assets/computer.png").load(ctx, Default::default(), Default::default());
+            let _ = egui::include_image!("../assets/internet.png").load(ctx, Default::default(), Default::default());
+            let _ = egui::include_image!("../../../public/logo.png").load(ctx, Default::default(), Default::default());
+            self.images_preloaded = true;
+        }
 
         // The Top Panel is logically at the top of the window.
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -128,7 +138,7 @@ impl eframe::App for FosrApp {
                         show_visualization_tab_content(
                             ui,
                             &mut self.visualization_tab_state,
-                            &self.configuration_file_state,
+                            &mut self.configuration_file_state,
                         );
                     }
                     #[cfg(not(target_arch = "wasm32"))]
