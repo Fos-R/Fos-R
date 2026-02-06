@@ -25,7 +25,10 @@ use crate::timepicker::TimePickerButton;
 
 // Time interval for the slider.
 pub const DURATION_MIN: Duration = Duration::from_secs(60); // 1 min
+#[cfg(not(target_arch = "wasm32"))]
 pub const DURATION_MAX: Duration = Duration::from_secs(3 * 24 * 3600); // 3 days
+#[cfg(target_arch = "wasm32")]
+pub const DURATION_MAX: Duration = Duration::from_secs(24 * 3600); // 1 day (browser tab memory is limited)
 
 pub enum UiStatus {
     Idle,

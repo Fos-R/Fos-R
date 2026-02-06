@@ -94,19 +94,19 @@ blockquote {
     .scrollable-navbar {
         max-height: calc(100vh - var(--navbar-height));
         overflow-y: auto;
-	scrollbar-width: none; /* Hide scrollbar in Firefox */
+        scrollbar-width: none; /* Hide scrollbar in Firefox */
     }
 
     /* Hide scrollbar in Chrome, Edge, Safari */
     .scrollable-navbar::-webkit-scrollbar {
-	display: none;
+        display: none;
     }
 }
 
 /* Added by PFG */
 img {
-  width: 100%;
-  height: auto;
+    width: 100%;
+    height: auto;
 }
 
 table {
@@ -115,14 +115,13 @@ table {
 }
 
 table tr:nth-child(even) {
-  background: var(--bd-pre-bg);
+    background: var(--bd-pre-bg);
 }
 
 #gui_wrapper {
     position: relative;
     width: 100%;
-    max-width: 500px;
-    height: 440px;
+    height: 550px;
     background: var(--bs-body-bg, #ffffff);
     margin: 15px auto;
     border-radius: 0.5rem;
