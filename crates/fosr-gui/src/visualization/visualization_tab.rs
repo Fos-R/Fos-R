@@ -42,7 +42,7 @@ impl From<HostType> for NodeType {
 /// Node data: host information
 #[derive(Clone, Debug)]
 pub struct NodeData {
-    pub ip_addr: Ipv4Addr,
+    pub ip_addrs: Vec<Ipv4Addr>,
     pub hostname: Option<String>,
     pub node_type: NodeType,
     #[allow(dead_code)] // Kept for possible future use (node styling by OS?)
@@ -53,7 +53,7 @@ impl NodeData {
     /// Create an Internet node
     pub fn internet() -> Self {
         Self {
-            ip_addr: INTERNET_IP,
+            ip_addrs: vec![INTERNET_IP],
             hostname: Some("Internet".to_string()),
             node_type: NodeType::Internet,
             os: OS::Linux, // Doesn't matter for Internet node
@@ -61,17 +61,31 @@ impl NodeData {
     }
 }
 
-// Display the IP address, plus the hostname if available
+// Display the hostname plus all IP addresses
 impl fmt::Display for NodeData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(ref hostname) = self.hostname {
             if self.node_type == NodeType::Internet {
                 write!(f, "{}", hostname)
             } else {
-                write!(f, "{}\n{}", hostname, self.ip_addr)
+                // Display hostname followed by all IPs (one per line)
+                let ips_str = self
+                    .ip_addrs
+                    .iter()
+                    .map(|ip| ip.to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                write!(f, "{}\n{}", hostname, ips_str)
             }
         } else {
-            write!(f, "{}", self.ip_addr)
+            // No hostname: display all IPs (one per line)
+            let ips_str = self
+                .ip_addrs
+                .iter()
+                .map(|ip| ip.to_string())
+                .collect::<Vec<_>>()
+                .join("\n");
+            write!(f, "{}", ips_str)
         }
     }
 }
@@ -195,10 +209,10 @@ impl VisualizationTabState {
         let mut known_ips = HashSet::new();
         let mut ip_to_node = HashMap::new();
 
-        // Add demo nodes
+        // Add demo nodes (one node per IP in demo mode, since demo hosts have single IPs)
         for (ip, node_type) in &demo_hosts {
             let node_data = NodeData {
-                ip_addr: *ip,
+                ip_addrs: vec![*ip],
                 hostname: None, // No hostname, just show IP
                 node_type: *node_type,
                 os: OS::Linux, // Does not matter
@@ -287,19 +301,22 @@ impl VisualizationTabState {
         let mut known_ips = HashSet::new();
         let mut ip_to_node: HashMap<Ipv4Addr, petgraph::graph::NodeIndex> = HashMap::new();
 
-        // Add nodes for each host interface
-        // TODO: it would be better to have one single node per host
+        // Add one node per host (with all its IPs)
         for host in &config.hosts {
-            for interface in &host.interfaces {
-                let node_data = NodeData {
-                    ip_addr: interface.ip_addr,
-                    hostname: host.hostname.clone(),
-                    node_type: host.host_type.into(),
-                    os: host.os,
-                };
-                let idx = graph.add_node_with_location(node_data, egui::pos2(0.0, 0.0));
-                known_ips.insert(interface.ip_addr);
-                ip_to_node.insert(interface.ip_addr, idx);
+            let all_ips: Vec<Ipv4Addr> = host.interfaces.iter().map(|i| i.ip_addr).collect();
+
+            let node_data = NodeData {
+                ip_addrs: all_ips.clone(),
+                hostname: host.hostname.clone(),
+                node_type: host.host_type.into(),
+                os: host.os,
+            };
+            let idx = graph.add_node_with_location(node_data, egui::pos2(0.0, 0.0));
+
+            // Map all IPs of this host to the same node
+            for ip in all_ips {
+                known_ips.insert(ip);
+                ip_to_node.insert(ip, idx);
             }
         }
 
@@ -537,41 +554,49 @@ fn update_graph_edges(state: &mut VisualizationTabState) {
     let graph = &mut state.graph;
 
     // Collect edge info first to avoid borrow issues
-    let edges_data: Vec<(petgraph::graph::EdgeIndex, Ipv4Addr, Ipv4Addr)> = graph
+    // Each node can have multiple IPs, so we collect all IP lists for matching
+    let edges_data: Vec<(petgraph::graph::EdgeIndex, Vec<Ipv4Addr>, Vec<Ipv4Addr>)> = graph
         .g()
         .edge_indices()
         .map(|edge| {
             let (source, target) = graph.g().edge_endpoints(edge).unwrap();
-            let src_ip = graph.g()[source].payload().ip_addr;
-            let dst_ip = graph.g()[target].payload().ip_addr;
-            (edge, src_ip, dst_ip)
+            let src_ips = graph.g()[source].payload().ip_addrs.clone();
+            let dst_ips = graph.g()[target].payload().ip_addrs.clone();
+            (edge, src_ips, dst_ips)
         })
         .collect();
 
-    for (edge, src_ip, dst_ip) in edges_data {
-        let forward_key = (src_ip, dst_ip);
-        let reverse_key = (dst_ip, src_ip);
+    for (edge, src_ips, dst_ips) in edges_data {
+        // Check all IP combinations for an active link
+        let mut new_edge_data = EdgeData::Inactive;
 
-        let new_edge_data = if let Some(link) = state.active_links.get(&forward_key) {
-            EdgeData::Active {
-                protocol: link.protocol,
-                start_time: link.start_time,
-                direction: link.direction.clone(),
+        'outer: for src_ip in &src_ips {
+            for dst_ip in &dst_ips {
+                let forward_key = (*src_ip, *dst_ip);
+                let reverse_key = (*dst_ip, *src_ip);
+
+                if let Some(link) = state.active_links.get(&forward_key) {
+                    new_edge_data = EdgeData::Active {
+                        protocol: link.protocol,
+                        start_time: link.start_time,
+                        direction: link.direction.clone(),
+                    };
+                    break 'outer;
+                } else if let Some(link) = state.active_links.get(&reverse_key) {
+                    new_edge_data = EdgeData::Active {
+                        protocol: link.protocol,
+                        start_time: link.start_time,
+                        // we are using the reverse key, so we need to reverse the direction
+                        direction: match link.direction {
+                            LinkDirection::Forward => LinkDirection::Backward,
+                            LinkDirection::Backward => LinkDirection::Forward,
+                            LinkDirection::Bidirectional => LinkDirection::Bidirectional,
+                        },
+                    };
+                    break 'outer;
+                }
             }
-        } else if let Some(link) = state.active_links.get(&reverse_key) {
-            EdgeData::Active {
-                protocol: link.protocol,
-                start_time: link.start_time,
-                // we are using the reverse key, so we need to reverse the direction
-                direction: match link.direction {
-                    LinkDirection::Forward => LinkDirection::Backward,
-                    LinkDirection::Backward => LinkDirection::Forward,
-                    LinkDirection::Bidirectional => LinkDirection::Bidirectional,
-                },
-            }
-        } else {
-            EdgeData::Inactive
-        };
+        }
 
         // Update the edge data
         if let Some(edge_mut) = graph.g_mut().edge_weight_mut(edge) {

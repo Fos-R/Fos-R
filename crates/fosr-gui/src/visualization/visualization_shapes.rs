@@ -43,15 +43,7 @@ impl From<NodeProps<NodeData>> for NetworkNodeShape {
             NodeType::Internet => (COLOR_INTERNET, RADIUS_INTERNET, true),
         };
 
-        let label = if let Some(ref hostname) = payload.hostname {
-            if payload.node_type == NodeType::Internet {
-                hostname.clone()
-            } else {
-                format!("{}\n{}", hostname, payload.ip_addr)
-            }
-        } else {
-            format!("{}", payload.ip_addr)
-        };
+        let label = payload.to_string();
 
         Self {
             radius,
@@ -126,15 +118,7 @@ for NetworkNodeShape
         self.radius = radius;
         self.is_internet = is_internet;
 
-        self.label = if let Some(ref hostname) = payload.hostname {
-            if payload.node_type == NodeType::Internet {
-                hostname.clone()
-            } else {
-                format!("{}\n{}", hostname, payload.ip_addr)
-            }
-        } else {
-            format!("{}", payload.ip_addr)
-        };
+        self.label = payload.to_string();
 
         self.location = state.location();
     }
