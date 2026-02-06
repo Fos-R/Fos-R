@@ -1,3 +1,7 @@
+// This file is derived from egui_timepicker.
+// Copyright (c) 2025 Tilen Pintarič
+// Licensed under the MIT License (see mod.rs for full text).
+
 use chrono::NaiveTime;
 use eframe::egui;
 use egui::{Area, Button, Frame, InnerResponse, Key, Order, RichText, Widget};
@@ -110,7 +114,7 @@ impl Widget for TimePickerButton<'_> {
                                 use_12_hour_clock: self.use_12_hour_clock,
                                 use_dragvalue: self.use_dragvalue,
                             }
-                            .draw(ui)
+                                .draw(ui)
                         })
                         .inner
                 });
