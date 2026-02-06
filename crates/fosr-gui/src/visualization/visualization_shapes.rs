@@ -18,8 +18,10 @@ pub const COLOR_HTTPS: Color32 = Color32::from_rgb(46, 204, 113); // Green
 pub const COLOR_SSH: Color32 = Color32::from_rgb(155, 89, 182); // Purple
 pub const COLOR_DNS: Color32 = Color32::from_rgb(230, 126, 34); // Orange
 
-const RADIUS_NORMAL: f32 = 20.0;
-const RADIUS_INTERNET: f32 = 30.0;
+// Node radius constants - all nodes grow with flow count
+const RADIUS_MIN: f32 = 5.0;       // Starting size for all nodes
+const RADIUS_MAX: f32 = 25.0;       // Maximum size
+const FLOW_SCALE_FACTOR: f32 = 0.3; // Radius increase per flow
 
 const EDGE_WIDTH_INACTIVE: f32 = 0.5;
 const EDGE_WIDTH_ACTIVE: f32 = 3.0;
@@ -34,17 +36,37 @@ pub struct NetworkNodeShape {
     is_internet: bool,
 }
 
-impl From<NodeProps<NodeData>> for NetworkNodeShape {
-    fn from(props: NodeProps<NodeData>) -> Self {
-        let payload = &props.payload;
-        let (color, radius, is_internet) = match payload.node_type {
-            NodeType::Server => (COLOR_SERVER, RADIUS_NORMAL, false),
-            NodeType::User => (COLOR_USER, RADIUS_NORMAL, false),
-            NodeType::Internet => (COLOR_INTERNET, RADIUS_INTERNET, true),
+impl NetworkNodeShape {
+    /// Compute node style from payload data.
+    fn style_from_payload(payload: &NodeData) -> (f32, Color32, bool, String) {
+        // Hybrid linear/proportional radius scaling
+        let max_linear = RADIUS_MIN + payload.max_flow_count as f32 * FLOW_SCALE_FACTOR;
+        let radius = if max_linear < RADIUS_MAX {
+            // Linear phase: everyone grows normally
+            RADIUS_MIN + payload.flow_count as f32 * FLOW_SCALE_FACTOR
+        } else {
+            // Proportional phase: scale by ratio to max
+            let ratio = if payload.max_flow_count > 0 {
+                payload.flow_count as f32 / payload.max_flow_count as f32
+            } else {
+                0.0
+            };
+            RADIUS_MIN + ratio * (RADIUS_MAX - RADIUS_MIN)
         };
 
-        let label = payload.to_string();
+        let (color, is_internet) = match payload.node_type {
+            NodeType::Internet => (COLOR_INTERNET, true),
+            NodeType::Server => (COLOR_SERVER, false),
+            NodeType::User => (COLOR_USER, false),
+        };
 
+        (radius, color, is_internet, payload.to_string())
+    }
+}
+
+impl From<NodeProps<NodeData>> for NetworkNodeShape {
+    fn from(props: NodeProps<NodeData>) -> Self {
+        let (radius, color, is_internet, label) = Self::style_from_payload(&props.payload);
         Self {
             radius,
             color,
@@ -106,20 +128,11 @@ for NetworkNodeShape
     }
 
     fn update(&mut self, state: &NodeProps<NodeData>) {
-        let payload = &state.payload;
-
-        let (color, radius, is_internet) = match payload.node_type {
-            NodeType::Server => (COLOR_SERVER, RADIUS_NORMAL, false),
-            NodeType::User => (COLOR_USER, RADIUS_NORMAL, false),
-            NodeType::Internet => (COLOR_INTERNET, RADIUS_INTERNET, true),
-        };
-
-        self.color = color;
+        let (radius, color, is_internet, label) = Self::style_from_payload(&state.payload);
         self.radius = radius;
+        self.color = color;
         self.is_internet = is_internet;
-
-        self.label = payload.to_string();
-
+        self.label = label;
         self.location = state.location();
     }
 
