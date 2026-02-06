@@ -50,6 +50,12 @@ pub struct NodeData {
     pub node_type: NodeType,
     #[allow(dead_code)] // Kept for possible future use (node styling by OS?)
     pub os: OS,
+    /// Number of flows this node has been involved in (as sender or receiver).
+    /// Used for dynamic node sizing - more active nodes appear larger.
+    pub flow_count: u32,
+    /// Maximum flow count among all nodes (for proportional sizing).
+    /// When the linear formula would exceed RADIUS_MAX, we switch to proportional mode.
+    pub max_flow_count: u32,
 }
 
 impl NodeData {
@@ -60,6 +66,8 @@ impl NodeData {
             hostname: Some("Internet".to_string()),
             node_type: NodeType::Internet,
             os: OS::Linux, // Doesn't matter for Internet node
+            flow_count: 0,
+            max_flow_count: 0,
         }
     }
 }
@@ -230,6 +238,8 @@ impl VisualizationTabState {
                 hostname: None, // No hostname, just show IP
                 node_type: *node_type,
                 os: OS::Linux, // Does not matter
+                flow_count: 0,
+                max_flow_count: 0,
             };
             // Nodes are initially placed at the center. They are manually distributed later.
             let idx = graph.add_node_with_location(node_data, egui::pos2(0.0, 0.0));
@@ -323,6 +333,8 @@ impl VisualizationTabState {
                 hostname: host.hostname.clone(),
                 node_type: host.host_type.into(),
                 os: host.os,
+                flow_count: 0,
+                max_flow_count: 0,
             };
             let idx = graph.add_node_with_location(node_data, egui::pos2(0.0, 0.0));
 
@@ -568,6 +580,41 @@ fn process_flow_events(state: &mut VisualizationTabState) {
                 direction,
             },
         );
+
+        // Increment flow counters only if an edge exists between the nodes
+        if let (Some(&src_idx), Some(&dst_idx)) = (
+            state.ip_to_node.get(&display_src),
+            state.ip_to_node.get(&display_dst),
+        ) {
+            // Check if edge exists (undirected graph, so check both directions)
+            let edge_exists = state.graph.g().find_edge(src_idx, dst_idx).is_some()
+                || state.graph.g().find_edge(dst_idx, src_idx).is_some();
+
+            if edge_exists {
+                if let Some(node) = state.graph.g_mut().node_weight_mut(src_idx) {
+                    node.payload_mut().flow_count += 1;
+                }
+                if let Some(node) = state.graph.g_mut().node_weight_mut(dst_idx) {
+                    node.payload_mut().flow_count += 1;
+                }
+            }
+        }
+    }
+
+    // Update max_flow_count for all nodes (for proportional sizing)
+    let max_flow = state
+        .graph
+        .g()
+        .node_indices()
+        .filter_map(|idx| state.graph.g().node_weight(idx))
+        .map(|n| n.payload().flow_count)
+        .max()
+        .unwrap_or(0);
+
+    for idx in state.graph.g().node_indices().collect::<Vec<_>>() {
+        if let Some(node) = state.graph.g_mut().node_weight_mut(idx) {
+            node.payload_mut().max_flow_count = max_flow;
+        }
     }
 }
 
