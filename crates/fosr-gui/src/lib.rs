@@ -16,7 +16,7 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 pub async fn start(canvas_id: &str) -> Result<(), JsValue> {
     // Redirect `log` message to `console.log`:
-    eframe::WebLogger::init(log::LevelFilter::Debug).ok();
+    eframe::WebLogger::init(log::LevelFilter::Info).ok();
 
     let web_options = eframe::WebOptions::default();
 
