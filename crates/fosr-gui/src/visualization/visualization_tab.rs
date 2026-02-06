@@ -163,6 +163,11 @@ pub struct VisualizationTabState {
     pub clicked_node: Option<petgraph::graph::NodeIndex>,
     /// Node info modal open state
     pub node_info_modal_open: bool,
+    /// Frames to wait before auto-starting.
+    /// Using a countdown instead of a boolean allows to render the UI before starting the visualization.
+    /// This avoids lag when clicking on the Visualization tab.
+    /// Note: 2 frames minimum required for all UI elements to display properly on first tab visit.
+    auto_start_countdown: Option<u8>,
 }
 
 impl Default for VisualizationTabState {
@@ -283,17 +288,13 @@ impl VisualizationTabState {
             events_buffer: Rc::new(RefCell::new(Vec::new())),
             clicked_node: None,
             node_info_modal_open: false,
+            auto_start_countdown: Some(2),
         }
     }
 
     /// Update state from a configuration (preserves some state)
+    /// Note: caller should stop visualization before calling this if running
     pub fn update_from_config(&mut self, config: &config::Configuration) {
-        // Don't update while running
-        // TODO: provide better handling if configuration changes during generation
-        if self.visualization_running {
-            return;
-        }
-
         let (graph, known_ips, ip_to_node) = Self::build_graph_from_config(config);
         self.graph = graph;
         self.known_ips = known_ips;
@@ -424,6 +425,20 @@ pub fn show_visualization_tab_content(
     // Handle config changes
     handle_config_changes(state, configuration_file_state);
 
+    // Auto-start visualization with delay (allows UI to render first)
+    if let Some(countdown) = state.auto_start_countdown {
+        if countdown > 0 {
+            state.auto_start_countdown = Some(countdown - 1);
+        } else if !state.visualization_running {
+            let config = state.config_content.clone();
+            let speed = state.speed.clone();
+            if let Err(e) = state.start_visualization(config.as_deref(), speed) {
+                log::error!("Failed to auto-start visualization: {}", e);
+            }
+            state.auto_start_countdown = None;
+        }
+    }
+
     // Process incoming flow events
     process_flow_events(state);
 
@@ -451,7 +466,11 @@ fn handle_config_changes(
     let was_config_removed =
         state.config_content.is_some() && configuration_file_state.config_file_content.is_none();
 
-    if was_config_removed && !state.visualization_running {
+    if was_config_removed {
+        // Stop visualization if running, then reset to default
+        if state.visualization_running {
+            state.stop_visualization();
+        }
         state.config_content = None;
         *state = VisualizationTabState::default();
         return;
@@ -465,18 +484,18 @@ fn handle_config_changes(
         _ => false,
     };
 
-    if needs_update && !state.visualization_running {
+    if needs_update {
         if let Some(ref config_content) = configuration_file_state.config_file_content {
-            state.active_links.clear();
-            if let Some(streamer) = &state.streamer {
-                streamer.stop();
+            // Stop visualization if running before updating config
+            let was_running = state.visualization_running;
+            if was_running {
+                state.stop_visualization();
             }
-            state.streamer = None;
-            state.flow_receiver = None;
 
             let config = config::import_config(config_content);
             state.update_from_config(&config);
             state.config_content = Some(config_content.clone());
+            state.auto_start_countdown = Some(2);
         }
     }
 }
