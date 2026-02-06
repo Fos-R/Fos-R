@@ -1,6 +1,6 @@
 //! Custom node and edge shapes for network visualization
 
-use crate::visualization::visualization_tab::{EdgeData, LinkDirection, NodeData, NodeType};
+use crate::visualization::visualization_tab::{EdgeData, EdgeState, LinkDirection, NodeData, NodeType};
 use eframe::egui;
 use egui::{Color32, Pos2, Shape, Vec2};
 use egui_graphs::{DisplayEdge, DisplayNode, DrawContext, Node, NodeProps};
@@ -23,8 +23,9 @@ const RADIUS_MIN: f32 = 5.0;       // Starting size for all nodes
 const RADIUS_MAX: f32 = 25.0;       // Maximum size
 const FLOW_SCALE_FACTOR: f32 = 0.3; // Radius increase per flow
 
-const EDGE_WIDTH_INACTIVE: f32 = 0.5;
-const EDGE_WIDTH_ACTIVE: f32 = 3.0;
+const EDGE_WIDTH_MIN: f32 = 0.2;
+const EDGE_WIDTH_MAX: f32 = 3.0;
+const EDGE_FLOW_SCALE: f32 = 0.1; // Width increase per flow (linear phase)
 
 /// Custom node shape that displays hostname and IP, with color based on node type
 #[derive(Clone)]
@@ -142,11 +143,27 @@ for NetworkNodeShape
     }
 }
 
-/// Get edge style based on protocol and direction
+/// Get edge style based on protocol, direction, and flow count
 fn edge_style(edge_data: &EdgeData) -> (Color32, f32, bool, bool) {
-    match edge_data {
-        EdgeData::Inactive => (COLOR_INACTIVE, EDGE_WIDTH_INACTIVE, false, false),
-        EdgeData::Active { protocol, direction, .. } => {
+    match &edge_data.state {
+        EdgeState::Inactive => {
+            // Hybrid linear/proportional width scaling (same approach as nodes)
+            let max_linear = EDGE_WIDTH_MIN + edge_data.max_flow_count as f32 * EDGE_FLOW_SCALE;
+            let width = if max_linear < EDGE_WIDTH_MAX {
+                // Linear phase: all edges grow normally
+                EDGE_WIDTH_MIN + edge_data.flow_count as f32 * EDGE_FLOW_SCALE
+            } else {
+                // Proportional phase: scale by ratio to max
+                let ratio = if edge_data.max_flow_count > 0 {
+                    edge_data.flow_count as f32 / edge_data.max_flow_count as f32
+                } else {
+                    0.0
+                };
+                EDGE_WIDTH_MIN + ratio * (EDGE_WIDTH_MAX - EDGE_WIDTH_MIN)
+            };
+            (COLOR_INACTIVE, width, false, false)
+        }
+        EdgeState::Active { protocol, direction, .. } => {
             let color = match protocol {
                 L7Proto::HTTP => Color32::from_rgb(52, 152, 219),  // Blue
                 L7Proto::HTTPS => Color32::from_rgb(46, 204, 113), // Green
@@ -159,7 +176,7 @@ fn edge_style(edge_data: &EdgeData) -> (Color32, f32, bool, bool) {
                 LinkDirection::Backward => (true, false),
                 LinkDirection::Bidirectional => (true, true),
             };
-            (color, EDGE_WIDTH_ACTIVE, arrow_start, arrow_end)
+            (color, EDGE_WIDTH_MAX, arrow_start, arrow_end)
         }
     }
 }
