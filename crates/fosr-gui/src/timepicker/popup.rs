@@ -1,3 +1,7 @@
+// This file is derived from egui_timepicker.
+// Copyright (c) 2025 Tilen Pintarič
+// Licensed under the MIT License (see mod.rs for full text).
+
 use std::fmt::Display;
 
 use chrono::{NaiveTime, Timelike};
