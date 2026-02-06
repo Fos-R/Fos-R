@@ -20,7 +20,7 @@ fn main() -> eframe::Result {
 
     let shared_viewport = egui::ViewportBuilder::default()
         .with_inner_size([700.0, 600.0])
-        .with_min_inner_size([500.0, 450.0])
+        .with_min_inner_size([550.0, 500.0])
         .with_title("Fos-R");
 
     #[cfg(target_os = "macos")]
