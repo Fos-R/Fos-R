@@ -1,4 +1,5 @@
 import os
+os.environ["OMP_NUM_THREADS"] = "1"
 import argparse
 import re
 import json
@@ -216,7 +217,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     args.output = args.output or "."
 
-    os.environ["OMP_NUM_THREADS"] = "1"
 
     # if args.automaton_name:
     #     if args.output is None:
