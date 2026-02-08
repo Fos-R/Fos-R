@@ -7,16 +7,16 @@ use std::collections::HashSet;
 use std::net::Ipv4Addr;
 
 #[derive(Debug)]
-/// The configuration file of the network and the hosts
-pub struct Configuration {
+/// The networkuration file of the network and the hosts
+pub struct Network {
     // TODO: faire du tri dans ce qui n’est pas utile
-    /// The metadata of the configuration
+    /// The metadata of the networkuration
     pub metadata: Metadata,
     /// The list of hosts
     pub hosts: Vec<Host>,
-    /// A hashmap that maps an IP to a MAC address (if it is defined in the config file)
+    /// A hashmap that maps an IP to a MAC address (if it is defined in the network file)
     pub mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
-    /// A hashmap that maps an IP to an OS (if it is defined in the config file)
+    /// A hashmap that maps an IP to an OS (if it is defined in the network file)
     pub os_map: HashMap<Ipv4Addr, OS>,
     /// The usages of each IP address
     pub usages_map: HashMap<Ipv4Addr, f64>,
@@ -24,7 +24,7 @@ pub struct Configuration {
     pub users: Vec<Ipv4Addr>,
     /// The list of "servers" IPs
     pub servers: Vec<Ipv4Addr>,
-    /// The list of services proposed in the configuration
+    /// The list of services proposed in the networkuration
     pub services: Vec<&'static str>,
     /// Overridden listening ports
     pub open_ports: HashMap<(Ipv4Addr, &'static str), u16>,
@@ -34,13 +34,13 @@ pub struct Configuration {
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-struct ConfigurationYaml {
+struct NetworkYaml {
     pub metadata: Metadata,
     pub hosts: Vec<Host>,
 }
 
-impl From<ConfigurationYaml> for Configuration {
-    fn from(c: ConfigurationYaml) -> Self {
+impl From<NetworkYaml> for Network {
+    fn from(c: NetworkYaml) -> Self {
         let users: Vec<Ipv4Addr> = c
             .hosts
             .iter()
@@ -125,7 +125,7 @@ impl From<ConfigurationYaml> for Configuration {
             assert!(users_per_service.contains_key(service));
         }
 
-        Configuration {
+        Network {
             metadata: c.metadata,
             hosts: c.hosts,
             os_map,
@@ -141,7 +141,7 @@ impl From<ConfigurationYaml> for Configuration {
     }
 }
 
-impl Configuration {
+impl Network {
     /// Get the list of servers that provide a service
     pub fn get_servers_per_service(&self, service: &'static str) -> Vec<Ipv4Addr> {
         self.servers_per_service
@@ -161,19 +161,19 @@ impl Configuration {
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-/// Metadata of the configuration file
+/// Metadata of the networkuration file
 pub struct Metadata {
-    /// The title of the config file
+    /// The title of the network file
     pub title: String,
-    /// The description of the config file
+    /// The description of the network file
     pub desc: Option<String>,
-    /// The author of the config file
+    /// The author of the network file
     pub author: Option<String>,
-    /// The "last modified" date of the config file
+    /// The "last modified" date of the network file
     pub date: Option<String>,
-    /// The user-defined version of the config file
+    /// The user-defined version of the network file
     pub version: Option<String>,
-    /// The lib-defined format version of the config file
+    /// The lib-defined format version of the network file
     pub format: Option<u64>,
 }
 
@@ -298,15 +298,15 @@ impl TryFrom<InterfaceYaml> for Interface {
     }
 }
 
-/// Import a configuration from a string. The string can be either in JSON or YAML format (the
+/// Import a networkuration from a string. The string can be either in JSON or YAML format (the
 /// truth is that YAML is a superset of JSON).
-pub fn import_config(config_string: &str) -> Configuration {
-    let config: Configuration = serde_yaml::from_str::<ConfigurationYaml>(config_string)
-        .expect("Cannot parse the configuration file")
+pub fn import_network(network_string: &str) -> Network {
+    let network: Network = serde_yaml::from_str::<NetworkYaml>(network_string)
+        .expect("Cannot parse the networkuration file")
         .into();
-    log::info!("\"{}\" successfully loaded", config.metadata.title);
-    log::trace!("Configuration: {config:?}");
-    config
+    log::info!("\"{}\" successfully loaded", network.metadata.title);
+    log::trace!("Network: {network:?}");
+    network
 }
 
 #[cfg(test)]
@@ -314,11 +314,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_config_simple() {
-        let config = import_config(
+    fn test_network_simple() {
+        let network = import_network(
             r#"
 metadata:
-  title: Sample configuration
+  title: Sample networkuration
 hosts:
   - interfaces:
       - services:
@@ -329,19 +329,19 @@ hosts:
       - ip_addr: 192.168.0.9
 "#,
         );
-        // TODO tester la config chargée
+        // TODO tester la network chargée
     }
 
     #[test]
-    fn test_config_complex() {
-        let config = import_config(
+    fn test_network_complex() {
+        let network = import_network(
             r#"
 metadata:
-  title: Sample configuration # Mandatory. The title of the configuration file.
-  desc: A sample configuration file to show all the different available fields # Optional. A description of the configuration file.
+  title: Sample networkuration # Mandatory. The title of the networkuration file.
+  desc: A sample networkuration file to show all the different available fields # Optional. A description of the networkuration file.
   author: Jane Doe # Optional. Author of the file.
   date: 2025/11/05 # Optional. Last modification date.
-  version: 0.1.0 # Optional. The version number of this configuration file. Format is free.
+  version: 0.1.0 # Optional. The version number of this networkuration file. Format is free.
   format: 1 # Reserved for now. The version will be bumped when the format changes.
 
 hosts:
@@ -365,17 +365,17 @@ hosts:
       - ip_addr: 192.168.0.11 # Another host with a single interface
 "#,
         );
-        println!("{config:?}");
+        println!("{network:?}");
     }
 
     #[test]
-    fn test_config_json() {
-        let config = import_config(
+    fn test_network_json() {
+        let network = import_network(
             r#"
 {
     "metadata": {
-        "title": "Sample JSON configuration",
-        "desc": "A sample configuration file to show all the different available fields",
+        "title": "Sample JSON networkuration",
+        "desc": "A sample networkuration file to show all the different available fields",
         "author": "Jane Doe",
         "date": "2025/11/05",
         "version": "0.1.0",
@@ -417,6 +417,6 @@ hosts:
     ]
 }"#,
         );
-        println!("{config:?}");
+        println!("{network:?}");
     }
 }

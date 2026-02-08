@@ -89,8 +89,8 @@ pub enum Command {
         default_models: Option<DefaultModels>,
         #[arg(long, help = "Use a custom model")]
         custom_models: Option<String>,
-        #[arg(short, long, help = "Path to the configuration file")]
-        config: String,
+        #[arg(short, long, help = "Path to the network file")]
+        network: String,
         #[cfg(all(target_os = "linux", feature = "iptables"))]
         #[arg(
             long,
@@ -166,8 +166,8 @@ pub enum Command {
         default_models: Option<DefaultModels>,
         #[arg(long, help = "Use a custom model")]
         custom_models: Option<String>,
-        #[arg(short, long, help = "Path to the configuration file")]
-        config: String,
+        #[arg(short, long, help = "Path to the network file")]
+        network: String,
         #[arg(
             short,
             long,
@@ -223,8 +223,8 @@ pub enum Command {
             help = "The generation profile to use. Either \"fast\" that optimizes CPU use but the entire dataset must fit in RAM, or \"efficient\" that requires less RAM but is slower"
         )]
         profile: GenerationProfile,
-        #[arg(short, long, help = "Path to the configuration file")]
-        config: Option<String>,
+        #[arg(short, long, help = "Path to the network file")]
+        network: Option<String>,
         #[arg(short = 'n', long, help = "Minimum number of packets to generate")]
         packets_count: Option<u64>,
         #[arg(
