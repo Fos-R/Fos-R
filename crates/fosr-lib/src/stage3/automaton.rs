@@ -304,11 +304,11 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
                 }
                 PayloadType::Text(tss, distrib) => {
                     let ts = &tss[distrib.sample(rng)];
-                    (Payload::Replay(ts), ts.len())
+                    (Payload::Binary(ts), ts.len())
                 }
-                PayloadType::Replay(tss, distrib) => {
+                PayloadType::Binary(tss, distrib) => {
                     let ts = &tss[distrib.sample(rng)];
-                    (Payload::Replay(ts), ts.len())
+                    (Payload::Binary(ts), ts.len())
                 }
             };
             let cond_mu = e.mu[0] + e.cov[0][1] / e.cov[1][1] * (payload_size as f32 - e.mu[1]);
@@ -493,7 +493,7 @@ impl TryFrom<JsonPayload> for PayloadType {
                     Err("No payload information".to_string())
                 } else {
                     let weights = w.unwrap_or_else(|| vec![1; p.len()]);
-                    Ok(PayloadType::Replay(
+                    Ok(PayloadType::Binary(
                         Box::leak(Box::new(p.into_iter().map(hex_decode).collect())),
                         WeightedIndex::new(weights).map_err(|e| format!("Weights error: {e}"))?,
                     ))
@@ -507,7 +507,7 @@ impl TryFrom<JsonPayload> for PayloadType {
                     Err("No payload information".to_string())
                 } else {
                     let weights = w.unwrap_or_else(|| vec![1; p.len()]);
-                    Ok(PayloadType::Replay(
+                    Ok(PayloadType::Binary(
                         Box::leak(Box::new(
                             p.into_iter()
                                 .map(|s| base64::prelude::BASE64_STANDARD.decode(s).unwrap())

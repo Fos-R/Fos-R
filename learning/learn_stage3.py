@@ -34,7 +34,7 @@ def add_payload_type(payload_type, row):
     else:
         headers = [""]*len(payloads)
 
-    nb_replay = 0
+    nb_binary = 0
     nb_random = 0
     nb_text = 0
     for i,p in enumerate(payloads):
@@ -60,7 +60,7 @@ def add_payload_type(payload_type, row):
                 nb_random += 1
                 # print("Detected as random")
             else:
-                replay = True
+                binary = True
                 try:
                     s = bytes.fromhex(p).decode('utf-8')
                     s = s.translate({10: " ", 13: " "}) # replace CR and LF by whitespace
@@ -70,16 +70,16 @@ def add_payload_type(payload_type, row):
                         else:
                             headers[i]+="/Text"
                         # print(s, s.split()[0])
-                        replay = False
+                        binary = False
                         # print("Detected as text")
                         nb_text += 1
                 except: # cannot decode: not text
                     pass
-                if replay:
-                    headers[i]+="/Replay"
-                    # print("Detected as replay")
-                    nb_replay += 1
-    # print("Type inference. Replay:",nb_replay,"Random:",nb_random,"Text:",nb_text)
+                if binary:
+                    headers[i]+="/Binary"
+                    # print("Detected as binary")
+                    nb_binary += 1
+    # print("Type inference. binary:",nb_replay,"Random:",nb_random,"Text:",nb_text)
     return " ".join(headers)
 
 def parse_TCP(input_string):
@@ -145,7 +145,7 @@ class Exporter:
                 # save the weights only if it’s not equiprobable
                 if any(c != counts[0] for c in counts):
                     d["payloads"]["weights"] = [int(i) for i in counts]
-            elif "Replay" in e.symbol:
+            elif "Binary" in e.symbol:
                 tss = []
                 for ts, t in e.tss.items():
                     tss = tss + [self.payloads[ts][a] for (a,_) in t]
