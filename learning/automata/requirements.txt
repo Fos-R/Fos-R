@@ -1,3 +1,0 @@
-tadam-learner
-numpy
-pandas
