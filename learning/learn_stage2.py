@@ -176,9 +176,9 @@ if __name__ == '__main__':
     flow = flow.dropna(subset="Applicative Proto")
     flow['Applicative Proto'] = flow['Applicative Proto'].apply(keep_first_service)
 
-    m = 50 # at least 50 examples
-    print("Removed rare services:\n",flow["Applicative Proto"].value_counts()[flow["Applicative Proto"].value_counts() <= m])
-    flow = flow[flow["Applicative Proto"].isin(flow["Applicative Proto"].value_counts()[flow["Applicative Proto"].value_counts() > m].index)]
+    m = 20 # at least 20 examples
+    print("Removed rare services:\n",flow["Applicative Proto"].value_counts()[flow["Applicative Proto"].value_counts() < m])
+    flow = flow[flow["Applicative Proto"].isin(flow["Applicative Proto"].value_counts()[flow["Applicative Proto"].value_counts() >= m].index)]
 
     # Export for automata learning
 
@@ -188,11 +188,11 @@ if __name__ == '__main__':
         for conn_state in flow[flow["Applicative Proto"] == s]["Connection State"].unique():
             if str(conn_state) != "NaN":
                 flows = list(flow[(flow["Applicative Proto"] == s) & (flow["Connection State"] == conn_state) & (flow["Proto"] == "TCP")]["uid"])
-                if len(flows) > 0:
+                if len(flows) >= m:
                     d = { "service": s, "conn_state": conn_state, "flows": flows, "proto": "tcp" }
                     automata.append(d)
         flows = list(flow[(flow["Applicative Proto"] == s) & (flow["Proto"] == "UDP")]["uid"])
-        if len(flows) > 0:
+        if len(flows) >= m:
             d = { "service": s, "flows": flows, "proto": "udp" }
             automata.append(d)
 
