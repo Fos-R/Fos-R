@@ -178,7 +178,7 @@ impl Stage4 {
                 rng.fill_bytes(&mut payload_array[0..*size]);
                 tcp_packet.set_payload(&payload_array[0..*size]);
             }
-            Payload::Replay(payload) => {
+            Payload::Binary(payload) => {
                 tcp_packet.set_payload(payload);
             }
         }
@@ -267,7 +267,7 @@ impl Stage4 {
                 udp_packet.set_payload(&payload_array[0..*size]);
                 udp_packet.set_length((*size as u16) + 8);
             }
-            Payload::Replay(payload) => {
+            Payload::Binary(payload) => {
                 udp_packet.set_length((payload.len() as u16) + 8);
                 udp_packet.set_payload(payload);
             }

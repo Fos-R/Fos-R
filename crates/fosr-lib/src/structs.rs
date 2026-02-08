@@ -235,7 +235,7 @@ pub enum PayloadType {
     /// Payload is a UTF-8 text
     Text(&'static Vec<Vec<u8>>, WeightedIndex<u64>),
     /// Payload is not random and will be replayed
-    Replay(&'static Vec<Vec<u8>>, WeightedIndex<u64>),
+    Binary(&'static Vec<Vec<u8>>, WeightedIndex<u64>),
     /// Payload is random
     Random(Vec<usize>, WeightedIndex<u64>),
 }
@@ -283,7 +283,7 @@ pub enum Payload {
     /// No payload
     Empty,
     /// A replayed payload
-    Replay(&'static Vec<u8>),
+    Binary(&'static Vec<u8>),
     /// A payload that will be randomly generated
     Random(usize),
 }
@@ -292,7 +292,7 @@ impl Payload {
     pub fn get_payload_size(&self) -> usize {
         match &self {
             Payload::Empty => 0,
-            Payload::Replay(l) => l.len(),
+            Payload::Binary(l) => l.len(),
             Payload::Random(len) => *len,
         }
     }
