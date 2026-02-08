@@ -1,4 +1,4 @@
-use crate::config;
+use crate::network;
 use crate::{stage1, stage2, stage3};
 use std::ffi::OsStr;
 use std::fs;
@@ -35,18 +35,18 @@ impl Models {
         })
     }
 
-    pub fn with_config(mut self, path: &str) -> Result<Self, String> {
-        let config = config::import_config(
+    pub fn with_network(mut self, path: &str) -> Result<Self, String> {
+        let network = network::import_network(
             &fs::read_to_string(Path::new(path))
-                .map_err(|e| format!("Cannot open the configuration file: {e}"))?,
+                .map_err(|e| format!("Cannot open the network file: {e}"))?,
         );
-        self.bn.apply_config(&config)?;
+        self.bn.apply_network(&network)?;
         Ok(self)
     }
 
-    pub fn with_string_config(mut self, config: &str) -> Result<Self, String> {
-        let config = config::import_config(config);
-        self.bn.apply_config(&config)?;
+    pub fn with_string_network(mut self, network: &str) -> Result<Self, String> {
+        let network = network::import_network(network);
+        self.bn.apply_network(&network)?;
         Ok(self)
     }
 }

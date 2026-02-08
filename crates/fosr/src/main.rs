@@ -62,7 +62,7 @@ fn main() {
              #[cfg(all(target_os = "linux", feature = "iptables"))]
             stealthy,
             seed,
-            config,
+            network,
             outfile,
             no_order_pcap,
             flow_per_day,
@@ -84,12 +84,12 @@ fn main() {
             .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed."));
             #[cfg(not(all(target_os = "linux", feature = "iptables")))]
             let stealthy = false;
-            net_injection(stealthy, seed, config, outfile, no_order_pcap, flow_per_day, net_enabler, duration, jobs, deterministic, injection_algo, source);
+            net_injection(stealthy, seed, network, outfile, no_order_pcap, flow_per_day, net_enabler, duration, jobs, deterministic, injection_algo, source);
         },
         #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
         cmd::Command::InjectAcross { 
             seed,
-            config,
+            network,
             outfile,
             no_order_pcap,
             flow_per_day,
@@ -106,7 +106,7 @@ fn main() {
             };
             let duration = duration
             .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed."));
-            net_injection(false, seed, config, outfile, no_order_pcap, flow_per_day, cmd::NetEnabler::Ebpf, duration, jobs, true, cmd::InjectionAlgo::Fast, source);
+            net_injection(false, seed, network, outfile, no_order_pcap, flow_per_day, cmd::NetEnabler::Ebpf, duration, jobs, true, cmd::InjectionAlgo::Fast, source);
         },
         cmd::Command::CreatePcap {
             seed,
@@ -119,7 +119,7 @@ fn main() {
             flow_per_day,
             tz,
             jobs,
-            config,
+            network,
             taint,
             default_models,
             custom_models,
@@ -132,8 +132,8 @@ fn main() {
             };
 
             let mut model = models::Models::from_source(source).unwrap();
-            if let Some(config) = config {
-                model = model.with_config(&config).unwrap();
+            if let Some(network) = network {
+                model = model.with_network(&network).unwrap();
             }
             let automata_library = Arc::new(model.automata);
             let bn = Arc::new(model.bn);
@@ -217,7 +217,7 @@ fn main() {
             );
             let s2 = stage2::bayesian_networks::BNGenerator::new(bn, false);
             let s3 = stage3::tadam::TadamGenerator::new(automata_library);
-            let s4 = stage4::Stage4::new(taint); //, model.config);
+            let s4 = stage4::Stage4::new(taint); //, model.network);
             let jobs = jobs.unwrap_or(max(1, num_cpus::get() / 2));
             match profile {
                 cmd::GenerationProfile::Fast => {
@@ -267,7 +267,7 @@ fn main() {
 fn net_injection(
     stealthy: bool,
     seed: Option<u64>,
-    config: String,
+    network: String,
     outfile: Option<String>,
     no_order_pcap: bool,
     flow_per_day: Option<u64>,
@@ -304,13 +304,13 @@ fn net_injection(
         .collect();
     log::debug!("IPv4 interfaces: {:?}", &local_ips);
 
-    let model = models::Models::from_source(source).unwrap();//.with_config(&config).unwrap(); // FIXME
+    let model = models::Models::from_source(source).unwrap();//.with_network(&network).unwrap(); // FIXME
     let automata_library = Arc::new(model.automata);
     let bn = Arc::new(model.bn);
 
-    // TODO verify if the current IP has a role in the config
+    // TODO verify if the current IP has a role in the network
     // if !has_role {
-    //     log::error!("This computer has no traffic to inject with this configuration file! Exiting.");
+    //     log::error!("This computer has no traffic to inject with this network file! Exiting.");
     //     process::exit(1);
     // }
 

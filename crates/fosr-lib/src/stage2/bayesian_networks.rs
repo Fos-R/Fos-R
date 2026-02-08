@@ -1,4 +1,4 @@
-use crate::config;
+use crate::network;
 use crate::models;
 use crate::stage2::*;
 
@@ -107,9 +107,9 @@ enum Feature {
     TimeBin(usize), // cardinality only
     SrcIpRole(Vec<IpRole>),
     DstIpRole(Vec<IpRole>),
-    SrcIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the config
-    DstIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the config
-    DstPt(Vec<DstPt>), // the port comes from the config (must be chosen after the dest IP)
+    SrcIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
+    DstIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
+    DstPt(Vec<DstPt>), // the port comes from the network file (must be chosen after the dest IP)
     #[allow(unused)]
     FwdPkt(Vec<Normal<f64>>), // the exact number is sampled from a Gaussian distribution afterward
     #[allow(unused)]
@@ -283,7 +283,7 @@ impl BayesianNetwork {
                         } else {
                             rejected += 1;
                             if rejected > 10000 {
-                                return Err("Too many rejections during sampling. Maybe the configuration file is not compatible with the model learned.".to_string());
+                                return Err("Too many rejections during sampling. Maybe the network file is not compatible with the model learned.".to_string());
                             }
                             if rejected > 10 && (rejected as f64).log10().fract() == 0.0 {
                                 log::warn!("Rejected sample ({rejected} times)");
@@ -353,7 +353,7 @@ fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), Stri
     node.removed_values.insert(index);
     if node.removed_values.len() == node.feature.get_cardinality() {
         Err(format!(
-            "No value of {:?} can lead to a flow compatible with the configuration",
+            "No value of {:?} can lead to a flow compatible with the networkuration",
             node.feature
         ))
     } else {
@@ -478,7 +478,7 @@ impl BayesianModel {
         Ok(())
     }
 
-    pub fn apply_config(&mut self, config: &config::Configuration) -> Result<(), String> {
+    pub fn apply_network(&mut self, network: &network::Network) -> Result<(), String> {
         // we know L7Proto exists
         let mut protocols: Vec<&'static str> = vec![];
         let mut l7proto_index: usize = 0;
@@ -489,7 +489,7 @@ impl BayesianModel {
             }
         }
 
-        self.open_ports = config.open_ports.clone();
+        self.open_ports = network.open_ports.clone();
 
         let mut src_ip_roles: Vec<IpRole> = vec![];
         let mut src_ip_role_index: usize = 0;
@@ -513,8 +513,8 @@ impl BayesianModel {
             match &mut node.feature {
                 // we set the probability of absent services to 0
                 Feature::L7Proto(v) => {
-                    // get services present in the configuration
-                    for s in config.services.iter() {
+                    // get services present in the networkuration
+                    for s in network.services.iter() {
                         if !v.contains(s) {
                             log::warn!(
                                 "Service {s:?} is not present in the original dataset and will not be generated"
@@ -526,7 +526,7 @@ impl BayesianModel {
                         .iter()
                         .enumerate()
                         .filter_map(|(index, proto)| {
-                            if config.services.contains(proto) {
+                            if network.services.contains(proto) {
                                 None
                             } else {
                                 Some((index, &0.0f64))
@@ -547,8 +547,8 @@ impl BayesianModel {
                 // TODO: trop de copier-coller !
                 Feature::SrcIp(_) => {
                     // we replace the node by a new one
-                    let mut all_src_ip = config.users.clone();
-                    all_src_ip.append(&mut config.servers.clone());
+                    let mut all_src_ip = network.users.clone();
+                    all_src_ip.append(&mut network.servers.clone());
                     let ip: Vec<AnonymizedIpv4Addr> = all_src_ip
                         .clone()
                         .into_iter()
@@ -557,8 +557,8 @@ impl BayesianModel {
                         .collect();
                     let mut cpt: Vec<Option<WeightedIndex<f64>>> = vec![];
                     for p in protocols.iter() {
-                        if !config.services.contains(p) {
-                            // this protocol will never be sampled with this config
+                        if !network.services.contains(p) {
+                            // this protocol will never be sampled with this network
                             for _ in src_ip_roles.iter() {
                                 cpt.push(None);
                             }
@@ -566,7 +566,7 @@ impl BayesianModel {
                             for role in src_ip_roles.iter() {
                                 match role {
                                     IpRole::User => {
-                                        let proto_users = config.get_users_per_service(p);
+                                        let proto_users = network.get_users_per_service(p);
                                         assert!(!proto_users.is_empty());
                                         let proba = all_src_ip
                                             .clone()
@@ -574,7 +574,7 @@ impl BayesianModel {
                                             .map(|ip| {
                                                 if proto_users.contains(&ip) {
                                                     // this IP can be sampled
-                                                    *config.usages_map.get(&ip).unwrap()
+                                                    *network.usages_map.get(&ip).unwrap()
                                                 } else {
                                                     // this IP cannot be sampled
                                                     0.0f64
@@ -584,7 +584,7 @@ impl BayesianModel {
                                         cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}")));
                                     }
                                     IpRole::Server => {
-                                        let proto_servers = config.get_servers_per_service(p);
+                                        let proto_servers = network.get_servers_per_service(p);
                                         assert!(!proto_servers.is_empty());
                                         let proba = all_src_ip
                                             .clone()
@@ -592,7 +592,7 @@ impl BayesianModel {
                                             .map(|ip| {
                                                 if proto_servers.contains(&ip) {
                                                     // this IP can be sampled
-                                                    *config.usages_map.get(&ip).unwrap()
+                                                    *network.usages_map.get(&ip).unwrap()
                                                 } else {
                                                     // this IP cannot be sampled
                                                     0.0f64
@@ -622,8 +622,8 @@ impl BayesianModel {
                 }
                 Feature::DstIp(_) => {
                     // we replace the node by a new one
-                    let mut all_dst_ip = config.users.clone();
-                    all_dst_ip.append(&mut config.servers.clone());
+                    let mut all_dst_ip = network.users.clone();
+                    all_dst_ip.append(&mut network.servers.clone());
                     let ip: Vec<AnonymizedIpv4Addr> = all_dst_ip
                         .clone()
                         .into_iter()
@@ -632,8 +632,8 @@ impl BayesianModel {
                         .collect();
                     let mut cpt: Vec<Option<WeightedIndex<f64>>> = vec![];
                     for p in protocols.iter() {
-                        if !config.services.contains(p) {
-                            // this protocol will never be sampled with this config
+                        if !network.services.contains(p) {
+                            // this protocol will never be sampled with this network
                             for _ in dst_ip_roles.iter() {
                                 cpt.push(None);
                             }
@@ -641,7 +641,7 @@ impl BayesianModel {
                             for role in dst_ip_roles.iter() {
                                 match role {
                                     IpRole::User => {
-                                        let proto_users = config.get_users_per_service(p);
+                                        let proto_users = network.get_users_per_service(p);
                                         assert!(!proto_users.is_empty());
                                         let proba = all_dst_ip
                                             .clone()
@@ -649,7 +649,7 @@ impl BayesianModel {
                                             .map(|ip| {
                                                 if proto_users.contains(&ip) {
                                                     // this IP can be sampled
-                                                    *config.usages_map.get(&ip).unwrap()
+                                                    *network.usages_map.get(&ip).unwrap()
                                                 } else {
                                                     // this IP cannot be sampled
                                                     0.0f64
@@ -659,7 +659,7 @@ impl BayesianModel {
                                         cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of DstIp for {p} and {role}")));
                                     }
                                     IpRole::Server => {
-                                        let proto_servers = config.get_servers_per_service(p);
+                                        let proto_servers = network.get_servers_per_service(p);
                                         assert!(!proto_servers.is_empty());
                                         let proba = all_dst_ip
                                             .clone()
@@ -667,7 +667,7 @@ impl BayesianModel {
                                             .map(|ip| {
                                                 if proto_servers.contains(&ip) {
                                                     // this IP can be sampled
-                                                    *config.usages_map.get(&ip).unwrap()
+                                                    *network.usages_map.get(&ip).unwrap()
                                                 } else {
                                                     // this IP cannot be sampled
                                                     0.0f64
@@ -970,7 +970,7 @@ fn bn_from_bif(
 
 impl BNGenerator {
     pub fn new(model: Arc<BayesianModel>, online: bool) -> Self {
-        // TODO: adapter le modèle à la config !
+        // TODO: adapter le modèle à la config du réseau !
         BNGenerator { model, online }
     }
 }

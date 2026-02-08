@@ -3,7 +3,7 @@
 // #![warn(missing_docs)]
 
 /// Network and host configuration
-pub mod config;
+pub mod network;
 /// Generation statistics
 pub mod stats;
 
