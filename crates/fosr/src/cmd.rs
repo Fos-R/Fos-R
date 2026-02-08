@@ -117,7 +117,7 @@ pub enum Command {
         )]
         duration: Option<String>,
         #[arg(
-            short,
+            short = 'e',
             long,
             help = "Method to avoid kernel interactions with the injected traffic"
         )]
@@ -225,7 +225,7 @@ pub enum Command {
         profile: GenerationProfile,
         #[arg(short, long, help = "Path to the network file")]
         network: Option<String>,
-        #[arg(short = 'n', long, help = "Minimum number of packets to generate")]
+        #[arg(long, help = "Minimum number of packets to generate")]
         packets_count: Option<u64>,
         #[arg(
             short = 'd',
