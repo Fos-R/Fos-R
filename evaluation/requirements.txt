@@ -1,6 +1,6 @@
 pandas
 scipy
 scikit-learn
-imbalanced-learn
 isotree
 matplotlib
+vendi-score
