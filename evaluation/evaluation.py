@@ -15,11 +15,11 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.manifold import TSNE
+from sklearn.metrics.pairwise import cosine_similarity
+from scipy.spatial.distance import hamming
 import bleu
 import rouge
-
-def zipngram(words, n):
-    return zip(*[words[i:] for i in range(n)])
+from vendi_score import vendi
 
 pd.options.mode.copy_on_write = True
 
@@ -90,7 +90,6 @@ def evaluate(flow_real, flow_synthetic, pcap_real, pcap_synthetic):
     # JSD for categorical data
     # print(f"Connection state:\n\tReal: {flow_real['conn_state'].value_counts(normalize=True)}\n\tSynthetic: {flow_synthetic['conn_state'].value_counts(normalize=True)}")
 
-
     results["Flow Source IP"] = jsd(flow_real["id.orig_h"],flow_synthetic["id.orig_h"])
     results["Flow Dest. IP"] = jsd(flow_real["id.resp_h"],flow_synthetic["id.resp_h"])
     results["Flow Dest. port"] = jsd(flow_real["id.resp_p"],flow_synthetic["id.resp_p"])
@@ -120,9 +119,24 @@ def evaluate(flow_real, flow_synthetic, pcap_real, pcap_synthetic):
         flow_real_if[feature] = flow_real_if[feature].astype("category") # for IF
         flow_synthetic_if[feature] = flow_synthetic_if[feature].astype("category") # for IF
 
+    discrete_similarity = lambda l1, l2: 1-hamming(l1,l2)
+    # use only 1000 flows chosen randomly
+    discrete_samples_real = flow_real[["id.orig_h", "id.resp_h", "id.resp_p", "proto", "service","history", "conn_state", "ip_proto"]].sample(n=1000, random_state=0).values.tolist()
+    discrete_samples_synthetic = flow_synthetic[["id.orig_h", "id.resp_h", "id.resp_p", "proto", "service","history", "conn_state", "ip_proto"]].sample(n=1000, random_state=0).values.tolist()
+
+    # Vendi describes a dataset and is not a distance.
+    results["Discrete Vendi"] = vendi.score(discrete_samples_synthetic, discrete_similarity) / len(discrete_samples_synthetic) - vendi.score(discrete_samples_real, discrete_similarity) / len(discrete_samples_real)
+
+    continuous_samples_real = flow_real[["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts", "ts"]].sample(n=1000, random_state=0).values.tolist()
+    continuous_samples_synthetic = flow_synthetic[["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts", "ts"]].sample(n=1000, random_state=0).values.tolist()
+
+    # TODO: vérifier
+    results["Continuous Vendi"] = vendi.score_dual(cosine_similarity(continuous_samples_synthetic)) / len(discrete_samples_synthetic) - vendi.score_dual(cosine_similarity(continuous_samples_real)) / len(discrete_samples_real)
+
     results["BLEU"] = bleu.compute_bleu(translation_corpus=[list(pcap_synthetic)], reference_corpus=[[list(pcap_real)]], max_order=4)[0]
     results["ROUGE"] = rouge.rouge_n(evaluated_sentences=list(pcap_synthetic), reference_sentences=list(pcap_eval), n=4)[0]
     results["Bytes JSD"] = jsd(list(pcap_real), list(pcap_synthetic))
+
 
 
 # isotree peut traiter les variables catégoriques : https://github.com/david-cortes/isotree
