@@ -756,17 +756,20 @@ fn run_fast(
         let gen_duration = start.elapsed().as_secs_f64();
 
         let mut total_size = 0;
+        let mut pkt_number = 0;
         log::info!("Pcap export");
         for packet in kmerge(rx) {
             let len = packet.data.len();
             total_size += len;
+            pkt_number += 1;
             pcap_writer
                 .write_packet(&PcapPacket::new(packet.timestamp, len as u32, &packet.data))
                 .unwrap();
         }
         log::info!(
-            "Generation throughput: {}/s",
-            HumanBytes(((total_size as f64) / gen_duration) as u64)
+            "Generation throughput: {}/s, {:.3}/MPPS",
+            HumanBytes(((total_size as f64) / gen_duration) as u64),
+            ((pkt_number as f64) / (1_000_000f64 * gen_duration))
         );
     }
 }
