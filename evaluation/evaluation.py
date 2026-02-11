@@ -84,7 +84,7 @@ def evaluate_ip(flow_real, flow_synthetic):
     results["Pkt Length"] = wasserstein_distance(flow_real["ip.len"],flow_synthetic["ip.len"])
     return results
 
-def evaluate(flow_real, flow_synthetic):
+def evaluate(flow_real, flow_synthetic, pcap_real, pcap_synthetic):
     results = {}
 
     # JSD for categorical data
@@ -119,6 +119,11 @@ def evaluate(flow_real, flow_synthetic):
         flow_synthetic_if[feature] = le.transform(flow_synthetic_if[feature])
         flow_real_if[feature] = flow_real_if[feature].astype("category") # for IF
         flow_synthetic_if[feature] = flow_synthetic_if[feature].astype("category") # for IF
+
+    results["BLEU"] = bleu.compute_bleu(translation_corpus=[list(pcap_synthetic)], reference_corpus=[[list(pcap_real)]], max_order=4)[0]
+    results["ROUGE"] = rouge.rouge_n(evaluated_sentences=list(pcap_synthetic), reference_sentences=list(pcap_eval), n=4)[0]
+    results["Bytes JSD"] = jsd(list(pcap_real), list(pcap_synthetic))
+
 
 # isotree peut traiter les variables catégoriques : https://github.com/david-cortes/isotree
 
@@ -201,9 +206,8 @@ if __name__ == '__main__':
 
     # data.pcap
     try:
-        # evaluate with the first GB
-        max_index = 1_000_000_000
-        max_index = 1_000 # FIXME
+        # evaluate with the first 10 MB (due to scalability issue)
+        max_index = 10_000_000
         with open(os.path.join(args.eval, "data.pcap"), "rb") as file:
             pcap_eval = file.read()[:max_index]
         with open(os.path.join(args.reference, "data.pcap"), "rb") as file:
@@ -213,12 +217,6 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"Cannot process data.pcap!",e)
         exit(1)
-
-    bleu_results = bleu.compute_bleu(translation_corpus=[list(pcap_synthetic)], reference_corpus=[[list(pcap_eval)]])
-    print("BLEU: Synthetic / eval", bleu_results)
-    bleu_results = bleu.compute_bleu(translation_corpus=[list(pcap_ref)], reference_corpus=[[list(pcap_eval)]])
-    print("BLEU: Reference / eval", bleu_results)
-
 
     if False:
         # ip.csv
@@ -286,12 +284,12 @@ if __name__ == '__main__':
 
     if True:
         print("Evaluating synthetic data")
-        results_synthetic = evaluate(flow_eval, flow_synthetic)
+        results_synthetic = evaluate(flow_eval, flow_synthetic, pcap_eval, pcap_synthetic)
         # results_synthetic = results_synthetic | evaluate_ip(flow_eval_ip, flow_synthetic_ip)
         # results_synthetic = results_synthetic | evaluate_tcp(flow_eval_tcp, flow_synthetic_tcp)
 
         print("Evaluating reference data")
-        results_ref = evaluate(flow_eval, flow_ref)
+        results_ref = evaluate(flow_eval, flow_ref, pcap_eval, pcap_ref)
         # results_ref = results_ref | evaluate_ip(flow_eval_ip, flow_ref_ip)
         # results_ref = results_synthetic | evaluate_tcp(flow_eval_tcp, flow_ref_tcp)
 
