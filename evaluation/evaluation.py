@@ -15,6 +15,11 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.manifold import TSNE
+import bleu
+import rouge
+
+def zipngram(words, n):
+    return zip(*[words[i:] for i in range(n)])
 
 pd.options.mode.copy_on_write = True
 
@@ -179,7 +184,7 @@ if __name__ == '__main__':
         elif args.baseline_train:
             flow_synthetic = pd.read_csv(os.path.join(args.baseline_train, "conn.log"), header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
     except Exception as e:
-        print(f"Cannot find conn.log!",e)
+        print(f"Cannot process conn.log!",e)
         exit(1)
 
     # weird.log
@@ -191,8 +196,29 @@ if __name__ == '__main__':
         elif args.baseline_train:
             flow_synthetic_weird = pd.read_csv(os.path.join(args.baseline_train, "weird.log"), header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "name", "addl", "notice", "peer", "source"])
     except Exception as e:
-        print(f"Cannot find weird.log!",e)
+        print(f"Cannot process weird.log!",e)
         exit(1)
+
+    # data.pcap
+    try:
+        # evaluate with the first GB
+        max_index = 1_000_000_000
+        max_index = 1_000 # FIXME
+        with open(os.path.join(args.eval, "data.pcap"), "rb") as file:
+            pcap_eval = file.read()[:max_index]
+        with open(os.path.join(args.reference, "data.pcap"), "rb") as file:
+            pcap_ref = file.read()[:max_index]
+        with open(os.path.join(args.synthetic, "data.pcap"), "rb") as file:
+            pcap_synthetic = file.read()[:max_index]
+    except Exception as e:
+        print(f"Cannot process data.pcap!",e)
+        exit(1)
+
+    bleu_results = bleu.compute_bleu(translation_corpus=[list(pcap_synthetic)], reference_corpus=[[list(pcap_eval)]])
+    print("BLEU: Synthetic / eval", bleu_results)
+    bleu_results = bleu.compute_bleu(translation_corpus=[list(pcap_ref)], reference_corpus=[[list(pcap_eval)]])
+    print("BLEU: Reference / eval", bleu_results)
+
 
     if False:
         # ip.csv
