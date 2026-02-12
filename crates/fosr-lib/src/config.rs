@@ -177,9 +177,9 @@ pub struct Metadata {
     pub format: Option<u64>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
 #[serde(rename_all = "lowercase")]
-enum HostType {
+pub enum HostType {
     Server,
     User,
 }
@@ -198,7 +198,8 @@ pub struct Host {
     client: Option<Vec<L7Proto>>, // we keep the option here, because there is a difference
     // between an empty list (no service is used) and nothing
     // (default services are used)
-    host_type: HostType,
+    /// The type of host (server or user)
+    pub host_type: HostType,
     /// Its interfaces
     pub interfaces: Vec<Interface>,
 }

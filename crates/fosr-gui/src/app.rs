@@ -29,9 +29,13 @@ impl Default for CurrentTab {
     }
 }
 
+pub const DEFAULT_ZOOM: f32 = 1.4;
+
 #[derive(Default)]
 pub struct FosrApp {
     current_tab: CurrentTab,
+    zoom_initialized: bool,
+    images_preloaded: bool,
     configuration_file_state: ConfigurationFileState,
     configuration_tab_state: ConfigurationTabState,
     visualization_tab_state: VisualizationTabState,
@@ -40,9 +44,24 @@ pub struct FosrApp {
 
 impl eframe::App for FosrApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Set default zoom once
+        if !self.zoom_initialized {
+            ctx.options_mut(|option| option.zoom_factor = DEFAULT_ZOOM);
+            self.zoom_initialized = true;
+        }
+
         // Set the image loaders
         // Required for egui to display images
         egui_extras::install_image_loaders(ctx);
+
+        // Preload all images to avoid spinners/fallbacks on first visit
+        if !self.images_preloaded {
+            let _ = egui::include_image!("../assets/server.png").load(ctx, Default::default(), Default::default());
+            let _ = egui::include_image!("../assets/computer.png").load(ctx, Default::default(), Default::default());
+            let _ = egui::include_image!("../assets/internet.png").load(ctx, Default::default(), Default::default());
+            let _ = egui::include_image!("../../../public/logo.png").load(ctx, Default::default(), Default::default());
+            self.images_preloaded = true;
+        }
 
         // The Top Panel is logically at the top of the window.
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -97,33 +116,40 @@ impl eframe::App for FosrApp {
 
         // The Central Panel is the region left after adding the Top, Bottom and Side panels.
         egui::CentralPanel::default().show(ctx, |ui| {
-            // Display the tab content depending on the currently select tab
-            match self.current_tab {
-                CurrentTab::Generation => {
-                    show_generation_tab_content(
-                        ui,
-                        &mut self.generation_tab_state,
-                        &mut self.configuration_file_state,
-                    );
+            // Wrap in ScrollArea for vertical scrolling
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                // Display the tab content depending on the currently select tab
+                match self.current_tab {
+                    CurrentTab::Generation => {
+                        show_generation_tab_content(
+                            ui,
+                            &mut self.generation_tab_state,
+                            &mut self.configuration_file_state,
+                        );
+                    }
+                    CurrentTab::Configuration => {
+                        show_configuration_tab_content(
+                            ui,
+                            &mut self.configuration_tab_state,
+                            &mut self.configuration_file_state,
+                        );
+                    }
+                    CurrentTab::Visualization => {
+                        show_visualization_tab_content(
+                            ui,
+                            &mut self.visualization_tab_state,
+                            &mut self.configuration_file_state,
+                        );
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    CurrentTab::Injection => {
+                        show_injection_tab_content(ui);
+                    }
+                    CurrentTab::About => {
+                        show_about_tab_content(ui);
+                    }
                 }
-                CurrentTab::Configuration => {
-                    show_configuration_tab_content(
-                        ui,
-                        &mut self.configuration_tab_state,
-                        &mut self.configuration_file_state,
-                    );
-                }
-                CurrentTab::Visualization => {
-                    show_visualization_tab_content(ui, &mut self.visualization_tab_state);
-                }
-                #[cfg(not(target_arch = "wasm32"))]
-                CurrentTab::Injection => {
-                    show_injection_tab_content(ui);
-                }
-                CurrentTab::About => {
-                    show_about_tab_content(ui);
-                }
-            }
+            });
         });
     }
 }

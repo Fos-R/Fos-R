@@ -3,9 +3,7 @@ use super::generation_validation::FieldValidation;
 use chrono_tz::TZ_VARIANTS;
 use eframe::{egui, egui::PopupCloseBehavior};
 
-/**
- * Display the error in red
- */
+/// Display the error in red
 pub fn show_field_error(ui: &mut egui::Ui, validation: &FieldValidation) {
     if let Some(msg) = &validation.error {
         ui.add_space(6.0);

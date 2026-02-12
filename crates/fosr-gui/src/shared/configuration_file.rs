@@ -38,6 +38,13 @@ pub fn configuration_file_picker(
 
         // File Dialog to pick a config file
         if ui.button("Select file").clicked() {
+            // Clear previous config content when selecting a new file
+            configuration_file_state.config_file_content = None;
+            #[cfg(target_arch = "wasm32")]
+            {
+                configuration_file_state.config_file_content_receiver = None;
+            }
+
             #[cfg(not(target_arch = "wasm32"))]
             {
                 // Only update if a file was actually selected
@@ -84,6 +91,7 @@ pub fn configuration_file_picker(
 
         if configuration_file_state.picked_config_file.is_some() && ui.button("Remove").clicked() {
             configuration_file_state.picked_config_file = None;
+            configuration_file_state.config_file_content = None;
         };
 
         // On desktop: filename with its full path on hover, on WASM: just the filename
