@@ -121,17 +121,20 @@ def evaluate(flow_real, flow_synthetic, pcap_real, pcap_synthetic):
 
     discrete_similarity = lambda l1, l2: 1-hamming(l1,l2)
     # use only 1000 flows chosen randomly
-    discrete_samples_real = flow_real[["id.orig_h", "id.resp_h", "id.resp_p", "proto", "service","history", "conn_state", "ip_proto"]].sample(n=1000, random_state=0).values.tolist()
+    # discrete_samples_real = flow_real[["id.orig_h", "id.resp_h", "id.resp_p", "proto", "service","history", "conn_state", "ip_proto"]].sample(n=1000, random_state=0).values.tolist()
     discrete_samples_synthetic = flow_synthetic[["id.orig_h", "id.resp_h", "id.resp_p", "proto", "service","history", "conn_state", "ip_proto"]].sample(n=1000, random_state=0).values.tolist()
 
     # Vendi describes a dataset and is not a distance.
-    results["Discrete Vendi"] = vendi.score(discrete_samples_synthetic, discrete_similarity) / len(discrete_samples_synthetic) - vendi.score(discrete_samples_real, discrete_similarity) / len(discrete_samples_real)
+    results["Discrete Vendi"] = vendi.score(discrete_samples_synthetic, discrete_similarity) / len(discrete_samples_synthetic) #- vendi.score(discrete_samples_real, discrete_similarity) / len(discrete_samples_real)
 
-    continuous_samples_real = flow_real[["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts", "ts"]].sample(n=1000, random_state=0).values.tolist()
-    continuous_samples_synthetic = flow_synthetic[["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts", "ts"]].sample(n=1000, random_state=0).values.tolist()
+    # continuous_samples_real = flow_real[["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts", "ts"]].sample(n=1000, random_state=0).values.tolist()
+    continuous_samples_synthetic = flow_synthetic[["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts"]].sample(n=1000, random_state=0)
+    # normalize
+    for column in continuous_samples_synthetic.columns:
+        continuous_samples_synthetic[column] = (continuous_samples_synthetic[column] - continuous_samples_synthetic[column].mean()) / continuous_samples_synthetic[column].std()
+    continuous_samples_synthetic = continuous_samples_synthetic.values.tolist()
 
-    # TODO: vérifier
-    results["Continuous Vendi"] = vendi.score_dual(cosine_similarity(continuous_samples_synthetic)) / len(discrete_samples_synthetic) - vendi.score_dual(cosine_similarity(continuous_samples_real)) / len(discrete_samples_real)
+    results["Continuous Vendi"] = vendi.score_K(cosine_similarity(continuous_samples_synthetic)) / len(discrete_samples_synthetic) #- vendi.score_dual(cosine_similarity(continuous_samples_real)) / len(discrete_samples_real)
 
     results["BLEU"] = bleu.compute_bleu(translation_corpus=[list(pcap_synthetic)], reference_corpus=[[list(pcap_real)]], max_order=4)[0]
     results["ROUGE"] = rouge.rouge_n(evaluated_sentences=list(pcap_synthetic), reference_sentences=list(pcap_eval), n=4)[0]
@@ -185,7 +188,7 @@ def evaluate(flow_real, flow_synthetic, pcap_real, pcap_synthetic):
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='Learn a time profile for Fos-R.')
+    parser = argparse.ArgumentParser(description='Evaluate the generated data.')
     parser.add_argument('--eval', required=True, help="Select the folder with Zeek logs of evaluation data.")
     parser.add_argument('--reference', required=True, help="Select the folder with Zeek logs of reference data.")
     parser.add_argument('--synthetic', help="Select the folder with Zeek logs of synthetic data.")
