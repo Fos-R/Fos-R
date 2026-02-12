@@ -79,6 +79,9 @@ pub fn show_configuration_tab_content(
     _tab_state: &mut ConfigurationTabState,
     file_state: &mut ConfigurationFileState,
 ) {
+    // Eagerly load config file contents when a file is selected
+    load_config_file_contents(file_state);
+
     egui::ScrollArea::vertical().show(ui, |ui| {
         // File Selection
         configuration_file_picker(ui, file_state);
@@ -92,17 +95,17 @@ pub fn show_configuration_tab_content(
             ui.separator();
             ui_hosts_section(ui, model);
             ui.separator();
+        }
 
-            // YAML Preview Button
-            if ui.button("Export YAML (preview)").clicked() {
-                match serde_yaml::to_string(&*model) {
-                    Ok(yaml) => {
-                        file_state.config_file_content = Some(yaml);
-                        file_state.parse_error = None;
-                    }
-                    Err(e) => {
-                        file_state.parse_error = Some(e.to_string());
-                    }
+        // Auto-sync model edits back to YAML so other tabs see the changes
+        if let Some(model) = &file_state.config_model {
+            match serde_yaml::to_string(model) {
+                Ok(yaml) => {
+                    file_state.config_file_content = Some(yaml);
+                    file_state.parse_error = None;
+                }
+                Err(e) => {
+                    file_state.parse_error = Some(e.to_string());
                 }
             }
         }
