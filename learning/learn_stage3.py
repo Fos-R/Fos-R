@@ -357,7 +357,9 @@ if __name__ == '__main__':
         sum_proba = sum([pow(2, v) for v in distrib.values()])
         distrib_output = {}
         for k,v in distrib.items():
-            distrib_output[k] = pow(2, v)/sum_proba
+            p = pow(2, v)/sum_proba
+            if p >= 1e-5:
+                distrib_output[k] = p
 
         if conn_state is None:
             output_name = os.path.join(args.output, service+"-language.json")
