@@ -7,11 +7,13 @@ use super::generation_validation::{
     FieldValidation, first_invalid_param, validate_duration, validate_optional_u64,
     validate_timezone,
 };
-use crate::shared::configuration_file::{ConfigurationFileState, configuration_file_picker};
+use crate::shared::configuration_file::{
+    ConfigurationFileState, configuration_file_picker, load_config_file_contents,
+};
 #[cfg(not(target_arch = "wasm32"))]
-use crate::shared::file_io::{read_file_desktop, save_file_desktop};
+use crate::shared::file_io::save_file_desktop;
 #[cfg(target_arch = "wasm32")]
-use crate::shared::file_io::{read_file_wasm, save_file_wasm};
+use crate::shared::file_io::save_file_wasm;
 use chrono::{NaiveDate, NaiveTime};
 use chrono_tz::Tz;
 use eframe::egui;
@@ -123,6 +125,9 @@ pub fn show_generation_tab_content(
     state: &mut GenerationTabState,
     configuration_file_state: &mut ConfigurationFileState,
 ) {
+    // Eagerly load config file contents when a file is selected
+    load_config_file_contents(configuration_file_state);
+
     configuration_file_picker(ui, configuration_file_state);
 
     ui.separator();
@@ -321,20 +326,17 @@ pub fn show_generation_tab_content(
                         Some(state.timezone_input.clone())
                     };
                     let ctx = ui.ctx().clone();
-                    let file_handle = configuration_file_state.picked_config_file.clone();
                     let cancelled = state.cancelled.clone();
+                    // Prefer in-memory config content (reflects edits from Configuration tab)
+                    // over re-reading the file from disk
+                    let config_content = configuration_file_state.config_file_content.clone();
 
                     #[cfg(target_arch = "wasm32")]
                     {
                         wasm_bindgen_futures::spawn_local(async move {
-                            let profile = if let Some(file) = file_handle.as_ref() {
-                                Some(read_file_wasm(file).await)
-                            } else {
-                                None
-                            };
                             generate(
                                 seed,
-                                profile,
+                                config_content,
                                 order_pcap,
                                 start_time,
                                 duration,
@@ -352,10 +354,9 @@ pub fn show_generation_tab_content(
                     #[cfg(not(target_arch = "wasm32"))]
                     {
                         std::thread::spawn(move || {
-                            let profile = file_handle.as_ref().map(|file| read_file_desktop(file));
                             generate(
                                 seed,
-                                profile,
+                                config_content,
                                 order_pcap,
                                 start_time,
                                 duration,
