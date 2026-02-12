@@ -353,6 +353,20 @@ if __name__ == '__main__':
         ta = l.ta
         print("Automaton successfully learned")
 
+        distrib = l.ta._generate_exhaustively(10)
+        sum_proba = sum([pow(2, v) for v in distrib.values()])
+        distrib_output = {}
+        for k,v in distrib.items():
+            distrib_output[k] = pow(2, v)/sum_proba
+
+        if conn_state is None:
+            output_name = os.path.join(args.output, service+"-language.json")
+        else:
+            output_name = os.path.join(args.output, service+"-"+conn_state+"-language.json")
+
+        out_file = open(output_name, "w")
+        json.dump(distrib_output, out_file, indent=1)
+
         try:
             if conn_state is None:
                 output_name_dot = os.path.join(args.output, service+".dot")
