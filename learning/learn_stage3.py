@@ -82,6 +82,11 @@ def add_payload_type(payload_type, row):
                     nb_binary += 1
     # print("Type inference. binary:",nb_replay,"Random:",nb_random,"Text:",nb_text)
     return " ".join(headers)
+# remove ill-formed connection, notably TCP streams not starting with SYN
+def keep_connection(row):
+    if 'flags' in row and row['flags'].split(",")[0] != "S":
+        return False
+    return True
 
 def parse_TCP(input_string):
     """
@@ -306,6 +311,9 @@ if __name__ == '__main__':
         all_df = df
 
         assert len(df) > 0 # by construction
+
+        df["keep"] = df.apply(keep_connection, axis=1)
+        df = df[df["keep"]]
 
         if args.subsample and len(df) > args.subsample:
             df = df.sample(n=args.subsample, random_state=0)

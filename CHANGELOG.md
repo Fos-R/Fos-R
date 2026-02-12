@@ -18,14 +18,11 @@
 - Added `--default-models` and `--custom-models` options
 - Two generation profiles: fast or efficient
 
-#### fosr-gui
-
-- Added a GUI to Fos-R
-- Published an WASM-based online version
-
 #### other
 
+- Evaluation pipeline
 - Added a Zeek script for feature extraction
+- TADAM: noise includes substitution
 - Reworked learning algorithms
 
 ### Changed
