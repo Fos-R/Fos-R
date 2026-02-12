@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 from math import floor, log2, pow
 
 def jsd_automata(distrib1, distrib2):
@@ -24,13 +25,18 @@ def jaccard(distrib1, distrib2):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Compute the distances between learned automata.')
-    parser.add_argument('--input', nargs=2, required=True, help="Select the language files.")
+    parser.add_argument('--input', nargs=2, required=True, help="Select the automata directories.")
     args = parser.parse_args()
 
-    with open(args.input[0]) as f:
-        d1 = json.load(f)
-    with open(args.input[1]) as f:
-        d2 = json.load(f)
+    dir_list1 = os.listdir(args.input[0])
+    dir_list2 = os.listdir(args.input[1])
+    files = set([os.path.split(p)[1] for p in dir_list1 if p.endswith("-language.json")]).intersection([os.path.split(p)[1] for p in dir_list2 if p.endswith("-language.json")])
 
-    print("JSD:",jsd_automata(d1,d2))
-    print("Jaccard:",jaccard(d1,d2))
+    for file in files:
+        with open(os.path.join(args.input[0], file)) as f:
+            d1 = json.load(f)
+        with open(os.path.join(args.input[1], file)) as f:
+            d2 = json.load(f)
+        print(f"{file}")
+        print(f"  JSD: {jsd_automata(d1,d2)}")
+        print(f"  Jaccard {file}: {jaccard(d1,d2)}")
