@@ -168,11 +168,7 @@ pub enum Command {
         custom_models: Option<String>,
         #[arg(short, long, help = "Path to the network file")]
         network: String,
-        #[arg(
-            short,
-            long,
-            help = "Seed for random number generation"
-        )]
+        #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,
         #[arg(
             short,

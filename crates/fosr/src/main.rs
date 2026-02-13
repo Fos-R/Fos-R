@@ -59,7 +59,7 @@ fn main() {
     match args.command {
         #[cfg(feature = "net_injection")]
         cmd::Command::InjectWithin {
-             #[cfg(all(target_os = "linux", feature = "iptables"))]
+            #[cfg(all(target_os = "linux", feature = "iptables"))]
             stealthy,
             seed,
             network,
@@ -81,13 +81,26 @@ fn main() {
                 default_models.unwrap().get_source() // we are sure it contains something
             };
             let duration = duration
-            .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed."));
+                .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed."));
             #[cfg(not(all(target_os = "linux", feature = "iptables")))]
             let stealthy = false;
-            net_injection(stealthy, seed, network, outfile, no_order_pcap, flow_per_day, net_enabler, duration, jobs, deterministic, injection_algo, source);
-        },
+            net_injection(
+                stealthy,
+                seed,
+                network,
+                outfile,
+                no_order_pcap,
+                flow_per_day,
+                net_enabler,
+                duration,
+                jobs,
+                deterministic,
+                injection_algo,
+                source,
+            );
+        }
         #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
-        cmd::Command::InjectAcross { 
+        cmd::Command::InjectAcross {
             seed,
             network,
             outfile,
@@ -105,9 +118,22 @@ fn main() {
                 default_models.unwrap().get_source() // we are sure it contains something
             };
             let duration = duration
-            .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed."));
-            net_injection(false, seed, network, outfile, no_order_pcap, flow_per_day, cmd::NetEnabler::Ebpf, duration, jobs, true, cmd::InjectionAlgo::Fast, source);
-        },
+                .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed."));
+            net_injection(
+                false,
+                seed,
+                network,
+                outfile,
+                no_order_pcap,
+                flow_per_day,
+                cmd::NetEnabler::Ebpf,
+                duration,
+                jobs,
+                true,
+                cmd::InjectionAlgo::Fast,
+                source,
+            );
+        }
         cmd::Command::CreatePcap {
             seed,
             outfile,
@@ -277,7 +303,7 @@ fn net_injection(
     deterministic: bool,
     injection_algo: cmd::InjectionAlgo,
     source: models::ModelsSource,
-    ) {
+) {
     // Extract all IPv4 local interfaces (except loopback)
     let extract_addr = |iface: datalink::NetworkInterface| {
         iface
@@ -304,7 +330,7 @@ fn net_injection(
         .collect();
     log::debug!("IPv4 interfaces: {:?}", &local_ips);
 
-    let model = models::Models::from_source(source).unwrap();//.with_network(&network).unwrap(); // FIXME
+    let model = models::Models::from_source(source).unwrap(); //.with_network(&network).unwrap(); // FIXME
     let automata_library = Arc::new(model.automata);
     let bn = Arc::new(model.bn);
 
@@ -341,7 +367,10 @@ fn net_injection(
         #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
         cmd::NetEnabler::Ebpf => {
             let s4net = InjectParam {
-                net_enabler: inject::ebpf::EBPFNetEnabler::new(matches!(injection_algo, cmd::InjectionAlgo::Fast), &local_interfaces),
+                net_enabler: inject::ebpf::EBPFNetEnabler::new(
+                    matches!(injection_algo, cmd::InjectionAlgo::Fast),
+                    &local_interfaces,
+                ),
                 injection_algo,
             };
             run_efficient(
@@ -379,7 +408,6 @@ fn net_injection(
             );
         }
     };
-
 }
 
 struct ExportParams {
@@ -417,8 +445,7 @@ fn run_efficient<T: inject::NetEnabler>(
     s3: (impl stage3::Stage3, usize),
     s4: (stage4::Stage4, usize),
     stats: Arc<stats::Stats>,
-    #[allow(unused)]
-    s5net: Option<InjectParam<T>>,
+    #[allow(unused)] s5net: Option<InjectParam<T>>,
 ) {
     let (s2, s2_count) = s2;
     let (s3, s3_count) = s3;
