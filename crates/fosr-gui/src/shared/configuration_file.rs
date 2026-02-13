@@ -1,8 +1,8 @@
 use crate::shared::config_model::Configuration;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::shared::file_io::{read_file_desktop, show_file_picker_desktop};
+use crate::shared::file_io::{read_file_desktop, save_file_desktop, show_file_picker_desktop};
 #[cfg(target_arch = "wasm32")]
-use crate::shared::file_io::{read_file_wasm, show_file_picker_wasm};
+use crate::shared::file_io::{read_file_wasm, save_file_wasm, show_file_picker_wasm};
 use eframe::egui;
 use rfd::FileHandle;
 #[cfg(target_arch = "wasm32")]
@@ -100,6 +100,40 @@ pub fn configuration_file_picker(
             configuration_file_state.picked_config_file = None;
             reset_loaded_config(configuration_file_state);
         };
+
+        // Save as button (only when config content is available)
+        if configuration_file_state.config_file_content.is_some() {
+            if ui.button("Save as").clicked() {
+                let content = configuration_file_state.config_file_content.clone().unwrap();
+                let default_name = configuration_file_state
+                    .picked_config_file
+                    .as_ref()
+                    .map(|f| f.file_name())
+                    .unwrap_or_else(|| "config.yaml".to_string());
+
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    match save_file_desktop(content.as_bytes(), &default_name) {
+                        Ok(handle) => {
+                            log::info!("Config saved to {}", handle.path().display());
+                        }
+                        Err(e) => {
+                            log::error!("Failed to save config: {}", e);
+                        }
+                    }
+                }
+
+                #[cfg(target_arch = "wasm32")]
+                {
+                    wasm_bindgen_futures::spawn_local(async move {
+                        match save_file_wasm(content.as_bytes(), &default_name).await {
+                            Ok(_) => log::info!("Config saved"),
+                            Err(e) => log::error!("Failed to save config: {}", e),
+                        }
+                    });
+                }
+            }
+        }
 
         // On desktop: filename with its full path on hover, on WASM: just the filename
         #[cfg(not(target_arch = "wasm32"))]
