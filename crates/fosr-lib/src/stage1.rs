@@ -236,7 +236,9 @@ impl BinBasedGenerator {
         }
 
         self.current_distrib = get_poisson(&self.lambdas, self.dest_tz_offset, self.next_ts);
-        self.remaining_flows = self.current_distrib.map_or(0, |s| s.sample(&mut self.flow_rng.clone()) as u64);
+        self.remaining_flows = self
+            .current_distrib
+            .map_or(0, |s| s.sample(&mut self.flow_rng.clone()) as u64);
         self.time_distrib = Uniform::new(
             self.next_ts.as_millis() as u64,
             self.next_ts.as_millis() as u64 + 1000 * WINDOW_WIDTH_IN_SECS,

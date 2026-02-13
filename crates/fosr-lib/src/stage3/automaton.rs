@@ -69,16 +69,15 @@ impl EdgeDistribution {
 
 #[derive(Debug, Copy, Clone)]
 pub(crate) enum IatPrecision {
-    MILLI,
-    MICRO,
+    Milli,
+    Micro,
 }
 
 impl IatPrecision {
-
     fn iat_to_duration(&self, iat: f32) -> Duration {
         match self {
-            IatPrecision::MILLI => Duration::from_nanos((iat * 1e6) as u64),
-            IatPrecision::MICRO => Duration::from_nanos((iat * 1e3) as u64),
+            IatPrecision::Milli => Duration::from_nanos((iat * 1e6) as u64),
+            IatPrecision::Micro => Duration::from_nanos((iat * 1e3) as u64),
         }
     }
 }
@@ -213,7 +212,6 @@ pub trait Automaton<T: EdgeType> {
 }
 
 impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
-
     fn iat_to_duration(&self, iat: f32) -> Duration {
         self.precision.iat_to_duration(iat)
     }
@@ -250,7 +248,6 @@ impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
 }
 
 impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
-
     fn iat_to_duration(&self, iat: f32) -> Duration {
         self.precision.iat_to_duration(iat)
     }

@@ -149,7 +149,6 @@ impl ModelsSource {
                             1
                         ))
                         .unwrap(),
-
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/automata/ntp.json",
                             1
@@ -285,7 +284,6 @@ impl ModelsSource {
                             22
                         ))
                         .unwrap(),
-
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/automata/ntp.json",
                             22
@@ -560,7 +558,6 @@ impl ModelsSource {
                         ))
                         .unwrap(),
                     ]
-
                 },
             ),
             ModelsSource::UserDefined(path) => {

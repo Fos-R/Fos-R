@@ -29,7 +29,6 @@ impl AutomataLibrary {
             // cons_tcp_automata: HashMap::new(),
             // cons_udp_automata: HashMap::new(),
             // cons_icmp_automata: HashMap::new(),
-
             tcp_automata: HashMap::new(),
             udp_automata: HashMap::new(),
             icmp_automata: HashMap::new(),
@@ -65,19 +64,19 @@ impl AutomataLibrary {
             L4Proto::TCP => {
                 let a = automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(
                     a,
-                    automaton::IatPrecision::MILLI,
+                    automaton::IatPrecision::Milli,
                     parse_tcp_symbol,
                 )?;
                 log::debug!("Import TCP {a}");
                 self.tcp_automata
                     .insert((l7proto, conn_state.unwrap()), a.clone());
                 // self.cons_tcp_automata
-                    // .insert((l7proto, conn_state.unwrap()), a.into());
+                // .insert((l7proto, conn_state.unwrap()), a.into());
             }
             L4Proto::UDP => {
                 let a = automaton::TimedAutomaton::<UDPEdgeTuple>::import_timed_automaton(
                     a,
-                    automaton::IatPrecision::MICRO,
+                    automaton::IatPrecision::Micro,
                     parse_udp_symbol,
                 )?;
                 log::debug!("Import UDP {a}");
@@ -87,7 +86,7 @@ impl AutomataLibrary {
             L4Proto::ICMP => {
                 let a = automaton::TimedAutomaton::<ICMPEdgeTuple>::import_timed_automaton(
                     a,
-                    automaton::IatPrecision::MICRO,
+                    automaton::IatPrecision::Micro,
                     parse_icmp_symbol,
                 )?;
                 log::debug!("Import ICMP {a}");
