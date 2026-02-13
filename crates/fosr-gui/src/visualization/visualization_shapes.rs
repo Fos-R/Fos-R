@@ -11,6 +11,10 @@ const IMG_SERVER: egui::ImageSource = egui::include_image!("../../assets/server.
 const IMG_COMPUTER: egui::ImageSource = egui::include_image!("../../assets/computer.png");
 const IMG_INTERNET: egui::ImageSource = egui::include_image!("../../assets/internet.png");
 
+// Icon tint: gray instead of pure black/white
+pub const ICON_TINT_DARK: Color32 = Color32::from_rgb(180, 180, 180);
+pub const ICON_TINT_LIGHT: Color32 = Color32::from_rgb(40, 40, 40);
+
 // Color constants for edge states
 pub const COLOR_INACTIVE: Color32 = Color32::from_rgb(200, 200, 200); // Light gray
 pub const COLOR_HTTP: Color32 = Color32::from_rgb(52, 152, 219); // Blue
@@ -109,7 +113,12 @@ for NetworkNodeShape
             image_source.load(ctx.ctx, TextureOptions::default(), SizeHint::default())
         {
             let uv = Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
-            shapes.push(Shape::image(texture.id, rect, uv, Color32::WHITE));
+            let tint = if ctx.ctx.style().visuals.dark_mode {
+                ICON_TINT_DARK
+            } else {
+                ICON_TINT_LIGHT
+            };
+            shapes.push(Shape::image(texture.id, rect, uv, tint));
         }
 
         // Draw text label
