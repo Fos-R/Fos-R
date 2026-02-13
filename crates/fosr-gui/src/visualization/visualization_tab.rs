@@ -198,6 +198,8 @@ pub struct VisualizationTabState {
     auto_start_countdown: Option<u8>,
     /// Total number of flows processed since visualization started
     total_flows: u32,
+    /// Flag to request a zoom/pan reset on the next frame
+    pub reset_view_requested: bool,
 }
 
 impl Default for VisualizationTabState {
@@ -322,6 +324,7 @@ impl VisualizationTabState {
             node_info_modal_open: false,
             auto_start_countdown: Some(10),
             total_flows: 0,
+            reset_view_requested: false,
         }
     }
 
@@ -805,6 +808,10 @@ fn render_control_panel(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
                         state.stop_visualization();
                     }
                 }
+
+                if ui.button("Reset view").clicked() {
+                    state.reset_view_requested = true;
+                }
             });
 
             ui.separator();
@@ -975,6 +982,13 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
             .with_node_clicking_enabled(true)
             .with_dragging_enabled(true);
 
+        // When reset is requested, enable fit-to-screen for one frame
+        // so egui_graphs recalculates the proper zoom/pan to center the graph
+        let fit_to_screen = state.reset_view_requested;
+        if state.reset_view_requested {
+            state.reset_view_requested = false;
+        }
+
         let mut graph_view = egui_graphs::GraphView::<
             NodeData,
             EdgeData,
@@ -987,7 +1001,11 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
         >::new(&mut state.graph)
             .with_interactions(&interactions)
             .with_event_sink(&state.events_buffer)
-            .with_styles(&egui_graphs::SettingsStyle::new().with_labels_always(true));
+            .with_styles(&egui_graphs::SettingsStyle::new().with_labels_always(true))
+            .with_navigations(&egui_graphs::SettingsNavigation::new()
+                .with_fit_to_screen_enabled(fit_to_screen)
+                .with_zoom_and_pan_enabled(true)
+            );
 
         // Disable force-directed layout to preserve circle layout
         // TODO: handle this properly instead of just deactivating the auto-layout
