@@ -118,6 +118,11 @@ pub fn configuration_file_picker(
 }
 
 pub fn load_config_file_contents(configuration_file_state: &mut ConfigurationFileState) {
+    // Already loaded — don't re-read from disk every frame
+    if configuration_file_state.config_file_content.is_some() {
+        return;
+    }
+
     if let Some(file_handle) = &configuration_file_state.picked_config_file {
         #[cfg(not(target_arch = "wasm32"))]
         {
