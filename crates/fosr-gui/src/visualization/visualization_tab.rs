@@ -4,6 +4,7 @@ use super::visualization_shapes::{
 };
 use super::visualization_stream::{FlowEvent, FlowStreamer};
 use super::visualization_utils::distribute_nodes_circle;
+use crate::shared::config_model::Host;
 use crate::shared::configuration_file::ConfigurationFileState;
 use eframe::egui;
 use egui_graphs::{
@@ -191,6 +192,8 @@ pub struct VisualizationTabState {
     pub clicked_node: Option<petgraph::graph::NodeIndex>,
     /// Node info modal open state
     pub node_info_modal_open: bool,
+    /// Map from graph NodeIndex to config_model.hosts index
+    node_to_host: HashMap<petgraph::graph::NodeIndex, usize>,
     /// Frames to wait before auto-starting.
     /// Using a countdown instead of a boolean allows to render the UI before starting the visualization.
     /// This avoids lag when clicking on the Visualization tab.
@@ -202,6 +205,8 @@ pub struct VisualizationTabState {
     pub reset_view_requested: bool,
     /// Previous screen size (to reset view on window resize)
     last_screen_size: Option<egui::Vec2>,
+    /// Edit buffer for the node info modal (cloned from config on open, applied on Save)
+    modal_edit_buffer: Option<Host>,
 }
 
 impl Default for VisualizationTabState {
@@ -324,20 +329,23 @@ impl VisualizationTabState {
             events_buffer: Rc::new(RefCell::new(Vec::new())),
             clicked_node: None,
             node_info_modal_open: false,
+            node_to_host: HashMap::new(),
             auto_start_countdown: Some(10),
             total_flows: 0,
             reset_view_requested: false,
             last_screen_size: None,
+            modal_edit_buffer: None,
         }
     }
 
     /// Update state from a configuration (preserves some state)
     /// Note: caller should stop visualization before calling this if running
     pub fn update_from_config(&mut self, config: &config::Configuration) {
-        let (graph, known_ips, ip_to_node) = Self::build_graph_from_config(config);
+        let (graph, known_ips, ip_to_node, node_to_host) = Self::build_graph_from_config(config);
         self.graph = graph;
         self.known_ips = known_ips;
         self.ip_to_node = ip_to_node;
+        self.node_to_host = node_to_host;
         self.layout_initialized = false;
     }
 
@@ -348,13 +356,15 @@ impl VisualizationTabState {
         VisualizationGraph,
         HashSet<Ipv4Addr>,
         HashMap<Ipv4Addr, petgraph::graph::NodeIndex>,
+        HashMap<petgraph::graph::NodeIndex, usize>,
     ) {
         let mut graph = VisualizationGraph::new(petgraph::stable_graph::StableGraph::default());
         let mut known_ips = HashSet::new();
         let mut ip_to_node: HashMap<Ipv4Addr, petgraph::graph::NodeIndex> = HashMap::new();
+        let mut node_to_host: HashMap<petgraph::graph::NodeIndex, usize> = HashMap::new();
 
         // Add one node per host (with all its IPs)
-        for host in &config.hosts {
+        for (host_idx, host) in config.hosts.iter().enumerate() {
             let all_ips: Vec<Ipv4Addr> = host.interfaces.iter().map(|i| i.ip_addr).collect();
 
             let node_data = NodeData {
@@ -366,6 +376,7 @@ impl VisualizationTabState {
                 max_flow_count: 0,
             };
             let idx = graph.add_node_with_location(node_data, egui::pos2(0.0, 0.0));
+            node_to_host.insert(idx, host_idx);
 
             // Map all IPs of this host to the same node
             for ip in all_ips {
@@ -401,7 +412,7 @@ impl VisualizationTabState {
             }
         }
 
-        (graph, known_ips, ip_to_node)
+        (graph, known_ips, ip_to_node, node_to_host)
     }
 
     /// Check if an IP is a known (configured) IP
@@ -522,8 +533,8 @@ pub fn show_visualization_tab_content(
     render_graph_view(ui, state);
 
     // Process node click events and render info modal
-    process_graph_events(state);
-    render_node_info_modal(ui.ctx(), state);
+    process_graph_events(state, configuration_file_state);
+    render_node_info_modal(ui.ctx(), state, configuration_file_state);
 }
 
 /// Handle configuration file changes
@@ -542,6 +553,7 @@ fn handle_config_changes(
         }
         state.config_content = None;
         *state = VisualizationTabState::default();
+        state.reset_view_requested = true;
         return;
     }
 
@@ -872,7 +884,10 @@ fn render_control_panel(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
 }
 
 /// Process graph click events from the event buffer
-fn process_graph_events(state: &mut VisualizationTabState) {
+fn process_graph_events(
+    state: &mut VisualizationTabState,
+    configuration_file_state: &ConfigurationFileState,
+) {
     let events: Vec<Event> = state.events_buffer.borrow_mut().drain(..).collect();
 
     for event in events {
@@ -880,12 +895,25 @@ fn process_graph_events(state: &mut VisualizationTabState) {
             let node_idx = petgraph::graph::NodeIndex::new(id);
             state.clicked_node = Some(node_idx);
             state.node_info_modal_open = true;
+
+            // Clone the host into the edit buffer
+            let host_idx = state.node_to_host.get(&node_idx).copied();
+            state.modal_edit_buffer = host_idx.and_then(|idx| {
+                configuration_file_state
+                    .config_model
+                    .as_ref()
+                    .and_then(|c| c.hosts.get(idx).cloned())
+            });
         }
     }
 }
 
 /// Render the node information modal for the clicked node
-fn render_node_info_modal(ctx: &egui::Context, state: &mut VisualizationTabState) {
+fn render_node_info_modal(
+    ctx: &egui::Context,
+    state: &mut VisualizationTabState,
+    config_file_state: &mut ConfigurationFileState,
+) {
     if !state.node_info_modal_open {
         return;
     }
@@ -901,10 +929,17 @@ fn render_node_info_modal(ctx: &egui::Context, state: &mut VisualizationTabState
     };
 
     let node_data = node.payload().clone();
+    let host_idx = state.node_to_host.get(&node_idx).copied();
+    let has_edit_buffer = state.modal_edit_buffer.is_some();
 
+    let mut save_clicked = false;
     let modal = egui::Modal::new(egui::Id::new("node_info_modal")).show(ctx, |ui| {
         ui.set_width(250.0);
-        ui.heading("Node Information");
+        if has_edit_buffer {
+            ui.heading("Edit Node Information");
+        } else {
+            ui.heading("Node Information");
+        }
 
         ui.separator();
 
@@ -926,40 +961,121 @@ fn render_node_info_modal(ctx: &egui::Context, state: &mut VisualizationTabState
 
         ui.add_space(4.0);
 
-        if let Some(ref hostname) = node_data.hostname {
+        // Editable fields if we have an edit buffer (config loaded and host found)
+        if let Some(ref mut host) = state.modal_edit_buffer {
+            // Hostname
             ui.horizontal(|ui| {
                 ui.label("Hostname:");
-                ui.label(egui::RichText::new(hostname).monospace());
+                let mut buf = host.hostname.clone().unwrap_or_default();
+                if ui
+                    .add(egui::TextEdit::singleline(&mut buf).hint_text("hostname"))
+                    .changed()
+                {
+                    host.hostname = if buf.trim().is_empty() {
+                        None
+                    } else {
+                        Some(buf)
+                    };
+                }
             });
-        }
 
-        ui.label("IP Addresses:");
-        for ip in &node_data.ip_addrs {
+            // OS
             ui.horizontal(|ui| {
-                ui.add_space(16.0);
-                ui.label(egui::RichText::new(ip.to_string()).monospace());
+                ui.label("OS:");
+                let selected = host.os.as_deref().unwrap_or("<none>");
+                egui::ComboBox::from_id_salt("modal_os")
+                    .selected_text(selected)
+                    .show_ui(ui, |ui| {
+                        if ui.selectable_label(host.os.is_none(), "<none>").clicked() {
+                            host.os = None;
+                        }
+                        if ui
+                            .selectable_label(host.os.as_deref() == Some("Linux"), "Linux")
+                            .clicked()
+                        {
+                            host.os = Some("Linux".to_string());
+                        }
+                        if ui
+                            .selectable_label(host.os.as_deref() == Some("Windows"), "Windows")
+                            .clicked()
+                        {
+                            host.os = Some("Windows".to_string());
+                        }
+                    });
             });
-        }
 
-        ui.add_space(4.0);
-        ui.horizontal(|ui| {
-            ui.label("OS:");
-            ui.label(egui::RichText::new(format!("{:?}", node_data.os)).monospace());
-        });
+            // IP addresses
+            ui.label("IP Addresses:");
+            for iface in &mut host.interfaces {
+                ui.horizontal(|ui| {
+                    ui.add_space(16.0);
+                    ui.add(egui::TextEdit::singleline(&mut iface.ip_addr).hint_text("0.0.0.0"));
+                });
+            }
+        } else {
+            // Read-only fallback (no config loaded or Internet node)
+            if let Some(ref hostname) = node_data.hostname {
+                ui.horizontal(|ui| {
+                    ui.label("Hostname:");
+                    ui.label(egui::RichText::new(hostname).monospace());
+                });
+            }
+            ui.horizontal(|ui| {
+                ui.label("OS:");
+                ui.label(egui::RichText::new(format!("{:?}", node_data.os)).monospace());
+            });
+            ui.label("IP Addresses:");
+            for ip in &node_data.ip_addrs {
+                ui.horizontal(|ui| {
+                    ui.add_space(16.0);
+                    ui.label(egui::RichText::new(ip.to_string()).monospace());
+                });
+            }
+        }
 
         ui.add_space(8.0);
 
-        ui.vertical_centered(|ui| {
+        if has_edit_buffer {
+            ui.horizontal(|ui| {
+                if ui.button("Cancel").clicked() {
+                    ui.close();
+                }
+                if ui.button("Save").clicked() {
+                    save_clicked = true;
+                    ui.close();
+                }
+            });
+        } else {
             if ui.button("Close").clicked() {
                 ui.close();
             }
-        });
+        }
     });
 
-    // Close on Escape or click outside
+    // Apply changes to config model on Save
+    if save_clicked {
+        if let (Some(idx), Some(buffer)) = (host_idx, state.modal_edit_buffer.take()) {
+            if let Some(host) = config_file_state
+                .config_model
+                .as_mut()
+                .and_then(|c| c.hosts.get_mut(idx))
+            {
+                *host = buffer;
+            }
+            // Sync config model back to YAML so other tabs and handle_config_changes pick it up
+            if let Some(model) = &config_file_state.config_model {
+                if let Ok(yaml) = serde_yaml::to_string(model) {
+                    config_file_state.config_file_content = Some(yaml);
+                }
+            }
+        }
+    }
+
+    // Close on Escape or click outside (discard changes)
     if modal.should_close() {
         state.node_info_modal_open = false;
         state.clicked_node = None;
+        state.modal_edit_buffer = None;
     }
 }
 
