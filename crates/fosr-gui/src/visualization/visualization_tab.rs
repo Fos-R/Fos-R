@@ -1,6 +1,6 @@
 use super::visualization_shapes::{
     NetworkEdgeShape, NetworkNodeShape, COLOR_DNS, COLOR_HTTP, COLOR_HTTPS, COLOR_INACTIVE,
-    COLOR_OTHER, COLOR_SMTP, COLOR_SSH,
+    COLOR_OTHER, COLOR_SMTP, COLOR_SSH, ICON_TINT_DARK, ICON_TINT_LIGHT,
 };
 use super::visualization_stream::{FlowEvent, FlowStreamer};
 use super::visualization_utils::distribute_nodes_circle;
@@ -200,6 +200,8 @@ pub struct VisualizationTabState {
     total_flows: u32,
     /// Flag to request a zoom/pan reset on the next frame
     pub reset_view_requested: bool,
+    /// Previous screen size (to reset view on window resize)
+    last_screen_size: Option<egui::Vec2>,
 }
 
 impl Default for VisualizationTabState {
@@ -325,6 +327,7 @@ impl VisualizationTabState {
             auto_start_countdown: Some(10),
             total_flows: 0,
             reset_view_requested: false,
+            last_screen_size: None,
         }
     }
 
@@ -562,6 +565,7 @@ fn handle_config_changes(
             state.update_from_config(&config);
             state.config_content = Some(config_content.clone());
             state.auto_start_countdown = Some(10);
+            state.reset_view_requested = true;
         }
     }
 }
@@ -911,7 +915,12 @@ fn render_node_info_modal(ctx: &egui::Context, state: &mut VisualizationTabState
                 NodeType::User => (egui::include_image!("../../assets/computer.png"), "User"),
                 NodeType::Internet => (egui::include_image!("../../assets/internet.png"), "Internet"),
             };
-            ui.add(egui::Image::new(image).fit_to_exact_size(egui::vec2(20.0, 20.0)));
+            let tint = if ui.style().visuals.dark_mode {
+                ICON_TINT_DARK
+            } else {
+                ICON_TINT_LIGHT
+            };
+            ui.add(egui::Image::new(image).fit_to_exact_size(egui::vec2(20.0, 20.0)).tint(tint));
             ui.label(egui::RichText::new(type_str).strong());
         });
 
@@ -968,7 +977,12 @@ fn legend_item_inline(ui: &mut egui::Ui, label: &str, color: egui::Color32) {
 
 /// Helper to render a legend item with an image (for nodes)
 fn legend_item_with_image(ui: &mut egui::Ui, label: &str, image: egui::ImageSource) {
-    ui.add(egui::Image::new(image).fit_to_exact_size(egui::vec2(20.0, 20.0)));
+    let tint = if ui.style().visuals.dark_mode {
+        ICON_TINT_DARK
+    } else {
+        ICON_TINT_LIGHT
+    };
+    ui.add(egui::Image::new(image).fit_to_exact_size(egui::vec2(20.0, 20.0)).tint(tint));
     ui.add_space(-2.0);
     ui.label(label);
     ui.add_space(6.0);
@@ -981,6 +995,17 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
         let interactions = SettingsInteraction::new()
             .with_node_clicking_enabled(true)
             .with_dragging_enabled(true);
+
+        // Reset view on window resize
+        let screen_size = ui.ctx().content_rect().size();
+        match state.last_screen_size {
+            Some(last) if last != screen_size => {
+                state.last_screen_size = Some(screen_size);
+                state.reset_view_requested = true;
+            }
+            None => state.last_screen_size = Some(screen_size),
+            _ => {}
+        }
 
         // When reset is requested, enable fit-to-screen for one frame
         // so egui_graphs recalculates the proper zoom/pan to center the graph
