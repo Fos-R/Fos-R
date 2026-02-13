@@ -29,9 +29,9 @@ const RADIUS_MIN: f32 = 15.0;      // Starting size for all nodes
 const RADIUS_MAX: f32 = 25.0;       // Maximum size
 const FLOW_SCALE_FACTOR: f32 = 0.3; // Radius increase per flow
 
-const EDGE_WIDTH_MIN: f32 = 0.2;
+const EDGE_WIDTH_MIN: f32 = 0.0;
 const EDGE_WIDTH_MAX: f32 = 3.0;
-const EDGE_FLOW_SCALE: f32 = 0.1; // Width increase per flow (linear phase)
+const EDGE_FLOW_SCALE: f32 = 0.2; // Width increase per flow (linear phase)
 
 /// Custom node shape that displays hostname and IP, with icon based on node type
 #[derive(Clone)]
