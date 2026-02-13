@@ -1,6 +1,6 @@
 ![](https://raw.githubusercontent.com/Fos-R/Fos-R/refs/heads/main/public/logo.png)
 
-Fos-R is a network traffic generator based on AI models. It does not require a GPU and can generate in the order of Gbps of network traffic with a laptop.
+Fos-R is a network traffic generator based on ML models. It does not require a GPU and can generate in the order of Gbps of network traffic with a laptop.
 
 You can find the stable and experimental binaries on the [Fos-R website](https://fosr.inria.fr).
 
@@ -8,7 +8,7 @@ You can find the stable and experimental binaries on the [Fos-R website](https:/
 
 ## Create-pcap
 
-In this mode, Fos-R outputs a pcap file generated with the AI models.
+In this mode, Fos-R outputs a pcap file generated with the ML models.
 
 ```
 Usage: fosr create-pcap [OPTIONS] <--duration <DURATION>|--packets-count <PACKETS_COUNT>>

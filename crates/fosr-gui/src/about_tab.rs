@@ -9,7 +9,7 @@ pub fn show_about_tab_content(ui: &mut egui::Ui) {
     ui.add_space(5.0);
 
     ui.label(
-        "Fos-R is a high-quality and high-throughput network traffic generator based on AI models.",
+        "Fos-R is a high-quality and high-throughput network traffic generator based on ML models.",
     );
     ui.add_space(15.0);
 
