@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
-members = [ "crates/fosr-ebpf","crates/fosr","crates/fosr-lib"]
-exclude = ["/dev","/learning","/resources","/public"]
+members = ["crates/fosr-ebpf", "crates/fosr", "crates/fosr-lib", "crates/fosr-gui"]
+exclude = ["/dev", "/learning", "/resources", "/public"]
 default-members = ["crates/fosr"]
 
 [profile.release]
