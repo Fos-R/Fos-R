@@ -20,8 +20,12 @@ from scipy.spatial.distance import hamming
 import bleu
 import rouge
 from vendi_score import vendi
+import json
 
 pd.options.mode.copy_on_write = True
+
+def keep_first_service(value):
+    return value.split(",")[0]
 
 local_net = ['192.168.', '10.', '0.', '127.', '192.0.0', '198.18', '198.19']
 for i in range(16,32):
@@ -106,7 +110,7 @@ def evaluate(flow_real, flow_synthetic, pcap_real, pcap_synthetic):
     results["Flow Dest. bytes"] = wasserstein_distance(flow_real["resp_bytes"],flow_synthetic["resp_bytes"])
     results["Flow Source packets"] = wasserstein_distance(flow_real["orig_pkts"],flow_synthetic["orig_pkts"])
     results["Flow Dest. packets"] = wasserstein_distance(flow_real["resp_pkts"],flow_synthetic["resp_pkts"])
-    results["Flow Time"] = wasserstein_distance(flow_real["ts"],flow_synthetic["ts"])
+    # results["Flow Time"] = wasserstein_distance(flow_real["ts"],flow_synthetic["ts"])
 
     features_if = ["id.orig_h", "id.resp_h", "id.resp_p", "proto", "service", "history", "conn_state", "duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts"]
     flow_real_if = flow_real[features_if]
@@ -194,7 +198,21 @@ if __name__ == '__main__':
     parser.add_argument('--synthetic', help="Select the folder with Zeek logs of synthetic data.")
     parser.add_argument('--baseline', choices=["naive","ros","smote","adasyn"], help="Select a baseline to run")
     parser.add_argument('--baseline-train', help="Select the folder with Zeek logs of train data.")
+    parser.add_argument('--output', required=True, help="Output directory.")
     args = parser.parse_args()
+
+    try:
+        os.mkdir(args.output)
+    except FileExistsError:
+        pass
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        exit()
+
+    # normalize the paths
+    args.eval = os.path.normpath(args.eval)
+    args.synthetic = os.path.normpath(args.synthetic)
+    args.reference = os.path.normpath(args.reference)
 
     print("Loading data")
     # conn.log
@@ -209,6 +227,10 @@ if __name__ == '__main__':
         print(f"Cannot process conn.log!",e)
         exit(1)
 
+
+    flow_eval['service'] = flow_eval['service'].apply(keep_first_service)
+    flow_ref['service'] = flow_ref['service'].apply(keep_first_service)
+    flow_synthetic['service'] = flow_synthetic['service'].apply(keep_first_service)
     # weird.log
     try:
         flow_eval_weird = pd.read_csv(os.path.join(args.eval, "weird.log"), header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "name", "addl", "notice", "peer", "source"])
@@ -275,13 +297,38 @@ if __name__ == '__main__':
     flow_ref["ts"] = flow_ref["ts"].apply(get_time)
     flow_synthetic["ts"] = flow_synthetic["ts"].apply(get_time)
 
-    for feature in ["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts", "ts"]:
+    for feature in ["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts"]:
         flow_eval[feature] = flow_eval[feature].replace("-", "0")
         flow_ref[feature] = flow_ref[feature].replace("-", "0")
         flow_synthetic[feature] = flow_synthetic[feature].replace("-", "0")
         flow_eval[feature] = pd.to_numeric(flow_eval[feature])
         flow_ref[feature] = pd.to_numeric(flow_ref[feature])
         flow_synthetic[feature] = pd.to_numeric(flow_synthetic[feature])
+        flow_eval[feature] = np.log10(flow_eval[feature].clip(lower=1e-3))
+        flow_ref[feature] = np.log10(flow_ref[feature].clip(lower=1e-3))
+        flow_synthetic[feature] = np.log10(flow_synthetic[feature].clip(lower=1e-3))
+
+
+    for feature in ["ts"]:
+        flow_eval[feature] = flow_eval[feature].replace("-", "0")
+        flow_ref[feature] = flow_ref[feature].replace("-", "0")
+        flow_synthetic[feature] = flow_synthetic[feature].replace("-", "0")
+        flow_eval[feature] = pd.to_numeric(flow_eval[feature])
+        flow_ref[feature] = pd.to_numeric(flow_ref[feature])
+        flow_synthetic[feature] = pd.to_numeric(flow_synthetic[feature])
+
+    for feature in ["orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts", "ts", "duration"]:
+        plt.hist(flow_ref[feature].values.tolist(), 50, density=True, alpha=0.75, label="Reference")
+        plt.hist(flow_synthetic[feature].values.tolist(), 50, density=True, alpha=0.75, label="Synthetic")
+        plt.xlabel(feature)
+        plt.ylabel('Probability')
+        plt.title(f'Marginal distribution of {feature} for {os.path.split(args.synthetic)[-1]}')
+        # plt.text(60, .025, r'$\mu=100,\ \sigma=15$')
+        # plt.axis([40, 160, 0, 0.03])
+        plt.grid(True)
+        plt.legend()
+        plt.savefig(os.path.join(args.output,f"marginal-{feature}-{os.path.split(args.synthetic)[-1]}.png"))
+        plt.clf()
 
     if args.baseline:
         print("Generating new data with",args.baseline)
@@ -310,7 +357,34 @@ if __name__ == '__main__':
         # results_ref = results_ref | evaluate_ip(flow_eval_ip, flow_ref_ip)
         # results_ref = results_synthetic | evaluate_tcp(flow_eval_tcp, flow_ref_tcp)
 
-        marginal_score = []
+
+        out_file = open(os.path.join(args.output, f"results-{os.path.split(args.synthetic)[-1]}.json"), "w")
+        json.dump(results_synthetic, out_file, indent=1)
+        out_file = open(os.path.join(args.output, f"results-{os.path.split(args.eval)[-1]}.json"), "w")
+        json.dump(results_ref, out_file, indent=1)
+
+        exit()
+        fig, ax = plt.subplots(layout='constrained')
+
+        width = 0.25  # the width of the bars
+        multiplier = 0
+        rects = ax.bar(x + width * multiplier, list(results_ref.values()), width, label="Reference")
+        ax.bar_label(rects, padding=3)
+        multiplier += 1
+
+        rects = ax.bar(x + width * multiplier, list(results_synthetic.values()), width, label="Synthetic")
+        ax.bar_label(rects, padding=3)
+        multiplier += 1
+
+
+        # plt.bar(list(results_synthetic.keys()), list(results_synthetic.values()), color="red", alpha=0.7)
+        # plt.bar(list(results_ref.keys()), list(results_ref.values()), color="green", alpha=0.7)
+        ax.set_ylabel('Score')
+        plt.title('Evaluation')
+        plt.grid(True)
+        plt.show()
+        exit()
+
         for k in results_synthetic.keys():
         # for k in ["Source IP","Dest. IP","Dest. port","Protocol","Service","History","Connection state","IP protocol","Duration","Source bytes","Dest. bytes","Source packets","Dest. packets","Time"]:
             print(f"{k}:\n\tReference: {results_ref[k]}\n\tSynthetic: {results_synthetic[k]}\n\tScore: {abs(results_synthetic[k] - results_ref[k])}")
