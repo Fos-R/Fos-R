@@ -189,9 +189,77 @@ pub enum Command {
         )]
         jobs: Option<usize>,
     },
+    /// Create a pcap file that extends a dataset. For deterministic generation,
+    /// specify -d, -t, --tz and --seed.
+    #[clap(group(
+    clap::ArgGroup::new("target")
+        .required(true)
+        .args(&["duration", "packets_count"])),
+    group(
+    clap::ArgGroup::new("models")
+        .required(true)
+        .args(&["default_models", "custom_models"]),
 
-    /// Create a pcap file. If you require deterministic generation,
-    /// you must specify -d, -t, --tz and --seed.
+    ))]
+    AugmentDataset {
+        #[arg(
+            short,
+            long,
+            default_value = "output.pcap",
+            help = "Output pcap file for synthetic network packets"
+        )]
+        outfile: String,
+        #[arg(long, default_value_t = false, help = "Taint the packets")]
+        taint: bool,
+        #[arg(
+            short,
+            long,
+            default_value_t = GenerationProfile::Efficient,
+            help = "The generation profile to use. Either \"fast\" that optimizes CPU use but the entire dataset must fit in RAM, or \"efficient\" that requires less RAM but is slower"
+        )]
+        profile: GenerationProfile,
+        #[arg(long, help = "Minimum number of packets to generate")]
+        packets_count: Option<u64>,
+        #[arg(
+            short = 'd',
+            long,
+            help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\""
+        )]
+        duration: Option<String>,
+        #[arg(
+            short = 't',
+            long,
+            help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use the current time. Date time is considered to be in the timezone specified with --tz"
+        )]
+        start_time: Option<String>,
+        #[arg(
+            short,
+            long,
+            help = "Number of generation jobs. By default, use half the available cores"
+        )]
+        jobs: Option<usize>,
+        #[arg(short, long, help = "Seed for random number generation")]
+        seed: Option<u64>,
+        #[arg(short = 'm', long, help = "Use a default model")]
+        default_models: Option<DefaultModels>,
+        #[arg(long, help = "Use a custom model")]
+        custom_models: Option<String>,
+        #[arg(
+            long,
+            help = "Timezone of the generated, used for realistic work hours. By default, local timezone is used. Use a IANA time zone (like Europe/Paris) or an abbreviation (like CET). The offset is assumed constant during the generation time range"
+        )]
+        tz: Option<String>,
+        #[arg(
+            long,
+            default_value_t = false,
+            help = "Disable the temporal sorting of the generated pcap. Reduce significantly the RAM usage when used with \"--profile efficient\""
+        )]
+        no_order_pcap: bool,
+    },
+
+    #[cfg(feature = "unstable")]
+    /// Create a pcap file for the described network. For deterministic generation,
+    /// specify -d, -t, --tz and --seed.
     #[clap(group(
     clap::ArgGroup::new("target")
         .required(true)
@@ -220,7 +288,7 @@ pub enum Command {
         )]
         profile: GenerationProfile,
         #[arg(short, long, help = "Path to the network file")]
-        network: Option<String>,
+        network: String,
         #[arg(long, help = "Minimum number of packets to generate")]
         packets_count: Option<u64>,
         #[arg(

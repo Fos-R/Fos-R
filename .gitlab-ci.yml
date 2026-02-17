@@ -191,7 +191,7 @@ tests:
   image: rust
   script:
     # generation only, so no need for ebpf
-    - cargo run -- create-pcap -o sample.pcap -s 0 -d 1h -t 0 -p fast --tz CET -m cupid
+    - cargo run -- augment-dataset -o sample.pcap -s 0 -d 1h -t 0 -p fast --tz CET -m cupid
     - cargo test -p fosr -- --nocapture
   artifacts:
     when: always
@@ -286,7 +286,7 @@ pages:
     - echo -e "\nBuild version $CI_COMMIT_SHORT_SHA, compiled on $(date -I) ([changelog](changelog.html)).\n" >> intro.md
     - chmod +x ./bin/x86_64-unknown-linux-gnu/release/fosr
     # add the --help output
-    - ./bin/x86_64-unknown-linux-gnu/release/fosr create-pcap --help >> howto-pcap.md
+    - ./bin/x86_64-unknown-linux-gnu/release/fosr augment-dataset --help >> howto-pcap.md
     - echo "\`\`\`" >> howto-pcap.md
     # - ./bin/x86_64-unknown-linux-gnu/release/fosr inject --help >> howto-inject.md
     # - echo "\`\`\`" >> howto-inject.md

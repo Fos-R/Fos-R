@@ -15,7 +15,7 @@ fn deterministic_fast_generation() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin(pkg_name!())?;
 
     // ensure the generation is deterministic
-    cmd.arg("create-pcap")
+    cmd.arg("augment-dataset")
         .args(["-o", &file_path])
         .args(["-s", "0"])
         .args(["-d", "1h"])
@@ -46,7 +46,7 @@ fn deterministic_efficient_generation() -> Result<(), Box<dyn std::error::Error>
     let mut cmd = Command::cargo_bin(pkg_name!())?;
 
     // ensure the generation is deterministic
-    cmd.arg("create-pcap")
+    cmd.arg("augment-dataset")
         .args(["-o", &file_path])
         .args(["-s", "0"])
         .args(["-d", "1h"])

@@ -40,6 +40,7 @@ sha2 = "0.10.9"
 [features]
 default = ["fosr-lib/models_cupid", "fosr-lib/models_cicids17"]
 net_injection = ["pnet/std", "fosr-lib/net_injection"]
+unstable = []
 
 # Linux only
 iptables = ["net_injection", "fosr-lib/iptables"]
