@@ -134,6 +134,7 @@ fn main() {
                 source,
             );
         }
+        #[cfg(feature = "unstable")]
         cmd::Command::CreatePcap {
             seed,
             outfile,
@@ -157,136 +158,209 @@ fn main() {
                 default_models.unwrap().get_source() // we are sure it contains something
             };
 
-            let mut model = models::Models::from_source(source).unwrap();
-            if let Some(network) = network {
-                model = model.with_network(&network).unwrap();
-            }
-            let automata_library = Arc::new(model.automata);
-            let bn = Arc::new(model.bn);
-            // handle the parameters: either there is a packet count target or a duration
-            let (target, duration) = match (packets_count, duration) {
-                (None, Some(d)) => {
-                    let d = humantime::parse_duration(&d).expect("Duration could not be parsed.");
-                    log::info!("Generating a pcap of {d:?}");
-                    (stats::Target::GenerationDuration(d), Some(d))
-                }
-                (Some(p), None) => {
-                    log::info!("Generation at least {p} packets");
-                    (stats::Target::PacketCount(p), None)
-                }
-                _ => unreachable!(),
-            };
-            if let Some(s) = seed {
-                log::info!("Generating with seed {s}");
-            }
+            let model = models::Models::from_source(source)
+                .unwrap()
+                .with_network(&network)
+                .unwrap();
 
-            let (mut initial_ts, ts_requires_offset): (Duration, bool) =
-                if let Some(start_time) = start_time {
-                    // try to parse a date
-                    if let Ok(d) = humantime::parse_rfc3339_weak(&start_time) {
-                        (d.duration_since(UNIX_EPOCH).unwrap(), true)
-                    } else if let Ok(n) = start_time.parse::<u64>() {
-                        (Duration::from_secs(n), false)
-                    } else {
-                        panic!("Could not parse start time");
-                    }
-                } else {
-                    (SystemTime::now().duration_since(UNIX_EPOCH).unwrap(), false)
-                };
-
-            let tz_offset = match tz {
-                Some(tz_str) => {
-                    let tz: Tz = tz_str.parse().expect("Could not parse the timezone");
-                    let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
-                        .unwrap()
-                        .naive_utc();
-                    let tz = tz.offset_from_utc_datetime(&date).fix();
-                    log::info!("Using {tz_str} timezone (UTC{tz})");
-                    tz
-                }
-                None => {
-                    let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
-                        .unwrap()
-                        .naive_utc();
-                    let tz = chrono::Local::now()
-                        .timezone()
-                        .offset_from_local_datetime(&date)
-                        .single()
-                        .expect("Ambiguous local date from timestamp")
-                        .fix();
-                    log::info!("Using local timezone (UTC{tz})");
-                    tz
-                }
-            };
-
-            // the initial timestamp was computed assuming that the timezone is UTC.
-            // now, compute the actual timestamp taking into account the timezone
-            if ts_requires_offset {
-                initial_ts = Duration::from_secs(
-                    DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
-                        .unwrap()
-                        .naive_utc()
-                        .and_local_timezone(tz_offset)
-                        .unwrap()
-                        .timestamp() as u64,
-                );
-            }
-
-            let s1 = stage1::BinBasedGenerator::new(
-                seed,
-                false,
-                flow_per_day,
-                model.time_bins,
-                initial_ts,
+            generate_pcap(
+                packets_count,
                 duration,
-                tz_offset,
-            );
-            let s2 = stage2::bayesian_networks::BNGenerator::new(bn, false);
-            let s3 = stage3::tadam::TadamGenerator::new(automata_library);
-            let s4 = stage4::Stage4::new(taint); //, model.network);
-            let jobs = jobs.unwrap_or(max(1, num_cpus::get() / 2));
-            match profile {
-                cmd::GenerationProfile::Fast => {
-                    run_fast(
-                        ExportParams {
-                            outfile,
-                            order_pcap: !no_order_pcap,
-                        },
-                        s1,
-                        s2,
-                        s3,
-                        s4,
-                        jobs,
-                        Arc::new(stats::Stats::new(target)),
-                    );
-                    // }
-                }
-                cmd::GenerationProfile::Efficient => {
-                    let (s2_count, s3_count, s4_count) = (
-                        max(1, jobs / 3),
-                        max(1, jobs / 3),
-                        max(1, jobs - (2 * jobs) / 3),
-                    );
-                    run_efficient(
-                        vec![],
-                        Some(ExportParams {
-                            outfile,
-                            order_pcap: !no_order_pcap,
-                        }),
-                        s1,
-                        (s2, s2_count),
-                        (s3, s3_count),
-                        (s4, s4_count),
-                        Arc::new(stats::Stats::new(target)),
-                        None::<InjectParam<inject::DummyNetEnabler>>,
-                    );
-                }
-            }
+                seed,
+                outfile,
+                profile,
+                no_order_pcap,
+                start_time,
+                flow_per_day,
+                tz,
+                jobs,
+                taint,
+                model,
+            )
         }
+        cmd::Command::AugmentDataset {
+            seed,
+            outfile,
+            packets_count,
+            profile,
+            no_order_pcap,
+            start_time,
+            duration,
+            tz,
+            jobs,
+            taint,
+            default_models,
+            custom_models,
+        } => {
+            // load the models
+            let source = if let Some(custom_models) = custom_models {
+                models::ModelsSource::UserDefined(custom_models)
+            } else {
+                default_models.unwrap().get_source() // we are sure it contains something
+            };
+
+            let model = models::Models::from_source(source).unwrap();
+
+            generate_pcap(
+                packets_count,
+                duration,
+                seed,
+                outfile,
+                profile,
+                no_order_pcap,
+                start_time,
+                None,
+                tz,
+                jobs,
+                taint,
+                model,
+            )
+        }
+
         cmd::Command::Untaint { input, output } => {
             utils::untaint_file(&input, &output);
         }
     };
+}
+
+#[allow(clippy::too_many_arguments)]
+fn generate_pcap(
+    packets_count: Option<u64>,
+    duration: Option<String>,
+    seed: Option<u64>,
+    outfile: String,
+    profile: cmd::GenerationProfile,
+    no_order_pcap: bool,
+    start_time: Option<String>,
+    flow_per_day: Option<u64>,
+    tz: Option<String>,
+    jobs: Option<usize>,
+    taint: bool,
+    model: models::Models,
+) {
+    let automata_library = Arc::new(model.automata);
+    let bn = Arc::new(model.bn);
+
+    // handle the parameters: either there is a packet count target or a duration
+    let (target, duration) = match (packets_count, duration) {
+        (None, Some(d)) => {
+            let d = humantime::parse_duration(&d).expect("Duration could not be parsed.");
+            log::info!("Generating a pcap of {d:?}");
+            (stats::Target::GenerationDuration(d), Some(d))
+        }
+        (Some(p), None) => {
+            log::info!("Generation at least {p} packets");
+            (stats::Target::PacketCount(p), None)
+        }
+        _ => unreachable!(),
+    };
+
+    if let Some(s) = seed {
+        log::info!("Generating with seed {s}");
+    }
+
+    let (mut initial_ts, ts_requires_offset): (Duration, bool) =
+        if let Some(start_time) = start_time {
+            // try to parse a date
+            if let Ok(d) = humantime::parse_rfc3339_weak(&start_time) {
+                (d.duration_since(UNIX_EPOCH).unwrap(), true)
+            } else if let Ok(n) = start_time.parse::<u64>() {
+                (Duration::from_secs(n), false)
+            } else {
+                panic!("Could not parse start time");
+            }
+        } else {
+            (SystemTime::now().duration_since(UNIX_EPOCH).unwrap(), false)
+        };
+
+    let tz_offset = match tz {
+        Some(tz_str) => {
+            let tz: Tz = tz_str.parse().expect("Could not parse the timezone");
+            let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
+                .unwrap()
+                .naive_utc();
+            let tz = tz.offset_from_utc_datetime(&date).fix();
+            log::info!("Using {tz_str} timezone (UTC{tz})");
+            tz
+        }
+        None => {
+            let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
+                .unwrap()
+                .naive_utc();
+            let tz = chrono::Local::now()
+                .timezone()
+                .offset_from_local_datetime(&date)
+                .single()
+                .expect("Ambiguous local date from timestamp")
+                .fix();
+            log::info!("Using local timezone (UTC{tz})");
+            tz
+        }
+    };
+
+    // the initial timestamp was computed assuming that the timezone is UTC.
+    // now, compute the actual timestamp taking into account the timezone
+    if ts_requires_offset {
+        initial_ts = Duration::from_secs(
+            DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
+                .unwrap()
+                .naive_utc()
+                .and_local_timezone(tz_offset)
+                .unwrap()
+                .timestamp() as u64,
+        );
+    }
+
+    let s1 = stage1::BinBasedGenerator::new(
+        seed,
+        false,
+        flow_per_day,
+        model.time_bins,
+        initial_ts,
+        duration,
+        tz_offset,
+    );
+    let s2 = stage2::bayesian_networks::BNGenerator::new(bn, false);
+    let s3 = stage3::tadam::TadamGenerator::new(automata_library);
+    let s4 = stage4::Stage4::new(taint); //, model.network);
+    let jobs = jobs.unwrap_or(max(1, num_cpus::get() / 2));
+    match profile {
+        cmd::GenerationProfile::Fast => {
+            run_fast(
+                ExportParams {
+                    outfile,
+                    order_pcap: !no_order_pcap,
+                },
+                s1,
+                s2,
+                s3,
+                s4,
+                jobs,
+                Arc::new(stats::Stats::new(target)),
+            );
+            // }
+        }
+        cmd::GenerationProfile::Efficient => {
+            let (s2_count, s3_count, s4_count) = (
+                max(1, jobs / 3),
+                max(1, jobs / 3),
+                max(1, jobs - (2 * jobs) / 3),
+            );
+            run_efficient(
+                vec![],
+                Some(ExportParams {
+                    outfile,
+                    order_pcap: !no_order_pcap,
+                }),
+                s1,
+                (s2, s2_count),
+                (s3, s3_count),
+                (s4, s4_count),
+                Arc::new(stats::Stats::new(target)),
+                None::<InjectParam<inject::DummyNetEnabler>>,
+            );
+        }
+    }
 }
 
 #[cfg(feature = "net_injection")]
