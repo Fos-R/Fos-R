@@ -115,7 +115,7 @@ pub enum Command {
             long,
             help = "Automatically stop the generation after this time. You can use human-friendly time, such as \"15days 30min 5s\""
         )]
-        duration: String,
+        duration: Option<String>,
         #[arg(
             short = 'e',
             long,
@@ -181,7 +181,7 @@ pub enum Command {
             long,
             help = "Automatically stop the generation after this time. You can use human-friendly time, such as \"15days 30min 5s\""
         )]
-        duration: String,
+        duration: Option<String>,
         #[arg(
             short,
             long,
