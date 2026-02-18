@@ -111,11 +111,11 @@ pub enum Command {
         )]
         flow_per_day: Option<u64>,
         #[arg(
-            short = 'd',
+            short,
             long,
             help = "Automatically stop the generation after this time. You can use human-friendly time, such as \"15days 30min 5s\""
         )]
-        duration: Option<String>,
+        duration: String,
         #[arg(
             short = 'e',
             long,
@@ -177,11 +177,11 @@ pub enum Command {
         )]
         flow_per_day: Option<u64>,
         #[arg(
-            short = 'd',
+            short,
             long,
             help = "Automatically stop the generation after this time. You can use human-friendly time, such as \"15days 30min 5s\""
         )]
-        duration: Option<String>,
+        duration: String,
         #[arg(
             short,
             long,
@@ -190,12 +190,8 @@ pub enum Command {
         jobs: Option<usize>,
     },
     /// Create a pcap file that extends a dataset. For deterministic generation,
-    /// specify -d, -t, --tz and --seed.
+    /// specify -t, --tz and --seed.
     #[clap(group(
-    clap::ArgGroup::new("target")
-        .required(true)
-        .args(&["duration", "packets_count"])),
-    group(
     clap::ArgGroup::new("models")
         .required(true)
         .args(&["default_models", "custom_models"]),
@@ -218,14 +214,12 @@ pub enum Command {
             help = "The generation profile to use. Either \"fast\" that optimizes CPU use but the entire dataset must fit in RAM, or \"efficient\" that requires less RAM but is slower"
         )]
         profile: GenerationProfile,
-        #[arg(long, help = "Minimum number of packets to generate")]
-        packets_count: Option<u64>,
         #[arg(
-            short = 'd',
+            short,
             long,
             help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\""
         )]
-        duration: Option<String>,
+        duration: String,
         #[arg(
             short = 't',
             long,
@@ -259,12 +253,8 @@ pub enum Command {
 
     #[cfg(feature = "unstable")]
     /// Create a pcap file for the described network. For deterministic generation,
-    /// specify -d, -t, --tz and --seed.
+    /// specify -t, --tz and --seed.
     #[clap(group(
-    clap::ArgGroup::new("target")
-        .required(true)
-        .args(&["duration", "packets_count"])),
-    group(
     clap::ArgGroup::new("models")
         .required(true)
         .args(&["default_models", "custom_models"]),
@@ -289,14 +279,12 @@ pub enum Command {
         profile: GenerationProfile,
         #[arg(short, long, help = "Path to the network file")]
         network: String,
-        #[arg(long, help = "Minimum number of packets to generate")]
-        packets_count: Option<u64>,
         #[arg(
-            short = 'd',
+            short,
             long,
             help = "Minimum pcap traffic duration described in human-friendly time, such as \"15days 30min 5s\""
         )]
-        duration: Option<String>,
+        duration: String,
         #[arg(
             short = 't',
             long,

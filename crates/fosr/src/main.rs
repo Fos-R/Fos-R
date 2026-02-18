@@ -164,7 +164,6 @@ fn main() {
                 .unwrap();
 
             generate_pcap(
-                packets_count,
                 duration,
                 seed,
                 outfile,
@@ -181,7 +180,6 @@ fn main() {
         cmd::Command::AugmentDataset {
             seed,
             outfile,
-            packets_count,
             profile,
             no_order_pcap,
             start_time,
@@ -202,7 +200,6 @@ fn main() {
             let model = models::Models::from_source(source).unwrap();
 
             generate_pcap(
-                packets_count,
                 duration,
                 seed,
                 outfile,
@@ -225,8 +222,7 @@ fn main() {
 
 #[allow(clippy::too_many_arguments)]
 fn generate_pcap(
-    packets_count: Option<u64>,
-    duration: Option<String>,
+    duration: String,
     seed: Option<u64>,
     outfile: String,
     profile: cmd::GenerationProfile,
@@ -240,20 +236,8 @@ fn generate_pcap(
 ) {
     let automata_library = Arc::new(model.automata);
     let bn = Arc::new(model.bn);
-
-    // handle the parameters: either there is a packet count target or a duration
-    let (target, duration) = match (packets_count, duration) {
-        (None, Some(d)) => {
-            let d = humantime::parse_duration(&d).expect("Duration could not be parsed.");
-            log::info!("Generating a pcap of {d:?}");
-            (stats::Target::GenerationDuration(d), Some(d))
-        }
-        (Some(p), None) => {
-            log::info!("Generation at least {p} packets");
-            (stats::Target::PacketCount(p), None)
-        }
-        _ => unreachable!(),
-    };
+    let duration = humantime::parse_duration(&duration).expect("Duration could not be parsed.");
+    let target = stats::Target::GenerationDuration(duration);
 
     if let Some(s) = seed {
         log::info!("Generating with seed {s}");
@@ -317,7 +301,7 @@ fn generate_pcap(
         flow_per_day,
         model.time_bins,
         initial_ts,
-        duration,
+        Some(duration),
         tz_offset,
     );
     let s2 = stage2::bayesian_networks::BNGenerator::new(bn, false);
