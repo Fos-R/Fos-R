@@ -1788,6 +1788,7 @@ dependencies = [
  "anyhow",
  "aya-build",
  "aya-ebpf",
+ "cargo_metadata",
  "network-types",
  "which",
 ]
