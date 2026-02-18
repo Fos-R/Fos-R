@@ -67,7 +67,7 @@ impl fmt::Display for DefaultModels {
 #[derive(Debug, Subcommand, Clone)]
 pub enum Command {
     #[cfg(feature = "net_injection")]
-    /// This mode generates and injects network traffic between different computers in the same network.
+    /// This mode generates and injects network traffic between different computers in the same network, to be used in a cyber range or a honeynet.
     /// Fos-R needs to be executed on each computer.
     #[clap(group(
     clap::ArgGroup::new("models")
@@ -75,7 +75,7 @@ pub enum Command {
         .args(&["default_models", "custom_models"]),
 
     ))]
-    InjectWithin {
+    InjectCyberRange {
         #[arg(short, long, help = "Output pcap file of the generated packets")]
         outfile: Option<String>,
         #[arg(
