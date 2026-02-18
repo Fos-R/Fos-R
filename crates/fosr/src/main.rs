@@ -58,7 +58,7 @@ fn main() {
 
     match args.command {
         #[cfg(feature = "net_injection")]
-        cmd::Command::InjectWithin {
+        cmd::Command::InjectCyberRange {
             #[cfg(all(target_os = "linux", feature = "iptables"))]
             stealthy,
             seed,
@@ -138,7 +138,6 @@ fn main() {
         cmd::Command::CreatePcap {
             seed,
             outfile,
-            packets_count,
             profile,
             no_order_pcap,
             start_time,
