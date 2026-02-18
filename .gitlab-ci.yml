@@ -27,6 +27,7 @@ build-linux-x86-64:
     - cargo doc
     - mv target/doc doc
   artifacts:
+    expire_in: 3 days
     paths:
       - target/*/release/fosr
       - target/debian/*.deb
@@ -47,6 +48,7 @@ build-linux-x86-32:
     - cargo build --target=i686-unknown-linux-gnu --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\" -p fosr -r
     - cargo deb --target=i686-unknown-linux-gnu -p fosr -- --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\"
   artifacts:
+    expire_in: 3 days
     paths:
       - target/*/release/fosr
       - target/debian/*.deb
@@ -69,6 +71,7 @@ build-linux-raspberry-pi:
     - debname=$(ls *.deb)
     - mv $debname rpi_$debname
   artifacts:
+    expire_in: 3 days
     paths:
       - target/*/release/fosr
       - target/debian/*.deb
@@ -89,6 +92,7 @@ build-linux-arm-32:
     - cargo build --target=arm-unknown-linux-gnueabihf --config target.arm-unknown-linux-gnueabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
     - cargo deb --target=arm-unknown-linux-gnueabihf -p fosr -- --config target.arm-unknown-linux-gnueabihf.linker=\"arm-linux-gnueabihf-gcc\"
   artifacts:
+    expire_in: 3 days
     paths:
       - target/*/release/fosr
       - target/debian/*.deb
@@ -109,6 +113,7 @@ build-linux-arm-64:
     - cargo build --target=aarch64-unknown-linux-gnu --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\" -p fosr -r
     - cargo deb --target=aarch64-unknown-linux-gnu -p fosr -- --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\"
   artifacts:
+    expire_in: 3 days
     paths:
       - target/*/release/fosr
       - target/debian/*.deb
@@ -125,6 +130,7 @@ build-win64-x86:
     - rustup target add x86_64-pc-windows-gnu
     - cargo build --target=x86_64-pc-windows-gnu -p fosr -r
   artifacts:
+    expire_in: 3 days
     paths:
       - target/*/release/fosr.exe
 
@@ -140,6 +146,7 @@ build-win32-x86:
     - rustup target add i686-pc-windows-gnu
     - cargo build --target=i686-pc-windows-gnu -p fosr -r
   artifacts:
+    expire_in: 3 days
     paths:
       - target/*/release/fosr.exe
 
@@ -155,6 +162,7 @@ build-wasm32:
     - cargo build -p fosr-gui -r --target wasm32-unknown-unknown --no-default-features --features models
     - wasm-bindgen --out-dir public --target web target/wasm32-unknown-unknown/release/fosr_gui.wasm --no-typescript
   artifacts:
+    expire_in: 3 days
     paths:
       - public/fosr_gui.js
       - public/fosr_gui_bg.wasm
@@ -194,6 +202,7 @@ tests:
     - cargo run -- augment-dataset -o sample.pcap -s 0 -d 1h -t 0 -p fast --tz CET -m cupid
     - cargo test -p fosr -- --nocapture
   artifacts:
+    expire_in: 3 days
     when: always
     paths:
       - crates/fosr/deterministic-test.pcap # in case of an error
@@ -217,6 +226,7 @@ cupid-dataset:
     - mv public/dataset-cupid.md public/cupid.md
     # TODO: add evaluation
   artifacts:
+    expire_in: 3 days
     paths:
       - public/cupid.md
       - public/cupid/
@@ -238,6 +248,7 @@ cicids17-dataset:
     - mv public/dataset-cicids17.md public/cicids17.md
     # TODO: add evaluation
   artifacts:
+    expire_in: 3 days
     paths:
       - public/cicids17.md
       - public/cicids17/
@@ -260,6 +271,7 @@ analysis:
     - suricata -c /etc/suricata/suricata.yaml -r sample.pcap > analysis/suricata.txt
     - zip -r analysis.zip analysis
   artifacts:
+    expire_in: 3 days
     paths:
       - analysis.zip
 
@@ -300,5 +312,6 @@ pages:
     - pandoc cicids17.md -o cicids17.html --template template.html --include-after-body footer.html --standalone --toc
     - rm *.md
   artifacts:
+    expire_in: 3 days
     paths:
       - public
