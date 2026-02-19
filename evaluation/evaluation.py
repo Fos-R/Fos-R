@@ -23,6 +23,7 @@ import rouge
 from vendi_score import vendi
 import json
 from scipy import stats
+from sklearn.metrics import mutual_info_score
 
 pd.options.mode.copy_on_write = True
 
@@ -129,10 +130,16 @@ def evaluate_flow(flow_real, flow_synthetic):
     # results["Flow Time"] = wasserstein_distance(flow_real["ts"],flow_synthetic["ts"])
 
     # Spearman correlation for numerical data
-    for f1 in ["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts"]:
-        for f2 in ["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts"]:
-            if f1!=f2:
-                results[f"Spearman {f1}-{f2}"] = stats.spearmanr(flow_synthetic[f1], flow_synthetic[f2]).statistic - stats.spearmanr(flow_real[f1], flow_real[f2]).statistic
+    for (i,f1) in enumerate(["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts"]):
+        for (j,f2) in enumerate(["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts"]):
+            if i < j:
+                results[f"Spearman {f1} / {f2}"] = stats.spearmanr(flow_synthetic[f1], flow_synthetic[f2]).statistic - stats.spearmanr(flow_real[f1], flow_real[f2]).statistic
+
+    # Mutual information for categorical data
+    for (i,f1) in enumerate(["id.orig_h", "id.resp_h", "id.resp_p", "proto", "service","history", "conn_state", "ip_proto"]):
+        for (j,f2) in enumerate(["id.orig_h", "id.resp_h", "id.resp_p", "proto", "service","history", "conn_state", "ip_proto"]):
+            if i < j:
+                results[f"Mutual information {f1} / {f2}"] = mutual_info_score(flow_synthetic[f1], flow_synthetic[f2]) - mutual_info_score(flow_real[f1], flow_real[f2])
 
     discrete_similarity = lambda l1, l2: 1-hamming(l1,l2)
 
