@@ -52,7 +52,7 @@ pub struct TimedEdge<T: EdgeType> {
 impl EdgeDistribution {
     // https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Conditional_distributions
 
-    fn sample(&self, rng: &mut impl RngCore, cond_mu: f32, cond_var: f32) -> f32 {
+    fn sample(&self, rng: &mut impl Rng, cond_mu: f32, cond_var: f32) -> f32 {
         match &self {
             EdgeDistribution::Normal => {
                 let normal = Normal::new(cond_mu, cond_var.sqrt()).unwrap();
@@ -206,7 +206,7 @@ pub trait Automaton<T: EdgeType> {
 
     fn is_final(&self, n: usize) -> bool;
 
-    fn get_next_edge(&self, rng: &mut impl RngCore, current_state: usize) -> &TimedEdge<T>;
+    fn get_next_edge(&self, rng: &mut impl Rng, current_state: usize) -> &TimedEdge<T>;
 
     fn finalize_timestamps<U: PacketInfo>(&self, vector: &mut Vec<U>, ts: Duration);
 }
@@ -237,7 +237,7 @@ impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
             .1
     }
 
-    fn get_next_edge(&self, rng: &mut impl RngCore, current_state: usize) -> &TimedEdge<T> {
+    fn get_next_edge(&self, rng: &mut impl Rng, current_state: usize) -> &TimedEdge<T> {
         debug_assert!(!self.graph[current_state].in_edges.is_empty());
         let index = match &self.graph[current_state].dist {
             None => 0, // only one outgoing edge
@@ -268,7 +268,7 @@ impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
         self.initial_state
     }
 
-    fn get_next_edge(&self, rng: &mut impl RngCore, current_state: usize) -> &TimedEdge<T> {
+    fn get_next_edge(&self, rng: &mut impl Rng, current_state: usize) -> &TimedEdge<T> {
         debug_assert!(!self.graph[current_state].out_edges.is_empty());
         let index = match &self.graph[current_state].dist {
             None => 0, // only one outgoing edge
@@ -279,7 +279,7 @@ impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
 }
 
 pub fn sample<T: EdgeType, U: PacketInfo>(
-    rng: &mut impl RngCore,
+    rng: &mut impl Rng,
     automaton: &impl Automaton<T>,
     fd: &FlowData,
     header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
