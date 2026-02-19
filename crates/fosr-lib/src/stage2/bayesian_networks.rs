@@ -155,7 +155,7 @@ impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
     fn sample_index(
         &self,
-        rng: &mut impl RngCore,
+        rng: &mut impl Rng,
         current: &[Option<usize>],
     ) -> Result<Option<usize>, String> {
         let mut parents_index = 0;
@@ -183,7 +183,7 @@ struct BayesianNetwork {
     nodes: Vec<BayesianNetworkNode>,
 }
 
-fn sample_random_global_ip(rng: &mut impl RngCore) -> Ipv4Addr {
+fn sample_random_global_ip(rng: &mut impl Rng) -> Ipv4Addr {
     let mut addr = Ipv4Addr::from_bits(rng.next_u32());
     // rejection sampling
     while addr.octets()[0] == 0
@@ -220,7 +220,7 @@ impl BayesianNetwork {
     /// Sample a vector from the Bayesian network
     fn sample(
         &self,
-        rng: &mut impl RngCore,
+        rng: &mut impl Rng,
         discrete_vector: &mut Vec<Option<usize>>,
     ) -> Result<IntermediateVector, String> {
         // println!("{self:?}");

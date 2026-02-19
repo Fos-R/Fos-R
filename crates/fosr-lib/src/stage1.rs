@@ -144,7 +144,7 @@ impl BinBasedGenerator {
         .unwrap();
         let window_rng = match seed {
             Some(s) => Pcg32::seed_from_u64(s),
-            None => Pcg32::from_os_rng(),
+            None => Pcg32::from_rng(&mut rand::rng()),
         };
         let remaining_windows = total_duration.map(|d| {
             d.div_duration_f32(Duration::from_secs(WINDOW_WIDTH_IN_SECS))

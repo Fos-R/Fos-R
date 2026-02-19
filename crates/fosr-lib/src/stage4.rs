@@ -44,7 +44,7 @@ struct TcpPacketData {
 
 impl TcpPacketData {
     /// Creates new TCP packet data with randomized initial sequence numbers.
-    fn new(rng: &mut impl RngCore) -> Self {
+    fn new(rng: &mut impl Rng) -> Self {
         TcpPacketData {
             forward: Wrapping(rng.next_u32()),
             backward: Wrapping(rng.next_u32()),
@@ -73,7 +73,7 @@ impl Stage4 {
     /// then calculates and sets the IPv4 header checksum.
     fn setup_ip_packet<P: PacketInfo>(
         &self,
-        rng: &mut impl RngCore,
+        rng: &mut impl Rng,
         packet: &mut [u8],
         flow: &Flow,
         packet_info: &P,
@@ -123,7 +123,7 @@ impl Stage4 {
     /// Returns an updated TcpPacketData structure for further packet generation.
     fn setup_tcp_packet(
         &self,
-        rng: &mut impl RngCore,
+        rng: &mut impl Rng,
         packet: &mut [u8],
         flow: &FlowData,
         packet_info: &TCPPacketInfo,
