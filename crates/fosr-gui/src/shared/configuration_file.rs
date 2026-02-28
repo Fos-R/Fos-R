@@ -89,14 +89,17 @@ pub fn configuration_file_picker(
             }
         }
 
-        // Display the filename of the picked file, or a placeholder
-        let filename = configuration_file_state
-            .picked_config_file
-            .as_ref()
-            .map(|file| file.file_name())
-            .unwrap_or("No file selected".to_string());
+        // Diplay the file name on disk or template or a placeholder
+        let filename = if let Some(file) = &configuration_file_state.picked_config_file {
+            file.file_name()
+        } else if configuration_file_state.config_file_content.is_some() {
+            "basic_config.yaml (unsaved)".to_string()
+        } else {
+            "No file selected".to_string()
+        };
 
-        if configuration_file_state.picked_config_file.is_some() && ui.button("Remove").clicked() {
+        // Diplay Remove button if there is content (from disk or template)
+        if configuration_file_state.config_file_content.is_some() && ui.button("Remove").clicked() {
             configuration_file_state.picked_config_file = None;
             reset_loaded_config(configuration_file_state);
         };
@@ -104,12 +107,15 @@ pub fn configuration_file_picker(
         // Save as button (only when config content is available)
         if configuration_file_state.config_file_content.is_some() {
             if ui.button("Save as").clicked() {
-                let content = configuration_file_state.config_file_content.clone().unwrap();
+                let content = configuration_file_state
+                    .config_file_content
+                    .clone()
+                    .unwrap();
                 let default_name = configuration_file_state
                     .picked_config_file
                     .as_ref()
                     .map(|f| f.file_name())
-                    .unwrap_or_else(|| "config.yaml".to_string());
+                    .unwrap_or_else(|| "basic_config.yaml".to_string());
 
                 #[cfg(not(target_arch = "wasm32"))]
                 {

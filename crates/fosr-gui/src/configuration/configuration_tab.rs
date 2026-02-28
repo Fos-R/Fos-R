@@ -8,6 +8,17 @@ use eframe::egui;
 use egui_extras::DatePickerButton;
 use std::collections::HashSet;
 
+const DEFAULT_CONFIG_YAML: &str = r#"metadata:
+  title: Sample configuration
+hosts:
+  - interfaces:
+      - ip_addr: 192.168.0.8
+        services:
+          - https
+          - ssh:2222
+  - interfaces:
+      - ip_addr: 192.168.0.9"#;
+
 /// Scans all interfaces to find the next available IP in 192.168.0.x
 fn next_free_ip(used_ips: &HashSet<String>) -> Option<String> {
     for x in 1..=254 {
@@ -86,6 +97,25 @@ pub fn show_configuration_tab_content(
         // File Selection
         configuration_file_picker(ui, file_state);
         ui.separator();
+
+        if file_state.config_file_content.is_none() {
+            ui.horizontal(|ui| {
+                ui.label("No configuration loaded.");
+                if ui.button("Init basic configuration").clicked() {
+                    file_state.config_file_content = Some(DEFAULT_CONFIG_YAML.to_string());
+                    match serde_yaml::from_str::<Configuration>(DEFAULT_CONFIG_YAML) {
+                        Ok(model) => {
+                            file_state.config_model = Some(model);
+                            file_state.parse_error = None;
+                        }
+                        Err(e) => {
+                            file_state.parse_error = Some(e.to_string());
+                        }
+                    }
+                }
+            });
+            ui.separator();
+        }
 
         ui_parsing_status(ui, file_state);
 
@@ -536,28 +566,17 @@ fn ui_single_service(
 
 /// Read-only YAML Preview
 fn ui_yaml_preview(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
-    if state.picked_config_file.is_none() {
+    if state.config_file_content.is_none() {
         ui.label("No configuration file selected");
         return;
     }
+    let content = state.config_file_content.as_ref().unwrap();
+    let theme = egui_extras::syntax_highlighting::CodeTheme::from_memory(ui.ctx(), ui.style());
 
-    if state.config_file_content.is_none() {
-        ui.label("Loading configuration file...");
-        load_config_file_contents(state);
-    } else {
-        let content = state.config_file_content.as_ref().unwrap();
-        let theme = egui_extras::syntax_highlighting::CodeTheme::from_memory(ui.ctx(), ui.style());
+    let mut layout_job =
+        egui_extras::syntax_highlighting::highlight(ui.ctx(), ui.style(), &theme, content, "yaml");
 
-        let mut layout_job = egui_extras::syntax_highlighting::highlight(
-            ui.ctx(),
-            ui.style(),
-            &theme,
-            content,
-            "yaml",
-        );
+    layout_job.wrap.max_width = ui.available_width();
 
-        layout_job.wrap.max_width = ui.available_width();
-
-        ui.add(egui::Label::new(layout_job).selectable(true));
-    }
+    ui.add(egui::Label::new(layout_job).selectable(true));
 }
