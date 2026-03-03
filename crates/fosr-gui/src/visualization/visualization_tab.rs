@@ -211,109 +211,9 @@ pub struct VisualizationTabState {
 
 impl Default for VisualizationTabState {
     fn default() -> Self {
-        Self::create_demo_state()
-    }
-}
-
-impl VisualizationTabState {
-    /// Create a demo state with all IPs from the BN models (bn_additional_data.json)
-    /// TODO: only a subset of them seems to appear in the generated data, prune the unused ones
-    fn create_demo_state() -> Self {
-        // All IPs from bn_additional_data.json (excluding 0.0.0.0)
-        // Servers are x.x.x.2, Users are x.x.x.3+
-        let demo_hosts: Vec<(Ipv4Addr, NodeType)> = vec![
-            // 192.168.100.x
-            (Ipv4Addr::new(192, 168, 100, 2), NodeType::Server),
-            (Ipv4Addr::new(192, 168, 100, 3), NodeType::User),
-            (Ipv4Addr::new(192, 168, 100, 4), NodeType::User),
-            (Ipv4Addr::new(192, 168, 100, 5), NodeType::User),
-            (Ipv4Addr::new(192, 168, 100, 6), NodeType::User),
-            // 192.168.200.x
-            (Ipv4Addr::new(192, 168, 200, 2), NodeType::Server),
-            (Ipv4Addr::new(192, 168, 200, 3), NodeType::User),
-            (Ipv4Addr::new(192, 168, 200, 4), NodeType::User),
-            (Ipv4Addr::new(192, 168, 200, 5), NodeType::User),
-            (Ipv4Addr::new(192, 168, 200, 8), NodeType::User),
-            (Ipv4Addr::new(192, 168, 200, 9), NodeType::User),
-            // 192.168.210.x
-            (Ipv4Addr::new(192, 168, 210, 2), NodeType::Server),
-            (Ipv4Addr::new(192, 168, 210, 3), NodeType::User),
-            (Ipv4Addr::new(192, 168, 210, 4), NodeType::User),
-            (Ipv4Addr::new(192, 168, 210, 5), NodeType::User),
-            // 192.168.220.x
-            (Ipv4Addr::new(192, 168, 220, 2), NodeType::Server),
-            (Ipv4Addr::new(192, 168, 220, 3), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 4), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 5), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 6), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 7), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 8), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 9), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 10), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 11), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 12), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 13), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 14), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 15), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 16), NodeType::User),
-        ];
-
-        let mut graph = VisualizationGraph::new(petgraph::stable_graph::StableGraph::default());
-        let mut known_ips = HashSet::new();
-        let mut ip_to_node = HashMap::new();
-
-        // Add demo nodes (one node per IP in demo mode, since demo hosts have single IPs)
-        for (ip, node_type) in &demo_hosts {
-            let node_data = NodeData {
-                ip_addrs: vec![*ip],
-                hostname: None, // No hostname, just show IP
-                node_type: *node_type,
-                os: OS::Linux, // Does not matter
-                flow_count: 0,
-                max_flow_count: 0,
-            };
-            // Nodes are initially placed at the center. They are manually distributed later.
-            let idx = graph.add_node_with_location(node_data, egui::pos2(0.0, 0.0));
-            known_ips.insert(*ip);
-            ip_to_node.insert(*ip, idx);
-        }
-
-        // Distribute nodes before adding the Internet node, so that it stays in the center
-        distribute_nodes_circle(&mut graph);
-
-        // Add Internet node
-        let internet_idx =
-            graph.add_node_with_location(NodeData::internet(), egui::pos2(0.0, 0.0));
-        ip_to_node.insert(INTERNET_IP, internet_idx);
-
-        // Add edges between users and servers
-        // TODO: make sure that all flows occur between a server and a user, never between 2 servers or 2 users or a server and the Internet
-        let users: Vec<_> = demo_hosts
-            .iter()
-            .filter(|(_, t)| *t == NodeType::User)
-            .collect();
-        let servers: Vec<_> = demo_hosts
-            .iter()
-            .filter(|(_, t)| *t == NodeType::Server)
-            .collect();
-
-        for (user_ip, _) in &users {
-            for (server_ip, _) in &servers {
-                let user_idx = ip_to_node[user_ip];
-                let server_idx = ip_to_node[server_ip];
-                graph.add_edge(user_idx, server_idx, EdgeData::default());
-            }
-            // Add edge to Internet for each user
-            let user_idx = ip_to_node[user_ip];
-            graph.add_edge(user_idx, internet_idx, EdgeData::default());
-        }
-
-        // Add edges from servers to Internet
-        for (server_ip, _) in &servers {
-            let server_idx = ip_to_node[server_ip];
-            graph.add_edge(server_idx, internet_idx, EdgeData::default());
-        }
-
+        // Start with an empty graph; the default config from ConfigurationFileState
+        // will be detected by handle_config_changes() on the first frame.
+        let graph = VisualizationGraph::new(petgraph::stable_graph::StableGraph::default());
         Self {
             graph,
             flow_receiver: None,
@@ -322,22 +222,24 @@ impl VisualizationTabState {
             config_content: None,
             streamer: None,
             layout_initialized: false,
-            known_ips,
-            ip_to_node,
+            known_ips: HashSet::new(),
+            ip_to_node: HashMap::new(),
             visualization_start: None,
             speed: Arc::new(RwLock::new(1.0)),
             events_buffer: Rc::new(RefCell::new(Vec::new())),
             clicked_node: None,
             node_info_modal_open: false,
             node_to_host: HashMap::new(),
-            auto_start_countdown: Some(10),
+            auto_start_countdown: None,
             total_flows: 0,
             reset_view_requested: false,
             last_screen_size: None,
             modal_edit_buffer: None,
         }
     }
+}
 
+impl VisualizationTabState {
     /// Update state from a configuration (preserves some state)
     /// Note: caller should stop visualization before calling this if running
     pub fn update_from_config(&mut self, config: &config::Configuration) {

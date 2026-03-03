@@ -8,6 +8,8 @@ use rfd::FileHandle;
 #[cfg(target_arch = "wasm32")]
 use std::sync::mpsc::{Receiver, channel};
 
+pub const DEFAULT_CONFIG_YAML: &str = include_str!("../default_config.yaml");
+
 pub struct ConfigurationFileState {
     pub picked_config_file: Option<FileHandle>,
     #[cfg(target_arch = "wasm32")]
@@ -21,14 +23,15 @@ pub struct ConfigurationFileState {
 
 impl Default for ConfigurationFileState {
     fn default() -> Self {
+        let config_model = serde_yaml::from_str::<Configuration>(DEFAULT_CONFIG_YAML).ok();
         Self {
             picked_config_file: None,
             #[cfg(target_arch = "wasm32")]
             config_file_receiver: None,
-            config_file_content: None,
+            config_file_content: Some(DEFAULT_CONFIG_YAML.to_string()),
             #[cfg(target_arch = "wasm32")]
             config_file_content_receiver: None,
-            config_model: None,
+            config_model,
             parse_error: None,
         }
     }
@@ -56,7 +59,7 @@ pub fn configuration_file_picker(
                 let file = show_file_picker_desktop();
                 if file.is_some() {
                     configuration_file_state.picked_config_file = file;
-                    reset_loaded_config(configuration_file_state);
+                    clear_loaded_config(configuration_file_state);
                 }
             }
 
@@ -82,24 +85,24 @@ pub fn configuration_file_picker(
                     // Only update if a file was actually selected
                     if file.is_some() {
                         configuration_file_state.picked_config_file = file;
-                        reset_loaded_config(configuration_file_state);
+                        clear_loaded_config(configuration_file_state);
                     }
                     configuration_file_state.config_file_receiver = None; // Dialog finished
                 }
             }
         }
 
-        // Diplay the file name on disk or template or a placeholder
+        // Display the file name on disk, or indicate built-in default
         let filename = if let Some(file) = &configuration_file_state.picked_config_file {
             file.file_name()
-        } else if configuration_file_state.config_file_content.is_some() {
-            "basic_config.yaml (unsaved)".to_string()
         } else {
-            "No file selected".to_string()
+            "default_config.yaml (built-in)".to_string()
         };
 
-        // Diplay Remove button if there is content (from disk or template)
-        if configuration_file_state.config_file_content.is_some() && ui.button("Remove").clicked() {
+        // Display Restore default button when a custom file is loaded
+        if configuration_file_state.picked_config_file.is_some()
+            && ui.button("Restore default").clicked()
+        {
             configuration_file_state.picked_config_file = None;
             reset_loaded_config(configuration_file_state);
         };
@@ -115,7 +118,7 @@ pub fn configuration_file_picker(
                     .picked_config_file
                     .as_ref()
                     .map(|f| f.file_name())
-                    .unwrap_or_else(|| "basic_config.yaml".to_string());
+                    .unwrap_or_else(|| "config.yaml".to_string());
 
                 #[cfg(not(target_arch = "wasm32"))]
                 {
@@ -212,9 +215,23 @@ fn parse_config_yaml(configuration_file_state: &mut ConfigurationFileState) {
     }
 }
 
-pub fn reset_loaded_config(configuration_file_state: &mut ConfigurationFileState) {
+/// Clear all loaded config state to allow loading a new file.
+fn clear_loaded_config(configuration_file_state: &mut ConfigurationFileState) {
     configuration_file_state.config_file_content = None;
     configuration_file_state.config_model = None;
+    configuration_file_state.parse_error = None;
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        configuration_file_state.config_file_content_receiver = None;
+    }
+}
+
+/// Restore the built-in default configuration.
+pub fn reset_loaded_config(configuration_file_state: &mut ConfigurationFileState) {
+    configuration_file_state.config_file_content = Some(DEFAULT_CONFIG_YAML.to_string());
+    configuration_file_state.config_model =
+        serde_yaml::from_str::<Configuration>(DEFAULT_CONFIG_YAML).ok();
     configuration_file_state.parse_error = None;
 
     #[cfg(target_arch = "wasm32")]
