@@ -4,8 +4,6 @@ import pandas as pd
 import numpy as np
 from math import log2
 from scipy.stats import wasserstein_distance
-# from sklearn.ensemble import IsolationForest
-from isotree import IsolationForest
 from sklearn.preprocessing import LabelEncoder
 from imblearn.over_sampling import RandomOverSampler
 from sklearn.preprocessing import StandardScaler
@@ -75,33 +73,31 @@ def jsd(l1, l2):
 
 def evaluate_tcp(flow_real, flow_synthetic):
     print("Evaluating TCP packet-level metrics")
-    results = {}
-    results["Pkt TCP flags"] = jsd(flow_real["tcp.flags"],flow_synthetic["tcp.flags"])
-    return results
+    return [ {"data": "Packet", "feature": "TCP flags", "metric": "JSD", "value": jsd(flow_real["tcp.flags"],flow_synthetic["tcp.flags"])} ]
 
 def evaluate_ip(flow_real, flow_synthetic):
     print("Evaluating IP packet-level metrics")
-    results = {}
-    results["Pkt TTL"] = jsd(flow_real["ip.ttl"],flow_synthetic["ip.ttl"])
-    results["Pkt Source IP"] = jsd(flow_real["ip.src"],flow_synthetic["ip.src"])
-    results["Pkt Dest. IP"] = jsd(flow_real["ip.dst"],flow_synthetic["ip.dst"])
-    results["Pkt Protocol"] = jsd(flow_real["ip.proto"],flow_synthetic["ip.proto"])
-    results["Pkt Length"] = wasserstein_distance(flow_real["ip.len"],flow_synthetic["ip.len"])
+    results = []
+    results.append({"data": "Packet", "feature": "TTL", "metric": "JSD", "value": jsd(flow_real["ip.ttl"],flow_synthetic["ip.ttl"])})
+    results.append({"data": "Packet", "feature": "Source IP", "metric": "JSD", "value": jsd(flow_real["ip.src"],flow_synthetic["ip.src"])
+    results.append({"data": "Packet", "feature": "Dest. IP", "metric": "JSD", "value": jsd(flow_real["ip.dst"],flow_synthetic["ip.dst"])
+    results.append({"data": "Packet", "feature": "L4 Protocol", "metric": "JSD", "value": jsd(flow_real["ip.proto"],flow_synthetic["ip.proto"])
+    results.append({"data": "Packet", "feature": "Length", "metric": "EMD", "value": wasserstein_distance(flow_real["ip.len"],flow_synthetic["ip.len"])
     return results
 
 def evaluate_pcap(pcap_real, pcap_synthetic):
     results = {}
     print("Evaluating BLEU")
-    results["Pcap BLEU"] = bleu.compute_bleu(translation_corpus=[list(pcap_synthetic)], reference_corpus=[[list(pcap_real)]], max_order=4)[0]
+    results.append({"data": "Pcap file", "feature": "n-grams", "metric": "BLEU", "value": bleu.compute_bleu(translation_corpus=[list(pcap_synthetic)], reference_corpus=[[list(pcap_real)]], max_order=4)[0]})
     print("Evaluating ROUGE")
-    results["Pcap ROUGE"] = rouge.rouge_n(evaluated_sentences=list(pcap_synthetic), reference_sentences=list(pcap_eval), n=4)[0]
-    results["Pcap Bytes"] = jsd(list(pcap_real), list(pcap_synthetic))
+    results.append({"data": "Pcap file", "feature": "n-grams", "metric": "ROUGE", "value": rouge.rouge_n(evaluated_sentences=list(pcap_synthetic), reference_sentences=list(pcap_eval), n=4)[0]
+    results.append({"data": "Pcap file", "feature": "Bytes histograms", "metric": "JSD", "value": jsd(list(pcap_real), list(pcap_synthetic))
     return results
 
 def evaluate_weird(flow_real, flow_synthetic, flow_real_weird, flow_synthetic_weird):
     results = {}
     print("Evaluating weird.log file")
-    results["Flow weird proportion"] = len(flow_synthetic_weird) / len(flow_synthetic) - len(flow_real_weird) / len(flow_real)
+    results.append({"data": "Flow", "feature": "\"Weird\" occurrences ", "metric": "Ratio difference", "value": len(flow_synthetic_weird) / len(flow_synthetic) - len(flow_real_weird) / len(flow_real)})
     print("Most common names in weird.log:")
     print(flow_synthetic_weird["name"].value_counts())
     return results
@@ -111,35 +107,37 @@ def evaluate_flow(flow_real, flow_synthetic):
 
     # JSD for categorical data
     print("Evaluating flow-level metrics")
-    results["Flow Source IP"] = jsd(flow_real["id.orig_h"],flow_synthetic["id.orig_h"])
-    results["Flow Dest. IP"] = jsd(flow_real["id.resp_h"],flow_synthetic["id.resp_h"])
-    results["Flow Dest. port"] = jsd(flow_real["id.resp_p"],flow_synthetic["id.resp_p"])
-    results["Flow Protocol"] = jsd(flow_real["proto"],flow_synthetic["proto"])
-    results["Flow Service"] = jsd(flow_real["service"],flow_synthetic["service"])
-    results["Flow History"] = jsd(flow_real["history"],flow_synthetic["history"])
+    results.append({"data": "Flow", "feature": "Source IP", "metric": "JSD", "value": jsd(flow_real["id.orig_h"],flow_synthetic["id.orig_h"])})
+    results.append({"data": "Flow", "feature": "Dest. IP", "metric": "JSD", "value": jsd(flow_real["id.resp_h"],flow_synthetic["id.resp_h"])})
+    results.append({"data": "Flow", "feature": "Dest. Port", "metric": "JSD", "value": jsd(flow_real["id.resp_p"],flow_synthetic["id.resp_p"])})
+    results.append({"data": "Flow", "feature": "L4 Protocol", "metric": "JSD", "value": jsd(flow_real["proto"],flow_synthetic["proto"])})
+    results.append({"data": "Flow", "feature": "L7 Protocol", "metric": "JSD", "value": jsd(flow_real["service"],flow_synthetic["service"])
+    results.append({"data": "Flow", "feature": "Flags History", "metric": "JSD", "value": jsd(flow_real["history"],flow_synthetic["history"])})
     # we only consider connections with a connection state (i.e., TCP)
-    results["Flow Connection state"] = jsd(flow_real[flow_real["conn_state"] != "-"]["conn_state"],flow_synthetic[flow_synthetic["conn_state"] != "-"]["conn_state"])
-    results["Flow IP protocol"] = jsd(flow_real["ip_proto"],flow_synthetic["ip_proto"])
+    results.append({"data": "Flow", "feature": "Connection State", "metric": "JSD", "value": jsd(flow_real[flow_real["conn_state"] != "-"]["conn_state"],flow_synthetic[flow_synthetic["conn_state"] != "-"]["conn_state"])})
+    results.append({"data": "Flow", "feature": "L4 Protocol", "metric": "JSD", "value": jsd(flow_real["ip_proto"],flow_synthetic["ip_proto"])})
 
     # EMD for numerical data
-    results["Flow Duration"] = wasserstein_distance(flow_real["duration"],flow_synthetic["duration"])
-    results["Flow Source bytes"] = wasserstein_distance(flow_real["orig_bytes"],flow_synthetic["orig_bytes"])
-    results["Flow Dest. bytes"] = wasserstein_distance(flow_real["resp_bytes"],flow_synthetic["resp_bytes"])
-    results["Flow Source packets"] = wasserstein_distance(flow_real["orig_pkts"],flow_synthetic["orig_pkts"])
-    results["Flow Dest. packets"] = wasserstein_distance(flow_real["resp_pkts"],flow_synthetic["resp_pkts"])
+    results.append({"data": "Flow", "feature": "Duration", "metric": "EMD", "value": wasserstein_distance(flow_real["duration"],flow_synthetic["duration"])})
+    results.append({"data": "Flow", "feature": "Source Bytes", "metric": "EMD", "value": wasserstein_distance(flow_real["orig_bytes"],flow_synthetic["orig_bytes"])})
+    results.append({"data": "Flow", "feature": "Dest. Bytes", "metric": "EMD", "value": wasserstein_distance(flow_real["resp_bytes"],flow_synthetic["resp_bytes"])})
+    results.append({"data": "Flow", "feature": "Source Packets", "metric": "EMD", "value": wasserstein_distance(flow_real["orig_pkts"],flow_synthetic["orig_pkts"])})
+    results.append({"data": "Flow", "feature": "Dest. Packets", "metric": "EMD", "value": wasserstein_distance(flow_real["resp_pkts"],flow_synthetic["resp_pkts"])})
     # results["Flow Time"] = wasserstein_distance(flow_real["ts"],flow_synthetic["ts"])
+
+    nice_names = {"duration": "Duration", "orig_bytes": "Source Bytes", "resp_bytes": "Dest. Bytes", "orig_pkts": "Source Packets", "resp_pkts": "Dest. Packets", "id.orig_h": "Source IP", "id.resp_h": "Dest. IP", "id.resp_p": "Dest. Port", "proto": "L4 Protocol", "service": "L7 Protocol", "history": "Flags History", "conn_state": "Connection State", "ip_proto": "L3 Protocol"}
 
     # Spearman correlation for numerical data
     for (i,f1) in enumerate(["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts"]):
         for (j,f2) in enumerate(["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts"]):
             if i < j:
-                results[f"Spearman {f1} / {f2}"] = stats.spearmanr(flow_synthetic[f1], flow_synthetic[f2]).statistic - stats.spearmanr(flow_real[f1], flow_real[f2]).statistic
+                results.append({"data": "Flow", "feature": f"{nice_names[f1]} & {nice_names[f2]}", "metric": "Spearman corr. difference", "value": stats.spearmanr(flow_synthetic[f1], flow_synthetic[f2]).statistic - stats.spearmanr(flow_real[f1], flow_real[f2]).statistic})
 
     # Mutual information for categorical data
     for (i,f1) in enumerate(["id.orig_h", "id.resp_h", "id.resp_p", "proto", "service","history", "conn_state", "ip_proto"]):
         for (j,f2) in enumerate(["id.orig_h", "id.resp_h", "id.resp_p", "proto", "service","history", "conn_state", "ip_proto"]):
             if i < j:
-                results[f"Mutual information {f1} / {f2}"] = mutual_info_score(flow_synthetic[f1], flow_synthetic[f2]) - mutual_info_score(flow_real[f1], flow_real[f2])
+                results.append({"data": "Flow", "feature": f"{nice_names[f1]} & {nice_names[f2]}", "metric": "Mutual Information", "value":  mutual_info_score(flow_synthetic[f1], flow_synthetic[f2]) - mutual_info_score(flow_real[f1], flow_real[f2])})
 
     discrete_similarity = lambda l1, l2: 1-hamming(l1,l2)
 
@@ -147,15 +145,14 @@ def evaluate_flow(flow_real, flow_synthetic):
     # use only 1000 flows chosen randomly
     discrete_samples_synthetic = flow_synthetic[["id.orig_h", "id.resp_h", "id.resp_p", "proto", "service","history", "conn_state", "ip_proto"]].sample(n=1000, random_state=0).values.tolist()
     # Vendi describes a dataset and is not a distance.
-    results["Vendi (discrete)"] = vendi.score(discrete_samples_synthetic, discrete_similarity) / len(discrete_samples_synthetic)
+    results.append({"data": "Flow", "feature": "All Discrete Features", "metric": "Vendi", "value": vendi.score(discrete_samples_synthetic, discrete_similarity) / len(discrete_samples_synthetic)})
 
     continuous_samples_synthetic = flow_synthetic[["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts"]].sample(n=1000, random_state=0)
     # normalize
     for column in continuous_samples_synthetic.columns:
         continuous_samples_synthetic[column] = (continuous_samples_synthetic[column] - continuous_samples_synthetic[column].mean()) / continuous_samples_synthetic[column].std()
     continuous_samples_synthetic = continuous_samples_synthetic.values.tolist()
-
-    results["Vendi (continuous)"] = vendi.score_K(cosine_similarity(continuous_samples_synthetic)) / len(discrete_samples_synthetic)
+    results.append({"data": "Flow", "feature": "All Continuous Features", "metric": "Vendi", "value": vendi.score_K(cosine_similarity(continuous_samples_synthetic)) / len(discrete_samples_synthetic)})
 
     print("Evaluating C2ST")
 
@@ -172,7 +169,8 @@ def evaluate_flow(flow_real, flow_synthetic):
     clf = RandomForestClassifier(random_state=0)
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
-    results["C2ST"] = balanced_accuracy_score(y_test, y_pred)
+
+    results.append({"data": "Flow", "feature": "All Features", "metric": "C2ST Balanced Accuracy", "value": balanced_accuracy_score(y_test, y_pred)})
 
     return results
 
