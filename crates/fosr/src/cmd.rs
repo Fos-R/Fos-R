@@ -223,7 +223,7 @@ pub enum Command {
         #[arg(
             short = 't',
             long,
-            help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. By default, use the current time. Date time is considered to be in the timezone specified with --tz"
+            help = "Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. The date cannot be ealier than 1970. By default, use the current time. Date time is considered to be in the timezone specified with --tz"
         )]
         start_time: Option<String>,
         #[arg(
