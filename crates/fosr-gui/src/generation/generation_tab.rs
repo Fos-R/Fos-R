@@ -166,7 +166,7 @@ pub fn show_generation_tab_content(
     if !state.use_current_time {
         ui.horizontal(|ui| {
             ui.label("Start time");
-            ui.add(DatePickerButton::new(&mut state.start_date));
+            ui.add(DatePickerButton::new(&mut state.start_date).start_end_years(2020..=2100));
             ui.add(TimePickerButton::new(&mut state.start_hour).show_seconds(true).use_dragvalue(true));
         });
 
