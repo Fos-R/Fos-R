@@ -1,6 +1,6 @@
 pandas
 scipy
 scikit-learn
-isotree
 matplotlib
 vendi-score
+imblearn

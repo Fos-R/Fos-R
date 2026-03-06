@@ -79,23 +79,23 @@ def evaluate_ip(flow_real, flow_synthetic):
     print("Evaluating IP packet-level metrics")
     results = []
     results.append({"data": "Packet", "feature": "TTL", "metric": "JSD", "value": jsd(flow_real["ip.ttl"],flow_synthetic["ip.ttl"])})
-    results.append({"data": "Packet", "feature": "Source IP", "metric": "JSD", "value": jsd(flow_real["ip.src"],flow_synthetic["ip.src"])
-    results.append({"data": "Packet", "feature": "Dest. IP", "metric": "JSD", "value": jsd(flow_real["ip.dst"],flow_synthetic["ip.dst"])
-    results.append({"data": "Packet", "feature": "L4 Protocol", "metric": "JSD", "value": jsd(flow_real["ip.proto"],flow_synthetic["ip.proto"])
-    results.append({"data": "Packet", "feature": "Length", "metric": "EMD", "value": wasserstein_distance(flow_real["ip.len"],flow_synthetic["ip.len"])
+    results.append({"data": "Packet", "feature": "Source IP", "metric": "JSD", "value": jsd(flow_real["ip.src"],flow_synthetic["ip.src"])})
+    results.append({"data": "Packet", "feature": "Dest. IP", "metric": "JSD", "value": jsd(flow_real["ip.dst"],flow_synthetic["ip.dst"])})
+    results.append({"data": "Packet", "feature": "L4 Protocol", "metric": "JSD", "value": jsd(flow_real["ip.proto"],flow_synthetic["ip.proto"])})
+    results.append({"data": "Packet", "feature": "Length", "metric": "EMD", "value": wasserstein_distance(flow_real["ip.len"],flow_synthetic["ip.len"])})
     return results
 
 def evaluate_pcap(pcap_real, pcap_synthetic):
-    results = {}
+    results = []
     print("Evaluating BLEU")
     results.append({"data": "Pcap file", "feature": "n-grams", "metric": "BLEU", "value": bleu.compute_bleu(translation_corpus=[list(pcap_synthetic)], reference_corpus=[[list(pcap_real)]], max_order=4)[0]})
     print("Evaluating ROUGE")
-    results.append({"data": "Pcap file", "feature": "n-grams", "metric": "ROUGE", "value": rouge.rouge_n(evaluated_sentences=list(pcap_synthetic), reference_sentences=list(pcap_eval), n=4)[0]
-    results.append({"data": "Pcap file", "feature": "Bytes histograms", "metric": "JSD", "value": jsd(list(pcap_real), list(pcap_synthetic))
+    results.append({"data": "Pcap file", "feature": "n-grams", "metric": "ROUGE", "value": rouge.rouge_n(evaluated_sentences=list(pcap_synthetic), reference_sentences=list(pcap_eval), n=4)[0]})
+    results.append({"data": "Pcap file", "feature": "Bytes histograms", "metric": "JSD", "value": jsd(list(pcap_real), list(pcap_synthetic))})
     return results
 
 def evaluate_weird(flow_real, flow_synthetic, flow_real_weird, flow_synthetic_weird):
-    results = {}
+    results = []
     print("Evaluating weird.log file")
     results.append({"data": "Flow", "feature": "\"Weird\" occurrences ", "metric": "Ratio difference", "value": len(flow_synthetic_weird) / len(flow_synthetic) - len(flow_real_weird) / len(flow_real)})
     print("Most common names in weird.log:")
@@ -103,7 +103,7 @@ def evaluate_weird(flow_real, flow_synthetic, flow_real_weird, flow_synthetic_we
     return results
 
 def evaluate_flow(flow_real, flow_synthetic):
-    results = {}
+    results = []
 
     # JSD for categorical data
     print("Evaluating flow-level metrics")
@@ -111,7 +111,7 @@ def evaluate_flow(flow_real, flow_synthetic):
     results.append({"data": "Flow", "feature": "Dest. IP", "metric": "JSD", "value": jsd(flow_real["id.resp_h"],flow_synthetic["id.resp_h"])})
     results.append({"data": "Flow", "feature": "Dest. Port", "metric": "JSD", "value": jsd(flow_real["id.resp_p"],flow_synthetic["id.resp_p"])})
     results.append({"data": "Flow", "feature": "L4 Protocol", "metric": "JSD", "value": jsd(flow_real["proto"],flow_synthetic["proto"])})
-    results.append({"data": "Flow", "feature": "L7 Protocol", "metric": "JSD", "value": jsd(flow_real["service"],flow_synthetic["service"])
+    results.append({"data": "Flow", "feature": "L7 Protocol", "metric": "JSD", "value": jsd(flow_real["service"],flow_synthetic["service"])})
     results.append({"data": "Flow", "feature": "Flags History", "metric": "JSD", "value": jsd(flow_real["history"],flow_synthetic["history"])})
     # we only consider connections with a connection state (i.e., TCP)
     results.append({"data": "Flow", "feature": "Connection State", "metric": "JSD", "value": jsd(flow_real[flow_real["conn_state"] != "-"]["conn_state"],flow_synthetic[flow_synthetic["conn_state"] != "-"]["conn_state"])})
@@ -327,25 +327,21 @@ if __name__ == '__main__':
 
     print("\tSYNTHETIC DATA")
     results_synthetic = evaluate_flow(flow_eval, flow_synthetic)
-    # results_synthetic = results_synthetic | evaluate_weird(flow_eval, flow_synthetic, flow_eval_weird, flow_synthetic_weird)
-    # results_synthetic = results_synthetic | evaluate_pcap(pcap_eval, pcap_synthetic)
-    # results_synthetic = results_synthetic | evaluate_ip(flow_eval_ip, flow_synthetic_ip)
-    # results_synthetic = results_synthetic | evaluate_tcp(flow_eval_tcp, flow_synthetic_tcp)
+    results_synthetic = results_synthetic + evaluate_weird(flow_eval, flow_synthetic, flow_eval_weird, flow_synthetic_weird)
+    results_synthetic = results_synthetic + evaluate_pcap(pcap_eval, pcap_synthetic)
+    results_synthetic = results_synthetic + evaluate_ip(flow_eval_ip, flow_synthetic_ip)
+    results_synthetic = results_synthetic + evaluate_tcp(flow_eval_tcp, flow_synthetic_tcp)
 
     print("\tREFERENCE DATA")
     results_ref = evaluate_flow(flow_eval, flow_ref)
-    # results_ref = results_ref | evaluate_weird(flow_eval, flow_ref, flow_eval_weird, flow_ref_weird)
-    # results_ref = results_ref | evaluate_pcap(pcap_eval, pcap_ref)
-    # results_ref = results_ref | evaluate_ip(flow_eval_ip, flow_ref_ip)
-    # results_ref = results_ref | evaluate_tcp(flow_eval_tcp, flow_ref_tcp)
+    results_ref = results_ref + evaluate_weird(flow_eval, flow_ref, flow_eval_weird, flow_ref_weird)
+    results_ref = results_ref + evaluate_pcap(pcap_eval, pcap_ref)
+    results_ref = results_ref + evaluate_ip(flow_eval_ip, flow_ref_ip)
+    results_ref = results_ref + evaluate_tcp(flow_eval_tcp, flow_ref_tcp)
 
-    keys = list(set(list(results_synthetic.keys())+list(results_ref.keys())))
-    keys.sort()
-    for k in keys:
-        print(f"{k}:\n\tReference: {results_ref.get(k)}\n\tSynthetic: {results_synthetic.get(k)}")
-
-    results_synthetic["method"] = "Fos-R unstable"
-    results_ref["method"] = "Reference"
+    results_synthetic = { "method": "Fos-R (last)", "results": {f"{r['feature']} {r['data']} {r['metric']}": r for r in results_synthetic }}
+    results_ref = { "method": "Reference", "results": {f"{r['feature']} {r['data']} {r['metric']}": r for r in results_ref }}
+    # results_ref  = { "method": "Reference", "results": results_ref }
 
     out_file = open(os.path.join(args.output, f"results-{os.path.split(args.synthetic)[-1]}.json"), "w")
     json.dump(results_synthetic, out_file, indent=1)
