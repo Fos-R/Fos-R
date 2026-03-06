@@ -3,7 +3,6 @@ use eframe::egui;
 /// Display a small info icon with a tooltip.
 pub fn info_icon(ui: &mut egui::Ui, tooltip: &str) {
     ui.add_space(-4.0);
-    ui.ctx().style_mut(|s| s.interaction.tooltip_delay = 0.1);
     ui.label(egui::RichText::new("ℹ").color(egui::Color32::GRAY).size(14.0))
         .on_hover_cursor(egui::CursorIcon::Help)
         .on_hover_ui(|ui| {
