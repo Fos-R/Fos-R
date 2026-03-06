@@ -72,9 +72,6 @@ impl eframe::App for FosrApp {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // Add a Menu Bar to host the tabs buttons
             egui::MenuBar::new().ui(ui, |ui| {
-                // On native, show the theme switch (using system theme by default)
-                #[cfg(not(target_arch = "wasm32"))]
-                global_theme_preference_switch(ui);
                 // On web, use dark theme to match with the Fos-R website's theme
                 #[cfg(target_arch = "wasm32")]
                 ctx.set_theme(egui::Theme::Dark);
@@ -117,6 +114,40 @@ impl eframe::App for FosrApp {
                 {
                     self.current_tab = CurrentTab::About;
                 }
+
+                // Right-align utility buttons so they sit on the opposite side of the tabs
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    // On native, show the theme switch (using system theme by default)
+                    #[cfg(not(target_arch = "wasm32"))]
+                    global_theme_preference_switch(ui);
+
+                    // On web, show a fullscreen toggle button
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        let is_fullscreen = web_sys::window()
+                            .and_then(|w| w.document())
+                            .and_then(|d| d.fullscreen_element())
+                            .is_some();
+
+                        let (icon, tooltip) = if is_fullscreen {
+                            (egui_material_icons::icons::ICON_FULLSCREEN_EXIT, "Exit fullscreen")
+                        } else {
+                            (egui_material_icons::icons::ICON_FULLSCREEN, "Fullscreen")
+                        };
+
+                        if ui.button(icon).on_hover_text(tooltip).clicked() {
+                            if let Some(window) = web_sys::window() {
+                                if let Some(document) = window.document() {
+                                    if is_fullscreen {
+                                        document.exit_fullscreen();
+                                    } else if let Some(canvas) = document.get_element_by_id("fosr_gui_canvas") {
+                                        let _ = canvas.request_fullscreen();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
             });
         });
 
