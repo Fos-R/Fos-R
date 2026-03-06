@@ -15,6 +15,7 @@ use crate::shared::ui_utils::info_icon;
 use crate::shared::file_io::save_file_desktop;
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::save_file_wasm;
+use crate::timepicker::TimePickerButton;
 use chrono::{NaiveDate, NaiveTime};
 use chrono_tz::Tz;
 use eframe::egui;
@@ -24,7 +25,6 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, channel};
 use std::time::Duration;
-use crate::timepicker::TimePickerButton;
 
 // Time interval for the slider.
 pub const DURATION_MIN: Duration = Duration::from_secs(60); // 1 min
@@ -42,7 +42,6 @@ pub enum UiStatus {
     #[cfg(not(target_arch = "wasm32"))]
     Error(String),
 }
-
 
 /// Represents the state of the generation tab.
 pub struct GenerationTabState {
@@ -167,7 +166,11 @@ pub fn show_generation_tab_content(
         ui.horizontal(|ui| {
             ui.label("Start time");
             ui.add(DatePickerButton::new(&mut state.start_date).start_end_years(2020..=2100));
-            ui.add(TimePickerButton::new(&mut state.start_hour).show_seconds(true).use_dragvalue(true));
+            ui.add(
+                TimePickerButton::new(&mut state.start_hour)
+                    .show_seconds(true)
+                    .use_dragvalue(true),
+            );
         });
 
         ui.add_space(10.0);
