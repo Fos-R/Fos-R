@@ -19,20 +19,80 @@ pub struct ConfigurationFileState {
     pub config_file_content_receiver: Option<Receiver<Option<String>>>,
     pub config_model: Option<Configuration>,
     pub parse_error: Option<String>,
+    /// Whether the user has chosen a configuration (default or imported).
+    /// When false, the startup modal is shown.
+    pub config_chosen: bool,
 }
 
 impl Default for ConfigurationFileState {
     fn default() -> Self {
-        let config_model = serde_yaml::from_str::<Configuration>(DEFAULT_CONFIG_YAML).ok();
         Self {
             picked_config_file: None,
             #[cfg(target_arch = "wasm32")]
             config_file_receiver: None,
-            config_file_content: Some(DEFAULT_CONFIG_YAML.to_string()),
+            config_file_content: None,
             #[cfg(target_arch = "wasm32")]
             config_file_content_receiver: None,
-            config_model,
+            config_model: None,
             parse_error: None,
+            config_chosen: false,
+        }
+    }
+}
+
+/// Load the built-in default configuration into the state.
+pub fn load_default_config(state: &mut ConfigurationFileState) {
+    state.picked_config_file = None;
+    state.config_file_content = Some(DEFAULT_CONFIG_YAML.to_string());
+    state.config_model = serde_yaml::from_str::<Configuration>(DEFAULT_CONFIG_YAML).ok();
+    state.parse_error = None;
+    state.config_chosen = true;
+}
+
+/// Trigger a file import dialog (works on both desktop and WASM).
+/// On desktop this is synchronous; on WASM the result arrives via `config_file_receiver`.
+pub fn trigger_file_import(state: &mut ConfigurationFileState, ctx: &egui::Context) {
+    state.config_file_content = None;
+    #[cfg(target_arch = "wasm32")]
+    {
+        state.config_file_content_receiver = None;
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = ctx;
+        let file = show_file_picker_desktop();
+        if file.is_some() {
+            state.picked_config_file = file;
+            state.config_chosen = true;
+            clear_loaded_config(state);
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        let (sender, receiver) = channel();
+        state.config_file_receiver = Some(receiver);
+        let ctx = ctx.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            let file = show_file_picker_wasm().await;
+            let _ = sender.send(file);
+            ctx.request_repaint();
+        });
+    }
+}
+
+/// Poll the WASM async file picker and apply the result if ready.
+#[cfg(target_arch = "wasm32")]
+pub fn poll_file_import(state: &mut ConfigurationFileState) {
+    if let Some(receiver) = &state.config_file_receiver {
+        if let Ok(file) = receiver.try_recv() {
+            if file.is_some() {
+                state.picked_config_file = file;
+                state.config_chosen = true;
+                clear_loaded_config(state);
+            }
+            state.config_file_receiver = None;
         }
     }
 }
@@ -44,53 +104,12 @@ pub fn configuration_file_picker(
     ui.horizontal(|ui| {
         ui.label("Configuration file:");
 
-        // File Dialog to pick a config file
         if ui.button(egui_material_icons::icons::ICON_FOLDER_OPEN).on_hover_text("Select file").clicked() {
-            // Clear previous config content when selecting a new file
-            configuration_file_state.config_file_content = None;
-            #[cfg(target_arch = "wasm32")]
-            {
-                configuration_file_state.config_file_content_receiver = None;
-            }
-
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                // Only update if a file was actually selected
-                let file = show_file_picker_desktop();
-                if file.is_some() {
-                    configuration_file_state.picked_config_file = file;
-                    clear_loaded_config(configuration_file_state);
-                }
-            }
-
-            #[cfg(target_arch = "wasm32")]
-            {
-                let (sender, receiver) = channel();
-                configuration_file_state.config_file_receiver = Some(receiver);
-
-                let ctx = ui.ctx().clone();
-                wasm_bindgen_futures::spawn_local(async move {
-                    let file = show_file_picker_wasm().await;
-                    let _ = sender.send(file);
-                    ctx.request_repaint();
-                });
-            }
+            trigger_file_import(configuration_file_state, ui.ctx());
         }
 
         #[cfg(target_arch = "wasm32")]
-        // Check if we received a file from the async task
-        {
-            if let Some(receiver) = &configuration_file_state.config_file_receiver {
-                if let Ok(file) = receiver.try_recv() {
-                    // Only update if a file was actually selected
-                    if file.is_some() {
-                        configuration_file_state.picked_config_file = file;
-                        clear_loaded_config(configuration_file_state);
-                    }
-                    configuration_file_state.config_file_receiver = None; // Dialog finished
-                }
-            }
-        }
+        poll_file_import(configuration_file_state);
 
         // Display the file name on disk, or indicate built-in default
         let filename = if let Some(file) = &configuration_file_state.picked_config_file {
@@ -229,10 +248,7 @@ fn clear_loaded_config(configuration_file_state: &mut ConfigurationFileState) {
 
 /// Restore the built-in default configuration.
 pub fn reset_loaded_config(configuration_file_state: &mut ConfigurationFileState) {
-    configuration_file_state.config_file_content = Some(DEFAULT_CONFIG_YAML.to_string());
-    configuration_file_state.config_model =
-        serde_yaml::from_str::<Configuration>(DEFAULT_CONFIG_YAML).ok();
-    configuration_file_state.parse_error = None;
+    load_default_config(configuration_file_state);
 
     #[cfg(target_arch = "wasm32")]
     {

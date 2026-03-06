@@ -8,7 +8,7 @@ use super::generation_validation::{
     validate_timezone,
 };
 use crate::shared::configuration_file::{
-    ConfigurationFileState, configuration_file_picker, load_config_file_contents,
+    ConfigurationFileState, load_config_file_contents,
 };
 use crate::shared::ui_utils::info_icon;
 #[cfg(not(target_arch = "wasm32"))]
@@ -115,10 +115,6 @@ pub fn show_generation_tab_content(
 ) {
     // Eagerly load config file contents when a file is selected
     load_config_file_contents(configuration_file_state);
-
-    configuration_file_picker(ui, configuration_file_state);
-
-    ui.separator();
 
     ui.horizontal(|ui| {
         ui.label("Duration");
