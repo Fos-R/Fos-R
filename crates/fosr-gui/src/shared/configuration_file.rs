@@ -110,7 +110,11 @@ pub fn configuration_file_picker(
     ui.horizontal(|ui| {
         ui.label("Configuration file:");
 
-        if ui.button(egui_material_icons::icons::ICON_FOLDER_OPEN).on_hover_text("Select file").clicked() {
+        if ui
+            .button(egui_material_icons::icons::ICON_FOLDER_OPEN)
+            .on_hover_text("Select file")
+            .clicked()
+        {
             trigger_file_import(configuration_file_state, ui.ctx());
         }
 
@@ -126,7 +130,10 @@ pub fn configuration_file_picker(
 
         // Display Restore default button when a custom file is loaded
         if configuration_file_state.picked_config_file.is_some()
-            && ui.button(egui_material_icons::icons::ICON_RESTORE).on_hover_text("Restore default").clicked()
+            && ui
+                .button(egui_material_icons::icons::ICON_RESTORE)
+                .on_hover_text("Restore default")
+                .clicked()
         {
             configuration_file_state.picked_config_file = None;
             reset_loaded_config(configuration_file_state);
@@ -134,7 +141,11 @@ pub fn configuration_file_picker(
 
         // Save as button (only when config content is available)
         if configuration_file_state.config_file_content.is_some() {
-            if ui.button(egui_material_icons::icons::ICON_SAVE_AS).on_hover_text("Save as").clicked() {
+            if ui
+                .button(egui_material_icons::icons::ICON_SAVE_AS)
+                .on_hover_text("Save as")
+                .clicked()
+            {
                 let content = configuration_file_state
                     .config_file_content
                     .clone()
@@ -226,7 +237,7 @@ pub fn load_config_file_contents(configuration_file_state: &mut ConfigurationFil
     }
 }
 
-fn parse_config_yaml(configuration_file_state: &mut ConfigurationFileState) {
+pub fn parse_config_yaml(configuration_file_state: &mut ConfigurationFileState) {
     configuration_file_state.config_model = None;
     configuration_file_state.parse_error = None;
 

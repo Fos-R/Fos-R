@@ -1,6 +1,6 @@
 use crate::shared::config_model::{Configuration, Host, Interface};
 use crate::shared::configuration_file::{
-    ConfigurationFileState, configuration_file_picker, load_config_file_contents,
+    ConfigurationFileState, configuration_file_picker, load_config_file_contents, parse_config_yaml,
 };
 use crate::shared::ui_utils::{edit_optional_multiline_string, edit_optional_string, info_icon};
 use eframe::egui;
@@ -120,18 +120,22 @@ fn format_service(name: &str, port: Option<u16>) -> String {
 }
 
 /// Represents the state of the configuration tab.
-pub struct ConfigurationTabState {}
+pub struct ConfigurationTabState {
+    pub is_code_mode: bool,
+}
 
 impl Default for ConfigurationTabState {
     fn default() -> Self {
-        Self {}
+        Self {
+            is_code_mode: false,
+        }
     }
 }
 
 /// The main tab component
 pub fn show_configuration_tab_content(
     ui: &mut egui::Ui,
-    _tab_state: &mut ConfigurationTabState,
+    tab_state: &mut ConfigurationTabState,
     file_state: &mut ConfigurationFileState,
 ) {
     // Eagerly load config file contents when a file is selected
@@ -144,28 +148,38 @@ pub fn show_configuration_tab_content(
 
         ui_parsing_status(ui, file_state);
 
-        // Editor (if model is loaded)
-        if let Some(model) = file_state.config_model.as_mut() {
-            ui_hosts_section(ui, model);
+        if file_state.config_chosen {
+            ui.horizontal(|ui| {
+                ui.selectable_value(&mut tab_state.is_code_mode, false, "Visual mode");
+                ui.selectable_value(&mut tab_state.is_code_mode, true, "Code mode");
+            });
             ui.separator();
-            ui_metadata(ui, model);
-            ui.separator();
-        }
 
-        // Auto-sync model edits back to YAML so other tabs see the changes
-        if let Some(model) = &file_state.config_model {
-            match serde_yaml::to_string(model) {
-                Ok(yaml) => {
-                    file_state.config_file_content = Some(yaml);
-                    file_state.parse_error = None;
+            if !tab_state.is_code_mode {
+                // Visual mode
+                if let Some(model) = file_state.config_model.as_mut() {
+                    ui_hosts_section(ui, model);
+                    ui.separator();
+                    ui_metadata(ui, model);
+                    ui.separator();
                 }
-                Err(e) => {
-                    file_state.parse_error = Some(e.to_string());
+
+                // Auto-sync model edits back to YAML so other tabs see the changes
+                if let Some(model) = &file_state.config_model {
+                    match serde_yaml::to_string(model) {
+                        Ok(yaml) => {
+                            file_state.config_file_content = Some(yaml);
+                            file_state.parse_error = None;
+                        }
+                        Err(e) => {
+                            file_state.parse_error = Some(e.to_string());
+                        }
+                    }
                 }
+            } else {
+                ui_yaml_editor(ui, file_state);
             }
         }
-
-        ui_yaml_preview(ui, file_state);
     });
 }
 
@@ -215,7 +229,11 @@ fn ui_hosts_section(ui: &mut egui::Ui, model: &mut Configuration) {
     ui.add_space(6.0);
 
     ui.horizontal(|ui| {
-        if ui.button(egui_material_icons::icons::ICON_ADD).on_hover_text("Add host").clicked() {
+        if ui
+            .button(egui_material_icons::icons::ICON_ADD)
+            .on_hover_text("Add host")
+            .clicked()
+        {
             model.hosts.push(Host::default());
         }
     });
@@ -277,7 +295,11 @@ fn ui_single_host(
             ui.label(host_name);
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.button(egui_material_icons::icons::ICON_DELETE).on_hover_text("Remove host").clicked() {
+                if ui
+                    .button(egui_material_icons::icons::ICON_DELETE)
+                    .on_hover_text("Remove host")
+                    .clicked()
+                {
                     *remove_request = Some(index);
                 }
             });
@@ -306,7 +328,11 @@ fn ui_single_host(
                         Some(usage_val)
                     };
                 }
-                if ui.button(egui_material_icons::icons::ICON_CLEAR).on_hover_text("Clear").clicked() {
+                if ui
+                    .button(egui_material_icons::icons::ICON_CLEAR)
+                    .on_hover_text("Clear")
+                    .clicked()
+                {
                     host.usage = None;
                 }
             });
@@ -348,7 +374,12 @@ fn ui_host_os_selector(ui: &mut egui::Ui, host_idx: usize, host_os: &mut Option<
                 }
             });
 
-        if host_os.is_some() && ui.button(egui_material_icons::icons::ICON_CLEAR).on_hover_text("Clear OS").clicked() {
+        if host_os.is_some()
+            && ui
+                .button(egui_material_icons::icons::ICON_CLEAR)
+                .on_hover_text("Clear OS")
+                .clicked()
+        {
             *host_os = None;
         }
     });
@@ -411,7 +442,11 @@ fn ui_host_client_protocols(ui: &mut egui::Ui, host: &mut Host) {
                 .collect();
         }
 
-        if ui.button(egui_material_icons::icons::ICON_CLEAR).on_hover_text("Clear").clicked() {
+        if ui
+            .button(egui_material_icons::icons::ICON_CLEAR)
+            .on_hover_text("Clear")
+            .clicked()
+        {
             host.client.clear();
         }
     });
@@ -427,7 +462,11 @@ fn ui_interfaces_section(
 ) {
     ui.horizontal(|ui| {
         ui.label("Interfaces:");
-        if ui.button(egui_material_icons::icons::ICON_ADD).on_hover_text("Add interface").clicked() {
+        if ui
+            .button(egui_material_icons::icons::ICON_ADD)
+            .on_hover_text("Add interface")
+            .clicked()
+        {
             if let Some(ip) = next_free_ip(ip_counts) {
                 host.interfaces.push(Interface {
                     ip_addr: ip,
@@ -456,7 +495,11 @@ fn ui_interfaces_section(
                 ui.label(format!("Interface — {ip_label}"));
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button(egui_material_icons::icons::ICON_DELETE).on_hover_text("Remove interface").clicked() {
+                    if ui
+                        .button(egui_material_icons::icons::ICON_DELETE)
+                        .on_hover_text("Remove interface")
+                        .clicked()
+                    {
                         iface_to_remove = Some(if_idx);
                     }
                 });
@@ -502,7 +545,11 @@ fn ui_services_section(
             ui.label(format!("Services ({svc_count})"));
         })
         .body(|ui| {
-            if ui.button(egui_material_icons::icons::ICON_ADD).on_hover_text("Add service").clicked() {
+            if ui
+                .button(egui_material_icons::icons::ICON_ADD)
+                .on_hover_text("Add service")
+                .clicked()
+            {
                 iface.services.push("http".to_string());
             }
             ui.add_space(4.0);
@@ -558,11 +605,19 @@ fn ui_single_service(
         {
             svc_port = if port_val == 0 { None } else { Some(port_val) };
         }
-        if ui.button(egui_material_icons::icons::ICON_CLEAR).on_hover_text("Clear port").clicked() {
+        if ui
+            .button(egui_material_icons::icons::ICON_CLEAR)
+            .on_hover_text("Clear port")
+            .clicked()
+        {
             svc_port = None;
         }
 
-        if ui.button(egui_material_icons::icons::ICON_DELETE).on_hover_text("Delete service").clicked() {
+        if ui
+            .button(egui_material_icons::icons::ICON_DELETE)
+            .on_hover_text("Delete service")
+            .clicked()
+        {
             *remove_request = Some(svc_idx);
         }
     });
@@ -570,19 +625,41 @@ fn ui_single_service(
     *svc_raw = format_service(&svc_name, svc_port);
 }
 
-/// Read-only YAML Preview
-fn ui_yaml_preview(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
+/// Editable YAML Editor
+fn ui_yaml_editor(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
     if state.config_file_content.is_none() {
-        ui.label("No configuration file selected");
+        ui.label("No configuration file selected.");
         return;
     }
-    let content = state.config_file_content.as_ref().unwrap();
+
+    let mut content = state.config_file_content.clone().unwrap();
     let theme = egui_extras::syntax_highlighting::CodeTheme::from_memory(ui.ctx(), ui.style());
 
-    let mut layout_job =
-        egui_extras::syntax_highlighting::highlight(ui.ctx(), ui.style(), &theme, content, "yaml");
+    let mut layouter = |ui: &egui::Ui, text: &dyn egui::TextBuffer, wrap_width: f32| {
+        let mut layout_job = egui_extras::syntax_highlighting::highlight(
+            ui.ctx(),
+            ui.style(),
+            &theme,
+            text.as_str(),
+            "yaml",
+        );
+        layout_job.wrap.max_width = wrap_width;
 
-    layout_job.wrap.max_width = ui.available_width();
+        ui.fonts_mut(|f| f.layout_job(layout_job))
+    };
 
-    ui.add(egui::Label::new(layout_job).selectable(true));
+    let response = ui.add(
+        egui::TextEdit::multiline(&mut content)
+            .font(egui::TextStyle::Monospace)
+            .code_editor()
+            .desired_rows(20)
+            .lock_focus(true)
+            .desired_width(f32::INFINITY)
+            .layouter(&mut layouter),
+    );
+
+    if response.changed() {
+        state.config_file_content = Some(content);
+        parse_config_yaml(state);
+    }
 }
