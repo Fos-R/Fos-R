@@ -30,7 +30,7 @@ enum CurrentTab {
 
 impl Default for CurrentTab {
     fn default() -> Self {
-        CurrentTab::Generation
+        CurrentTab::Visualization
     }
 }
 
@@ -39,7 +39,7 @@ pub const DEFAULT_ZOOM: f32 = 1.4;
 #[derive(Default)]
 pub struct FosrApp {
     current_tab: CurrentTab,
-    zoom_initialized: bool,
+    style_initialized: bool,
     images_preloaded: bool,
     configuration_file_state: ConfigurationFileState,
     configuration_tab_state: ConfigurationTabState,
@@ -50,9 +50,10 @@ pub struct FosrApp {
 impl eframe::App for FosrApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Set default zoom once
-        if !self.zoom_initialized {
+        if !self.style_initialized {
             ctx.options_mut(|option| option.zoom_factor = DEFAULT_ZOOM);
-            self.zoom_initialized = true;
+            ctx.style_mut(|s| s.interaction.tooltip_delay = 0.1);
+            self.style_initialized = true;
         }
 
         // Set the image loaders
@@ -77,28 +78,31 @@ impl eframe::App for FosrApp {
                 ctx.set_theme(egui::Theme::Dark);
 
                 if ui
-                    .selectable_label(self.current_tab == CurrentTab::Generation, "Generation")
+                    .selectable_label(
+                        self.current_tab == CurrentTab::Visualization,
+                        "Live Preview",
+                    )
+                    .on_hover_text("Simulation of network traffic based on the current configuration. No real traffic is generated.")
                     .clicked()
                 {
-                    self.current_tab = CurrentTab::Generation;
+                    self.current_tab = CurrentTab::Visualization;
                 }
                 if ui
                     .selectable_label(
                         self.current_tab == CurrentTab::Configuration,
                         "Configuration",
                     )
+                    .on_hover_text("Edit the network configuration: hosts, interfaces, and services.")
                     .clicked()
                 {
                     self.current_tab = CurrentTab::Configuration;
                 }
                 if ui
-                    .selectable_label(
-                        self.current_tab == CurrentTab::Visualization,
-                        "Visualization",
-                    )
+                    .selectable_label(self.current_tab == CurrentTab::Generation, "Generation")
+                    .on_hover_text("Generate a PCAP file from the current network configuration.")
                     .clicked()
                 {
-                    self.current_tab = CurrentTab::Visualization;
+                    self.current_tab = CurrentTab::Generation;
                 }
                 // To be implemented
                 // #[cfg(not(target_arch = "wasm32"))]
@@ -110,6 +114,7 @@ impl eframe::App for FosrApp {
                 // }
                 if ui
                     .selectable_label(self.current_tab == CurrentTab::About, "About")
+                    .on_hover_text("About Fos-R and its authors.")
                     .clicked()
                 {
                     self.current_tab = CurrentTab::About;
@@ -157,7 +162,12 @@ impl eframe::App for FosrApp {
         }
 
         // The Central Panel is the region left after adding the Top, Bottom and Side panels.
+        // Don't render tab content while the startup modal is open, otherwise
+        // foreground overlays (e.g. visualization controls) would appear above the modal.
         egui::CentralPanel::default().show(ctx, |ui| {
+            if !self.configuration_file_state.config_chosen {
+                return;
+            }
             // Wrap in ScrollArea for vertical scrolling
             egui::ScrollArea::vertical().show(ui, |ui| {
                 // Display the tab content depending on the currently select tab

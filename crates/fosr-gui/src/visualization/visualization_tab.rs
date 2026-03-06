@@ -6,7 +6,6 @@ use super::visualization_stream::{FlowEvent, FlowStreamer};
 use super::visualization_utils::distribute_nodes_circle;
 use crate::shared::config_model::Host;
 use crate::shared::configuration_file::ConfigurationFileState;
-use crate::shared::ui_utils::info_icon;
 use eframe::egui;
 use egui_graphs::{
     FruchtermanReingoldState, FruchtermanReingoldWithCenterGravity,
@@ -1048,15 +1047,11 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
             .show(ui.ctx(), |ui| {
                 egui::Frame::popup(ui.style()).shadow(egui::epaint::Shadow::NONE).show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        ui.label(format!(
-                            "Active: {} | Flows: {}",
-                            state.active_links.len(),
-                            state.total_flows
-                        ));
-                        info_icon(
-                            ui,
-                            "This is a simulation of network traffic based on the current configuration. No real traffic is generated.",
-                        );
+                        ui.label(format!("Active: {}", state.active_links.len()))
+                            .on_hover_text("Number of network links currently transmitting data.");
+                        ui.separator();
+                        ui.label(format!("Total flows: {}", state.total_flows))
+                            .on_hover_text("Cumulative number of flows generated since the simulation started.");
                     });
                 });
             });
@@ -1071,7 +1066,7 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
                     legend_item_with_image(ui, "Server", egui::include_image!("../../assets/server.png"));
                     legend_item_with_image(ui, "User", egui::include_image!("../../assets/computer.png"));
                     legend_item_with_image(ui, "Internet", egui::include_image!("../../assets/internet.png"));
-                });
+                }).response.on_hover_text("Node types");
             });
 
         // Overlay legend: edge states (bottom-right of graph)
@@ -1088,7 +1083,7 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
                     legend_item_inline(ui, "DNS", COLOR_DNS);
                     legend_item_inline(ui, "SMTP", COLOR_SMTP);
                     legend_item_inline(ui, "Other", COLOR_OTHER);
-                });
+                }).response.on_hover_text("Link protocols");
             });
     });
 }

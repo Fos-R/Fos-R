@@ -122,8 +122,7 @@ for NetworkNodeShape
         }
 
         // Draw text label
-        let is_internet = matches!(self.node_type, NodeType::Internet);
-        let font_size = if is_internet { 14.0 } else { 10.0 };
+        let font_size = 14.0;
         let font_id = egui::FontId::proportional(font_size);
 
         let job = egui::text::LayoutJob::simple(
