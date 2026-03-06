@@ -19,7 +19,7 @@ fn main() -> eframe::Result {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let shared_viewport = egui::ViewportBuilder::default()
-        .with_inner_size([700.0, 600.0])
+        .with_inner_size([1200.0, 1000.0])
         .with_min_inner_size([550.0, 500.0])
         .with_title("Fos-R");
 
