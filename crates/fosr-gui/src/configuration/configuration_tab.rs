@@ -170,7 +170,7 @@ fn ui_metadata(ui: &mut egui::Ui, model: &mut Configuration) {
             model.metadata.date = Some(date_val.format("%Y/%m/%d").to_string());
         }
 
-        if ui.button("Clear").clicked() {
+        if ui.button(egui_material_icons::icons::ICON_CLEAR).on_hover_text("Clear").clicked() {
             model.metadata.date = None;
         }
     });
@@ -192,7 +192,7 @@ fn ui_metadata(ui: &mut egui::Ui, model: &mut Configuration) {
         if ui.button("Set to 1").clicked() {
             model.metadata.format = Some(1);
         }
-        if ui.button("Clear").clicked() {
+        if ui.button(egui_material_icons::icons::ICON_CLEAR).on_hover_text("Clear").clicked() {
             model.metadata.format = None;
         }
     });
@@ -204,7 +204,7 @@ fn ui_hosts_section(ui: &mut egui::Ui, model: &mut Configuration) {
     ui.add_space(6.0);
 
     ui.horizontal(|ui| {
-        if ui.button("+ Add host").clicked() {
+        if ui.button(egui_material_icons::icons::ICON_ADD).on_hover_text("Add host").clicked() {
             model.hosts.push(Host::default());
         }
     });
@@ -257,7 +257,7 @@ fn ui_single_host(
             ui.label(host_name);
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.button("Remove host").clicked() {
+                if ui.button(egui_material_icons::icons::ICON_DELETE).on_hover_text("Remove host").clicked() {
                     *remove_request = Some(index);
                 }
             });
@@ -285,7 +285,7 @@ fn ui_single_host(
                         Some(usage_val)
                     };
                 }
-                if ui.button("Clear").clicked() {
+                if ui.button(egui_material_icons::icons::ICON_CLEAR).on_hover_text("Clear").clicked() {
                     host.usage = None;
                 }
             });
@@ -327,7 +327,7 @@ fn ui_host_os_selector(ui: &mut egui::Ui, host_idx: usize, host_os: &mut Option<
                 }
             });
 
-        if host_os.is_some() && ui.button("Clear OS").clicked() {
+        if host_os.is_some() && ui.button(egui_material_icons::icons::ICON_CLEAR).on_hover_text("Clear OS").clicked() {
             *host_os = None;
         }
     });
@@ -362,7 +362,7 @@ fn ui_host_type_selector(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
                 }
             });
 
-        if ui.button("Clear").clicked() {
+        if ui.button(egui_material_icons::icons::ICON_CLEAR).on_hover_text("Clear").clicked() {
             host.r#type = None;
         }
     });
@@ -388,7 +388,7 @@ fn ui_host_client_protocols(ui: &mut egui::Ui, host: &mut Host) {
                 .collect();
         }
 
-        if ui.button("Clear").clicked() {
+        if ui.button(egui_material_icons::icons::ICON_CLEAR).on_hover_text("Clear").clicked() {
             host.client.clear();
         }
     });
@@ -403,7 +403,7 @@ fn ui_interfaces_section(
 ) {
     ui.horizontal(|ui| {
         ui.label("Interfaces:");
-        if ui.button("+ Add interface").clicked() {
+        if ui.button(egui_material_icons::icons::ICON_ADD).on_hover_text("Add interface").clicked() {
             if let Some(ip) = next_free_ip(used_ips) {
                 host.interfaces.push(Interface {
                     ip_addr: ip,
@@ -432,7 +432,7 @@ fn ui_interfaces_section(
                 ui.label(format!("Interface — {ip_label}"));
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("Remove interface").clicked() {
+                    if ui.button(egui_material_icons::icons::ICON_DELETE).on_hover_text("Remove interface").clicked() {
                         iface_to_remove = Some(if_idx);
                     }
                 });
@@ -466,7 +466,7 @@ fn ui_services_section(ui: &mut egui::Ui, iface_idx: usize, iface: &mut Interfac
     egui::CollapsingHeader::new(format!("Services ({svc_count})"))
         .default_open(false)
         .show(ui, |ui| {
-            if ui.button("+ Add service").clicked() {
+            if ui.button(egui_material_icons::icons::ICON_ADD).on_hover_text("Add service").clicked() {
                 iface.services.push("http".to_string());
             }
             ui.add_space(4.0);
@@ -522,11 +522,11 @@ fn ui_single_service(
         {
             svc_port = if port_val == 0 { None } else { Some(port_val) };
         }
-        if ui.button("Clear port").clicked() {
+        if ui.button(egui_material_icons::icons::ICON_CLEAR).on_hover_text("Clear port").clicked() {
             svc_port = None;
         }
 
-        if ui.button("Delete service").clicked() {
+        if ui.button(egui_material_icons::icons::ICON_DELETE).on_hover_text("Delete service").clicked() {
             *remove_request = Some(svc_idx);
         }
     });

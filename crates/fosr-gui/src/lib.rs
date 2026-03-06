@@ -37,7 +37,10 @@ pub async fn start(canvas_id: &str) -> Result<(), JsValue> {
         .start(
             canvas,
             web_options,
-            Box::new(|_cc| Ok(Box::new(FosrApp::default()))),
+            Box::new(|cc| {
+                egui_material_icons::initialize(&cc.egui_ctx);
+                Ok(Box::new(FosrApp::default()))
+            }),
         )
         .await?;
 

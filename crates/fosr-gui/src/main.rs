@@ -42,7 +42,10 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "Fos-R GUI",
         native_options,
-        Box::new(|_cc| Ok(Box::new(FosrApp::default()))),
+        Box::new(|cc| {
+            egui_material_icons::initialize(&cc.egui_ctx);
+            Ok(Box::new(FosrApp::default()))
+        }),
     )
 }
 

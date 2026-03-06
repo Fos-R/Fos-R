@@ -10,6 +10,7 @@ use super::generation_validation::{
 use crate::shared::configuration_file::{
     ConfigurationFileState, configuration_file_picker, load_config_file_contents,
 };
+use crate::shared::ui_utils::info_icon;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::save_file_desktop;
 #[cfg(target_arch = "wasm32")]
@@ -105,19 +106,6 @@ impl Default for GenerationTabState {
             output_file_name: "output.pcap".to_string(),
         }
     }
-}
-
-/// Display a small info icon with a tooltip.
-fn info_icon(ui: &mut egui::Ui, tooltip: &str) {
-    // Reduce spacing before the icon
-    ui.add_space(-4.0);
-    // Reduce tooltip delay
-    ui.ctx().style_mut(|s| s.interaction.tooltip_delay = 0.1);
-    ui.label(egui::RichText::new("ℹ").color(egui::Color32::GRAY).size(14.0))
-        .on_hover_ui(|ui| {
-            ui.set_max_width(300.0);
-            ui.label(tooltip);
-        });
 }
 
 pub fn show_generation_tab_content(
@@ -264,11 +252,11 @@ pub fn show_generation_tab_content(
     ui.horizontal(|ui| {
         if is_generating {
             let stop_button = egui::Button::new(
-                egui::RichText::new("Stop").size(13.0),
+                egui::RichText::new(egui_material_icons::icons::ICON_STOP).size(13.0),
             )
                 .fill(egui::Color32::from_rgb(200, 80, 80))
                 .min_size(egui::vec2(75.0, 24.0));
-            if ui.add(stop_button).clicked() {
+            if ui.add(stop_button).on_hover_text("Stop").clicked() {
                 state.cancelled.store(true, Ordering::Relaxed);
                 state.status = UiStatus::Idle;
                 state.progress = 0.0;
@@ -282,11 +270,11 @@ pub fn show_generation_tab_content(
             ui.add_enabled_ui(can_generate, |ui| {
                 let accent = ui.visuals().selection.bg_fill;
                 let generate_button = egui::Button::new(
-                    egui::RichText::new("Generate").size(13.0),
+                    egui::RichText::new(egui_material_icons::icons::ICON_PLAY_ARROW).size(13.0),
                 )
                     .fill(accent)
                     .min_size(egui::vec2(75.0, 24.0));
-                if ui.add(generate_button).clicked() {
+                if ui.add(generate_button).on_hover_text("Generate").clicked() {
                     state.status = UiStatus::Generating;
 
                     // Reset state
@@ -409,14 +397,18 @@ pub fn show_generation_tab_content(
                 state.status = UiStatus::Generated;
             }
             #[cfg(not(target_arch = "wasm32"))]
-            let save_button_label = "Save";
+            let save_button_icon = egui_material_icons::icons::ICON_SAVE;
             #[cfg(target_arch = "wasm32")]
-            let save_button_label = "Download";
+            let save_button_icon = egui_material_icons::icons::ICON_DOWNLOAD;
+            #[cfg(not(target_arch = "wasm32"))]
+            let save_button_tooltip = "Save";
+            #[cfg(target_arch = "wasm32")]
+            let save_button_tooltip = "Download";
             let save_button = egui::Button::new(
-                egui::RichText::new(save_button_label).size(13.0),
+                egui::RichText::new(save_button_icon).size(13.0),
             )
                 .min_size(egui::vec2(75.0, 24.0));
-            if ui.add(save_button).clicked() {
+            if ui.add(save_button).on_hover_text(save_button_tooltip).clicked() {
                 let pcap_bytes = state.pcap_bytes.clone();
                 #[cfg(not(target_arch = "wasm32"))]
                 {

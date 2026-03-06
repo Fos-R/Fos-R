@@ -45,7 +45,7 @@ pub fn configuration_file_picker(
         ui.label("Configuration file:");
 
         // File Dialog to pick a config file
-        if ui.button("Select file").clicked() {
+        if ui.button(egui_material_icons::icons::ICON_FOLDER_OPEN).on_hover_text("Select file").clicked() {
             // Clear previous config content when selecting a new file
             configuration_file_state.config_file_content = None;
             #[cfg(target_arch = "wasm32")]
@@ -101,7 +101,7 @@ pub fn configuration_file_picker(
 
         // Display Restore default button when a custom file is loaded
         if configuration_file_state.picked_config_file.is_some()
-            && ui.button("Restore default").clicked()
+            && ui.button(egui_material_icons::icons::ICON_RESTORE).on_hover_text("Restore default").clicked()
         {
             configuration_file_state.picked_config_file = None;
             reset_loaded_config(configuration_file_state);
@@ -109,7 +109,7 @@ pub fn configuration_file_picker(
 
         // Save as button (only when config content is available)
         if configuration_file_state.config_file_content.is_some() {
-            if ui.button("Save as").clicked() {
+            if ui.button(egui_material_icons::icons::ICON_SAVE_AS).on_hover_text("Save as").clicked() {
                 let content = configuration_file_state
                     .config_file_content
                     .clone()
