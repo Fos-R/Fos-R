@@ -143,16 +143,17 @@ pub fn show_configuration_tab_content(
 
     egui::ScrollArea::vertical().show(ui, |ui| {
         // File Selection
-        configuration_file_picker(ui, file_state);
-        ui.separator();
+        configuration_file_picker(ui, tab_state, file_state);
 
         ui_parsing_status(ui, file_state);
 
         if file_state.config_chosen {
-            ui.horizontal(|ui| {
-                ui.selectable_value(&mut tab_state.is_code_mode, false, "Visual mode");
-                ui.selectable_value(&mut tab_state.is_code_mode, true, "Code mode");
-            });
+            // ui.horizontal(|ui| {
+            //     ui.selectable_value(&mut tab_state.is_code_mode, false, "Visual mode")
+            //         .on_hover_text("Modify the config using the config editor");
+            //     ui.selectable_value(&mut tab_state.is_code_mode, true, "Code mode")
+            //         .on_hover_text("Modify yaml directly");
+            // });
             ui.separator();
 
             if !tab_state.is_code_mode {

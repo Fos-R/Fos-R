@@ -1,8 +1,10 @@
-use crate::shared::config_model::Configuration;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::{read_file_desktop, save_file_desktop, show_file_picker_desktop};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::{read_file_wasm, save_file_wasm, show_file_picker_wasm};
+use crate::{
+    configuration::configuration_tab::ConfigurationTabState, shared::config_model::Configuration,
+};
 use chrono::{DateTime, Local};
 use eframe::egui;
 use rfd::FileHandle;
@@ -105,6 +107,7 @@ pub fn poll_file_import(state: &mut ConfigurationFileState) {
 
 pub fn configuration_file_picker(
     ui: &mut egui::Ui,
+    tab_state: &mut ConfigurationTabState,
     configuration_file_state: &mut ConfigurationFileState,
 ) {
     ui.horizontal(|ui| {
@@ -193,6 +196,36 @@ pub fn configuration_file_picker(
 
         #[cfg(target_arch = "wasm32")]
         ui.label(&filename);
+
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.add_space(8.0);
+            ui.group(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.0;
+
+                if ui
+                    .selectable_label(
+                        tab_state.is_code_mode,
+                        egui_material_icons::icons::ICON_CODE,
+                    )
+                    .on_hover_text("Code Mode")
+                    .clicked()
+                {
+                    tab_state.is_code_mode = true;
+                }
+
+                if ui
+                    .selectable_label(
+                        !tab_state.is_code_mode,
+                        egui_material_icons::icons::ICON_EDIT,
+                    )
+                    .on_hover_text("Visual Mode")
+                    .clicked()
+                {
+                    tab_state.is_code_mode = false;
+                }
+            });
+            ui.add_space(8.0);
+        });
     });
 }
 
