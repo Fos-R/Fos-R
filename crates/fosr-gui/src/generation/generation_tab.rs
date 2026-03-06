@@ -16,7 +16,7 @@ use crate::shared::file_io::save_file_desktop;
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::save_file_wasm;
 use crate::timepicker::TimePickerButton;
-use chrono::{Local, NaiveDate, NaiveTime, TimeZone};
+use chrono::{Datelike, Local, NaiveDate, NaiveTime, TimeZone};
 use chrono_tz::Tz;
 use eframe::egui;
 use eframe::egui::{SliderClamping, Widget};
@@ -165,7 +165,8 @@ pub fn show_generation_tab_content(
     if !state.use_current_time {
         ui.horizontal(|ui| {
             ui.label("Start time");
-            ui.add(DatePickerButton::new(&mut state.start_date).start_end_years(2020..=2100));
+            let current_year = Local::now().date_naive().year();
+            ui.add(DatePickerButton::new(&mut state.start_date).start_end_years((current_year - 5)..=(current_year + 30)));
             ui.add(
                 TimePickerButton::new(&mut state.start_hour)
                     .show_seconds(true)
