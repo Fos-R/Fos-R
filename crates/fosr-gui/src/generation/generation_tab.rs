@@ -1,8 +1,5 @@
 use super::generation_core::generate;
 use super::generation_ui_components::{show_field_error, show_status, timezone_picker};
-use super::generation_utils::{
-    duration_string_from_slider, duration_to_slider, slider_from_duration_string,
-};
 use super::generation_validation::{
     FieldValidation, first_invalid_param, validate_duration, validate_optional_u64,
     validate_timezone,
@@ -19,7 +16,7 @@ use crate::timepicker::TimePickerButton;
 use chrono::{Datelike, Local, NaiveDate, NaiveTime, TimeZone};
 use chrono_tz::Tz;
 use eframe::egui;
-use eframe::egui::{SliderClamping, Widget};
+use eframe::egui::Widget;
 use egui_extras::DatePickerButton;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -61,7 +58,6 @@ pub struct GenerationTabState {
     pub order_pcap: bool,
     pub taint: bool,
     pub duration_str: String,
-    pub duration_slider_value: f32,
     pub use_seed: bool,
     pub seed_input: String,
     pub timezone_input: String,
@@ -74,9 +70,6 @@ pub struct GenerationTabState {
 
 impl Default for GenerationTabState {
     fn default() -> Self {
-        let default_duration = "1h".to_string();
-        let duration_slider_value = slider_from_duration_string(default_duration.clone()).unwrap();
-
         Self {
             progress: 0.0,
             progress_receiver: None,
@@ -93,8 +86,7 @@ impl Default for GenerationTabState {
             // Parameters
             order_pcap: true,
             taint: false,
-            duration_str: default_duration,
-            duration_slider_value,
+            duration_str: "1h".to_string(),
             use_seed: false,
             seed_input: String::new(),
             timezone_input: String::new(),
@@ -117,22 +109,14 @@ pub fn show_generation_tab_content(
 
     ui.horizontal(|ui| {
         ui.label("Duration");
-        info_icon(ui, "Minimum pcap traffic duration described in human-friendly time, such as \"30m\", \"1h\", \"2d\" or \"15days 30min 5s\".");
+        info_icon(ui, "Minimum pcap traffic duration described in human-friendly time, such as \"30m\", \"1h\", \"2d\" or \"2days 30min 5s\".");
 
-        // The only way to set the slider width currently is to set it globally.
-        // If we need another slider at some point, this value should be mutated
-        // again before adding it.
-        ui.style_mut().spacing.slider_width = 150.0;
-        let slider_response = ui.add(
-            egui::Slider::new(&mut state.duration_slider_value, 0.0..=1.0)
-                .show_value(false)
-                .clamping(SliderClamping::Never),
-        );
-
-        if slider_response.changed() {
-            let s = duration_string_from_slider(state.duration_slider_value);
-            state.duration_str = s;
-            state.duration_validation.set_ok();
+        // Preset buttons
+        for preset in ["5min", "1h", "24h"] {
+            if ui.small_button(preset).clicked() {
+                state.duration_str = preset.to_string();
+                state.duration_validation.set_ok();
+            }
         }
 
         let text_response = egui::TextEdit::singleline(&mut state.duration_str)
@@ -142,9 +126,8 @@ pub fn show_generation_tab_content(
 
         if text_response.changed() {
             match validate_duration(&state.duration_str) {
-                Ok(d) => {
+                Ok(_) => {
                     state.duration_validation.set_ok();
-                    state.duration_slider_value = duration_to_slider(d);
                 }
                 Err(msg) => {
                     state.duration_validation.set_err(msg);
