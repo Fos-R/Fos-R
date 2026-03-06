@@ -213,7 +213,8 @@ fn startup_card(ui: &mut egui::Ui, icon: &str, title: &str, description: &str) -
     let frame = egui::Frame::group(ui.style()).fill(fill);
     ui.scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
         frame.show(ui, |ui| {
-            // Disable interactions on child widgets so the whole card behaves as one
+            // Prevent child labels/icons from showing their own hover cursor and
+            // highlight, so the entire card acts as a single clickable area.
             ui.style_mut().interaction.selectable_labels = false;
             ui.set_width(ui.available_width());
             ui.vertical_centered(|ui| {

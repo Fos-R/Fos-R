@@ -976,13 +976,16 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
                 egui::Frame::popup(ui.style()).shadow(egui::epaint::Shadow::NONE).show(ui, |ui| {
                     ui.horizontal(|ui| {
                         if !state.visualization_running {
+                            // Continue: resume without resetting flow counts
                             if ui.button(egui_material_icons::icons::ICON_PLAY_ARROW).on_hover_text("Continue").clicked() {
+                                // Pass the user config if loaded, otherwise None (uses default BN model)
                                 let config = state.config_content.clone();
                                 let speed = state.speed.clone();
                                 if let Err(e) = state.start_visualization(config.as_deref(), speed, false) {
                                     log::error!("Failed to start flow streamer: {}", e);
                                 }
                             }
+                            // Restart: reset all flow counts and start fresh
                             if ui.button(egui_material_icons::icons::ICON_RESTART_ALT).on_hover_text("Restart").clicked() {
                                 let config = state.config_content.clone();
                                 let speed = state.speed.clone();
@@ -1003,6 +1006,8 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
 
                         // Playback speed: −/+ buttons with discrete steps
                         let speed_steps: &[f32] = &[0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0];
+                        // Speed is an Arc, we cannot use it directly with the buttons,
+                        // we need to read and write its value manually.
                         let mut speed_value = *state.speed.read().unwrap();
                         let current_idx = speed_steps.iter().position(|&s| (s - speed_value).abs() < 0.01);
 
