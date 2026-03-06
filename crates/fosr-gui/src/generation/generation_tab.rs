@@ -16,7 +16,7 @@ use crate::shared::file_io::save_file_desktop;
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::save_file_wasm;
 use crate::timepicker::TimePickerButton;
-use chrono::{NaiveDate, NaiveTime};
+use chrono::{Local, NaiveDate, NaiveTime, TimeZone};
 use chrono_tz::Tz;
 use eframe::egui;
 use eframe::egui::{SliderClamping, Widget};
@@ -100,8 +100,8 @@ impl Default for GenerationTabState {
             timezone_input: String::new(),
             use_current_time: true,
             use_local_timezone: true,
-            start_date: NaiveDate::from_ymd_opt(2025, 1, 1).unwrap(),
-            start_hour: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+            start_date: Local::now().date_naive(),
+            start_hour: Local::now().time(),
             output_file_name: "output.pcap".to_string(),
         }
     }
@@ -199,8 +199,33 @@ pub fn show_generation_tab_content(
                 }
             }
         });
+
     } else {
         state.timezone_validation.set_ok();
+    }
+
+    // Show the equivalent UTC start time
+    let utc_label = if state.use_current_time {
+        Some(chrono::Utc::now())
+    } else {
+        let local_dt = state.start_date.and_time(state.start_hour);
+        if state.use_local_timezone {
+            Local::now()
+                .timezone()
+                .from_local_datetime(&local_dt)
+                .earliest()
+                .map(|dt| dt.with_timezone(&chrono::Utc))
+        } else {
+            state.timezone_input.parse::<Tz>().ok()
+                .and_then(|tz| local_dt.and_local_timezone(tz).earliest())
+                .map(|dt| dt.with_timezone(&chrono::Utc))
+        }
+    };
+    if let Some(utc) = utc_label {
+        ui.label(
+            egui::RichText::new(format!("Start time (UTC): {}", utc.format("%Y-%m-%d %H:%M:%S")))
+                .color(egui::Color32::GRAY),
+        );
     }
 
     ui.add_space(10.0);
