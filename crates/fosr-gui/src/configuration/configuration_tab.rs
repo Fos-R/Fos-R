@@ -2,7 +2,7 @@ use crate::shared::config_model::{Configuration, Host, Interface};
 use crate::shared::configuration_file::{
     ConfigurationFileState, configuration_file_picker, load_config_file_contents,
 };
-use crate::shared::ui_utils::{edit_optional_multiline_string, edit_optional_string};
+use crate::shared::ui_utils::{edit_optional_multiline_string, edit_optional_string, info_icon};
 use eframe::egui;
 use egui::{TextFormat, text::LayoutJob};
 use std::collections::HashMap;
@@ -294,6 +294,7 @@ fn ui_single_host(
 
             ui.horizontal(|ui| {
                 ui.label("Usage:");
+                info_icon(ui, "How much is the host active");
                 let mut usage_val = host.usage.unwrap_or(1.0);
                 if ui
                     .add(egui::DragValue::new(&mut usage_val).speed(0.1))
@@ -357,6 +358,7 @@ fn ui_host_os_selector(ui: &mut egui::Ui, host_idx: usize, host_os: &mut Option<
 fn ui_host_type_selector(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
     ui.horizontal(|ui| {
         ui.label("Type:");
+        info_icon(ui, "If the host is a server then it will provide services, if it is a client it will use a service. If the host is a server it needs services, if it is a client it needs clients protocols.");
         let selected_text = host.r#type.as_deref().unwrap_or("<auto>").to_string();
 
         egui::ComboBox::from_id_salt((host_idx, "host_type"))
@@ -392,6 +394,7 @@ fn ui_host_type_selector(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
 fn ui_host_client_protocols(ui: &mut egui::Ui, host: &mut Host) {
     ui.horizontal(|ui| {
         ui.label("Client protocols:");
+        info_icon(ui, "Protocols the host is going to use from other servers");
         let mut buf = if host.client.is_empty() {
             String::new()
         } else {

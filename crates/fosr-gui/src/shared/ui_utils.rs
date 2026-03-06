@@ -68,7 +68,6 @@ pub fn edit_optional_string(
     });
 }
 
-
 /// Displays a multiline editor for an `Option<String>`.
 ///
 /// - `None` is represented as an empty text box.
