@@ -5,18 +5,75 @@ use crate::shared::configuration_file::{
 use crate::shared::ui_utils::{edit_optional_multiline_string, edit_optional_string};
 use chrono::NaiveDate;
 use eframe::egui;
+use egui::{TextFormat, text::LayoutJob};
 use egui_extras::DatePickerButton;
-use std::collections::HashSet;
+use std::collections::HashMap;
+
+// Helper for required label with red *
+fn required_label(ui: &mut egui::Ui, text: &str) {
+    let mut job = LayoutJob::default();
+
+    job.append(
+        text,
+        0.0,
+        TextFormat {
+            color: ui.visuals().text_color(),
+            ..Default::default()
+        },
+    );
+
+    job.append(
+        "*",
+        0.0,
+        TextFormat {
+            color: egui::Color32::RED,
+            ..Default::default()
+        },
+    );
+
+    job.append(
+        ":",
+        0.0,
+        TextFormat {
+            color: ui.visuals().text_color(),
+            ..Default::default()
+        },
+    );
+
+    ui.label(job);
+}
+
+/// Generate a random mac address
+fn random_mac() -> String {
+    let mut bytes: [u8; 6] = rand::random();
+
+    // Forcing local MAC
+    bytes[0] = (bytes[0] | 0x02) & 0xFE;
+
+    format!(
+        "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
+        bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5]
+    )
+}
+
+fn generate_mac_until_unique(mac_counts: &HashMap<String, usize>) -> String {
+    loop {
+        let mac = random_mac();
+
+        if !mac_counts.contains_key(&mac) {
+            return mac;
+        }
+    }
+}
 
 /// Scans all interfaces to find the next available IP in 192.168.0.x
-fn next_free_ip(used_ips: &HashSet<String>) -> Option<String> {
+fn next_free_ip(ip_counts: &HashMap<String, usize>) -> Option<String> {
     for x in 1..=254 {
         let candidate = format!("192.168.0.{x}");
-        if !used_ips.contains(&candidate) {
+        if !ip_counts.contains_key(&candidate) {
             return Some(candidate);
         }
     }
-
     None
 }
 
@@ -91,9 +148,9 @@ pub fn show_configuration_tab_content(
 
         // Editor (if model is loaded)
         if let Some(model) = file_state.config_model.as_mut() {
-            ui_metadata(ui, model);
-            ui.separator();
             ui_hosts_section(ui, model);
+            ui.separator();
+            ui_metadata(ui, model);
             ui.separator();
         }
 
@@ -134,31 +191,26 @@ fn ui_metadata(ui: &mut egui::Ui, model: &mut Configuration) {
     ui.heading("Metadata");
     ui.add_space(6.0);
 
-    // Title (Mandatory)
+    // Title
     ui.horizontal(|ui| {
-        ui.label("Title:");
+        required_label(ui, "Title");
         let title = model.metadata.title.get_or_insert_with(String::new);
         ui.text_edit_singleline(title);
     });
 
     edit_optional_multiline_string(
         ui,
-        "Description (optional):",
+        "Description:",
         &mut model.metadata.desc,
         "Optional description",
         3,
     );
 
-    edit_optional_string(
-        ui,
-        "Author (optional):",
-        &mut model.metadata.author,
-        "Jane Doe",
-    );
+    edit_optional_string(ui, "Author:", &mut model.metadata.author, "Jane Doe");
 
     // Date Picker
     ui.horizontal(|ui| {
-        ui.label("Date (optional):");
+        ui.label("Date:");
         let mut date_val = model
             .metadata
             .date
@@ -175,12 +227,7 @@ fn ui_metadata(ui: &mut egui::Ui, model: &mut Configuration) {
         }
     });
 
-    edit_optional_string(
-        ui,
-        "Version (optional):",
-        &mut model.metadata.version,
-        "0.1.0",
-    );
+    edit_optional_string(ui, "Version:", &mut model.metadata.version, "0.1.0");
 
     // Format (Reserved)
     ui.horizontal(|ui| {
@@ -215,18 +262,26 @@ fn ui_hosts_section(ui: &mut egui::Ui, model: &mut Configuration) {
         return;
     }
 
-    // Pre-calculate used IPs to avoid borrow checker conflicts
-    let mut used_ips = HashSet::new();
+    // Keep track of used IP and MAC addresses
+    let mut ip_counts: HashMap<String, usize> = HashMap::new();
     for h in &model.hosts {
         for iface in &h.interfaces {
-            used_ips.insert(iface.ip_addr.clone());
+            *ip_counts.entry(iface.ip_addr.clone()).or_insert(0) += 1;
+        }
+    }
+    let mut mac_counts: HashMap<String, usize> = HashMap::new();
+    for h in &model.hosts {
+        for iface in &h.interfaces {
+            if let Some(mac) = &iface.mac_addr {
+                *mac_counts.entry(mac.clone()).or_insert(0) += 1;
+            }
         }
     }
 
     let mut host_to_remove: Option<usize> = None;
 
     for (idx, host) in model.hosts.iter_mut().enumerate() {
-        ui_single_host(ui, idx, host, &used_ips, &mut host_to_remove);
+        ui_single_host(ui, idx, host, &ip_counts, &mac_counts, &mut host_to_remove);
         ui.add_space(6.0);
     }
 
@@ -240,7 +295,8 @@ fn ui_single_host(
     ui: &mut egui::Ui,
     index: usize,
     host: &mut Host,
-    used_ips: &HashSet<String>,
+    ip_counts: &HashMap<String, usize>,
+    mac_counts: &HashMap<String, usize>,
     remove_request: &mut Option<usize>,
 ) {
     let host_name = host_display_name(host);
@@ -270,10 +326,10 @@ fn ui_single_host(
             });
 
             ui_host_os_selector(ui, index, &mut host.os);
-            edit_optional_string(ui, "Hostname (optional):", &mut host.hostname, "host1");
+            edit_optional_string(ui, "Hostname:", &mut host.hostname, "host1");
 
             ui.horizontal(|ui| {
-                ui.label("Usage (optional):");
+                ui.label("Usage:");
                 let mut usage_val = host.usage.unwrap_or(1.0);
                 if ui
                     .add(egui::DragValue::new(&mut usage_val).speed(0.1))
@@ -293,14 +349,14 @@ fn ui_single_host(
             ui_host_type_selector(ui, index, host);
             ui_host_client_protocols(ui, host);
             ui.separator();
-            ui_interfaces_section(ui, index, host, used_ips);
+            ui_interfaces_section(ui, index, host, ip_counts, mac_counts);
         });
 }
 
 /// Dropdown selector for the Operating System
 fn ui_host_os_selector(ui: &mut egui::Ui, host_idx: usize, host_os: &mut Option<String>) {
     ui.horizontal(|ui| {
-        ui.label("OS (optional):");
+        ui.label("OS:");
 
         let selected_text = host_os.as_deref().unwrap_or("<none>");
 
@@ -336,7 +392,7 @@ fn ui_host_os_selector(ui: &mut egui::Ui, host_idx: usize, host_os: &mut Option<
 /// Type of host rendering
 fn ui_host_type_selector(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
     ui.horizontal(|ui| {
-        ui.label("Type (optional):");
+        ui.label("Type:");
         let selected_text = host.r#type.as_deref().unwrap_or("<auto>").to_string();
 
         egui::ComboBox::from_id_salt((host_idx, "host_type"))
@@ -371,7 +427,7 @@ fn ui_host_type_selector(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
 /// Client protocols rendering
 fn ui_host_client_protocols(ui: &mut egui::Ui, host: &mut Host) {
     ui.horizontal(|ui| {
-        ui.label("Client protocols (optional):");
+        ui.label("Client protocols:");
         let mut buf = if host.client.is_empty() {
             String::new()
         } else {
@@ -399,15 +455,16 @@ fn ui_interfaces_section(
     ui: &mut egui::Ui,
     host_idx: usize,
     host: &mut Host,
-    used_ips: &HashSet<String>,
+    ip_counts: &HashMap<String, usize>,
+    mac_counts: &HashMap<String, usize>,
 ) {
     ui.horizontal(|ui| {
         ui.label("Interfaces:");
         if ui.button(egui_material_icons::icons::ICON_ADD).on_hover_text("Add interface").clicked() {
-            if let Some(ip) = next_free_ip(used_ips) {
+            if let Some(ip) = next_free_ip(ip_counts) {
                 host.interfaces.push(Interface {
                     ip_addr: ip,
-                    mac_addr: None,
+                    mac_addr: Some(generate_mac_until_unique(mac_counts)),
                     services: Vec::new(),
                 });
             } else {
@@ -440,15 +497,18 @@ fn ui_interfaces_section(
             .body(|ui| {
                 ui.add_space(4.0);
                 ui.horizontal(|ui| {
-                    ui.label("IP (mandatory):");
+                    required_label(ui, "IP");
                     ui.text_edit_singleline(&mut iface.ip_addr);
+                    if ip_counts.get(&iface.ip_addr).copied().unwrap_or(0) > 1 {
+                        ui.colored_label(egui::Color32::RED, "IP already in used");
+                    }
                 });
-                edit_optional_string(
-                    ui,
-                    "MAC (optional):",
-                    &mut iface.mac_addr,
-                    "00:14:2A:3F:47:D8",
-                );
+                edit_optional_string(ui, "MAC:", &mut iface.mac_addr, "00:14:2A:3F:47:D8");
+                if let Some(mac) = &iface.mac_addr {
+                    if mac_counts.get(mac).copied().unwrap_or(0) > 1 {
+                        ui.colored_label(egui::Color32::RED, "MAC already in use");
+                    }
+                }
                 ui_services_section(ui, if_idx, iface);
             });
         ui.add_space(6.0);
