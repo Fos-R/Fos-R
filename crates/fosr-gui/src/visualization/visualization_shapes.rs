@@ -37,14 +37,15 @@ const EDGE_FLOW_SCALE: f32 = 0.2; // Width increase per flow (linear phase)
 #[derive(Clone)]
 pub struct NetworkNodeShape {
     radius: f32,
-    label: String,
+    hostname: Option<String>,
+    ips: Vec<String>,
     location: Pos2,
     node_type: NodeType,
 }
 
 impl NetworkNodeShape {
     /// Compute node style from payload data.
-    fn style_from_payload(payload: &NodeData) -> (f32, NodeType, String) {
+    fn style_from_payload(payload: &NodeData) -> (f32, NodeType, Option<String>, Vec<String>) {
         // Hybrid linear/proportional radius scaling
         let max_linear = RADIUS_MIN + payload.max_flow_count as f32 * FLOW_SCALE_FACTOR;
         let radius = if max_linear < RADIUS_MAX {
@@ -60,7 +61,8 @@ impl NetworkNodeShape {
             RADIUS_MIN + ratio * (RADIUS_MAX - RADIUS_MIN)
         };
 
-        (radius, payload.node_type.clone(), payload.to_string())
+        let ips: Vec<String> = payload.ip_addrs.iter().map(|ip| ip.to_string()).collect();
+        (radius, payload.node_type.clone(), payload.hostname.clone(), ips)
     }
 
     /// Get the image source for this node type
@@ -75,10 +77,11 @@ impl NetworkNodeShape {
 
 impl From<NodeProps<NodeData>> for NetworkNodeShape {
     fn from(props: NodeProps<NodeData>) -> Self {
-        let (radius, node_type, label) = Self::style_from_payload(&props.payload);
+        let (radius, node_type, hostname, ips) = Self::style_from_payload(&props.payload);
         Self {
             radius,
-            label,
+            hostname,
+            ips,
             location: props.location(),
             node_type,
         }
@@ -121,31 +124,51 @@ for NetworkNodeShape
             shapes.push(Shape::image(texture.id, rect, uv, tint));
         }
 
-        // Draw text label
+        // Draw text label: hostname (italic) and IPs (normal)
         let font_size = 14.0;
         let font_id = egui::FontId::proportional(font_size);
-
-        let job = egui::text::LayoutJob::simple(
-            self.label.clone(),
-            font_id,
-            Color32::GRAY,
-            f32::INFINITY,
-        );
+        let mut current_y = pos.y + radius + 2.0;
 
         ctx.ctx.fonts_mut(|f| {
-            let galley = f.layout_job(job);
-            let label_pos = Pos2::new(pos.x - galley.size().x / 2.0, pos.y + radius + 2.0);
-            shapes.push(Shape::galley(label_pos, galley, Color32::GRAY));
+            // Draw hostname in italic
+            if let Some(ref hostname) = self.hostname {
+                let mut job = egui::text::LayoutJob::default();
+                job.append(hostname, 0.0, egui::TextFormat {
+                    font_id: font_id.clone(),
+                    color: Color32::GRAY,
+                    italics: true,
+                    ..Default::default()
+                });
+                let galley = f.layout_job(job);
+                let label_pos = Pos2::new(pos.x - galley.size().x / 2.0, current_y);
+                shapes.push(Shape::galley(label_pos, galley, Color32::GRAY));
+                current_y += font_size + 2.0;
+            }
+
+            // Draw IPs (normal)
+            for ip in &self.ips {
+                let mut job = egui::text::LayoutJob::default();
+                job.append(ip, 0.0, egui::TextFormat {
+                    font_id: font_id.clone(),
+                    color: Color32::GRAY,
+                    ..Default::default()
+                });
+                let galley = f.layout_job(job);
+                let label_pos = Pos2::new(pos.x - galley.size().x / 2.0, current_y);
+                shapes.push(Shape::galley(label_pos, galley, Color32::GRAY));
+                current_y += font_size + 2.0;
+            }
         });
 
         shapes
     }
 
     fn update(&mut self, state: &NodeProps<NodeData>) {
-        let (radius, node_type, label) = Self::style_from_payload(&state.payload);
+        let (radius, node_type, hostname, ips) = Self::style_from_payload(&state.payload);
         self.radius = radius;
         self.node_type = node_type;
-        self.label = label;
+        self.hostname = hostname;
+        self.ips = ips;
         self.location = state.location();
     }
 
