@@ -3,10 +3,8 @@ use crate::shared::configuration_file::{
     ConfigurationFileState, configuration_file_picker, load_config_file_contents,
 };
 use crate::shared::ui_utils::{edit_optional_multiline_string, edit_optional_string};
-use chrono::NaiveDate;
 use eframe::egui;
 use egui::{TextFormat, text::LayoutJob};
-use egui_extras::DatePickerButton;
 use std::collections::HashMap;
 
 // Helper for required label with red *
@@ -208,41 +206,7 @@ fn ui_metadata(ui: &mut egui::Ui, model: &mut Configuration) {
 
     edit_optional_string(ui, "Author:", &mut model.metadata.author, "Jane Doe");
 
-    // Date Picker
-    ui.horizontal(|ui| {
-        ui.label("Date:");
-        let mut date_val = model
-            .metadata
-            .date
-            .as_deref()
-            .and_then(|s| NaiveDate::parse_from_str(s, "%Y/%m/%d").ok())
-            .unwrap_or_else(|| NaiveDate::from_ymd_opt(2025, 1, 1).unwrap());
-
-        if ui.add(DatePickerButton::new(&mut date_val)).changed() {
-            model.metadata.date = Some(date_val.format("%Y/%m/%d").to_string());
-        }
-
-        if ui.button(egui_material_icons::icons::ICON_CLEAR).on_hover_text("Clear").clicked() {
-            model.metadata.date = None;
-        }
-    });
-
     edit_optional_string(ui, "Version:", &mut model.metadata.version, "0.1.0");
-
-    // Format (Reserved)
-    ui.horizontal(|ui| {
-        ui.label("Format:");
-        let current = model.metadata.format.unwrap_or(1);
-        ui.label(current.to_string())
-            .on_hover_text("Reserved for now. Should remain 1.");
-
-        if ui.button("Set to 1").clicked() {
-            model.metadata.format = Some(1);
-        }
-        if ui.button(egui_material_icons::icons::ICON_CLEAR).on_hover_text("Clear").clicked() {
-            model.metadata.format = None;
-        }
-    });
 }
 
 /// Several host rendering
@@ -509,7 +473,7 @@ fn ui_interfaces_section(
                         ui.colored_label(egui::Color32::RED, "MAC already in use");
                     }
                 }
-                ui_services_section(ui, if_idx, iface);
+                ui_services_section(ui, if_idx, host_idx, iface);
             });
         ui.add_space(6.0);
     }
@@ -520,12 +484,21 @@ fn ui_interfaces_section(
 }
 
 /// Service section rendering
-fn ui_services_section(ui: &mut egui::Ui, iface_idx: usize, iface: &mut Interface) {
+fn ui_services_section(
+    ui: &mut egui::Ui,
+    host_idx: usize,
+    iface_idx: usize,
+    iface: &mut Interface,
+) {
     let svc_count = iface.services.len();
+    // let id = ui.make_persistent_id(("services", iface_idx));
+    let id = ui.make_persistent_id(("services", host_idx, iface_idx));
 
-    egui::CollapsingHeader::new(format!("Services ({svc_count})"))
-        .default_open(false)
-        .show(ui, |ui| {
+    egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, false)
+        .show_header(ui, |ui| {
+            ui.label(format!("Services ({svc_count})"));
+        })
+        .body(|ui| {
             if ui.button(egui_material_icons::icons::ICON_ADD).on_hover_text("Add service").clicked() {
                 iface.services.push("http".to_string());
             }

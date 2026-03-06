@@ -3,6 +3,7 @@ use crate::shared::config_model::Configuration;
 use crate::shared::file_io::{read_file_desktop, save_file_desktop, show_file_picker_desktop};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::{read_file_wasm, save_file_wasm, show_file_picker_wasm};
+use chrono::{DateTime, Local};
 use eframe::egui;
 use rfd::FileHandle;
 #[cfg(target_arch = "wasm32")]
@@ -44,7 +45,12 @@ impl Default for ConfigurationFileState {
 pub fn load_default_config(state: &mut ConfigurationFileState) {
     state.picked_config_file = None;
     state.config_file_content = Some(DEFAULT_CONFIG_YAML.to_string());
-    state.config_model = serde_yaml::from_str::<Configuration>(DEFAULT_CONFIG_YAML).ok();
+    state.config_model = serde_yaml::from_str::<Configuration>(DEFAULT_CONFIG_YAML)
+        .ok()
+        .map(|mut c| {
+            enforce_metadata_defaults(&mut c);
+            c
+        });
     state.parse_error = None;
     state.config_chosen = true;
 }
@@ -229,7 +235,10 @@ fn parse_config_yaml(configuration_file_state: &mut ConfigurationFileState) {
     };
 
     match serde_yaml::from_str::<Configuration>(yaml) {
-        Ok(model) => configuration_file_state.config_model = Some(model),
+        Ok(mut model) => {
+            enforce_metadata_defaults(&mut model);
+            configuration_file_state.config_model = Some(model);
+        }
         Err(e) => configuration_file_state.parse_error = Some(e.to_string()),
     }
 }
@@ -254,4 +263,12 @@ pub fn reset_loaded_config(configuration_file_state: &mut ConfigurationFileState
     {
         configuration_file_state.config_file_content_receiver = None;
     }
+}
+
+/// Enforce date and format in metadata
+fn enforce_metadata_defaults(config: &mut Configuration) {
+    let now: DateTime<Local> = Local::now();
+
+    config.metadata.date = Some(now.format("%Y/%m/%d").to_string());
+    config.metadata.format = Some(1);
 }
