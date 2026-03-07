@@ -71,7 +71,7 @@ fn required_label(ui: &mut egui::Ui, text: &str) {
         },
     );
 
-    ui.label(job);
+    ui.label(job).on_hover_text("Mandatory");
 }
 
 /// Generate a random mac address
@@ -97,6 +97,17 @@ fn generate_mac_until_unique(mac_counts: &HashMap<String, usize>) -> String {
     }
 }
 
+/// Check MAC format (ex: 00:14:2A:3F:47:D8)
+fn is_valid_mac(mac: &str) -> bool {
+    let parts: Vec<&str> = mac.split(':').collect();
+    if parts.len() != 6 {
+        return false;
+    }
+    parts
+        .iter()
+        .all(|p| p.len() == 2 && u8::from_str_radix(p, 16).is_ok())
+}
+
 /// Scans all interfaces to find the next available IP in 192.168.0.x
 fn next_free_ip(ip_counts: &HashMap<String, usize>) -> Option<String> {
     for x in 1..=254 {
@@ -106,6 +117,51 @@ fn next_free_ip(ip_counts: &HashMap<String, usize>) -> Option<String> {
         }
     }
     None
+}
+
+/// Function to validate if a host is correct
+fn validate_host(
+    host: &Host,
+    ip_counts: &HashMap<String, usize>,
+    mac_counts: &HashMap<String, usize>,
+) -> Vec<String> {
+    let mut errors = Vec::new();
+
+    if host.interfaces.is_empty() {
+        errors.push("Missing interface".to_string());
+    }
+
+    for iface in &host.interfaces {
+        if iface.ip_addr.parse::<std::net::IpAddr>().is_err() {
+            errors.push("Invalid IP format".to_string());
+        } else if ip_counts.get(&iface.ip_addr).copied().unwrap_or(0) > 1 {
+            errors.push("IP conflict".to_string());
+        }
+
+        if let Some(mac) = &iface.mac_addr {
+            if !is_valid_mac(mac) {
+                errors.push("Invalid MAC format".to_string());
+            } else if mac_counts.get(mac).copied().unwrap_or(0) > 1 {
+                errors.push("MAC conflict".to_string());
+            }
+        }
+    }
+
+    if host.r#type.as_deref() == Some("server") {
+        let has_service = host.interfaces.iter().any(|i| !i.services.is_empty());
+        if !has_service {
+            errors.push("Server missing service".to_string());
+        }
+    }
+
+    if host.r#type.as_deref() == Some("user") {
+        if host.client.is_empty() {
+            errors.push("Client missing protocols".to_string());
+        }
+    }
+
+    errors.dedup();
+    errors
 }
 
 /// Determines the best label for a host (Hostname > IP > Default)
@@ -310,18 +366,26 @@ fn ui_single_host(
     remove_request: &mut Option<usize>,
 ) {
     let host_name = host_display_name(host);
-    let header_name = host
-        .hostname
-        .clone()
-        .unwrap_or_else(|| "<no hostname>".to_string());
-    let header_type = host.r#type.clone().unwrap_or_else(|| "<auto>".to_string());
-    let if_count = host.interfaces.len();
+    let errors = validate_host(host, ip_counts, mac_counts);
 
     let id = ui.make_persistent_id(("host", index));
     egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, index == 0)
         .show_header(ui, |ui| {
-            ui.label(host_name).on_hover_ui(|ui| {
-                ui_host_summary_tooltip(ui, host);
+            ui.horizontal(|ui| {
+                if errors.is_empty() {
+                    ui.label(host_name).on_hover_ui(|ui| {
+                        ui_host_summary_tooltip(ui, host);
+                    });
+                } else {
+                    let warning_icon = egui_material_icons::icons::ICON_WARNING;
+                    let error_text = errors.join(", ");
+
+                    let label_text = format!("{} {} - {}", warning_icon, host_name, error_text);
+                    ui.colored_label(egui::Color32::RED, label_text)
+                        .on_hover_ui(|ui| {
+                            ui_host_summary_tooltip(ui, host);
+                        });
+                }
             });
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -335,12 +399,6 @@ fn ui_single_host(
             });
         })
         .body(|ui| {
-            ui.horizontal(|ui| {
-                ui.strong(format!(
-                    "{header_name} | type: {header_type} | interfaces: {if_count}"
-                ));
-            });
-
             ui_host_os_selector(ui, index, &mut host.os);
             edit_optional_string(ui, "Hostname:", &mut host.hostname, "host1");
 
