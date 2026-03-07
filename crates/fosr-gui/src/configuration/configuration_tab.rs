@@ -7,6 +7,39 @@ use eframe::egui;
 use egui::{TextFormat, text::LayoutJob};
 use std::collections::HashMap;
 
+/// Host summary
+fn ui_host_summary_tooltip(ui: &mut egui::Ui, host: &Host) {
+    let host_type = host.r#type.as_deref().unwrap_or("<auto>");
+    ui.horizontal(|ui| {
+        ui.label("Type :");
+        ui.strong(host_type);
+    });
+
+    if !host.client.is_empty() {
+        ui.horizontal(|ui| {
+            ui.label("Client protocols :");
+            ui.strong(host.client.join(", "));
+        });
+    }
+
+    ui.add_space(4.0);
+
+    ui.label("Interfaces :");
+    if host.interfaces.is_empty() {
+        ui.label("  No interfaces configured.");
+    } else {
+        for iface in &host.interfaces {
+            let services_str = if iface.services.is_empty() {
+                "no services".to_string()
+            } else {
+                iface.services.join(", ")
+            };
+
+            ui.label(format!("  • {} ({})", iface.ip_addr, services_str));
+        }
+    }
+}
+
 // Helper for required label with red *
 fn required_label(ui: &mut egui::Ui, text: &str) {
     let mut job = LayoutJob::default();
@@ -148,12 +181,6 @@ pub fn show_configuration_tab_content(
         ui_parsing_status(ui, file_state);
 
         if file_state.config_chosen {
-            // ui.horizontal(|ui| {
-            //     ui.selectable_value(&mut tab_state.is_code_mode, false, "Visual mode")
-            //         .on_hover_text("Modify the config using the config editor");
-            //     ui.selectable_value(&mut tab_state.is_code_mode, true, "Code mode")
-            //         .on_hover_text("Modify yaml directly");
-            // });
             ui.separator();
 
             if !tab_state.is_code_mode {
@@ -293,7 +320,9 @@ fn ui_single_host(
     let id = ui.make_persistent_id(("host", index));
     egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, index == 0)
         .show_header(ui, |ui| {
-            ui.label(host_name);
+            ui.label(host_name).on_hover_ui(|ui| {
+                ui_host_summary_tooltip(ui, host);
+            });
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui
