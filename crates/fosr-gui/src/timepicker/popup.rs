@@ -152,7 +152,8 @@ impl TimePickerPopup<'_> {
             };
             if let Some(rect) = active_rect {
                 let stroke = egui::Stroke::new(1.5, ui.visuals().selection.stroke.color);
-                ui.painter().rect_stroke(rect.expand(1.0), 2.0, stroke, egui::StrokeKind::Outside);
+                ui.painter()
+                    .rect_stroke(rect.expand(1.0), 2.0, stroke, egui::StrokeKind::Outside);
             }
         });
 
@@ -280,19 +281,11 @@ fn draw_timepicker(
                 }
 
                 if *time == i {
-                    painter.circle_filled(
-                        Pos2::new(x_outer, y_outer),
-                        15.,
-                        highlight_color,
-                    );
+                    painter.circle_filled(Pos2::new(x_outer, y_outer), 15., highlight_color);
                 }
 
                 if *time == (i + 12) {
-                    painter.circle_filled(
-                        Pos2::new(x_inner, y_inner),
-                        15.,
-                        highlight_color,
-                    );
+                    painter.circle_filled(Pos2::new(x_inner, y_inner), 15., highlight_color);
                 }
             }
             TimeFrame::Minute | TimeFrame::Second => {
@@ -305,11 +298,7 @@ fn draw_timepicker(
                 );
 
                 if *time % 5 == 0 && *time == i * 5 {
-                    painter.circle_filled(
-                        Pos2::new(x_outer, y_outer),
-                        15.,
-                        highlight_color,
-                    );
+                    painter.circle_filled(Pos2::new(x_outer, y_outer), 15., highlight_color);
                 }
             }
         }

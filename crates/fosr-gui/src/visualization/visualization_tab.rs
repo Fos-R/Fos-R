@@ -1,6 +1,6 @@
 use super::visualization_shapes::{
-    NetworkEdgeShape, NetworkNodeShape, COLOR_DNS, COLOR_HTTP, COLOR_HTTPS, COLOR_INACTIVE,
-    COLOR_OTHER, COLOR_SMTP, COLOR_SSH, ICON_TINT_DARK, ICON_TINT_LIGHT,
+    COLOR_DNS, COLOR_HTTP, COLOR_HTTPS, COLOR_INACTIVE, COLOR_OTHER, COLOR_SMTP, COLOR_SSH,
+    ICON_TINT_DARK, ICON_TINT_LIGHT, NetworkEdgeShape, NetworkNodeShape,
 };
 use super::visualization_stream::{FlowEvent, FlowStreamer};
 use super::visualization_utils::distribute_nodes_circle;
@@ -10,9 +10,10 @@ use eframe::egui;
 use egui_graphs::{
     FruchtermanReingoldState, FruchtermanReingoldWithCenterGravity,
     FruchtermanReingoldWithCenterGravityState, LayoutForceDirected, SettingsInteraction,
-    events::{Event, PayloadNodeClick}, set_layout_state,
+    events::{Event, PayloadNodeClick},
+    set_layout_state,
 };
-use fosr_lib::{config, config::HostType, L7Proto, OS};
+use fosr_lib::{L7Proto, OS, config, config::HostType};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -151,7 +152,6 @@ pub enum LinkDirection {
     Backward,
     Bidirectional,
 }
-
 
 /// An active link being displayed
 pub struct ActiveLink {
@@ -359,7 +359,10 @@ impl VisualizationTabState {
             self.reset_flow_counts();
         }
 
-        log::debug!("Starting visualization with {} known IPs:", self.known_ips.len());
+        log::debug!(
+            "Starting visualization with {} known IPs:",
+            self.known_ips.len()
+        );
         for ip in &self.known_ips {
             log::debug!("  - {}", ip);
         }
@@ -463,8 +466,10 @@ fn handle_config_changes(
     }
 
     // Check if config content has changed
-    let needs_update = match (&state.config_content, &configuration_file_state.config_file_content)
-    {
+    let needs_update = match (
+        &state.config_content,
+        &configuration_file_state.config_file_content,
+    ) {
         (Some(current), Some(new)) => current != new,
         (None, Some(_)) => true,
         _ => false,
@@ -526,16 +531,8 @@ fn process_flow_events(state: &mut VisualizationTabState) {
         state.total_flows += 1;
 
         // Map IPs to display IPs (unknown -> INTERNET_IP)
-        let display_src = if src_known {
-            event.src_ip
-        } else {
-            INTERNET_IP
-        };
-        let display_dst = if dst_known {
-            event.dst_ip
-        } else {
-            INTERNET_IP
-        };
+        let display_src = if src_known { event.src_ip } else { INTERNET_IP };
+        let display_dst = if dst_known { event.dst_ip } else { INTERNET_IP };
 
         log::debug!(
             "  -> Displayed as: {} -> {} ({:?})",
@@ -757,14 +754,21 @@ fn render_node_info_modal(
             let (image, type_str) = match node_data.node_type {
                 NodeType::Server => (egui::include_image!("../../assets/server.png"), "Server"),
                 NodeType::User => (egui::include_image!("../../assets/computer.png"), "User"),
-                NodeType::Internet => (egui::include_image!("../../assets/internet.png"), "Internet"),
+                NodeType::Internet => (
+                    egui::include_image!("../../assets/internet.png"),
+                    "Internet",
+                ),
             };
             let tint = if ui.style().visuals.dark_mode {
                 ICON_TINT_DARK
             } else {
                 ICON_TINT_LIGHT
             };
-            ui.add(egui::Image::new(image).fit_to_exact_size(egui::vec2(20.0, 20.0)).tint(tint));
+            ui.add(
+                egui::Image::new(image)
+                    .fit_to_exact_size(egui::vec2(20.0, 20.0))
+                    .tint(tint),
+            );
             ui.label(egui::RichText::new(type_str).strong());
         });
 
@@ -846,16 +850,28 @@ fn render_node_info_modal(
 
         if has_edit_buffer {
             ui.horizontal(|ui| {
-                if ui.button(egui_material_icons::icons::ICON_CLOSE).on_hover_text("Cancel").clicked() {
+                if ui
+                    .button(egui_material_icons::icons::ICON_CLOSE)
+                    .on_hover_text("Cancel")
+                    .clicked()
+                {
                     ui.close();
                 }
-                if ui.button(egui_material_icons::icons::ICON_SAVE).on_hover_text("Save").clicked() {
+                if ui
+                    .button(egui_material_icons::icons::ICON_SAVE)
+                    .on_hover_text("Save")
+                    .clicked()
+                {
                     save_clicked = true;
                     ui.close();
                 }
             });
         } else {
-            if ui.button(egui_material_icons::icons::ICON_CLOSE).on_hover_text("Close").clicked() {
+            if ui
+                .button(egui_material_icons::icons::ICON_CLOSE)
+                .on_hover_text("Close")
+                .clicked()
+            {
                 ui.close();
             }
         }
@@ -907,7 +923,11 @@ fn legend_item_with_image(ui: &mut egui::Ui, label: &str, image: egui::ImageSour
         } else {
             ICON_TINT_LIGHT
         };
-        ui.add(egui::Image::new(image).fit_to_exact_size(egui::vec2(20.0, 20.0)).tint(tint));
+        ui.add(
+            egui::Image::new(image)
+                .fit_to_exact_size(egui::vec2(20.0, 20.0))
+                .tint(tint),
+        );
         ui.add_space(-2.0);
         ui.label(label);
     });

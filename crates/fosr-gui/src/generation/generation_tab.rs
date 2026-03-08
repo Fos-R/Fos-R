@@ -4,14 +4,12 @@ use super::generation_validation::{
     FieldValidation, first_invalid_param, validate_duration, validate_optional_u64,
     validate_timezone,
 };
-use crate::shared::configuration_file::{
-    ConfigurationFileState, load_config_file_contents,
-};
-use crate::shared::ui_utils::info_icon;
+use crate::shared::configuration_file::{ConfigurationFileState, load_config_file_contents};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::save_file_desktop;
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::save_file_wasm;
+use crate::shared::ui_utils::info_icon;
 use crate::timepicker::TimePickerButton;
 use chrono::{Datelike, Local, NaiveDate, NaiveTime, TimeZone};
 use chrono_tz::Tz;
@@ -149,7 +147,10 @@ pub fn show_generation_tab_content(
         ui.horizontal(|ui| {
             ui.label("Start time");
             let current_year = Local::now().date_naive().year();
-            ui.add(DatePickerButton::new(&mut state.start_date).start_end_years((current_year - 5)..=(current_year + 30)));
+            ui.add(
+                DatePickerButton::new(&mut state.start_date)
+                    .start_end_years((current_year - 5)..=(current_year + 30)),
+            );
             ui.add(
                 TimePickerButton::new(&mut state.start_hour)
                     .show_seconds(true)
@@ -183,7 +184,6 @@ pub fn show_generation_tab_content(
                 }
             }
         });
-
     } else {
         state.timezone_validation.set_ok();
     }
@@ -200,15 +200,21 @@ pub fn show_generation_tab_content(
                 .earliest()
                 .map(|dt| dt.with_timezone(&chrono::Utc))
         } else {
-            state.timezone_input.parse::<Tz>().ok()
+            state
+                .timezone_input
+                .parse::<Tz>()
+                .ok()
                 .and_then(|tz| local_dt.and_local_timezone(tz).earliest())
                 .map(|dt| dt.with_timezone(&chrono::Utc))
         }
     };
     if let Some(utc) = utc_label {
         ui.label(
-            egui::RichText::new(format!("Start time (UTC): {}", utc.format("%Y-%m-%d %H:%M:%S")))
-                .color(egui::Color32::GRAY),
+            egui::RichText::new(format!(
+                "Start time (UTC): {}",
+                utc.format("%Y-%m-%d %H:%M:%S")
+            ))
+            .color(egui::Color32::GRAY),
         );
     }
 
@@ -262,8 +268,8 @@ pub fn show_generation_tab_content(
             let stop_button = egui::Button::new(
                 egui::RichText::new(egui_material_icons::icons::ICON_STOP).size(13.0),
             )
-                .fill(egui::Color32::from_rgb(200, 80, 80))
-                .min_size(egui::vec2(75.0, 24.0));
+            .fill(egui::Color32::from_rgb(200, 80, 80))
+            .min_size(egui::vec2(75.0, 24.0));
             if ui.add(stop_button).on_hover_text("Stop").clicked() {
                 state.cancelled.store(true, Ordering::Relaxed);
                 state.status = UiStatus::Idle;
@@ -280,8 +286,8 @@ pub fn show_generation_tab_content(
                 let generate_button = egui::Button::new(
                     egui::RichText::new(egui_material_icons::icons::ICON_PLAY_ARROW).size(13.0),
                 )
-                    .fill(accent)
-                    .min_size(egui::vec2(75.0, 24.0));
+                .fill(accent)
+                .min_size(egui::vec2(75.0, 24.0));
                 if ui.add(generate_button).on_hover_text("Generate").clicked() {
                     state.status = UiStatus::Generating;
 
@@ -412,11 +418,13 @@ pub fn show_generation_tab_content(
             let save_button_tooltip = "Save";
             #[cfg(target_arch = "wasm32")]
             let save_button_tooltip = "Download";
-            let save_button = egui::Button::new(
-                egui::RichText::new(save_button_icon).size(13.0),
-            )
+            let save_button = egui::Button::new(egui::RichText::new(save_button_icon).size(13.0))
                 .min_size(egui::vec2(75.0, 24.0));
-            if ui.add(save_button).on_hover_text(save_button_tooltip).clicked() {
+            if ui
+                .add(save_button)
+                .on_hover_text(save_button_tooltip)
+                .clicked()
+            {
                 let pcap_bytes = state.pcap_bytes.clone();
                 #[cfg(not(target_arch = "wasm32"))]
                 {

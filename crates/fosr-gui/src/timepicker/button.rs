@@ -114,7 +114,7 @@ impl Widget for TimePickerButton<'_> {
                                 use_12_hour_clock: self.use_12_hour_clock,
                                 use_dragvalue: self.use_dragvalue,
                             }
-                                .draw(ui)
+                            .draw(ui)
                         })
                         .inner
                 });
