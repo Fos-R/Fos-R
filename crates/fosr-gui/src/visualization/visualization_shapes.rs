@@ -156,22 +156,24 @@ impl DisplayNode<NodeData, EdgeData, petgraph::Undirected, petgraph::stable_grap
                 current_y += font_size + 2.0;
             }
 
-            // Draw IPs (normal)
-            for ip in &self.ips {
-                let mut job = egui::text::LayoutJob::default();
-                job.append(
-                    ip,
-                    0.0,
-                    egui::TextFormat {
-                        font_id: font_id.clone(),
-                        color: Color32::GRAY,
-                        ..Default::default()
-                    },
-                );
-                let galley = f.layout_job(job);
-                let label_pos = Pos2::new(pos.x - galley.size().x / 2.0, current_y);
-                shapes.push(Shape::galley(label_pos, galley, Color32::GRAY));
-                current_y += font_size + 2.0;
+            // Draw IPs (normal) - skip for Internet node
+            if self.node_type != NodeType::Internet {
+                for ip in &self.ips {
+                    let mut job = egui::text::LayoutJob::default();
+                    job.append(
+                        ip,
+                        0.0,
+                        egui::TextFormat {
+                            font_id: font_id.clone(),
+                            color: Color32::GRAY,
+                            ..Default::default()
+                        },
+                    );
+                    let galley = f.layout_job(job);
+                    let label_pos = Pos2::new(pos.x - galley.size().x / 2.0, current_y);
+                    shapes.push(Shape::galley(label_pos, galley, Color32::GRAY));
+                    current_y += font_size + 2.0;
+                }
             }
         });
 
