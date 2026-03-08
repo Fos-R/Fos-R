@@ -115,7 +115,7 @@ pub fn configuration_file_picker(
 
         if ui
             .button(egui_material_icons::icons::ICON_FOLDER_OPEN)
-            .on_hover_text("Select file")
+            .on_hover_text("Select a configuration file")
             .clicked()
         {
             trigger_file_import(configuration_file_state, ui.ctx());
@@ -190,7 +190,7 @@ pub fn configuration_file_picker(
                 .picked_config_file
                 .as_ref()
                 .map(|file| file.path().to_string_lossy().to_string())
-                .unwrap_or("Select a configuration file".to_string());
+                .unwrap_or("Default config selected".to_string());
             ui.label(&filename).on_hover_text(path_text);
         }
 
@@ -207,7 +207,7 @@ pub fn configuration_file_picker(
                         tab_state.is_code_mode,
                         egui_material_icons::icons::ICON_CODE,
                     )
-                    .on_hover_text("Code Mode")
+                    .on_hover_text("Code Mode: edit the configuration directly as raw YAML.")
                     .clicked()
                 {
                     tab_state.is_code_mode = true;
@@ -218,7 +218,9 @@ pub fn configuration_file_picker(
                         !tab_state.is_code_mode,
                         egui_material_icons::icons::ICON_EDIT,
                     )
-                    .on_hover_text("Visual Mode")
+                    .on_hover_text(
+                        "Visual Mode: edit the configuration using the graphical interface. Fields and options are presented as forms instead of raw YAML.",
+                    )
                     .clicked()
                 {
                     tab_state.is_code_mode = false;

@@ -61,16 +61,6 @@ fn required_label(ui: &mut egui::Ui, text: &str) {
             ..Default::default()
         },
     );
-
-    job.append(
-        ":",
-        0.0,
-        TextFormat {
-            color: ui.visuals().text_color(),
-            ..Default::default()
-        },
-    );
-
     ui.label(job).on_hover_text("Mandatory");
 }
 
@@ -274,7 +264,7 @@ fn ui_parsing_status(ui: &mut egui::Ui, state: &ConfigurationFileState) {
             ui.colored_label(egui::Color32::RED, "YAML parsing failed:");
             ui.label(err);
         } else if state.config_model.is_some() {
-            ui.colored_label(egui::Color32::GREEN, "YAML parsed successfully ✅");
+            ui.colored_label(egui::Color32::GREEN, "YAML parsed successfully");
         } else if state.config_file_content.is_some() {
             ui.colored_label(egui::Color32::YELLOW, "YAML loaded, but not parsed yet.");
         }
@@ -296,23 +286,21 @@ fn ui_metadata(ui: &mut egui::Ui, model: &mut Configuration) {
 
     edit_optional_multiline_string(
         ui,
-        "Description:",
+        "Description",
         &mut model.metadata.desc,
         "Optional description",
         3,
     );
 
-    edit_optional_string(ui, "Author:", &mut model.metadata.author, "Jane Doe");
+    edit_optional_string(ui, "Author", &mut model.metadata.author, "Jane Doe");
 
-    edit_optional_string(ui, "Version:", &mut model.metadata.version, "0.1.0");
+    edit_optional_string(ui, "Version", &mut model.metadata.version, "0.1.0");
 }
 
 /// Several host rendering
 fn ui_hosts_section(ui: &mut egui::Ui, model: &mut Configuration) {
-    ui.heading("Hosts");
-    ui.add_space(6.0);
-
     ui.horizontal(|ui| {
+        ui.heading("Hosts");
         if ui
             .button(egui_material_icons::icons::ICON_ADD)
             .on_hover_text("Add host")
@@ -400,11 +388,11 @@ fn ui_single_host(
         })
         .body(|ui| {
             ui_host_os_selector(ui, index, &mut host.os);
-            edit_optional_string(ui, "Hostname:", &mut host.hostname, "host1");
+            edit_optional_string(ui, "Hostname", &mut host.hostname, "host1");
 
             ui.horizontal(|ui| {
-                ui.label("Usage:");
-                info_icon(ui, "How much is the host active");
+                ui.label("Usage");
+                info_icon(ui, "Optional (default value: 1.0). The usage intensity of the host. 1 is the baseline, < 1 means less usage than usual, and > 1 means higher usage");
                 let mut usage_val = host.usage.unwrap_or(1.0);
                 if ui
                     .add(egui::DragValue::new(&mut usage_val).speed(0.1))
@@ -435,7 +423,7 @@ fn ui_single_host(
 /// Dropdown selector for the Operating System
 fn ui_host_os_selector(ui: &mut egui::Ui, host_idx: usize, host_os: &mut Option<String>) {
     ui.horizontal(|ui| {
-        ui.label("OS:");
+        ui.label("OS");
 
         let selected_text = host_os.as_deref().unwrap_or("<none>");
 
@@ -476,8 +464,8 @@ fn ui_host_os_selector(ui: &mut egui::Ui, host_idx: usize, host_os: &mut Option<
 /// Type of host rendering
 fn ui_host_type_selector(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
     ui.horizontal(|ui| {
-        ui.label("Type:");
-        info_icon(ui, "If the host is a server then it will provide services, if it is a client it will use a service. If the host is a server it needs services, if it is a client it needs clients protocols.");
+        ui.label("Type");
+        info_icon(ui, "Defines the role of the host. A server provides services, while a user (client) consumes services. If the host is a server, it must define services. If it is a user, it must define client protocols. If set to <auto>, the role is determined automatically: server if at least one service is defined, otherwise user.");
         let selected_text = host.r#type.as_deref().unwrap_or("<auto>").to_string();
 
         egui::ComboBox::from_id_salt((host_idx, "host_type"))
@@ -512,8 +500,8 @@ fn ui_host_type_selector(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
 /// Client protocols rendering
 fn ui_host_client_protocols(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
     ui.horizontal(|ui| {
-        ui.label("Client protocols:");
-        info_icon(ui, "Protocols the host is going to use from other servers");
+        ui.label("Client protocols");
+        info_icon(ui, "Specify what services the host is a client of.");
     });
 
     ui.horizontal_wrapped(|ui| {
@@ -535,7 +523,9 @@ fn ui_host_client_protocols(ui: &mut egui::Ui, host_idx: usize, host: &mut Host)
         }
 
         let popup_id = ui.make_persistent_id(("client_proto_popup", host_idx));
-        let add_btn_resp = ui.button(format!("{} Add", egui_material_icons::icons::ICON_ADD));
+        let add_btn_resp = ui
+            .button(format!("{} Add", egui_material_icons::icons::ICON_ADD))
+            .on_hover_text("Add protocol");
 
         egui::Popup::from_toggle_button_response(&add_btn_resp)
             .id(popup_id)
@@ -601,7 +591,7 @@ fn ui_interfaces_section(
     mac_counts: &HashMap<String, usize>,
 ) {
     ui.horizontal(|ui| {
-        ui.label("Interfaces:");
+        ui.label("Interfaces");
         if ui
             .button(egui_material_icons::icons::ICON_ADD)
             .on_hover_text("Add interface")
@@ -653,7 +643,7 @@ fn ui_interfaces_section(
                         ui.colored_label(egui::Color32::RED, "IP already in used");
                     }
                 });
-                edit_optional_string(ui, "MAC:", &mut iface.mac_addr, "00:14:2A:3F:47:D8");
+                edit_optional_string(ui, "MAC", &mut iface.mac_addr, "00:14:2A:3F:47:D8");
                 if let Some(mac) = &iface.mac_addr {
                     if mac_counts.get(mac).copied().unwrap_or(0) > 1 {
                         ui.colored_label(egui::Color32::RED, "MAC already in use");
@@ -682,6 +672,7 @@ fn ui_services_section(
     egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, false)
         .show_header(ui, |ui| {
             ui.label(format!("Services ({svc_count})"));
+            info_icon(ui, "The list of available services provided by the host.");
         })
         .body(|ui| {
             if ui
@@ -732,7 +723,7 @@ fn ui_single_service(
             });
 
         // Port Editor
-        ui.label("Port:");
+        ui.label("Port");
         let mut port_val = svc_port.unwrap_or(0);
         if ui
             .add(
