@@ -13,6 +13,9 @@ use std::sync::mpsc::{Receiver, channel};
 
 pub const DEFAULT_CONFIG_YAML: &str = include_str!("../default_config.yaml");
 
+/// Warning color (amber/orange).
+const COLOR_WARNING: egui::Color32 = egui::Color32::from_rgb(230, 160, 0);
+
 pub struct ConfigurationFileState {
     pub picked_config_file: Option<FileHandle>,
     #[cfg(target_arch = "wasm32")]
@@ -27,6 +30,9 @@ pub struct ConfigurationFileState {
     pub config_chosen: bool,
     pub is_dirty: bool,
     pub clean_snapshot: Option<Configuration>,
+    /// Whether the configuration has any errors (parse errors or validation errors).
+    /// Updated by the configuration tab rendering each frame.
+    pub has_errors: bool,
 }
 
 impl Default for ConfigurationFileState {
@@ -43,6 +49,7 @@ impl Default for ConfigurationFileState {
             config_chosen: false,
             is_dirty: false,
             clean_snapshot: None,
+            has_errors: false,
         }
     }
 }
@@ -199,9 +206,9 @@ pub fn configuration_file_picker(
                 .unwrap_or("Default config selected".to_string());
 
             if configuration_file_state.is_dirty {
-                ui.colored_label(egui::Color32::YELLOW, egui_material_icons::icons::ICON_WARNING)
+                ui.colored_label(COLOR_WARNING, egui_material_icons::icons::ICON_WARNING)
                     .on_hover_text("Unsaved changes detected — download the file to avoid losing them.");
-                ui.colored_label(egui::Color32::YELLOW, &filename)
+                ui.colored_label(COLOR_WARNING, &filename)
                     .on_hover_text(path_text);
             } else {
                 ui.label(&filename).on_hover_text(path_text);
@@ -211,9 +218,9 @@ pub fn configuration_file_picker(
         #[cfg(target_arch = "wasm32")]
         {
             if configuration_file_state.is_dirty {
-                ui.colored_label(egui::Color32::YELLOW, egui_material_icons::icons::ICON_WARNING)
+                ui.colored_label(COLOR_WARNING, egui_material_icons::icons::ICON_WARNING)
                     .on_hover_text("Unsaved changes detected — download the file to avoid losing them.");
-                ui.colored_label(egui::Color32::YELLOW, &filename);
+                ui.colored_label(COLOR_WARNING, &filename);
             } else {
                 ui.label(&filename);
             }

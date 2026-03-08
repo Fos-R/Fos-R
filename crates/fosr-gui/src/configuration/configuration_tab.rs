@@ -272,6 +272,10 @@ pub fn show_configuration_tab_content(
             } else {
                 ui_yaml_editor(ui, file_state);
             }
+
+            // Update error flag (parse errors + host validation errors)
+            file_state.has_errors = file_state.parse_error.is_some()
+                || file_state.config_model.as_ref().is_some_and(has_model_errors);
         }
     });
 }
@@ -315,7 +319,22 @@ fn ui_metadata(ui: &mut egui::Ui, model: &mut Configuration) {
     edit_optional_string(ui, "Version", &mut model.metadata.version, "0.1.0");
 }
 
-/// Several host rendering
+/// Returns true if any host in the model has validation errors.
+pub fn has_model_errors(model: &Configuration) -> bool {
+    let mut ip_counts: HashMap<String, usize> = HashMap::new();
+    let mut mac_counts: HashMap<String, usize> = HashMap::new();
+    for h in &model.hosts {
+        for iface in &h.interfaces {
+            *ip_counts.entry(iface.ip_addr.clone()).or_insert(0) += 1;
+            if let Some(mac) = &iface.mac_addr {
+                *mac_counts.entry(mac.clone()).or_insert(0) += 1;
+            }
+        }
+    }
+    model.hosts.iter().any(|host| !validate_host(host, &ip_counts, &mac_counts).is_empty())
+}
+
+/// Several host rendering.
 fn ui_hosts_section(ui: &mut egui::Ui, model: &mut Configuration) {
     ui.horizontal(|ui| {
         ui.heading("Hosts");

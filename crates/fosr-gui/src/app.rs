@@ -87,15 +87,22 @@ impl eframe::App for FosrApp {
                 {
                     self.current_tab = CurrentTab::Visualization;
                 }
-                if ui
-                    .selectable_label(
-                        self.current_tab == CurrentTab::Configuration,
-                        "Configuration",
-                    )
-                    .on_hover_text("Edit the network configuration: hosts, interfaces, and services.")
-                    .clicked()
                 {
-                    self.current_tab = CurrentTab::Configuration;
+                    let label_text = if self.configuration_file_state.has_errors {
+                        egui::RichText::new("⚠ Configuration").color(egui::Color32::RED)
+                    } else {
+                        egui::RichText::new("Configuration")
+                    };
+                    if ui
+                        .selectable_label(
+                            self.current_tab == CurrentTab::Configuration,
+                            label_text,
+                        )
+                        .on_hover_text("Edit the network configuration: hosts, interfaces, and services.")
+                        .clicked()
+                    {
+                        self.current_tab = CurrentTab::Configuration;
+                    }
                 }
                 if ui
                     .selectable_label(self.current_tab == CurrentTab::Generation, "Generation")
