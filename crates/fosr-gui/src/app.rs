@@ -5,11 +5,11 @@ use crate::configuration::configuration_tab::{
 use crate::generation::generation_tab::{GenerationTabState, show_generation_tab_content};
 // #[cfg(not(target_arch = "wasm32"))]
 // use crate::injection_tab::show_injection_tab_content;
+#[cfg(target_arch = "wasm32")]
+use crate::shared::configuration_file::poll_file_import;
 use crate::shared::configuration_file::{
     ConfigurationFileState, load_default_config, trigger_file_import,
 };
-#[cfg(target_arch = "wasm32")]
-use crate::shared::configuration_file::poll_file_import;
 use crate::visualization::visualization_tab::{
     VisualizationTabState, show_visualization_tab_content,
 };
@@ -62,10 +62,26 @@ impl eframe::App for FosrApp {
 
         // Preload all images to avoid spinners/fallbacks on first visit
         if !self.images_preloaded {
-            let _ = egui::include_image!("../assets/server.png").load(ctx, Default::default(), Default::default());
-            let _ = egui::include_image!("../assets/computer.png").load(ctx, Default::default(), Default::default());
-            let _ = egui::include_image!("../assets/internet.png").load(ctx, Default::default(), Default::default());
-            let _ = egui::include_image!("../../../public/logo.png").load(ctx, Default::default(), Default::default());
+            let _ = egui::include_image!("../assets/server.png").load(
+                ctx,
+                Default::default(),
+                Default::default(),
+            );
+            let _ = egui::include_image!("../assets/computer.png").load(
+                ctx,
+                Default::default(),
+                Default::default(),
+            );
+            let _ = egui::include_image!("../assets/internet.png").load(
+                ctx,
+                Default::default(),
+                Default::default(),
+            );
+            let _ = egui::include_image!("../../../public/logo.png").load(
+                ctx,
+                Default::default(),
+                Default::default(),
+            );
             self.images_preloaded = true;
         }
 

@@ -1,6 +1,8 @@
 //! Custom node and edge shapes for network visualization
 
-use crate::visualization::visualization_tab::{EdgeData, EdgeState, LinkDirection, NodeData, NodeType};
+use crate::visualization::visualization_tab::{
+    EdgeData, EdgeState, LinkDirection, NodeData, NodeType,
+};
 use eframe::egui;
 use egui::{Color32, Pos2, Rect, Shape, TextureOptions, Vec2, load::SizeHint};
 use egui_graphs::{DisplayEdge, DisplayNode, DrawContext, Node, NodeProps};
@@ -25,8 +27,8 @@ pub const COLOR_SMTP: Color32 = Color32::from_rgb(241, 196, 15); // Yellow
 pub const COLOR_OTHER: Color32 = Color32::from_rgb(149, 165, 166); // Gray
 
 // Node radius constants - all nodes grow with flow count
-const RADIUS_MIN: f32 = 15.0;      // Starting size for all nodes
-const RADIUS_MAX: f32 = 25.0;       // Maximum size
+const RADIUS_MIN: f32 = 15.0; // Starting size for all nodes
+const RADIUS_MAX: f32 = 25.0; // Maximum size
 const FLOW_SCALE_FACTOR: f32 = 0.3; // Radius increase per flow
 
 const EDGE_WIDTH_MIN: f32 = 0.0;
@@ -62,7 +64,12 @@ impl NetworkNodeShape {
         };
 
         let ips: Vec<String> = payload.ip_addrs.iter().map(|ip| ip.to_string()).collect();
-        (radius, payload.node_type.clone(), payload.hostname.clone(), ips)
+        (
+            radius,
+            payload.node_type.clone(),
+            payload.hostname.clone(),
+            ips,
+        )
     }
 
     /// Get the image source for this node type
@@ -89,7 +96,7 @@ impl From<NodeProps<NodeData>> for NetworkNodeShape {
 }
 
 impl DisplayNode<NodeData, EdgeData, petgraph::Undirected, petgraph::stable_graph::DefaultIx>
-for NetworkNodeShape
+    for NetworkNodeShape
 {
     /// Determines where edges should connect to the node shape
     fn closest_boundary_point(&self, dir: Vec2) -> Pos2 {
@@ -133,12 +140,16 @@ for NetworkNodeShape
             // Draw hostname in italic
             if let Some(ref hostname) = self.hostname {
                 let mut job = egui::text::LayoutJob::default();
-                job.append(hostname, 0.0, egui::TextFormat {
-                    font_id: font_id.clone(),
-                    color: Color32::GRAY,
-                    italics: true,
-                    ..Default::default()
-                });
+                job.append(
+                    hostname,
+                    0.0,
+                    egui::TextFormat {
+                        font_id: font_id.clone(),
+                        color: Color32::GRAY,
+                        italics: true,
+                        ..Default::default()
+                    },
+                );
                 let galley = f.layout_job(job);
                 let label_pos = Pos2::new(pos.x - galley.size().x / 2.0, current_y);
                 shapes.push(Shape::galley(label_pos, galley, Color32::GRAY));
@@ -148,11 +159,15 @@ for NetworkNodeShape
             // Draw IPs (normal)
             for ip in &self.ips {
                 let mut job = egui::text::LayoutJob::default();
-                job.append(ip, 0.0, egui::TextFormat {
-                    font_id: font_id.clone(),
-                    color: Color32::GRAY,
-                    ..Default::default()
-                });
+                job.append(
+                    ip,
+                    0.0,
+                    egui::TextFormat {
+                        font_id: font_id.clone(),
+                        color: Color32::GRAY,
+                        ..Default::default()
+                    },
+                );
                 let galley = f.layout_job(job);
                 let label_pos = Pos2::new(pos.x - galley.size().x / 2.0, current_y);
                 shapes.push(Shape::galley(label_pos, galley, Color32::GRAY));
@@ -198,7 +213,11 @@ fn edge_style(edge_data: &EdgeData) -> (Color32, f32, bool, bool) {
             };
             (COLOR_INACTIVE, width, false, false)
         }
-        EdgeState::Active { protocol, direction, .. } => {
+        EdgeState::Active {
+            protocol,
+            direction,
+            ..
+        } => {
             let color = match protocol {
                 L7Proto::HTTP => COLOR_HTTP,
                 L7Proto::HTTPS => COLOR_HTTPS,
@@ -229,7 +248,12 @@ pub struct NetworkEdgeShape {
 impl From<egui_graphs::EdgeProps<EdgeData>> for NetworkEdgeShape {
     fn from(props: egui_graphs::EdgeProps<EdgeData>) -> Self {
         let (color, width, arrow_start, arrow_end) = edge_style(&props.payload);
-        Self { color, width, arrow_start, arrow_end }
+        Self {
+            color,
+            width,
+            arrow_start,
+            arrow_end,
+        }
     }
 }
 
@@ -242,13 +266,13 @@ fn arrow_head(from: Pos2, to: Pos2, size: f32, angle: f32, color: Color32) -> Sh
 }
 
 impl
-DisplayEdge<
-    NodeData,
-    EdgeData,
-    petgraph::Undirected,
-    petgraph::stable_graph::DefaultIx,
-    NetworkNodeShape,
-> for NetworkEdgeShape
+    DisplayEdge<
+        NodeData,
+        EdgeData,
+        petgraph::Undirected,
+        petgraph::stable_graph::DefaultIx,
+        NetworkNodeShape,
+    > for NetworkEdgeShape
 {
     fn shapes(
         &mut self,
@@ -291,12 +315,24 @@ DisplayEdge<
         if self.arrow_end {
             let dir = (end_pos - start_pos).normalized();
             let extended_end = end_pos + dir * arrow_tip_offset;
-            shapes.push(arrow_head(start_pos, extended_end, arrow_size, arrow_angle, self.color));
+            shapes.push(arrow_head(
+                start_pos,
+                extended_end,
+                arrow_size,
+                arrow_angle,
+                self.color,
+            ));
         }
         if self.arrow_start {
             let dir = (start_pos - end_pos).normalized();
             let extended_start = start_pos + dir * arrow_tip_offset;
-            shapes.push(arrow_head(end_pos, extended_start, arrow_size, arrow_angle, self.color));
+            shapes.push(arrow_head(
+                end_pos,
+                extended_start,
+                arrow_size,
+                arrow_angle,
+                self.color,
+            ));
         }
 
         shapes

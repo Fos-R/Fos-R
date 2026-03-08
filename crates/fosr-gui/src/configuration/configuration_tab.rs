@@ -275,7 +275,10 @@ pub fn show_configuration_tab_content(
 
             // Update error flag (parse errors + host validation errors)
             file_state.has_errors = file_state.parse_error.is_some()
-                || file_state.config_model.as_ref().is_some_and(has_model_errors);
+                || file_state
+                    .config_model
+                    .as_ref()
+                    .is_some_and(has_model_errors);
         }
     });
 }
@@ -331,7 +334,10 @@ pub fn has_model_errors(model: &Configuration) -> bool {
             }
         }
     }
-    model.hosts.iter().any(|host| !validate_host(host, &ip_counts, &mac_counts).is_empty())
+    model
+        .hosts
+        .iter()
+        .any(|host| !validate_host(host, &ip_counts, &mac_counts).is_empty())
 }
 
 /// Several host rendering.

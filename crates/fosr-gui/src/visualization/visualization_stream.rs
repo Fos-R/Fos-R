@@ -7,7 +7,7 @@
 //! allowing multiple flows to be displayed in parallel.
 
 use chrono::{DateTime, Offset, TimeZone};
-use fosr_lib::{models, stage0, stage1::bayesian_networks::BNGenerator, stage1::Stage1, L7Proto};
+use fosr_lib::{L7Proto, models, stage0, stage1::Stage1, stage1::bayesian_networks::BNGenerator};
 use std::collections::BinaryHeap;
 use std::net::Ipv4Addr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -39,7 +39,6 @@ impl PartialEq for ScheduledFlow {
         self.scheduled_time == other.scheduled_time
     }
 }
-
 
 impl PartialOrd for ScheduledFlow {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -221,7 +220,8 @@ impl FlowStreamer {
                 .map_or(true, |f| f.scheduled_time < buffer_target)
             {
                 // Limit generation rate to avoid CPU spinning
-                if last_generation.elapsed() < Duration::from_millis(100) && !pending_flows.is_empty()
+                if last_generation.elapsed() < Duration::from_millis(100)
+                    && !pending_flows.is_empty()
                 {
                     break;
                 }
@@ -266,7 +266,6 @@ impl FlowStreamer {
                     break;
                 }
             }
-
 
             // Emit flows whose scheduled time has passed (in virtual time)
             while let Some(scheduled) = pending_flows.peek() {

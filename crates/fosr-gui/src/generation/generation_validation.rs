@@ -51,7 +51,6 @@ pub fn validate_duration(duration_str: &str) -> Result<Duration, String> {
     Ok(d)
 }
 
-
 pub fn validate_optional_u64(input: &str) -> Result<Option<u64>, String> {
     let s = input.trim();
     if s.is_empty() {

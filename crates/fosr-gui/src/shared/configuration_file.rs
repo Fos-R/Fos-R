@@ -3,8 +3,7 @@ use crate::shared::file_io::{read_file_desktop, save_file_desktop, show_file_pic
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::{read_file_wasm, save_file_wasm, show_file_picker_wasm};
 use crate::{
-    configuration::configuration_tab::ConfigurationTabState,
-    shared::config_model::Configuration,
+    configuration::configuration_tab::ConfigurationTabState, shared::config_model::Configuration,
     shared::ui_utils::labeled_toggle,
 };
 use chrono::{DateTime, Local};
@@ -164,10 +163,14 @@ pub fn configuration_file_picker(
                 }
                 let content = match &configuration_file_state.config_model {
                     Some(model) => serde_yaml::to_string(model).unwrap_or_default(),
-                    None => configuration_file_state.config_file_content.clone().unwrap_or_default(),
+                    None => configuration_file_state
+                        .config_file_content
+                        .clone()
+                        .unwrap_or_default(),
                 };
                 configuration_file_state.is_dirty = false;
-                configuration_file_state.clean_snapshot = configuration_file_state.config_model.clone();
+                configuration_file_state.clean_snapshot =
+                    configuration_file_state.config_model.clone();
                 let default_name = configuration_file_state
                     .picked_config_file
                     .as_ref()
@@ -209,7 +212,9 @@ pub fn configuration_file_picker(
 
             if configuration_file_state.is_dirty {
                 ui.colored_label(COLOR_WARNING, egui_material_icons::icons::ICON_WARNING)
-                    .on_hover_text("Unsaved changes detected — download the file to avoid losing them.");
+                    .on_hover_text(
+                        "Unsaved changes detected — download the file to avoid losing them.",
+                    );
                 ui.colored_label(COLOR_WARNING, &filename)
                     .on_hover_text(path_text);
             } else {
@@ -221,7 +226,9 @@ pub fn configuration_file_picker(
         {
             if configuration_file_state.is_dirty {
                 ui.colored_label(COLOR_WARNING, egui_material_icons::icons::ICON_WARNING)
-                    .on_hover_text("Unsaved changes detected — download the file to avoid losing them.");
+                    .on_hover_text(
+                        "Unsaved changes detected — download the file to avoid losing them.",
+                    );
                 ui.colored_label(COLOR_WARNING, &filename);
             } else {
                 ui.label(&filename);

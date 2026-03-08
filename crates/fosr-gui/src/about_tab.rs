@@ -2,10 +2,7 @@ use eframe::egui;
 
 pub fn show_about_tab_content(ui: &mut egui::Ui) {
     ui.vertical_centered(|ui| {
-        ui.add(
-            egui::Image::new(egui::include_image!("../../../public/logo.png"))
-                .max_width(450.0),
-        );
+        ui.add(egui::Image::new(egui::include_image!("../../../public/logo.png")).max_width(450.0));
     });
     ui.separator();
     ui.add_space(10.0);
