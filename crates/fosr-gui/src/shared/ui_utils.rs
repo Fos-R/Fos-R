@@ -67,6 +67,41 @@ pub fn edit_optional_string(
     });
 }
 
+/// Segmented toggle button between two options.
+/// Displays two buttons side by side in a grouped frame.
+/// `on` is false → left is selected, true → right is selected.
+pub fn labeled_toggle(
+    ui: &mut egui::Ui,
+    on: &mut bool,
+    left_label: &str,
+    right_label: &str,
+    tooltip_left: &str,
+    tooltip_right: &str,
+) {
+    // Use a group frame with tight padding to auto-size around the content
+    let resp = egui::Frame::group(ui.style())
+        .inner_margin(3.0)
+        .show(ui, |ui| {
+        // Remove the hover stroke on selectable labels inside this toggle
+        ui.style_mut().visuals.widgets.hovered.bg_stroke = egui::Stroke::NONE;
+        ui.spacing_mut().item_spacing = egui::vec2(3.0, 0.0);
+        ui.horizontal(|ui| {
+            let left = ui.selectable_label(!*on, left_label);
+            if left.clicked() {
+                *on = false;
+            }
+            left.on_hover_text(tooltip_left);
+
+            let right = ui.selectable_label(*on, right_label);
+            if right.clicked() {
+                *on = true;
+            }
+            right.on_hover_text(tooltip_right);
+        });
+    });
+    let _ = resp;
+}
+
 /// Displays a multiline editor for an `Option<String>`.
 ///
 /// - `None` is represented as an empty text box.
