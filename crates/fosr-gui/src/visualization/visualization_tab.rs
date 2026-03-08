@@ -1078,7 +1078,7 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
                     legend_item_with_image(ui, "Server", egui::include_image!("../../assets/server.png"));
                     legend_item_with_image(ui, "User", egui::include_image!("../../assets/computer.png"));
                     legend_item_with_image(ui, "Internet", egui::include_image!("../../assets/internet.png"));
-                }).response.on_hover_text("Node types");
+                }).response.on_hover_text("Node types. Size reflects relative traffic activity.");
             });
 
         // Overlay legend: edge states (bottom-right of graph)
@@ -1095,7 +1095,7 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
                     legend_item_inline(ui, "DNS", COLOR_DNS);
                     legend_item_inline(ui, "SMTP", COLOR_SMTP);
                     legend_item_inline(ui, "Other", COLOR_OTHER);
-                }).response.on_hover_text("Link protocols");
+                }).response.on_hover_text("Link protocols. Color shows protocol, thickness reflects relative traffic volume.");
             });
     });
 }
