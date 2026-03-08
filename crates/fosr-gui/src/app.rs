@@ -85,14 +85,22 @@ impl eframe::App for FosrApp {
             self.images_preloaded = true;
         }
 
+        // On web, use dark theme to match with the Fos-R website's theme
+        #[cfg(target_arch = "wasm32")]
+        ctx.set_theme(egui::Theme::Dark);
+
+        // Startup modal: choose configuration source
+        if !self.configuration_file_state.config_chosen {
+            // Render empty CentralPanel for background, then modal on top
+            egui::CentralPanel::default().show(ctx, |_ui| {});
+            render_startup_modal(ctx, &mut self.configuration_file_state);
+            return;
+        }
+
         // The Top Panel is logically at the top of the window.
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // Add a Menu Bar to host the tabs buttons
             egui::MenuBar::new().ui(ui, |ui| {
-                // On web, use dark theme to match with the Fos-R website's theme
-                #[cfg(target_arch = "wasm32")]
-                ctx.set_theme(egui::Theme::Dark);
-
                 if ui
                     .selectable_label(
                         self.current_tab == CurrentTab::Visualization,
@@ -179,18 +187,8 @@ impl eframe::App for FosrApp {
             });
         });
 
-        // Startup modal: choose configuration source
-        if !self.configuration_file_state.config_chosen {
-            render_startup_modal(ctx, &mut self.configuration_file_state);
-        }
-
         // The Central Panel is the region left after adding the Top, Bottom and Side panels.
-        // Don't render tab content while the startup modal is open, otherwise
-        // foreground overlays (e.g. visualization controls) would appear above the modal.
         egui::CentralPanel::default().show(ctx, |ui| {
-            if !self.configuration_file_state.config_chosen {
-                return;
-            }
             // Wrap in ScrollArea for vertical scrolling
             egui::ScrollArea::vertical().show(ui, |ui| {
                 // Display the tab content depending on the currently select tab
