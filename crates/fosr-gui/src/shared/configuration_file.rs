@@ -3,7 +3,9 @@ use crate::shared::file_io::{read_file_desktop, save_file_desktop, show_file_pic
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::{read_file_wasm, save_file_wasm, show_file_picker_wasm};
 use crate::{
-    configuration::configuration_tab::ConfigurationTabState, shared::config_model::Configuration,
+    configuration::configuration_tab::ConfigurationTabState,
+    shared::config_model::Configuration,
+    shared::ui_utils::labeled_toggle,
 };
 use chrono::{DateTime, Local};
 use eframe::egui;
@@ -228,34 +230,14 @@ pub fn configuration_file_picker(
 
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.add_space(8.0);
-            {
-                ui.spacing_mut().item_spacing.x = 0.0;
-
-                if ui
-                    .selectable_label(
-                        tab_state.is_code_mode,
-                        egui_material_icons::icons::ICON_CODE,
-                    )
-                    .on_hover_text("Code Mode: edit the configuration directly as raw YAML.")
-                    .clicked()
-                {
-                    tab_state.is_code_mode = true;
-                }
-
-                if ui
-                    .selectable_label(
-                        !tab_state.is_code_mode,
-                        egui_material_icons::icons::ICON_EDIT,
-                    )
-                    .on_hover_text(
-                        "Visual Mode: edit the configuration using the graphical interface. Fields and options are presented as forms instead of raw YAML.",
-                    )
-                    .clicked()
-                {
-                    tab_state.is_code_mode = false;
-                }
-            }
-            ui.add_space(8.0);
+            labeled_toggle(
+                ui,
+                &mut tab_state.is_code_mode,
+                &format!("{} Visual", egui_material_icons::icons::ICON_EDIT),
+                &format!("{} Code", egui_material_icons::icons::ICON_CODE),
+                "Visual Mode: edit using the graphical interface.",
+                "Code Mode: edit as raw YAML.",
+            );
         });
     });
 }
