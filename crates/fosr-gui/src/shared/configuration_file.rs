@@ -221,7 +221,7 @@ pub fn configuration_file_picker(
 
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.add_space(8.0);
-            ui.group(|ui| {
+            {
                 ui.spacing_mut().item_spacing.x = 0.0;
 
                 if ui
@@ -247,7 +247,7 @@ pub fn configuration_file_picker(
                 {
                     tab_state.is_code_mode = false;
                 }
-            });
+            }
             ui.add_space(8.0);
         });
     });
