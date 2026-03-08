@@ -25,6 +25,8 @@ pub struct ConfigurationFileState {
     /// Whether the user has chosen a configuration (default or imported).
     /// When false, the startup modal is shown.
     pub config_chosen: bool,
+    pub is_dirty: bool,
+    pub clean_snapshot: Option<Configuration>,
 }
 
 impl Default for ConfigurationFileState {
@@ -39,6 +41,8 @@ impl Default for ConfigurationFileState {
             config_model: None,
             parse_error: None,
             config_chosen: false,
+            is_dirty: false,
+            clean_snapshot: None,
         }
     }
 }
@@ -47,14 +51,11 @@ impl Default for ConfigurationFileState {
 pub fn load_default_config(state: &mut ConfigurationFileState) {
     state.picked_config_file = None;
     state.config_file_content = Some(DEFAULT_CONFIG_YAML.to_string());
-    state.config_model = serde_yaml::from_str::<Configuration>(DEFAULT_CONFIG_YAML)
-        .ok()
-        .map(|mut c| {
-            enforce_metadata_defaults(&mut c);
-            c
-        });
+    state.config_model = serde_yaml::from_str::<Configuration>(DEFAULT_CONFIG_YAML).ok();
     state.parse_error = None;
     state.config_chosen = true;
+    state.is_dirty = false;
+    state.clean_snapshot = state.config_model.clone();
 }
 
 /// Trigger a file import dialog (works on both desktop and WASM).
@@ -149,10 +150,15 @@ pub fn configuration_file_picker(
                 .on_hover_text("Save as")
                 .clicked()
             {
-                let content = configuration_file_state
-                    .config_file_content
-                    .clone()
-                    .unwrap();
+                if let Some(model) = configuration_file_state.config_model.as_mut() {
+                    enforce_metadata_defaults(model);
+                }
+                let content = match &configuration_file_state.config_model {
+                    Some(model) => serde_yaml::to_string(model).unwrap_or_default(),
+                    None => configuration_file_state.config_file_content.clone().unwrap_or_default(),
+                };
+                configuration_file_state.is_dirty = false;
+                configuration_file_state.clean_snapshot = configuration_file_state.config_model.clone();
                 let default_name = configuration_file_state
                     .picked_config_file
                     .as_ref()
@@ -191,11 +197,27 @@ pub fn configuration_file_picker(
                 .as_ref()
                 .map(|file| file.path().to_string_lossy().to_string())
                 .unwrap_or("Default config selected".to_string());
-            ui.label(&filename).on_hover_text(path_text);
+
+            if configuration_file_state.is_dirty {
+                ui.colored_label(egui::Color32::YELLOW, egui_material_icons::icons::ICON_WARNING)
+                    .on_hover_text("Unsaved changes detected — download the file to avoid losing them.");
+                ui.colored_label(egui::Color32::YELLOW, &filename)
+                    .on_hover_text(path_text);
+            } else {
+                ui.label(&filename).on_hover_text(path_text);
+            }
         }
 
         #[cfg(target_arch = "wasm32")]
-        ui.label(&filename);
+        {
+            if configuration_file_state.is_dirty {
+                ui.colored_label(egui::Color32::YELLOW, egui_material_icons::icons::ICON_WARNING)
+                    .on_hover_text("Unsaved changes detected — download the file to avoid losing them.");
+                ui.colored_label(egui::Color32::YELLOW, &filename);
+            } else {
+                ui.label(&filename);
+            }
+        }
 
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.add_space(8.0);
@@ -281,9 +303,12 @@ pub fn parse_config_yaml(configuration_file_state: &mut ConfigurationFileState) 
     };
 
     match serde_yaml::from_str::<Configuration>(yaml) {
-        Ok(mut model) => {
-            enforce_metadata_defaults(&mut model);
+        Ok(model) => {
+            if configuration_file_state.clean_snapshot.is_none() {
+                configuration_file_state.clean_snapshot = Some(model.clone());
+            }
             configuration_file_state.config_model = Some(model);
+            configuration_file_state.is_dirty = true;
         }
         Err(e) => configuration_file_state.parse_error = Some(e.to_string()),
     }
@@ -294,6 +319,8 @@ fn clear_loaded_config(configuration_file_state: &mut ConfigurationFileState) {
     configuration_file_state.config_file_content = None;
     configuration_file_state.config_model = None;
     configuration_file_state.parse_error = None;
+    configuration_file_state.is_dirty = false;
+    configuration_file_state.clean_snapshot = None;
 
     #[cfg(target_arch = "wasm32")]
     {
