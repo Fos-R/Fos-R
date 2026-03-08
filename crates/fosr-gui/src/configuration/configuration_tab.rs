@@ -895,6 +895,7 @@ fn ui_yaml_editor(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
     let mut editor_changed = false;
     let mut new_scroll_y = scroll_y;
 
+    ui.spacing_mut().item_spacing.x = 0.0;
     ui.horizontal_top(|ui| {
         let available_height = ui.available_height();
 
