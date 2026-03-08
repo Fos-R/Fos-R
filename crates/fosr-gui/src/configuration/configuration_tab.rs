@@ -426,7 +426,7 @@ fn ui_single_host(
             });
 
             ui_host_type_selector(ui, index, host);
-            ui_host_client_protocols(ui, host);
+            ui_host_client_protocols(ui, index, host);
             ui.separator();
             ui_interfaces_section(ui, index, host, ip_counts, mac_counts);
         });
@@ -510,33 +510,85 @@ fn ui_host_type_selector(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
 }
 
 /// Client protocols rendering
-fn ui_host_client_protocols(ui: &mut egui::Ui, host: &mut Host) {
+fn ui_host_client_protocols(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
     ui.horizontal(|ui| {
         ui.label("Client protocols:");
         info_icon(ui, "Protocols the host is going to use from other servers");
-        let mut buf = if host.client.is_empty() {
-            String::new()
-        } else {
-            host.client.join(",")
-        };
+    });
 
-        let resp = ui.add(egui::TextEdit::singleline(&mut buf).hint_text("ex: http,https,ssh"));
+    ui.horizontal_wrapped(|ui| {
+        let mut proto_to_remove: Option<usize> = None;
 
-        if resp.changed() {
-            host.client = buf
-                .split(',')
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect();
+        for (p_idx, proto) in host.client.iter().enumerate() {
+            let btn_text = format!("{} {}", proto, egui_material_icons::icons::ICON_CLEAR);
+            if ui
+                .button(btn_text)
+                .on_hover_text("Remove protocol")
+                .clicked()
+            {
+                proto_to_remove = Some(p_idx);
+            }
         }
 
-        if ui
-            .button(egui_material_icons::icons::ICON_CLEAR)
-            .on_hover_text("Clear")
-            .clicked()
-        {
-            host.client.clear();
+        if let Some(idx) = proto_to_remove {
+            host.client.remove(idx);
         }
+
+        let popup_id = ui.make_persistent_id(("client_proto_popup", host_idx));
+        let add_btn_resp = ui.button(format!("{} Add", egui_material_icons::icons::ICON_ADD));
+
+        egui::Popup::from_toggle_button_response(&add_btn_resp)
+            .id(popup_id)
+            .show(|ui| {
+                ui.set_min_width(180.0);
+
+                let search_id = ui.make_persistent_id(("proto_search", host_idx));
+                let mut search_text =
+                    ui.data_mut(|d| d.get_temp::<String>(search_id).unwrap_or_default());
+
+                let search_resp =
+                    ui.add(egui::TextEdit::singleline(&mut search_text).hint_text("Search..."));
+
+                if ui.memory(|m| m.focused().is_none()) {
+                    ui.memory_mut(|m| m.request_focus(search_resp.id));
+                }
+
+                ui.data_mut(|d| d.insert_temp(search_id, search_text.clone()));
+
+                ui.separator();
+
+                egui::ScrollArea::vertical()
+                    .max_height(200.0)
+                    .auto_shrink([true; 2])
+                    .show(ui, |ui| {
+                        let desired_content_width = 250.0;
+                        ui.set_width(desired_content_width);
+
+                        let filter = search_text.to_lowercase();
+                        let mut any_shown = false;
+
+                        for (name, _) in KNOWN_SERVICES {
+                            if (filter.is_empty() || name.to_lowercase().contains(&filter))
+                                && !host.client.contains(&name.to_string())
+                            {
+                                any_shown = true;
+                                if ui.selectable_label(false, *name).clicked() {
+                                    host.client.push(name.to_string());
+                                    ui.data_mut(|d| d.insert_temp(search_id, String::new()));
+                                    egui::Popup::close_id(ui.ctx(), popup_id);
+                                }
+                            }
+                        }
+
+                        if !any_shown {
+                            ui.label(
+                                egui::RichText::new("No available protocols")
+                                    .italics()
+                                    .weak(),
+                            );
+                        }
+                    });
+            });
     });
 }
 
@@ -625,7 +677,6 @@ fn ui_services_section(
     iface: &mut Interface,
 ) {
     let svc_count = iface.services.len();
-    // let id = ui.make_persistent_id(("services", iface_idx));
     let id = ui.make_persistent_id(("services", host_idx, iface_idx));
 
     egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, false)
