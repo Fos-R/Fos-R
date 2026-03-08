@@ -205,6 +205,9 @@ pub struct VisualizationTabState {
     pub reset_view_requested: bool,
     /// Previous screen size (to reset view on window resize)
     last_screen_size: Option<egui::Vec2>,
+    /// Whether the user has manually started the visualization at least once.
+    /// Auto-restart on config change is only enabled after this.
+    user_has_started: bool,
     /// Edit buffer for the node info modal (cloned from config on open, applied on Save)
     modal_edit_buffer: Option<Host>,
 }
@@ -232,6 +235,7 @@ impl Default for VisualizationTabState {
             node_to_host: HashMap::new(),
             auto_start_countdown: None,
             total_flows: 0,
+            user_has_started: false,
             reset_view_requested: false,
             last_screen_size: None,
             modal_edit_buffer: None,
@@ -477,7 +481,10 @@ fn handle_config_changes(
             let config = config::import_config(config_content);
             state.update_from_config(&config);
             state.config_content = Some(config_content.clone());
-            state.auto_start_countdown = Some(10);
+            // Only auto-restart if the user has started the visualization at least once
+            if state.user_has_started {
+                state.auto_start_countdown = Some(10);
+            }
             state.reset_view_requested = true;
         }
     }
@@ -975,8 +982,10 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
                 egui::Frame::popup(ui.style()).shadow(egui::epaint::Shadow::NONE).show(ui, |ui| {
                     ui.horizontal(|ui| {
                         if !state.visualization_running {
-                            // Continue: resume without resetting flow counts
-                            if ui.button(egui_material_icons::icons::ICON_PLAY_ARROW).on_hover_text("Continue").clicked() {
+                            // Play / Continue: resume without resetting flow counts
+                            let play_tooltip = if state.user_has_started { "Continue" } else { "Start" };
+                            if ui.button(egui_material_icons::icons::ICON_PLAY_ARROW).on_hover_text(play_tooltip).clicked() {
+                                state.user_has_started = true;
                                 // Pass the user config if loaded, otherwise None (uses default BN model)
                                 let config = state.config_content.clone();
                                 let speed = state.speed.clone();
@@ -985,11 +994,14 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
                                 }
                             }
                             // Restart: reset all flow counts and start fresh
-                            if ui.button(egui_material_icons::icons::ICON_RESTART_ALT).on_hover_text("Restart").clicked() {
-                                let config = state.config_content.clone();
-                                let speed = state.speed.clone();
-                                if let Err(e) = state.start_visualization(config.as_deref(), speed, true) {
-                                    log::error!("Failed to start flow streamer: {}", e);
+                            // Only visible after the user has started at least once
+                            if state.user_has_started {
+                                if ui.button(egui_material_icons::icons::ICON_RESTART_ALT).on_hover_text("Restart").clicked() {
+                                    let config = state.config_content.clone();
+                                    let speed = state.speed.clone();
+                                    if let Err(e) = state.start_visualization(config.as_deref(), speed, true) {
+                                        log::error!("Failed to start flow streamer: {}", e);
+                                    }
                                 }
                             }
                         } else {
