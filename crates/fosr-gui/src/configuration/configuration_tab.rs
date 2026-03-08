@@ -242,7 +242,6 @@ pub fn show_configuration_tab_content(
                     ui.separator();
                 }
 
-                // Auto-sync model edits back to YAML so other tabs see the changes
                 if let Some(model) = &file_state.config_model {
                     match serde_yaml::to_string(model) {
                         Ok(yaml) => {
@@ -252,6 +251,12 @@ pub fn show_configuration_tab_content(
                         Err(e) => {
                             file_state.parse_error = Some(e.to_string());
                         }
+                    }
+
+                    if let Some(snapshot) = &file_state.clean_snapshot {
+                        let model_yaml = serde_yaml::to_string(model).unwrap_or_default();
+                        let snap_yaml = serde_yaml::to_string(snapshot).unwrap_or_default();
+                        file_state.is_dirty = model_yaml != snap_yaml;
                     }
                 }
             } else {
