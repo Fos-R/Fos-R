@@ -520,23 +520,6 @@ fn ui_host_client_protocols(ui: &mut egui::Ui, host_idx: usize, host: &mut Host)
     ui.horizontal(|ui| {
         ui.label("Client protocols");
         info_icon(ui, "Specify what services the host is a client of.");
-        let mut proto_to_remove: Option<usize> = None;
-
-        for (p_idx, proto) in host.client.iter().enumerate() {
-            let btn_text = format!("{} {}", proto, egui_material_icons::icons::ICON_CLEAR);
-            if ui
-                .button(btn_text)
-                .on_hover_text("Remove protocol")
-                .clicked()
-            {
-                proto_to_remove = Some(p_idx);
-            }
-        }
-
-        if let Some(idx) = proto_to_remove {
-            host.client.remove(idx);
-        }
-
         let popup_id = ui.make_persistent_id(("client_proto_popup", host_idx));
         let add_btn_resp = ui
             .button(format!("{} Add", egui_material_icons::icons::ICON_ADD))
@@ -594,6 +577,21 @@ fn ui_host_client_protocols(ui: &mut egui::Ui, host_idx: usize, host: &mut Host)
                         }
                     });
             });
+
+        let mut proto_to_remove: Option<usize> = None;
+        for (p_idx, proto) in host.client.iter().enumerate() {
+            let btn_text = format!("{} {}", proto, egui_material_icons::icons::ICON_CLEAR);
+            if ui
+                .button(btn_text)
+                .on_hover_text("Remove protocol")
+                .clicked()
+            {
+                proto_to_remove = Some(p_idx);
+            }
+        }
+        if let Some(idx) = proto_to_remove {
+            host.client.remove(idx);
+        }
     });
 }
 
