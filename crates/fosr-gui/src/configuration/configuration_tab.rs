@@ -238,8 +238,18 @@ pub fn show_configuration_tab_content(
                 if let Some(model) = file_state.config_model.as_mut() {
                     ui_hosts_section(ui, model);
                     ui.separator();
-                    ui_metadata(ui, model);
-                    ui.separator();
+                    let meta_id = ui.make_persistent_id("metadata_section");
+                    egui::collapsing_header::CollapsingState::load_with_default_open(
+                        ui.ctx(),
+                        meta_id,
+                        false,
+                    )
+                    .show_header(ui, |ui| {
+                        ui.heading("Metadata");
+                    })
+                    .body(|ui| {
+                        ui_metadata(ui, model);
+                    });
                 }
 
                 if let Some(model) = &file_state.config_model {
@@ -283,7 +293,6 @@ fn ui_parsing_status(ui: &mut egui::Ui, state: &ConfigurationFileState) {
 
 /// Metadata rendering
 fn ui_metadata(ui: &mut egui::Ui, model: &mut Configuration) {
-    ui.heading("Metadata");
     ui.add_space(6.0);
 
     // Title
@@ -511,9 +520,6 @@ fn ui_host_client_protocols(ui: &mut egui::Ui, host_idx: usize, host: &mut Host)
     ui.horizontal(|ui| {
         ui.label("Client protocols");
         info_icon(ui, "Specify what services the host is a client of.");
-    });
-
-    ui.horizontal_wrapped(|ui| {
         let mut proto_to_remove: Option<usize> = None;
 
         for (p_idx, proto) in host.client.iter().enumerate() {
