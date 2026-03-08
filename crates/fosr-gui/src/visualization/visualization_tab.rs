@@ -833,16 +833,19 @@ fn render_node_info_modal(
                     ui.label(egui::RichText::new(hostname).monospace());
                 });
             }
-            ui.horizontal(|ui| {
-                ui.label("OS:");
-                ui.label(egui::RichText::new(format!("{:?}", node_data.os)).monospace());
-            });
-            ui.label("IP Addresses:");
-            for ip in &node_data.ip_addrs {
+            // Don't show OS or IP for Internet node
+            if node_data.node_type != NodeType::Internet {
                 ui.horizontal(|ui| {
-                    ui.add_space(16.0);
-                    ui.label(egui::RichText::new(ip.to_string()).monospace());
+                    ui.label("OS:");
+                    ui.label(egui::RichText::new(format!("{:?}", node_data.os)).monospace());
                 });
+                ui.label("IP Addresses:");
+                for ip in &node_data.ip_addrs {
+                    ui.horizontal(|ui| {
+                        ui.add_space(16.0);
+                        ui.label(egui::RichText::new(ip.to_string()).monospace());
+                    });
+                }
             }
         }
 
