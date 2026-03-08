@@ -148,6 +148,10 @@ fn validate_host(
         if host.client.is_empty() {
             errors.push("Client missing protocols".to_string());
         }
+        let has_service = host.interfaces.iter().any(|i| !i.services.is_empty());
+        if has_service {
+            errors.push("User host should not have services (use type: server)".to_string());
+        }
     }
 
     errors.dedup();
@@ -306,7 +310,7 @@ fn ui_hosts_section(ui: &mut egui::Ui, model: &mut Configuration) {
             .on_hover_text("Add host")
             .clicked()
         {
-            model.hosts.push(Host::default());
+            model.hosts.insert(0, Host::default());
         }
     });
     ui.add_space(6.0);
