@@ -69,14 +69,14 @@ pub fn edit_optional_string(
 
 /// Segmented toggle button between two options.
 /// Displays two buttons side by side in a grouped frame.
-/// `on` is false → left is selected, true → right is selected.
+/// Rendering order follows the parent layout direction.
 pub fn labeled_toggle(
     ui: &mut egui::Ui,
-    on: &mut bool,
-    left_label: &str,
-    right_label: &str,
-    tooltip_left: &str,
-    tooltip_right: &str,
+    is_first_selected: &mut bool,
+    first_label: &str,
+    second_label: &str,
+    tooltip_first: &str,
+    tooltip_second: &str,
 ) {
     // Use a group frame with tight padding to auto-size around the content
     let resp = egui::Frame::group(ui.style())
@@ -86,17 +86,17 @@ pub fn labeled_toggle(
         ui.style_mut().visuals.widgets.hovered.bg_stroke = egui::Stroke::NONE;
         ui.spacing_mut().item_spacing = egui::vec2(3.0, 0.0);
         ui.horizontal(|ui| {
-            let left = ui.selectable_label(!*on, left_label);
-            if left.clicked() {
-                *on = false;
+            let first = ui.selectable_label(*is_first_selected, first_label);
+            if first.clicked() {
+                *is_first_selected = true;
             }
-            left.on_hover_text(tooltip_left);
+            first.on_hover_text(tooltip_first);
 
-            let right = ui.selectable_label(*on, right_label);
-            if right.clicked() {
-                *on = true;
+            let second = ui.selectable_label(!*is_first_selected, second_label);
+            if second.clicked() {
+                *is_first_selected = false;
             }
-            right.on_hover_text(tooltip_right);
+            second.on_hover_text(tooltip_second);
         });
     });
     let _ = resp;

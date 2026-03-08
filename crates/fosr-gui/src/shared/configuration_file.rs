@@ -230,13 +230,15 @@ pub fn configuration_file_picker(
 
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.add_space(8.0);
+            // In RTL layout, rendering order is reversed,
+            // so Code is passed first to appear visually on the right.
             labeled_toggle(
                 ui,
                 &mut tab_state.is_code_mode,
-                &format!("{} Visual", egui_material_icons::icons::ICON_EDIT),
                 &format!("{} Code", egui_material_icons::icons::ICON_CODE),
-                "Visual Mode: edit using the graphical interface.",
+                &format!("{} Visual", egui_material_icons::icons::ICON_EDIT),
                 "Code Mode: edit as raw YAML.",
+                "Visual Mode: edit using the graphical interface.",
             );
         });
     });
