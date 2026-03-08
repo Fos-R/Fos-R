@@ -791,8 +791,9 @@ fn ui_single_service(
         .unwrap_or(0);
 
     let custom_port_id = ui.make_persistent_id(("custom_port", host_idx, iface_idx, svc_idx));
+    let is_custom_by_default = svc_port.map_or(false, |p| p != default_port);
     let mut custom_port_enabled: bool =
-        ui.data_mut(|d| d.get_temp(custom_port_id).unwrap_or(false));
+        ui.data_mut(|d| d.get_temp(custom_port_id).unwrap_or(is_custom_by_default));
 
     ui.horizontal(|ui| {
         let btn_text = format!("{} {}", svc_name, egui_material_icons::icons::ICON_CLEAR);
