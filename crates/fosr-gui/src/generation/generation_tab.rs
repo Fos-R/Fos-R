@@ -64,6 +64,13 @@ pub struct GenerationTabState {
     pub start_date: NaiveDate,
     pub start_hour: NaiveTime,
     pub output_file_name: String,
+    /// Holds the temporary PCAP file opened in Wireshark.
+    ///
+    /// `NamedTempFile` automatically deletes the file when dropped. By storing it here,
+    /// the file stays alive until: (1) the app closes, or (2) a new file is opened
+    /// (which replaces this value, dropping the previous file).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub temp_pcap_file: Option<tempfile::NamedTempFile>,
 }
 
 impl Default for GenerationTabState {
@@ -93,6 +100,8 @@ impl Default for GenerationTabState {
             start_date: Local::now().date_naive(),
             start_hour: Local::now().time(),
             output_file_name: "output.pcap".to_string(),
+            #[cfg(not(target_arch = "wasm32"))]
+            temp_pcap_file: None,
         }
     }
 }
@@ -266,11 +275,11 @@ pub fn show_generation_tab_content(
     ui.horizontal(|ui| {
         if is_generating {
             let stop_button = egui::Button::new(
-                egui::RichText::new(egui_material_icons::icons::ICON_STOP).size(13.0),
+                egui::RichText::new(format!("{} Stop", egui_material_icons::icons::ICON_STOP)).size(13.0),
             )
             .fill(egui::Color32::from_rgb(200, 80, 80))
             .min_size(egui::vec2(75.0, 24.0));
-            if ui.add(stop_button).on_hover_text("Stop").clicked() {
+            if ui.add(stop_button).on_hover_text("Cancel generation").clicked() {
                 state.cancelled.store(true, Ordering::Relaxed);
                 state.status = UiStatus::Idle;
                 state.progress = 0.0;
@@ -284,11 +293,11 @@ pub fn show_generation_tab_content(
             ui.add_enabled_ui(can_generate, |ui| {
                 let accent = ui.visuals().selection.bg_fill;
                 let generate_button = egui::Button::new(
-                    egui::RichText::new(egui_material_icons::icons::ICON_PLAY_ARROW).size(13.0),
+                    egui::RichText::new(format!("{} Generate", egui_material_icons::icons::ICON_PLAY_ARROW)).size(13.0),
                 )
                 .fill(accent)
-                .min_size(egui::vec2(75.0, 24.0));
-                if ui.add(generate_button).on_hover_text("Generate").clicked() {
+                .min_size(egui::vec2(85.0, 24.0));
+                if ui.add(generate_button).on_hover_text("Generate PCAP from configuration").clicked() {
                     state.status = UiStatus::Generating;
 
                     // Reset state
@@ -411,14 +420,14 @@ pub fn show_generation_tab_content(
                 state.status = UiStatus::Generated;
             }
             #[cfg(not(target_arch = "wasm32"))]
-            let save_button_icon = egui_material_icons::icons::ICON_SAVE;
+            let save_button_text = format!("{} Save", egui_material_icons::icons::ICON_SAVE);
             #[cfg(target_arch = "wasm32")]
-            let save_button_icon = egui_material_icons::icons::ICON_DOWNLOAD;
+            let save_button_text = format!("{} Download", egui_material_icons::icons::ICON_DOWNLOAD);
             #[cfg(not(target_arch = "wasm32"))]
-            let save_button_tooltip = "Save";
+            let save_button_tooltip = "Save PCAP file";
             #[cfg(target_arch = "wasm32")]
-            let save_button_tooltip = "Download";
-            let save_button = egui::Button::new(egui::RichText::new(save_button_icon).size(13.0))
+            let save_button_tooltip = "Download PCAP file";
+            let save_button = egui::Button::new(egui::RichText::new(save_button_text).size(13.0))
                 .min_size(egui::vec2(75.0, 24.0));
             if ui
                 .add(save_button)
@@ -464,6 +473,32 @@ pub fn show_generation_tab_content(
                     });
                 }
             }
+
+            // Open in Wireshark button (native only)
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let open_button = egui::Button::new(
+                    egui::RichText::new(format!("{} Open", egui_material_icons::icons::ICON_LAN)).size(13.0),
+                )
+                .min_size(egui::vec2(75.0, 24.0));
+                if ui
+                    .add(open_button)
+                    .on_hover_text("Open with default application (e.g. Wireshark)")
+                    .clicked()
+                {
+                    if let Some(ref pcap_bytes) = state.pcap_bytes {
+                        match open_in_wireshark(pcap_bytes, &mut state.temp_pcap_file) {
+                            Ok(_) => {
+                                log::info!("Opened PCAP in Wireshark");
+                            }
+                            Err(e) => {
+                                log::error!("Failed to open in Wireshark: {:?}", e);
+                                state.status = UiStatus::Error(format!("Failed to open in Wireshark: {e}"));
+                            }
+                        }
+                    }
+                }
+            }
         }
     });
 
@@ -489,4 +524,41 @@ pub fn show_generation_tab_content(
             format!("Invalid parameter: {name}. Expected: {spec}. ({err})"),
         );
     }
+}
+
+/// Opens the PCAP data in the system's default application (e.g., Wireshark).
+///
+/// This creates a temporary file with `.pcap` extension and opens it using `open::that()`.
+/// The `NamedTempFile` handle is stored in `temp_file_storage` to keep the file alive.
+/// When the handle is dropped (app closes or a new file is opened), the temp file is deleted.
+#[cfg(not(target_arch = "wasm32"))]
+fn open_in_wireshark(
+    pcap_bytes: &[u8],
+    temp_file_storage: &mut Option<tempfile::NamedTempFile>,
+) -> Result<(), String> {
+    use std::io::Write;
+
+    // Create a temporary file with .pcap extension
+    let mut temp_file = tempfile::Builder::new()
+        .suffix(".pcap")
+        .tempfile()
+        .map_err(|e| format!("Failed to create temp file: {e}"))?;
+
+    // Write the PCAP data
+    temp_file
+        .write_all(pcap_bytes)
+        .map_err(|e| format!("Failed to write PCAP data: {e}"))?;
+
+    // Get the path
+    let path = temp_file.path().to_path_buf();
+
+    log::info!("Opening PCAP file at: {}", path.display());
+
+    // Store the temp file to keep it alive until app closes
+    *temp_file_storage = Some(temp_file);
+
+    // Open with system default application (Wireshark for .pcap files)
+    open::that(&path).map_err(|e| format!("Failed to open file: {e}"))?;
+
+    Ok(())
 }
