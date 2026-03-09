@@ -1167,7 +1167,8 @@ fn handle_screenshot_export(ui: &mut egui::Ui, state: &mut VisualizationTabState
     // Transition: HidingOverlays → WaitingForScreenshot (request screenshot)
     if state.export_state == ExportState::HidingOverlays {
         state.export_state = ExportState::WaitingForScreenshot;
-        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::default()));
+        ui.ctx()
+            .send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::default()));
     }
 
     // Handle screenshot result
@@ -1204,7 +1205,10 @@ fn save_graph_png(image: &egui::ColorImage) {
 
     // Convert to PNG bytes
     let mut buffer = Vec::new();
-    match img_buffer.write_to(&mut std::io::Cursor::new(&mut buffer), image::ImageFormat::Png) {
+    match img_buffer.write_to(
+        &mut std::io::Cursor::new(&mut buffer),
+        image::ImageFormat::Png,
+    ) {
         Ok(_) => {
             #[cfg(not(target_arch = "wasm32"))]
             {

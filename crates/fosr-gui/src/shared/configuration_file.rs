@@ -3,10 +3,8 @@ use crate::shared::file_io::{read_file_desktop, save_file_desktop, show_file_pic
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::{read_file_wasm, save_file_wasm, show_file_picker_wasm};
 use crate::{
-    configuration::configuration_tab::ConfigurationTabState,
-    shared::config_model::Configuration,
-    shared::ui_utils::labeled_toggle,
-    templates::load_template_by_id,
+    configuration::configuration_tab::ConfigurationTabState, shared::config_model::Configuration,
+    shared::ui_utils::labeled_toggle, templates::load_template_by_id,
 };
 use chrono::{DateTime, Local};
 use eframe::egui;
@@ -137,17 +135,18 @@ pub fn configuration_file_picker(
         poll_file_import(configuration_file_state);
 
         // Template dropdown menu (always visible)
-        let template_menu = ui.menu_button(egui_material_icons::icons::ICON_DESCRIPTION, |menu_ui| {
-            for template in crate::templates::all_templates() {
-                if menu_ui
-                    .button(format!("{} {}", template.icon, template.title))
-                    .clicked()
-                {
-                    menu_ui.close();
-                    load_template_by_id(configuration_file_state, template.id);
+        let template_menu =
+            ui.menu_button(egui_material_icons::icons::ICON_DESCRIPTION, |menu_ui| {
+                for template in crate::templates::all_templates() {
+                    if menu_ui
+                        .button(format!("{} {}", template.icon, template.title))
+                        .clicked()
+                    {
+                        menu_ui.close();
+                        load_template_by_id(configuration_file_state, template.id);
+                    }
                 }
-            }
-        });
+            });
         template_menu.response.on_hover_text("Open template");
 
         // Display the file name on disk, or indicate built-in template
