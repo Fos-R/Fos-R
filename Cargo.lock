@@ -1836,6 +1836,7 @@ dependencies = [
  "getrandom 0.4.2",
  "gloo-timers",
  "humantime",
+ "image",
  "indicatif",
  "log",
  "open",
