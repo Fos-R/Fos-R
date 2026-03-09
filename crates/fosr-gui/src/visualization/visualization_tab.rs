@@ -169,6 +169,17 @@ type VisualizationGraph = egui_graphs::Graph<
     NetworkEdgeShape,
 >;
 
+/// State machine for screenshot export
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ExportState {
+    #[default]
+    Idle,
+    /// Hide overlays on next frame before taking screenshot
+    HidingOverlays,
+    /// Screenshot requested, waiting for result
+    WaitingForScreenshot,
+}
+
 /// Represents the state of the visualization tab.
 pub struct VisualizationTabState {
     pub graph: VisualizationGraph,
@@ -210,6 +221,10 @@ pub struct VisualizationTabState {
     user_has_started: bool,
     /// Edit buffer for the node info modal (cloned from config on open, applied on Save)
     modal_edit_buffer: Option<Host>,
+    /// The rect of the graph panel (updated each frame, used for screenshot region)
+    pub graph_rect: Option<egui::Rect>,
+    /// Screenshot export state machine
+    pub export_state: ExportState,
 }
 
 impl Default for VisualizationTabState {
@@ -239,6 +254,8 @@ impl Default for VisualizationTabState {
             reset_view_requested: false,
             last_screen_size: None,
             modal_edit_buffer: None,
+            graph_rect: None,
+            export_state: ExportState::Idle,
         }
     }
 }
@@ -938,7 +955,7 @@ fn legend_item_with_image(ui: &mut egui::Ui, label: &str, image: egui::ImageSour
 
 /// Render the graph view
 fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
-    egui::CentralPanel::default().show(ui.ctx(), |ui| {
+    let inner_response = egui::CentralPanel::default().show(ui.ctx(), |ui| {
         // Enable node clicking and dragging
         let interactions = SettingsInteraction::new()
             .with_node_clicking_enabled(true)
@@ -996,10 +1013,20 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
 
         ui.add(&mut graph_view);
 
+        // Handle screenshot export state machine
+        handle_screenshot_export(ui, state);
+
+        // Hide overlays during export to get clean screenshot
+        if state.export_state != ExportState::Idle {
+            return;
+        }
+
+        // Get content rect for overlay positioning
+        let local_rect = ui.max_rect();
+
         // Overlay control buttons in the top-left corner of the graph
-        let panel_rect = ui.min_rect();
         egui::Area::new(egui::Id::new("viz_overlay_buttons"))
-            .fixed_pos(panel_rect.left_top() + egui::vec2(4.0, 4.0))
+            .fixed_pos(local_rect.left_top() + egui::vec2(4.0, 4.0))
             .order(egui::Order::Foreground)
             .show(ui.ctx(), |ui| {
                 egui::Frame::popup(ui.style()).shadow(egui::epaint::Shadow::NONE).show(ui, |ui| {
@@ -1034,6 +1061,9 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
                         }
                         if ui.button(egui_material_icons::icons::ICON_FIT_SCREEN).on_hover_text("Fit to screen").clicked() {
                             state.reset_view_requested = true;
+                        }
+                        if ui.button(egui_material_icons::icons::ICON_IMAGE).on_hover_text("Export as PNG").clicked() {
+                            state.export_state = ExportState::HidingOverlays;
                         }
 
                         ui.separator();
@@ -1076,7 +1106,7 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
 
         // Overlay stats (bottom-left of graph)
         egui::Area::new(egui::Id::new("viz_overlay_stats"))
-            .fixed_pos(panel_rect.left_bottom() + egui::vec2(4.0, 0.0))
+            .fixed_pos(local_rect.left_bottom() + egui::vec2(4.0, 0.0))
             .pivot(egui::Align2::LEFT_BOTTOM)
             .order(egui::Order::Foreground)
             .show(ui.ctx(), |ui| {
@@ -1094,7 +1124,7 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
         // Overlay legend: node types (top-right of graph)
         egui::Area::new(egui::Id::new("viz_overlay_node_legend"))
             .pivot(egui::Align2::RIGHT_TOP)
-            .fixed_pos(panel_rect.right_top() + egui::vec2(-4.0, 4.0))
+            .fixed_pos(local_rect.right_top() + egui::vec2(-4.0, 4.0))
             .order(egui::Order::Foreground)
             .show(ui.ctx(), |ui| {
                 egui::Frame::popup(ui.style()).shadow(egui::epaint::Shadow::NONE).show(ui, |ui| {
@@ -1107,7 +1137,7 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
         // Overlay legend: edge states (bottom-right of graph)
         egui::Area::new(egui::Id::new("viz_overlay_edge_legend"))
             .pivot(egui::Align2::RIGHT_BOTTOM)
-            .fixed_pos(panel_rect.right_bottom() + egui::vec2(-4.0, -4.0))
+            .fixed_pos(local_rect.right_bottom() + egui::vec2(-4.0, -4.0))
             .order(egui::Order::Foreground)
             .show(ui.ctx(), |ui| {
                 egui::Frame::popup(ui.style()).shadow(egui::epaint::Shadow::NONE).show(ui, |ui| {
@@ -1121,4 +1151,84 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
                 }).response.on_hover_text("Link protocols. Color shows protocol, thickness reflects relative traffic volume.");
             });
     });
+
+    // Use panel rect directly - it's already in screen coordinates
+    // and represents the full panel area (ui.max_rect() excludes internal padding)
+    let panel_rect = inner_response.response.rect;
+    state.graph_rect = Some(panel_rect);
+}
+
+/// Handle screenshot export state machine.
+/// Uses a 2-frame approach:
+/// - Frame N: user clicks export → HidingOverlays
+/// - Frame N+1: overlays hidden → request screenshot → WaitingForScreenshot
+/// - Frame N+2: screenshot received → extract graph region → save → Idle
+fn handle_screenshot_export(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
+    // Transition: HidingOverlays → WaitingForScreenshot (request screenshot)
+    if state.export_state == ExportState::HidingOverlays {
+        state.export_state = ExportState::WaitingForScreenshot;
+        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::default()));
+    }
+
+    // Handle screenshot result
+    ui.input(|i| {
+        for event in &i.raw.events {
+            if let egui::Event::Screenshot { image, .. } = event {
+                if state.export_state == ExportState::WaitingForScreenshot {
+                    if let Some(graph_rect) = state.graph_rect {
+                        let graph_image = image.region(&graph_rect, Some(i.pixels_per_point()));
+                        save_graph_png(&graph_image);
+                    } else {
+                        log::error!("No graph rect stored for screenshot export");
+                    }
+                    state.export_state = ExportState::Idle;
+                }
+            }
+        }
+    });
+}
+
+/// Save the graph screenshot as a PNG file.
+fn save_graph_png(image: &egui::ColorImage) {
+    let width = image.width() as u32;
+    let height = image.height() as u32;
+    let pixels = image.as_raw();
+
+    // Convert RGBA to ImageBuffer
+    let img_buffer = image::RgbaImage::from_raw(width, height, pixels.to_vec())
+        .expect("Failed to create image buffer");
+
+    // Generate filename with timestamp
+    let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
+    let filename = format!("fosr_graph_{}.png", timestamp);
+
+    // Convert to PNG bytes
+    let mut buffer = Vec::new();
+    match img_buffer.write_to(&mut std::io::Cursor::new(&mut buffer), image::ImageFormat::Png) {
+        Ok(_) => {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                match crate::shared::file_io::save_file_desktop(&buffer, &filename) {
+                    Ok(file_handle) => {
+                        log::info!("Exported graph to {}", file_handle.path().to_string_lossy());
+                    }
+                    Err(e) => {
+                        log::error!("Failed to save graph PNG: {:?}", e);
+                    }
+                }
+            }
+
+            #[cfg(target_arch = "wasm32")]
+            {
+                let filename_clone = filename.clone();
+                wasm_bindgen_futures::spawn_local(async move {
+                    match crate::shared::file_io::save_file_wasm(&buffer, &filename_clone).await {
+                        Ok(_) => log::info!("Exported graph to {}", filename_clone),
+                        Err(e) => log::error!("Failed to save PNG on WASM: {:?}", e),
+                    }
+                });
+            }
+        }
+        Err(e) => log::error!("Failed to write PNG to buffer: {}", e),
+    }
 }
