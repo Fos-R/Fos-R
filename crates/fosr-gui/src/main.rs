@@ -3,6 +3,7 @@ mod app;
 mod configuration;
 mod generation;
 mod shared;
+mod templates;
 mod timepicker;
 mod visualization;
 
