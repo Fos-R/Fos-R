@@ -275,11 +275,16 @@ pub fn show_generation_tab_content(
     ui.horizontal(|ui| {
         if is_generating {
             let stop_button = egui::Button::new(
-                egui::RichText::new(format!("{} Stop", egui_material_icons::icons::ICON_STOP)).size(13.0),
+                egui::RichText::new(format!("{} Stop", egui_material_icons::icons::ICON_STOP))
+                    .size(13.0),
             )
             .fill(egui::Color32::from_rgb(200, 80, 80))
             .min_size(egui::vec2(75.0, 24.0));
-            if ui.add(stop_button).on_hover_text("Cancel generation").clicked() {
+            if ui
+                .add(stop_button)
+                .on_hover_text("Cancel generation")
+                .clicked()
+            {
                 state.cancelled.store(true, Ordering::Relaxed);
                 state.status = UiStatus::Idle;
                 state.progress = 0.0;
@@ -293,11 +298,19 @@ pub fn show_generation_tab_content(
             ui.add_enabled_ui(can_generate, |ui| {
                 let accent = ui.visuals().selection.bg_fill;
                 let generate_button = egui::Button::new(
-                    egui::RichText::new(format!("{} Generate", egui_material_icons::icons::ICON_PLAY_ARROW)).size(13.0),
+                    egui::RichText::new(format!(
+                        "{} Generate",
+                        egui_material_icons::icons::ICON_PLAY_ARROW
+                    ))
+                    .size(13.0),
                 )
                 .fill(accent)
                 .min_size(egui::vec2(85.0, 24.0));
-                if ui.add(generate_button).on_hover_text("Generate PCAP from configuration").clicked() {
+                if ui
+                    .add(generate_button)
+                    .on_hover_text("Generate PCAP from configuration")
+                    .clicked()
+                {
                     state.status = UiStatus::Generating;
 
                     // Reset state
@@ -422,7 +435,8 @@ pub fn show_generation_tab_content(
             #[cfg(not(target_arch = "wasm32"))]
             let save_button_text = format!("{} Save", egui_material_icons::icons::ICON_SAVE);
             #[cfg(target_arch = "wasm32")]
-            let save_button_text = format!("{} Download", egui_material_icons::icons::ICON_DOWNLOAD);
+            let save_button_text =
+                format!("{} Download", egui_material_icons::icons::ICON_DOWNLOAD);
             #[cfg(not(target_arch = "wasm32"))]
             let save_button_tooltip = "Save PCAP file";
             #[cfg(target_arch = "wasm32")]
@@ -478,7 +492,8 @@ pub fn show_generation_tab_content(
             #[cfg(not(target_arch = "wasm32"))]
             {
                 let open_button = egui::Button::new(
-                    egui::RichText::new(format!("{} Open", egui_material_icons::icons::ICON_LAN)).size(13.0),
+                    egui::RichText::new(format!("{} Open", egui_material_icons::icons::ICON_LAN))
+                        .size(13.0),
                 )
                 .min_size(egui::vec2(75.0, 24.0));
                 if ui
@@ -493,7 +508,8 @@ pub fn show_generation_tab_content(
                             }
                             Err(e) => {
                                 log::error!("Failed to open in Wireshark: {:?}", e);
-                                state.status = UiStatus::Error(format!("Failed to open in Wireshark: {e}"));
+                                state.status =
+                                    UiStatus::Error(format!("Failed to open in Wireshark: {e}"));
                             }
                         }
                     }

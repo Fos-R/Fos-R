@@ -318,7 +318,12 @@ fn render_template_selection_modal(ctx: &egui::Context, state: &mut Configuratio
         let templates = all_templates();
         ui.columns(3, |cols| {
             for (i, template) in templates.iter().enumerate() {
-                if startup_card(&mut cols[i % 3], template.icon, template.title, template.description) {
+                if startup_card(
+                    &mut cols[i % 3],
+                    template.icon,
+                    template.title,
+                    template.description,
+                ) {
                     load_template_by_id(state, template.id);
                 }
             }
