@@ -6,8 +6,9 @@ use crate::generation::generation_tab::{GenerationTabState, show_generation_tab_
 #[cfg(target_arch = "wasm32")]
 use crate::shared::configuration_file::poll_file_import;
 use crate::shared::configuration_file::{
-    ConfigurationFileState, load_default_config, trigger_file_import,
+    ConfigurationFileState, StartupModalState, trigger_file_import,
 };
+use crate::templates::{all_templates, load_template_by_id};
 use crate::visualization::visualization_tab::{
     VisualizationTabState, show_visualization_tab_content,
 };
@@ -254,6 +255,13 @@ fn startup_card(ui: &mut egui::Ui, icon: &str, title: &str, description: &str) -
 }
 
 fn render_startup_modal(ctx: &egui::Context, state: &mut ConfigurationFileState) {
+    match state.modal_state {
+        StartupModalState::Initial => render_initial_modal(ctx, state),
+        StartupModalState::TemplateSelection => render_template_selection_modal(ctx, state),
+    }
+}
+
+fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigurationFileState) {
     egui::Modal::new(egui::Id::new("startup_config_modal")).show(ctx, |ui| {
         ui.set_width(400.0);
         ui.heading("Welcome to Fos-R");
@@ -267,9 +275,9 @@ fn render_startup_modal(ctx: &egui::Context, state: &mut ConfigurationFileState)
                 &mut cols[0],
                 egui_material_icons::icons::ICON_LAN,
                 "Default configuration",
-                "A sample enterprise network\nwith servers and workstations",
+                "Choose from preset templates\nfor different network types",
             ) {
-                load_default_config(state);
+                state.modal_state = StartupModalState::TemplateSelection;
             }
 
             // Right: import file
@@ -285,5 +293,35 @@ fn render_startup_modal(ctx: &egui::Context, state: &mut ConfigurationFileState)
 
         #[cfg(target_arch = "wasm32")]
         poll_file_import(state);
+    });
+}
+
+fn render_template_selection_modal(ctx: &egui::Context, state: &mut ConfigurationFileState) {
+    egui::Modal::new(egui::Id::new("template_selection_modal")).show(ctx, |ui| {
+        ui.set_width(400.0);
+
+        // Header with back button
+        ui.horizontal(|ui| {
+            if ui
+                .button(egui_material_icons::icons::ICON_ARROW_BACK)
+                .on_hover_text("Back")
+                .clicked()
+            {
+                state.modal_state = StartupModalState::Initial;
+            }
+            ui.heading("Choose a template");
+        });
+
+        ui.add_space(12.0);
+
+        // Grid of template cards
+        let templates = all_templates();
+        ui.columns(3, |cols| {
+            for (i, template) in templates.iter().enumerate() {
+                if startup_card(&mut cols[i % 3], template.icon, template.title, template.description) {
+                    load_template_by_id(state, template.id);
+                }
+            }
+        });
     });
 }

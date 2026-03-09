@@ -3,8 +3,10 @@ use crate::shared::file_io::{read_file_desktop, save_file_desktop, show_file_pic
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::{read_file_wasm, save_file_wasm, show_file_picker_wasm};
 use crate::{
-    configuration::configuration_tab::ConfigurationTabState, shared::config_model::Configuration,
+    configuration::configuration_tab::ConfigurationTabState,
+    shared::config_model::Configuration,
     shared::ui_utils::labeled_toggle,
+    templates::load_template_by_id,
 };
 use chrono::{DateTime, Local};
 use eframe::egui;
@@ -12,7 +14,13 @@ use rfd::FileHandle;
 #[cfg(target_arch = "wasm32")]
 use std::sync::mpsc::{Receiver, channel};
 
-pub const DEFAULT_CONFIG_YAML: &str = include_str!("../default_config.yaml");
+/// State for the startup modal flow.
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+pub enum StartupModalState {
+    #[default]
+    Initial,
+    TemplateSelection,
+}
 
 /// Warning color (amber/orange).
 const COLOR_WARNING: egui::Color32 = egui::Color32::from_rgb(230, 160, 0);
@@ -34,6 +42,10 @@ pub struct ConfigurationFileState {
     /// Whether the configuration has any errors (parse errors or validation errors).
     /// Updated by the configuration tab rendering each frame.
     pub has_errors: bool,
+    /// Current state of the startup modal.
+    pub modal_state: StartupModalState,
+    /// The ID of the currently loaded template, if any.
+    pub loaded_template_id: Option<String>,
 }
 
 impl Default for ConfigurationFileState {
@@ -51,19 +63,10 @@ impl Default for ConfigurationFileState {
             is_dirty: false,
             clean_snapshot: None,
             has_errors: false,
+            modal_state: StartupModalState::Initial,
+            loaded_template_id: None,
         }
     }
-}
-
-/// Load the built-in default configuration into the state.
-pub fn load_default_config(state: &mut ConfigurationFileState) {
-    state.picked_config_file = None;
-    state.config_file_content = Some(DEFAULT_CONFIG_YAML.to_string());
-    state.config_model = serde_yaml::from_str::<Configuration>(DEFAULT_CONFIG_YAML).ok();
-    state.parse_error = None;
-    state.config_chosen = true;
-    state.is_dirty = false;
-    state.clean_snapshot = state.config_model.clone();
 }
 
 /// Trigger a file import dialog (works on both desktop and WASM).
@@ -133,22 +136,27 @@ pub fn configuration_file_picker(
         #[cfg(target_arch = "wasm32")]
         poll_file_import(configuration_file_state);
 
-        // Display the file name on disk, or indicate built-in default
+        // Template dropdown menu (always visible)
+        let template_menu = ui.menu_button(egui_material_icons::icons::ICON_DESCRIPTION, |menu_ui| {
+            for template in crate::templates::all_templates() {
+                if menu_ui
+                    .button(format!("{} {}", template.icon, template.title))
+                    .clicked()
+                {
+                    menu_ui.close();
+                    load_template_by_id(configuration_file_state, template.id);
+                }
+            }
+        });
+        template_menu.response.on_hover_text("Open template");
+
+        // Display the file name on disk, or indicate built-in template
         let filename = if let Some(file) = &configuration_file_state.picked_config_file {
             file.file_name()
+        } else if let Some(template_id) = &configuration_file_state.loaded_template_id {
+            format!("{}.yaml (built-in)", template_id)
         } else {
-            "default_config.yaml (built-in)".to_string()
-        };
-
-        // Display Restore default button when a custom file is loaded
-        if configuration_file_state.picked_config_file.is_some()
-            && ui
-                .button(egui_material_icons::icons::ICON_RESTORE)
-                .on_hover_text("Restore default")
-                .clicked()
-        {
-            configuration_file_state.picked_config_file = None;
-            reset_loaded_config(configuration_file_state);
+            "No file selected".to_string()
         };
 
         // Save as button (only when config content is available)
@@ -319,16 +327,7 @@ fn clear_loaded_config(configuration_file_state: &mut ConfigurationFileState) {
     configuration_file_state.parse_error = None;
     configuration_file_state.is_dirty = false;
     configuration_file_state.clean_snapshot = None;
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        configuration_file_state.config_file_content_receiver = None;
-    }
-}
-
-/// Restore the built-in default configuration.
-pub fn reset_loaded_config(configuration_file_state: &mut ConfigurationFileState) {
-    load_default_config(configuration_file_state);
+    configuration_file_state.loaded_template_id = None;
 
     #[cfg(target_arch = "wasm32")]
     {
