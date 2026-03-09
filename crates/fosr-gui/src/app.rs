@@ -3,8 +3,6 @@ use crate::configuration::configuration_tab::{
     ConfigurationTabState, show_configuration_tab_content,
 };
 use crate::generation::generation_tab::{GenerationTabState, show_generation_tab_content};
-// #[cfg(not(target_arch = "wasm32"))]
-// use crate::injection_tab::show_injection_tab_content;
 #[cfg(target_arch = "wasm32")]
 use crate::shared::configuration_file::poll_file_import;
 use crate::shared::configuration_file::{
@@ -22,9 +20,6 @@ enum CurrentTab {
     Configuration,
     Visualization,
     Generation,
-    // To be implemented
-    // #[cfg(not(target_arch = "wasm32"))]
-    // Injection,
     About,
 }
 
@@ -135,14 +130,6 @@ impl eframe::App for FosrApp {
                 {
                     self.current_tab = CurrentTab::Generation;
                 }
-                // To be implemented
-                // #[cfg(not(target_arch = "wasm32"))]
-                // if ui
-                //     .selectable_label(self.current_tab == CurrentTab::Injection, "Injection")
-                //     .clicked()
-                // {
-                //     self.current_tab = CurrentTab::Injection;
-                // }
                 if ui
                     .selectable_label(self.current_tab == CurrentTab::About, "About")
                     .on_hover_text("About Fos-R and its authors.")
@@ -214,11 +201,6 @@ impl eframe::App for FosrApp {
                             &mut self.configuration_file_state,
                         );
                     }
-                    // Still not implemented
-                    // #[cfg(not(target_arch = "wasm32"))]
-                    // CurrentTab::Injection => {
-                    //     show_injection_tab_content(ui);
-                    // }
                     CurrentTab::About => {
                         show_about_tab_content(ui);
                     }
