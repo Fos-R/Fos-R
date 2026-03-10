@@ -2,7 +2,10 @@ stages:
   - build
   - test
   - analyze
+  - evaluate
   - deploy
+
+### BUILD
 
 build-linux-x86-64:
   tags:
@@ -53,7 +56,7 @@ build-linux-x86-32:
       - target/*/release/fosr
       - target/debian/*.deb
 
-build-linux-raspberry-pi:
+build-linux-legacy-raspberry-pi:
   # a build targeting old rapsberry pi with armv6 processors
   tags:
     - ci.inria.fr
@@ -158,7 +161,7 @@ build-wasm32:
   image: rust
   script:
     - rustup target add wasm32-unknown-unknown
-    - cargo install wasm-bindgen-cli --version 0.2.108
+    - cargo install wasm-bindgen-cli
     - cargo build -p fosr-gui -r --target wasm32-unknown-unknown --no-default-features --features models
     - wasm-bindgen --out-dir public --target web target/wasm32-unknown-unknown/release/fosr_gui.wasm --no-typescript
   artifacts:
@@ -166,6 +169,8 @@ build-wasm32:
     paths:
       - public/fosr_gui.js
       - public/fosr_gui_bg.wasm
+
+### TEST
 
 test-audit:
   tags:
@@ -191,6 +196,23 @@ test-publish:
     - cargo publish --dry-run
   allow_failure: true # it can fail on new version update
 
+generate:
+  tags:
+    - ci.inria.fr
+    - large
+  stage: test
+  image: rust
+  script:
+    - mkdir -p data/cupid/cupid-fosr
+    - cargo run -- augment-dataset -o data/cupid/cupid-fosr/data.pcap -s 0 -d 1day -t 0 -p fast --tz CET -m cupid
+    - mkdir -p data/cicids17/cicids17-fosr
+    - cargo run -- augment-dataset -o data/cicids17/cicids17-fosr/data.pcap -s 0 -d 1day -t 0 -p fast --tz CET -m cicids17
+  artifacts:
+    expire_in: 3 days
+    when: always
+    paths:
+      - data/
+
 tests:
   tags:
     - ci.inria.fr
@@ -198,33 +220,60 @@ tests:
   stage: test
   image: rust
   script:
-    # generation only, so no need for ebpf
-    - cargo run -- augment-dataset -o sample.pcap -s 0 -d 1h -t 0 -p fast --tz CET -m cupid
     - cargo test -p fosr -- --nocapture
   artifacts:
     expire_in: 3 days
     when: always
     paths:
       - crates/fosr/deterministic-test.pcap # in case of an error
-      - sample.pcap
   allow_failure: true
 
-cupid-dataset:
-  image: alpine
+### ANALYZE
+
+analysis-cupid:
+  image: zeek/zeek
   tags:
     - ci.inria.fr
     - small
   stage: analyze
   script:
-    - apk add graphviz
+    - apt update
+    - apt install -y tshark suricata
+    - cd data/cupid/cupid-fosr
+    - ../../pcap-analysis.sh
+    - suricata -c /etc/suricata/suricata.yaml -r data.pcap > suricata.txt
+  artifacts:
+    expire_in: 3 days
+    paths:
+      - data/cupid/cupid-fosr
+
+### EVALUATE
+
+evaluate-cupid:
+  image: python
+  tags:
+    - ci.inria.fr
+    - small
+  stage: evaluate
+  script:
+    - apt update
+    - apt install graphviz graphviz-tools
     - mkdir public/cupid
+    # evaluation
+    - cd evaluation
+    - pip install -r requirements.txt
+    - python3 ./evaluation.py --eval ../data/cupid/cupid-eval/ --synthetic ../data/cupid/cupid-fosr --ref ../data/cupid/cupid-reference --output cupid
+    - python3 ./export.py --dataset cupid
+    - echo results-cupid.md >> public/dataset-cupid.md
+    # prepare model descriptions to public/
     - cd crates/fosr-lib/default_models/cupid/automata
-    - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/cupid/$file.png -Gdip=150; echo - \[$file\]\(cupid/$file.png\) >> ../../../../../public/dataset-cupid.md; done
+    - sed -i 's/ N(.*"/"/g' * # to make the automata more readable
+    - echo -e "## Automata\n\n" >> ../../../../../public/dataset-cupid.md
+    - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/cupid/$file.png -Gdip=150; echo -e "### ${file/%".dot"}\n\n<center><img style='max-width: 100%; width: auto' src='cupid/$file.png'></center>\n" >> ../../../../../public/dataset-cupid.md; done
     - cd ../../../../..
     - cp crates/fosr-lib/default_models/cupid/bn/bn_common.png public/cupid/bn.png
-    - echo -e "\n## Bayesian network\n![](cupid/bn.png)" >> public/dataset-cupid.md
+    - echo -e "## Bayesian network\n\n<center><img style='max-width: 100%; width: auto' src='cupid/bn.png'></center>\n" >> public/dataset-cupid.md
     - mv public/dataset-cupid.md public/cupid.md
-    # TODO: add evaluation
   artifacts:
     expire_in: 3 days
     paths:
@@ -236,7 +285,7 @@ cicids17-dataset:
   tags:
     - ci.inria.fr
     - small
-  stage: analyze
+  stage: evaluate
   script:
     - apk add graphviz
     - mkdir public/cicids17
@@ -253,27 +302,7 @@ cicids17-dataset:
       - public/cicids17.md
       - public/cicids17/
 
-analysis:
-  image: zeek/zeek
-  tags:
-    - ci.inria.fr
-    - small
-  stage: analyze
-  script:
-    - apt update
-    - apt install -y zip tshark suricata
-    - mkdir analysis
-    - zeek -r sample.pcap Log::default_logdir="analysis"
-    - capinfos sample.pcap > analysis/capinfos.txt
-    - tshark -r sample.pcap -T fields -E header=y -E separator=, -e ip.len -e ip.ttl -e ip.src -e ip.dst -e ip.proto "eth.type == 0x0800" > analysis/ip.csv
-    - tshark -r sample.pcap -T fields -E header=y -E separator=, -e tcp.flags "ip.proto == 6" > analysis/tcp.csv
-    - tshark -r sample.pcap -z expert,warn -q > analysis/expert_info.txt
-    - suricata -c /etc/suricata/suricata.yaml -r sample.pcap > analysis/suricata.txt
-    - zip -r analysis.zip analysis
-  artifacts:
-    expire_in: 3 days
-    paths:
-      - analysis.zip
+# DEPLOY
 
 pages:
   image: debian:bookworm # required to run fosr
