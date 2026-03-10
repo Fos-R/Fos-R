@@ -467,11 +467,20 @@ fn handle_config_changes(
     state: &mut VisualizationTabState,
     configuration_file_state: &ConfigurationFileState,
 ) {
-    // Check if config was removed
+    // Check if config was removed or is empty
+    let config_is_empty = configuration_file_state
+        .config_file_content
+        .as_ref()
+        .map(|c| c.trim().is_empty())
+        .unwrap_or(true);
+
     let was_config_removed =
         state.config_content.is_some() && configuration_file_state.config_file_content.is_none();
 
-    if was_config_removed {
+    // Only reset if we previously had a config (avoid resetting every frame when starting empty)
+    let should_reset = was_config_removed || (config_is_empty && state.config_content.is_some());
+
+    if should_reset {
         // Stop visualization if running, then reset to default
         if state.visualization_running {
             state.stop_visualization();
@@ -479,6 +488,12 @@ fn handle_config_changes(
         state.config_content = None;
         *state = VisualizationTabState::default();
         state.reset_view_requested = true;
+        log::warn!("Config removed or empty, visualization reset to default");
+        return;
+    }
+
+    // If config is empty and we have no config loaded, nothing to do
+    if config_is_empty && state.config_content.is_none() {
         return;
     }
 
@@ -500,14 +515,31 @@ fn handle_config_changes(
                 state.stop_visualization();
             }
 
-            let config = config::import_config(config_content);
-            state.update_from_config(&config);
-            state.config_content = Some(config_content.clone());
-            // Only auto-restart if the user has started the visualization at least once
-            if state.user_has_started {
-                state.auto_start_countdown = Some(10);
+            // Try to parse the config, handle errors gracefully
+            // Use catch_unwind because import_config uses .expect() internally
+            let config_result = std::panic::catch_unwind(|| {
+                config::import_config(config_content)
+            });
+
+            match config_result {
+                Ok(config) => {
+                    state.update_from_config(&config);
+                    state.config_content = Some(config_content.clone());
+                    // Only auto-restart if the user has started the visualization at least once
+                    if state.user_has_started {
+                        state.auto_start_countdown = Some(10);
+                    }
+                    state.reset_view_requested = true;
+                }
+                Err(e) => {
+                    // Log the error once and reset to default state instead of crashing
+                    // Store the config content so we don't retry parsing every frame
+                    log::error!("Failed to parse configuration: {:?}", e);
+                    *state = VisualizationTabState::default();
+                    state.config_content = Some(config_content.clone());
+                    state.reset_view_requested = true;
+                }
             }
-            state.reset_view_requested = true;
         }
     }
 }

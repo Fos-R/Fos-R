@@ -262,7 +262,8 @@ fn render_startup_modal(ctx: &egui::Context, state: &mut ConfigurationFileState)
 }
 
 fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigurationFileState) {
-    egui::Modal::new(egui::Id::new("startup_config_modal")).show(ctx, |ui| {
+    // Use the same modal ID as template selection to avoid flicker when transitioning
+    egui::Modal::new(egui::Id::new("startup_modal")).show(ctx, |ui| {
         ui.set_width(400.0);
         ui.heading("Welcome to Fos-R");
         ui.add_space(4.0);
@@ -297,7 +298,8 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigurationFileState)
 }
 
 fn render_template_selection_modal(ctx: &egui::Context, state: &mut ConfigurationFileState) {
-    egui::Modal::new(egui::Id::new("template_selection_modal")).show(ctx, |ui| {
+    // Use the same modal ID as initial modal to avoid flicker when transitioning
+    egui::Modal::new(egui::Id::new("startup_modal")).show(ctx, |ui| {
         ui.set_width(400.0);
 
         // Header with back button
