@@ -1,0 +1,48 @@
+metadata:
+  title: Home Network Configuration
+  desc: A simple home network with a router and workstations
+  author: FosR
+  version: 1.0.0
+  format: 1
+
+hosts:
+  # ==================== HOME NETWORK ====================
+
+  - hostname: home-router
+    os: Linux
+    usage: 0.5
+    type: server
+    client:
+      - dns
+      - https
+    interfaces:
+      - ip_addr: 192.168.1.1
+        mac_addr: 00:14:2A:3F:01:01
+        services:
+          - dns:53
+          - https:443
+
+  - hostname: workstation
+    os: Windows
+    usage: 0.8
+    type: user
+    client:
+      - https
+      - dns
+      - ssh
+    interfaces:
+      - ip_addr: 192.168.1.10
+        mac_addr: AA:BB:CC:DD:EE:01
+
+  - hostname: nas
+    os: Linux
+    usage: 0.3
+    type: server
+    client:
+      - https
+    interfaces:
+      - ip_addr: 192.168.1.20
+        mac_addr: 00:14:2A:3F:01:02
+        services:
+          - https:443
+          - ssh:22

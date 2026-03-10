@@ -108,7 +108,17 @@ pub fn generate(
     let s2 = TadamGenerator::new(automata_library);
     let s3 = stage4::Stage4::new(taint);
     log::info!("Run single thread");
-    run_single_thread(order_pcap, s0, s1, s2, s3, send_progress, send_pcap, throughput_sender, cancelled);
+    run_single_thread(
+        order_pcap,
+        s0,
+        s1,
+        s2,
+        s3,
+        send_progress,
+        send_pcap,
+        throughput_sender,
+        cancelled,
+    );
 }
 
 fn run_single_thread(
@@ -129,17 +139,26 @@ fn run_single_thread(
 
     log::info!("Stage 0 generation");
     let vec = stage1::run_vec(s0);
-    if is_cancelled() { log::info!("Generation cancelled after stage 0"); return; }
+    if is_cancelled() {
+        log::info!("Generation cancelled after stage 0");
+        return;
+    }
     send_progress(0.2);
 
     log::info!("Stage 1 generation");
     let vec = stage2::run_vec(s1, vec).unwrap();
-    if is_cancelled() { log::info!("Generation cancelled after stage 1"); return; }
+    if is_cancelled() {
+        log::info!("Generation cancelled after stage 1");
+        return;
+    }
     send_progress(0.4);
 
     log::info!("Stage 2 generation");
     let vec = stage3::run_vec(s2, vec);
-    if is_cancelled() { log::info!("Generation cancelled after stage 2"); return; }
+    if is_cancelled() {
+        log::info!("Generation cancelled after stage 2");
+        return;
+    }
     send_progress(0.6);
 
     let mut all_packets = vec![];
@@ -149,37 +168,55 @@ fn run_single_thread(
         vec.udp,
         stats.clone(),
     ));
-    if is_cancelled() { log::info!("Generation cancelled during stage 3"); return; }
+    if is_cancelled() {
+        log::info!("Generation cancelled during stage 3");
+        return;
+    }
     all_packets.append(&mut stage4::run_vec(
         |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
         vec.tcp,
         stats.clone(),
     ));
-    if is_cancelled() { log::info!("Generation cancelled during stage 3"); return; }
+    if is_cancelled() {
+        log::info!("Generation cancelled during stage 3");
+        return;
+    }
     all_packets.append(&mut stage4::run_vec(
         |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
         vec.icmp,
         stats.clone(),
     ));
-    if is_cancelled() { log::info!("Generation cancelled during stage 3"); return; }
+    if is_cancelled() {
+        log::info!("Generation cancelled during stage 3");
+        return;
+    }
     send_progress(0.8);
 
     let gen_duration = start.elapsed().as_secs_f64();
     let total_size = all_packets.iter().map(|p| p.data.len()).sum::<usize>() as u64;
-    let throughput_str = format!("{}/s", HumanBytes(((total_size as f64) / gen_duration) as u64));
+    let throughput_str = format!(
+        "{}/s",
+        HumanBytes(((total_size as f64) / gen_duration) as u64)
+    );
     log::info!("Generation throughput: {throughput_str}");
     if let Some(sender) = &throughput_sender {
         let _ = sender.send(throughput_str);
     }
 
-    if is_cancelled() { log::info!("Generation cancelled"); return; }
+    if is_cancelled() {
+        log::info!("Generation cancelled");
+        return;
+    }
 
     if order_pcap {
         log::info!("Sorting the packets");
         all_packets.sort_unstable();
     }
 
-    if is_cancelled() { log::info!("Generation cancelled"); return; }
+    if is_cancelled() {
+        log::info!("Generation cancelled");
+        return;
+    }
 
     let pcap_bytes = stage4::to_pcap_vec(&all_packets).expect("Error converting to pcap");
     send_pcap(pcap_bytes);

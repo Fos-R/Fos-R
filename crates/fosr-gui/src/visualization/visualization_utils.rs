@@ -1,6 +1,5 @@
 use eframe::egui;
 
-
 /// Distributes the graph nodes in a circle layout.
 /// Required for proper display on startup.
 pub fn distribute_nodes_circle<N, E, Ty, Ix, Dn, De>(

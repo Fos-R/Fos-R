@@ -1,6 +1,8 @@
 //! Custom node and edge shapes for network visualization
 
-use crate::visualization::visualization_tab::{EdgeData, EdgeState, LinkDirection, NodeData, NodeType};
+use crate::visualization::visualization_tab::{
+    EdgeData, EdgeState, LinkDirection, NodeData, NodeType,
+};
 use eframe::egui;
 use egui::{Color32, Pos2, Rect, Shape, TextureOptions, Vec2, load::SizeHint};
 use egui_graphs::{DisplayEdge, DisplayNode, DrawContext, Node, NodeProps};
@@ -24,8 +26,8 @@ pub const COLOR_SMTP: Color32 = Color32::from_rgb(241, 196, 15); // Yellow
 pub const COLOR_OTHER: Color32 = Color32::from_rgb(149, 165, 166); // Gray
 
 // Node radius constants - all nodes grow with flow count
-const RADIUS_MIN: f32 = 15.0;      // Starting size for all nodes
-const RADIUS_MAX: f32 = 25.0;       // Maximum size
+const RADIUS_MIN: f32 = 15.0; // Starting size for all nodes
+const RADIUS_MAX: f32 = 25.0; // Maximum size
 const FLOW_SCALE_FACTOR: f32 = 0.3; // Radius increase per flow
 
 const EDGE_WIDTH_MIN: f32 = 0.0;
@@ -36,14 +38,15 @@ const EDGE_FLOW_SCALE: f32 = 0.2; // Width increase per flow (linear phase)
 #[derive(Clone)]
 pub struct NetworkNodeShape {
     radius: f32,
-    label: String,
+    hostname: Option<String>,
+    ips: Vec<String>,
     location: Pos2,
     node_type: NodeType,
 }
 
 impl NetworkNodeShape {
     /// Compute node style from payload data.
-    fn style_from_payload(payload: &NodeData) -> (f32, NodeType, String) {
+    fn style_from_payload(payload: &NodeData) -> (f32, NodeType, Option<String>, Vec<String>) {
         // Hybrid linear/proportional radius scaling
         let max_linear = RADIUS_MIN + payload.max_flow_count as f32 * FLOW_SCALE_FACTOR;
         let radius = if max_linear < RADIUS_MAX {
@@ -59,7 +62,13 @@ impl NetworkNodeShape {
             RADIUS_MIN + ratio * (RADIUS_MAX - RADIUS_MIN)
         };
 
-        (radius, payload.node_type.clone(), payload.to_string())
+        let ips: Vec<String> = payload.ip_addrs.iter().map(|ip| ip.to_string()).collect();
+        (
+            radius,
+            payload.node_type.clone(),
+            payload.hostname.clone(),
+            ips,
+        )
     }
 
     /// Get the image source for this node type
@@ -74,10 +83,11 @@ impl NetworkNodeShape {
 
 impl From<NodeProps<NodeData>> for NetworkNodeShape {
     fn from(props: NodeProps<NodeData>) -> Self {
-        let (radius, node_type, label) = Self::style_from_payload(&props.payload);
+        let (radius, node_type, hostname, ips) = Self::style_from_payload(&props.payload);
         Self {
             radius,
-            label,
+            hostname,
+            ips,
             location: props.location(),
             node_type,
         }
@@ -85,7 +95,7 @@ impl From<NodeProps<NodeData>> for NetworkNodeShape {
 }
 
 impl DisplayNode<NodeData, EdgeData, petgraph::Undirected, petgraph::stable_graph::DefaultIx>
-for NetworkNodeShape
+    for NetworkNodeShape
 {
     /// Determines where edges should connect to the node shape
     fn closest_boundary_point(&self, dir: Vec2) -> Pos2 {
@@ -120,32 +130,61 @@ for NetworkNodeShape
             shapes.push(Shape::image(texture.id, rect, uv, tint));
         }
 
-        // Draw text label
-        let is_internet = matches!(self.node_type, NodeType::Internet);
-        let font_size = if is_internet { 14.0 } else { 10.0 };
+        // Draw text label: hostname (italic) and IPs (normal)
+        let font_size = 14.0;
         let font_id = egui::FontId::proportional(font_size);
-
-        let job = egui::text::LayoutJob::simple(
-            self.label.clone(),
-            font_id,
-            Color32::GRAY,
-            f32::INFINITY,
-        );
+        let mut current_y = pos.y + radius + 2.0;
 
         ctx.ctx.fonts_mut(|f| {
-            let galley = f.layout_job(job);
-            let label_pos = Pos2::new(pos.x - galley.size().x / 2.0, pos.y + radius + 2.0);
-            shapes.push(Shape::galley(label_pos, galley, Color32::GRAY));
+            // Draw hostname in italic
+            if let Some(ref hostname) = self.hostname {
+                let mut job = egui::text::LayoutJob::default();
+                job.append(
+                    hostname,
+                    0.0,
+                    egui::TextFormat {
+                        font_id: font_id.clone(),
+                        color: Color32::GRAY,
+                        italics: true,
+                        ..Default::default()
+                    },
+                );
+                let galley = f.layout_job(job);
+                let label_pos = Pos2::new(pos.x - galley.size().x / 2.0, current_y);
+                shapes.push(Shape::galley(label_pos, galley, Color32::GRAY));
+                current_y += font_size + 2.0;
+            }
+
+            // Draw IPs (normal) - skip for Internet node
+            if self.node_type != NodeType::Internet {
+                for ip in &self.ips {
+                    let mut job = egui::text::LayoutJob::default();
+                    job.append(
+                        ip,
+                        0.0,
+                        egui::TextFormat {
+                            font_id: font_id.clone(),
+                            color: Color32::GRAY,
+                            ..Default::default()
+                        },
+                    );
+                    let galley = f.layout_job(job);
+                    let label_pos = Pos2::new(pos.x - galley.size().x / 2.0, current_y);
+                    shapes.push(Shape::galley(label_pos, galley, Color32::GRAY));
+                    current_y += font_size + 2.0;
+                }
+            }
         });
 
         shapes
     }
 
     fn update(&mut self, state: &NodeProps<NodeData>) {
-        let (radius, node_type, label) = Self::style_from_payload(&state.payload);
+        let (radius, node_type, hostname, ips) = Self::style_from_payload(&state.payload);
         self.radius = radius;
         self.node_type = node_type;
-        self.label = label;
+        self.hostname = hostname;
+        self.ips = ips;
         self.location = state.location();
     }
 
@@ -175,7 +214,11 @@ fn edge_style(edge_data: &EdgeData) -> (Color32, f32, bool, bool) {
             };
             (COLOR_INACTIVE, width, false, false)
         }
-        EdgeState::Active { protocol, direction, .. } => {
+        EdgeState::Active {
+            protocol,
+            direction,
+            ..
+        } => {
             let color = match protocol {
                 // TODO
                 // L7Proto::HTTP => COLOR_HTTP,
@@ -207,7 +250,12 @@ pub struct NetworkEdgeShape {
 impl From<egui_graphs::EdgeProps<EdgeData>> for NetworkEdgeShape {
     fn from(props: egui_graphs::EdgeProps<EdgeData>) -> Self {
         let (color, width, arrow_start, arrow_end) = edge_style(&props.payload);
-        Self { color, width, arrow_start, arrow_end }
+        Self {
+            color,
+            width,
+            arrow_start,
+            arrow_end,
+        }
     }
 }
 
@@ -220,13 +268,13 @@ fn arrow_head(from: Pos2, to: Pos2, size: f32, angle: f32, color: Color32) -> Sh
 }
 
 impl
-DisplayEdge<
-    NodeData,
-    EdgeData,
-    petgraph::Undirected,
-    petgraph::stable_graph::DefaultIx,
-    NetworkNodeShape,
-> for NetworkEdgeShape
+    DisplayEdge<
+        NodeData,
+        EdgeData,
+        petgraph::Undirected,
+        petgraph::stable_graph::DefaultIx,
+        NetworkNodeShape,
+    > for NetworkEdgeShape
 {
     fn shapes(
         &mut self,
@@ -269,12 +317,24 @@ DisplayEdge<
         if self.arrow_end {
             let dir = (end_pos - start_pos).normalized();
             let extended_end = end_pos + dir * arrow_tip_offset;
-            shapes.push(arrow_head(start_pos, extended_end, arrow_size, arrow_angle, self.color));
+            shapes.push(arrow_head(
+                start_pos,
+                extended_end,
+                arrow_size,
+                arrow_angle,
+                self.color,
+            ));
         }
         if self.arrow_start {
             let dir = (start_pos - end_pos).normalized();
             let extended_start = start_pos + dir * arrow_tip_offset;
-            shapes.push(arrow_head(end_pos, extended_start, arrow_size, arrow_angle, self.color));
+            shapes.push(arrow_head(
+                end_pos,
+                extended_start,
+                arrow_size,
+                arrow_angle,
+                self.color,
+            ));
         }
 
         shapes

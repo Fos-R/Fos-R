@@ -2,9 +2,8 @@ mod about_tab;
 mod app;
 mod configuration;
 mod generation;
-#[cfg(not(target_arch = "wasm32"))]
-mod injection_tab;
 mod shared;
+mod templates;
 mod timepicker;
 mod visualization;
 
@@ -19,7 +18,7 @@ fn main() -> eframe::Result {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let shared_viewport = egui::ViewportBuilder::default()
-        .with_inner_size([700.0, 600.0])
+        .with_inner_size([1200.0, 1000.0])
         .with_min_inner_size([550.0, 500.0])
         .with_title("Fos-R");
 
@@ -42,7 +41,10 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "Fos-R GUI",
         native_options,
-        Box::new(|_cc| Ok(Box::new(FosrApp::default()))),
+        Box::new(|cc| {
+            egui_material_icons::initialize(&cc.egui_ctx);
+            Ok(Box::new(FosrApp::default()))
+        }),
     )
 }
 

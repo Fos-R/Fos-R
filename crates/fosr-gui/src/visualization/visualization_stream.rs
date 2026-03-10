@@ -40,7 +40,6 @@ impl PartialEq for ScheduledFlow {
     }
 }
 
-
 impl PartialOrd for ScheduledFlow {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
@@ -221,7 +220,8 @@ impl FlowStreamer {
                 .map_or(true, |f| f.scheduled_time < buffer_target)
             {
                 // Limit generation rate to avoid CPU spinning
-                if last_generation.elapsed() < Duration::from_millis(100) && !pending_flows.is_empty()
+                if last_generation.elapsed() < Duration::from_millis(100)
+                    && !pending_flows.is_empty()
                 {
                     break;
                 }
@@ -266,7 +266,6 @@ impl FlowStreamer {
                     break;
                 }
             }
-
 
             // Emit flows whose scheduled time has passed (in virtual time)
             while let Some(scheduled) = pending_flows.peek() {

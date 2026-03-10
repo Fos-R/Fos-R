@@ -42,12 +42,18 @@ web-time = "1.1.0"
 petgraph = "0.8.3"
 egui_graphs = { version = "0.29.0", features = ["events"] }
 serde_yaml = "0.9"
+egui_material_icons = "0.5.0"
+rand = "0.10.0"
+image = { version = "0.25", default-features = false, features = ["png"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 gloo-timers = { version = "0.3", features = ["futures"] }
 wasm-bindgen-futures = "0.4.58"
-web-sys = "0.3.85"
+web-sys = { version = "0.3.85", features = ["Element", "Document", "Window"] }
+getrandom = { version = "0.4", features = ["wasm_js"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = { version = "0.11.9", default-features = false, features = ["auto-color", "humantime"] }
+tempfile = "3.26.0"
+open = "5.3.3"
 
