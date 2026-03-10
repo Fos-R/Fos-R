@@ -247,6 +247,23 @@ analysis-cupid:
     paths:
       - data/cupid/cupid-fosr
 
+analysis-cicids17:
+  image: zeek/zeek
+  tags:
+    - ci.inria.fr
+    - small
+  stage: analyze
+  script:
+    - apt update
+    - apt install -y tshark suricata
+    - cd data/cicids17/cicicds17-fosr
+    - ../../pcap-analysis.sh
+    - suricata -c /etc/suricata/suricata.yaml -r data.pcap > suricata.txt
+  artifacts:
+    expire_in: 3 days
+    paths:
+      - data/cicids17/cicids17-fosr
+
 ### EVALUATE
 
 evaluate-cupid:
