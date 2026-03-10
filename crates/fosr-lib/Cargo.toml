@@ -16,7 +16,6 @@ base64 = "0.22.1"
 chrono = "0.4.43"
 crossbeam-channel = "0.5.15"
 fosr-ebpf = { version = "0.1.1", path = "../fosr-ebpf", optional = true }
-getrandom = "0.4.1"
 include-bytes-zstd = "0.1.0"
 indicatif = "0.18.4"
 kd-tree = "0.6.2"
@@ -41,7 +40,6 @@ aya = { version = "0.13.1", default-features = false, optional = true }
 [features]
 default = []
 net_injection = ["pnet/std"]
-wasm_js = ["getrandom/wasm_js"] # needed to compile to wasm32 target. No used by default to avoid bloating the Cargo.lock file
 models_cupid = []
 models_cicids17 = []
 
@@ -55,3 +53,7 @@ ebpf = ["dep:aya", "net_injection", "dep:fosr-ebpf"]
 anyhow = { version = "1", default-features = false, optional = true }
 aya-build = { version = "0.1.2", default-features = false, optional = true }
 fosr-ebpf = { path = "../fosr-ebpf", optional = true }
+
+# auto-detect WASM target and add the feature to getrandom
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.4.2", features=["wasm_js"] }

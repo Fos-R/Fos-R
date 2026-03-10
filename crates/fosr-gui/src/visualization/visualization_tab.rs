@@ -13,7 +13,7 @@ use egui_graphs::{
     events::{Event, PayloadNodeClick},
     set_layout_state,
 };
-use fosr_lib::{network, network::HostType, OS, config};
+use fosr_lib::{network, network::HostType, OS};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -518,7 +518,7 @@ fn handle_config_changes(
             // Try to parse the config, handle errors gracefully
             // Use catch_unwind because import_config uses .expect() internally
             let config_result = std::panic::catch_unwind(|| {
-                network::import_config(config_content)
+                network::import_network(config_content)
             });
 
             match config_result {
