@@ -1,6 +1,6 @@
 use super::visualization_shapes::{
-    NetworkEdgeShape, NetworkNodeShape, COLOR_DNS, COLOR_HTTP, COLOR_HTTPS, COLOR_INACTIVE,
-    COLOR_OTHER, COLOR_SMTP, COLOR_SSH, ICON_TINT_DARK, ICON_TINT_LIGHT,
+    COLOR_DNS, COLOR_HTTP, COLOR_HTTPS, COLOR_INACTIVE, COLOR_OTHER, COLOR_SMTP, COLOR_SSH,
+    ICON_TINT_DARK, ICON_TINT_LIGHT, NetworkEdgeShape, NetworkNodeShape,
 };
 use super::visualization_stream::{FlowEvent, FlowStreamer};
 use super::visualization_utils::distribute_nodes_circle;
@@ -10,9 +10,10 @@ use eframe::egui;
 use egui_graphs::{
     FruchtermanReingoldState, FruchtermanReingoldWithCenterGravity,
     FruchtermanReingoldWithCenterGravityState, LayoutForceDirected, SettingsInteraction,
-    events::{Event, PayloadNodeClick}, set_layout_state,
+    events::{Event, PayloadNodeClick},
+    set_layout_state,
 };
-use fosr_lib::{network, network::HostType, OS};
+use fosr_lib::{network, network::HostType, OS, config};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -152,7 +153,6 @@ pub enum LinkDirection {
     Bidirectional,
 }
 
-
 /// An active link being displayed
 pub struct ActiveLink {
     pub protocol: &'static str,
@@ -168,6 +168,17 @@ type VisualizationGraph = egui_graphs::Graph<
     NetworkNodeShape,
     NetworkEdgeShape,
 >;
+
+/// State machine for screenshot export
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ExportState {
+    #[default]
+    Idle,
+    /// Hide overlays on next frame before taking screenshot
+    HidingOverlays,
+    /// Screenshot requested, waiting for result
+    WaitingForScreenshot,
+}
 
 /// Represents the state of the visualization tab.
 pub struct VisualizationTabState {
@@ -205,115 +216,22 @@ pub struct VisualizationTabState {
     pub reset_view_requested: bool,
     /// Previous screen size (to reset view on window resize)
     last_screen_size: Option<egui::Vec2>,
+    /// Whether the user has manually started the visualization at least once.
+    /// Auto-restart on config change is only enabled after this.
+    user_has_started: bool,
     /// Edit buffer for the node info modal (cloned from config on open, applied on Save)
     modal_edit_buffer: Option<Host>,
+    /// The rect of the graph panel (updated each frame, used for screenshot region)
+    pub graph_rect: Option<egui::Rect>,
+    /// Screenshot export state machine
+    pub export_state: ExportState,
 }
 
 impl Default for VisualizationTabState {
     fn default() -> Self {
-        Self::create_demo_state()
-    }
-}
-
-impl VisualizationTabState {
-    /// Create a demo state with all IPs from the BN models (bn_additional_data.json)
-    /// TODO: only a subset of them seems to appear in the generated data, prune the unused ones
-    fn create_demo_state() -> Self {
-        // All IPs from bn_additional_data.json (excluding 0.0.0.0)
-        // Servers are x.x.x.2, Users are x.x.x.3+
-        let demo_hosts: Vec<(Ipv4Addr, NodeType)> = vec![
-            // 192.168.100.x
-            (Ipv4Addr::new(192, 168, 100, 2), NodeType::Server),
-            (Ipv4Addr::new(192, 168, 100, 3), NodeType::User),
-            (Ipv4Addr::new(192, 168, 100, 4), NodeType::User),
-            (Ipv4Addr::new(192, 168, 100, 5), NodeType::User),
-            (Ipv4Addr::new(192, 168, 100, 6), NodeType::User),
-            // 192.168.200.x
-            (Ipv4Addr::new(192, 168, 200, 2), NodeType::Server),
-            (Ipv4Addr::new(192, 168, 200, 3), NodeType::User),
-            (Ipv4Addr::new(192, 168, 200, 4), NodeType::User),
-            (Ipv4Addr::new(192, 168, 200, 5), NodeType::User),
-            (Ipv4Addr::new(192, 168, 200, 8), NodeType::User),
-            (Ipv4Addr::new(192, 168, 200, 9), NodeType::User),
-            // 192.168.210.x
-            (Ipv4Addr::new(192, 168, 210, 2), NodeType::Server),
-            (Ipv4Addr::new(192, 168, 210, 3), NodeType::User),
-            (Ipv4Addr::new(192, 168, 210, 4), NodeType::User),
-            (Ipv4Addr::new(192, 168, 210, 5), NodeType::User),
-            // 192.168.220.x
-            (Ipv4Addr::new(192, 168, 220, 2), NodeType::Server),
-            (Ipv4Addr::new(192, 168, 220, 3), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 4), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 5), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 6), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 7), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 8), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 9), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 10), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 11), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 12), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 13), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 14), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 15), NodeType::User),
-            (Ipv4Addr::new(192, 168, 220, 16), NodeType::User),
-        ];
-
-        let mut graph = VisualizationGraph::new(petgraph::stable_graph::StableGraph::default());
-        let mut known_ips = HashSet::new();
-        let mut ip_to_node = HashMap::new();
-
-        // Add demo nodes (one node per IP in demo mode, since demo hosts have single IPs)
-        for (ip, node_type) in &demo_hosts {
-            let node_data = NodeData {
-                ip_addrs: vec![*ip],
-                hostname: None, // No hostname, just show IP
-                node_type: *node_type,
-                os: OS::Linux, // Does not matter
-                flow_count: 0,
-                max_flow_count: 0,
-            };
-            // Nodes are initially placed at the center. They are manually distributed later.
-            let idx = graph.add_node_with_location(node_data, egui::pos2(0.0, 0.0));
-            known_ips.insert(*ip);
-            ip_to_node.insert(*ip, idx);
-        }
-
-        // Distribute nodes before adding the Internet node, so that it stays in the center
-        distribute_nodes_circle(&mut graph);
-
-        // Add Internet node
-        let internet_idx =
-            graph.add_node_with_location(NodeData::internet(), egui::pos2(0.0, 0.0));
-        ip_to_node.insert(INTERNET_IP, internet_idx);
-
-        // Add edges between users and servers
-        // TODO: make sure that all flows occur between a server and a user, never between 2 servers or 2 users or a server and the Internet
-        let users: Vec<_> = demo_hosts
-            .iter()
-            .filter(|(_, t)| *t == NodeType::User)
-            .collect();
-        let servers: Vec<_> = demo_hosts
-            .iter()
-            .filter(|(_, t)| *t == NodeType::Server)
-            .collect();
-
-        for (user_ip, _) in &users {
-            for (server_ip, _) in &servers {
-                let user_idx = ip_to_node[user_ip];
-                let server_idx = ip_to_node[server_ip];
-                graph.add_edge(user_idx, server_idx, EdgeData::default());
-            }
-            // Add edge to Internet for each user
-            let user_idx = ip_to_node[user_ip];
-            graph.add_edge(user_idx, internet_idx, EdgeData::default());
-        }
-
-        // Add edges from servers to Internet
-        for (server_ip, _) in &servers {
-            let server_idx = ip_to_node[server_ip];
-            graph.add_edge(server_idx, internet_idx, EdgeData::default());
-        }
-
+        // Start with an empty graph; the default config from ConfigurationFileState
+        // will be detected by handle_config_changes() on the first frame.
+        let graph = VisualizationGraph::new(petgraph::stable_graph::StableGraph::default());
         Self {
             graph,
             flow_receiver: None,
@@ -322,22 +240,27 @@ impl VisualizationTabState {
             config_content: None,
             streamer: None,
             layout_initialized: false,
-            known_ips,
-            ip_to_node,
+            known_ips: HashSet::new(),
+            ip_to_node: HashMap::new(),
             visualization_start: None,
             speed: Arc::new(RwLock::new(1.0)),
             events_buffer: Rc::new(RefCell::new(Vec::new())),
             clicked_node: None,
             node_info_modal_open: false,
             node_to_host: HashMap::new(),
-            auto_start_countdown: Some(10),
+            auto_start_countdown: None,
             total_flows: 0,
+            user_has_started: false,
             reset_view_requested: false,
             last_screen_size: None,
             modal_edit_buffer: None,
+            graph_rect: None,
+            export_state: ExportState::Idle,
         }
     }
+}
 
+impl VisualizationTabState {
     /// Update state from a configuration (preserves some state)
     /// Note: caller should stop visualization before calling this if running
     pub fn update_from_config(&mut self, config: &network::Network) {
@@ -453,7 +376,10 @@ impl VisualizationTabState {
             self.reset_flow_counts();
         }
 
-        log::debug!("Starting visualization with {} known IPs:", self.known_ips.len());
+        log::debug!(
+            "Starting visualization with {} known IPs:",
+            self.known_ips.len()
+        );
         for ip in &self.known_ips {
             log::debug!("  - {}", ip);
         }
@@ -529,7 +455,6 @@ pub fn show_visualization_tab_content(
     update_graph_edges(state);
 
     // Render UI
-    render_control_panel(ui, state);
     render_graph_view(ui, state);
 
     // Process node click events and render info modal
@@ -542,11 +467,20 @@ fn handle_config_changes(
     state: &mut VisualizationTabState,
     configuration_file_state: &ConfigurationFileState,
 ) {
-    // Check if config was removed
+    // Check if config was removed or is empty
+    let config_is_empty = configuration_file_state
+        .config_file_content
+        .as_ref()
+        .map(|c| c.trim().is_empty())
+        .unwrap_or(true);
+
     let was_config_removed =
         state.config_content.is_some() && configuration_file_state.config_file_content.is_none();
 
-    if was_config_removed {
+    // Only reset if we previously had a config (avoid resetting every frame when starting empty)
+    let should_reset = was_config_removed || (config_is_empty && state.config_content.is_some());
+
+    if should_reset {
         // Stop visualization if running, then reset to default
         if state.visualization_running {
             state.stop_visualization();
@@ -554,12 +488,20 @@ fn handle_config_changes(
         state.config_content = None;
         *state = VisualizationTabState::default();
         state.reset_view_requested = true;
+        log::warn!("Config removed or empty, visualization reset to default");
+        return;
+    }
+
+    // If config is empty and we have no config loaded, nothing to do
+    if config_is_empty && state.config_content.is_none() {
         return;
     }
 
     // Check if config content has changed
-    let needs_update = match (&state.config_content, &configuration_file_state.config_file_content)
-    {
+    let needs_update = match (
+        &state.config_content,
+        &configuration_file_state.config_file_content,
+    ) {
         (Some(current), Some(new)) => current != new,
         (None, Some(_)) => true,
         _ => false,
@@ -573,11 +515,31 @@ fn handle_config_changes(
                 state.stop_visualization();
             }
 
-            let config = network::import_network(config_content);
-            state.update_from_config(&config);
-            state.config_content = Some(config_content.clone());
-            state.auto_start_countdown = Some(10);
-            state.reset_view_requested = true;
+            // Try to parse the config, handle errors gracefully
+            // Use catch_unwind because import_config uses .expect() internally
+            let config_result = std::panic::catch_unwind(|| {
+                network::import_config(config_content)
+            });
+
+            match config_result {
+                Ok(config) => {
+                    state.update_from_config(&config);
+                    state.config_content = Some(config_content.clone());
+                    // Only auto-restart if the user has started the visualization at least once
+                    if state.user_has_started {
+                        state.auto_start_countdown = Some(10);
+                    }
+                    state.reset_view_requested = true;
+                }
+                Err(e) => {
+                    // Log the error once and reset to default state instead of crashing
+                    // Store the config content so we don't retry parsing every frame
+                    log::error!("Failed to parse configuration: {:?}", e);
+                    *state = VisualizationTabState::default();
+                    state.config_content = Some(config_content.clone());
+                    state.reset_view_requested = true;
+                }
+            }
         }
     }
 }
@@ -618,16 +580,8 @@ fn process_flow_events(state: &mut VisualizationTabState) {
         state.total_flows += 1;
 
         // Map IPs to display IPs (unknown -> INTERNET_IP)
-        let display_src = if src_known {
-            event.src_ip
-        } else {
-            INTERNET_IP
-        };
-        let display_dst = if dst_known {
-            event.dst_ip
-        } else {
-            INTERNET_IP
-        };
+        let display_src = if src_known { event.src_ip } else { INTERNET_IP };
+        let display_dst = if dst_known { event.dst_ip } else { INTERNET_IP };
 
         log::debug!(
             "  -> Displayed as: {} -> {} ({:?})",
@@ -784,105 +738,6 @@ fn update_graph_edges(state: &mut VisualizationTabState) {
     }
 }
 
-/// Render the control panel
-fn render_control_panel(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
-    egui::TopBottomPanel::top("visualization_controls").show(ui.ctx(), |ui| {
-        ui.vertical(|ui| {
-            // Row 1: Buttons + label
-            ui.horizontal(|ui| {
-                if !state.visualization_running {
-                    // Continue: resume without resetting flow counts
-                    if ui.button("Continue").clicked() {
-                        // Clone config to avoid borrow issues
-                        // Pass the user config if loaded, otherwise None (uses default BN model)
-                        let config = state.config_content.clone();
-                        let speed = state.speed.clone();
-                        if let Err(e) = state.start_visualization(config.as_deref(), speed, false) {
-                            log::error!("Failed to start flow streamer: {}", e);
-                        }
-                    }
-
-                    // Restart: reset all flow counts and start fresh
-                    if ui.button("Restart").clicked() {
-                        // Clone config to avoid borrow issues
-                        // Pass the user config if loaded, otherwise None (uses default BN model)
-                        let config = state.config_content.clone();
-                        let speed = state.speed.clone();
-                        if let Err(e) = state.start_visualization(config.as_deref(), speed, true) {
-                            log::error!("Failed to start flow streamer: {}", e);
-                        }
-                    }
-
-                    if state.config_content.is_none() {
-                        ui.label(
-                            egui::RichText::new("(Demo mode - load a config for custom network)")
-                                .color(egui::Color32::GRAY),
-                        );
-                    }
-                } else {
-                    if ui.button("Stop").clicked() {
-                        state.stop_visualization();
-                    }
-                }
-
-                if ui.button("Reset view").clicked() {
-                    state.reset_view_requested = true;
-                }
-            });
-
-            ui.separator();
-
-            // Row 2: Speed slider + active links
-            ui.horizontal(|ui| {
-                ui.label("Speed:");
-                // Speed is an Arc, we cannot use it directly with slider,
-                // we need to read and write its value manually.
-                let mut speed_value = *state.speed.read().unwrap();
-                let response = ui.add(
-                    egui::Slider::new(&mut speed_value, 0.5..=4.0)
-                        .logarithmic(true)
-                        .text("x"),
-                );
-                if response.changed() {
-                    *state.speed.write().unwrap() = speed_value;
-                }
-
-                ui.separator();
-                ui.label(format!(
-                    "Active links: {} | Total flows: {}",
-                    state.active_links.len(),
-                    state.total_flows
-                ));
-            });
-
-            ui.separator();
-
-            // Row 3: Legend - Node types
-            ui.horizontal(|ui| {
-                ui.label("Node Types:");
-                legend_item_with_image(ui, "Server", egui::include_image!("../../assets/server.png"));
-                legend_item_with_image(ui, "User", egui::include_image!("../../assets/computer.png"));
-                legend_item_with_image(ui, "Internet", egui::include_image!("../../assets/internet.png"));
-            });
-
-            // Row 4-5: Legend - Edge states
-            ui.horizontal(|ui| {
-                ui.label("Edge States:");
-                legend_item_inline(ui, "Inactive", COLOR_INACTIVE);
-                legend_item_inline(ui, "HTTP", COLOR_HTTP);
-                legend_item_inline(ui, "HTTPS", COLOR_HTTPS);
-                legend_item_inline(ui, "SSH", COLOR_SSH);
-            });
-            ui.horizontal(|ui| {
-                ui.add_space(80.0); // Align with items above
-                legend_item_inline(ui, "DNS", COLOR_DNS);
-                legend_item_inline(ui, "SMTP", COLOR_SMTP);
-                legend_item_inline(ui, "Other", COLOR_OTHER);
-            });
-        });
-    });
-}
-
 /// Process graph click events from the event buffer
 fn process_graph_events(
     state: &mut VisualizationTabState,
@@ -948,14 +803,21 @@ fn render_node_info_modal(
             let (image, type_str) = match node_data.node_type {
                 NodeType::Server => (egui::include_image!("../../assets/server.png"), "Server"),
                 NodeType::User => (egui::include_image!("../../assets/computer.png"), "User"),
-                NodeType::Internet => (egui::include_image!("../../assets/internet.png"), "Internet"),
+                NodeType::Internet => (
+                    egui::include_image!("../../assets/internet.png"),
+                    "Internet",
+                ),
             };
             let tint = if ui.style().visuals.dark_mode {
                 ICON_TINT_DARK
             } else {
                 ICON_TINT_LIGHT
             };
-            ui.add(egui::Image::new(image).fit_to_exact_size(egui::vec2(20.0, 20.0)).tint(tint));
+            ui.add(
+                egui::Image::new(image)
+                    .fit_to_exact_size(egui::vec2(20.0, 20.0))
+                    .tint(tint),
+            );
             ui.label(egui::RichText::new(type_str).strong());
         });
 
@@ -1020,16 +882,19 @@ fn render_node_info_modal(
                     ui.label(egui::RichText::new(hostname).monospace());
                 });
             }
-            ui.horizontal(|ui| {
-                ui.label("OS:");
-                ui.label(egui::RichText::new(format!("{:?}", node_data.os)).monospace());
-            });
-            ui.label("IP Addresses:");
-            for ip in &node_data.ip_addrs {
+            // Don't show OS or IP for Internet node
+            if node_data.node_type != NodeType::Internet {
                 ui.horizontal(|ui| {
-                    ui.add_space(16.0);
-                    ui.label(egui::RichText::new(ip.to_string()).monospace());
+                    ui.label("OS:");
+                    ui.label(egui::RichText::new(format!("{:?}", node_data.os)).monospace());
                 });
+                ui.label("IP Addresses:");
+                for ip in &node_data.ip_addrs {
+                    ui.horizontal(|ui| {
+                        ui.add_space(16.0);
+                        ui.label(egui::RichText::new(ip.to_string()).monospace());
+                    });
+                }
             }
         }
 
@@ -1037,16 +902,28 @@ fn render_node_info_modal(
 
         if has_edit_buffer {
             ui.horizontal(|ui| {
-                if ui.button("Cancel").clicked() {
+                if ui
+                    .button(egui_material_icons::icons::ICON_CLOSE)
+                    .on_hover_text("Cancel")
+                    .clicked()
+                {
                     ui.close();
                 }
-                if ui.button("Save").clicked() {
+                if ui
+                    .button(egui_material_icons::icons::ICON_SAVE)
+                    .on_hover_text("Save")
+                    .clicked()
+                {
                     save_clicked = true;
                     ui.close();
                 }
             });
         } else {
-            if ui.button("Close").clicked() {
+            if ui
+                .button(egui_material_icons::icons::ICON_CLOSE)
+                .on_hover_text("Close")
+                .clicked()
+            {
                 ui.close();
             }
         }
@@ -1081,32 +958,36 @@ fn render_node_info_modal(
 
 /// Helper to render a single legend item inline (for edges)
 fn legend_item_inline(ui: &mut egui::Ui, label: &str, color: egui::Color32) {
-    // Allocate space first
-    let rect = ui.allocate_space(egui::vec2(12.0, 12.0)).1;
-    // Then get painter and draw
-    let painter = ui.painter();
-    painter.circle_filled(rect.center(), 6.0, color);
-    ui.add_space(-2.0);
-    ui.label(label);
-    ui.add_space(6.0);
+    ui.horizontal(|ui| {
+        let rect = ui.allocate_space(egui::vec2(12.0, 12.0)).1;
+        let painter = ui.painter();
+        painter.circle_filled(rect.center(), 6.0, color);
+        ui.add_space(-2.0);
+        ui.label(label);
+    });
 }
 
 /// Helper to render a legend item with an image (for nodes)
 fn legend_item_with_image(ui: &mut egui::Ui, label: &str, image: egui::ImageSource) {
-    let tint = if ui.style().visuals.dark_mode {
-        ICON_TINT_DARK
-    } else {
-        ICON_TINT_LIGHT
-    };
-    ui.add(egui::Image::new(image).fit_to_exact_size(egui::vec2(20.0, 20.0)).tint(tint));
-    ui.add_space(-2.0);
-    ui.label(label);
-    ui.add_space(6.0);
+    ui.horizontal(|ui| {
+        let tint = if ui.style().visuals.dark_mode {
+            ICON_TINT_DARK
+        } else {
+            ICON_TINT_LIGHT
+        };
+        ui.add(
+            egui::Image::new(image)
+                .fit_to_exact_size(egui::vec2(20.0, 20.0))
+                .tint(tint),
+        );
+        ui.add_space(-2.0);
+        ui.label(label);
+    });
 }
 
 /// Render the graph view
 fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
-    egui::CentralPanel::default().show(ui.ctx(), |ui| {
+    let inner_response = egui::CentralPanel::default().show(ui.ctx(), |ui| {
         // Enable node clicking and dragging
         let interactions = SettingsInteraction::new()
             .with_node_clicking_enabled(true)
@@ -1163,5 +1044,227 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
         }
 
         ui.add(&mut graph_view);
+
+        // Handle screenshot export state machine
+        handle_screenshot_export(ui, state);
+
+        // Hide overlays during export to get clean screenshot
+        if state.export_state != ExportState::Idle {
+            return;
+        }
+
+        // Get content rect for overlay positioning
+        let local_rect = ui.max_rect();
+
+        // Overlay control buttons in the top-left corner of the graph
+        egui::Area::new(egui::Id::new("viz_overlay_buttons"))
+            .fixed_pos(local_rect.left_top() + egui::vec2(4.0, 4.0))
+            .order(egui::Order::Foreground)
+            .show(ui.ctx(), |ui| {
+                egui::Frame::popup(ui.style()).shadow(egui::epaint::Shadow::NONE).show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        if !state.visualization_running {
+                            // Play / Continue: resume without resetting flow counts
+                            let play_tooltip = if state.user_has_started { "Continue" } else { "Start" };
+                            if ui.button(egui_material_icons::icons::ICON_PLAY_ARROW).on_hover_text(play_tooltip).clicked() {
+                                state.user_has_started = true;
+                                // Pass the user config if loaded, otherwise None (uses default BN model)
+                                let config = state.config_content.clone();
+                                let speed = state.speed.clone();
+                                if let Err(e) = state.start_visualization(config.as_deref(), speed, false) {
+                                    log::error!("Failed to start flow streamer: {}", e);
+                                }
+                            }
+                            // Restart: reset all flow counts and start fresh
+                            // Only visible after the user has started at least once
+                            if state.user_has_started {
+                                if ui.button(egui_material_icons::icons::ICON_RESTART_ALT).on_hover_text("Restart").clicked() {
+                                    let config = state.config_content.clone();
+                                    let speed = state.speed.clone();
+                                    if let Err(e) = state.start_visualization(config.as_deref(), speed, true) {
+                                        log::error!("Failed to start flow streamer: {}", e);
+                                    }
+                                }
+                            }
+                        } else {
+                            if ui.button(egui_material_icons::icons::ICON_STOP).on_hover_text("Stop").clicked() {
+                                state.stop_visualization();
+                            }
+                        }
+                        if ui.button(egui_material_icons::icons::ICON_FIT_SCREEN).on_hover_text("Fit to screen").clicked() {
+                            state.reset_view_requested = true;
+                        }
+                        if ui.button(egui_material_icons::icons::ICON_IMAGE).on_hover_text("Export as PNG").clicked() {
+                            state.export_state = ExportState::HidingOverlays;
+                        }
+
+                        ui.separator();
+
+                        // Playback speed: −/+ buttons with discrete steps
+                        let speed_steps: &[f32] = &[0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0];
+                        // Speed is an Arc, we cannot use it directly with the buttons,
+                        // we need to read and write its value manually.
+                        let mut speed_value = *state.speed.read().unwrap();
+                        let current_idx = speed_steps.iter().position(|&s| (s - speed_value).abs() < 0.01);
+
+                        if ui.button(egui_material_icons::icons::ICON_REMOVE)
+                            .on_hover_text("Slow down")
+                            .clicked()
+                        {
+                            if let Some(idx) = current_idx {
+                                if idx > 0 {
+                                    speed_value = speed_steps[idx - 1];
+                                    *state.speed.write().unwrap() = speed_value;
+                                }
+                            }
+                        }
+                        ui.label(format!("{:.1}x", speed_value))
+                            .on_hover_text("Playback speed — controls how fast network flows are simulated");
+                        if ui.button(egui_material_icons::icons::ICON_ADD)
+                            .on_hover_text("Speed up")
+                            .clicked()
+                        {
+                            if let Some(idx) = current_idx {
+                                if idx < speed_steps.len() - 1 {
+                                    speed_value = speed_steps[idx + 1];
+                                    *state.speed.write().unwrap() = speed_value;
+                                }
+                            }
+                        }
+                    });
+
+                });
+            });
+
+        // Overlay stats (bottom-left of graph)
+        egui::Area::new(egui::Id::new("viz_overlay_stats"))
+            .fixed_pos(local_rect.left_bottom() + egui::vec2(4.0, 0.0))
+            .pivot(egui::Align2::LEFT_BOTTOM)
+            .order(egui::Order::Foreground)
+            .show(ui.ctx(), |ui| {
+                egui::Frame::popup(ui.style()).shadow(egui::epaint::Shadow::NONE).show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(format!("Active: {}", state.active_links.len()))
+                            .on_hover_text("Number of network links currently transmitting data.");
+                        ui.separator();
+                        ui.label(format!("Total flows: {}", state.total_flows))
+                            .on_hover_text("Cumulative number of flows generated since the simulation started.");
+                    });
+                });
+            });
+
+        // Overlay legend: node types (top-right of graph)
+        egui::Area::new(egui::Id::new("viz_overlay_node_legend"))
+            .pivot(egui::Align2::RIGHT_TOP)
+            .fixed_pos(local_rect.right_top() + egui::vec2(-4.0, 4.0))
+            .order(egui::Order::Foreground)
+            .show(ui.ctx(), |ui| {
+                egui::Frame::popup(ui.style()).shadow(egui::epaint::Shadow::NONE).show(ui, |ui| {
+                    legend_item_with_image(ui, "Server", egui::include_image!("../../assets/server.png"));
+                    legend_item_with_image(ui, "User", egui::include_image!("../../assets/computer.png"));
+                    legend_item_with_image(ui, "Internet", egui::include_image!("../../assets/internet.png"));
+                }).response.on_hover_text("Node types. Size reflects relative traffic activity.");
+            });
+
+        // Overlay legend: edge states (bottom-right of graph)
+        egui::Area::new(egui::Id::new("viz_overlay_edge_legend"))
+            .pivot(egui::Align2::RIGHT_BOTTOM)
+            .fixed_pos(local_rect.right_bottom() + egui::vec2(-4.0, -4.0))
+            .order(egui::Order::Foreground)
+            .show(ui.ctx(), |ui| {
+                egui::Frame::popup(ui.style()).shadow(egui::epaint::Shadow::NONE).show(ui, |ui| {
+                    legend_item_inline(ui, "Inactive", COLOR_INACTIVE);
+                    legend_item_inline(ui, "HTTP", COLOR_HTTP);
+                    legend_item_inline(ui, "HTTPS", COLOR_HTTPS);
+                    legend_item_inline(ui, "SSH", COLOR_SSH);
+                    legend_item_inline(ui, "DNS", COLOR_DNS);
+                    legend_item_inline(ui, "SMTP", COLOR_SMTP);
+                    legend_item_inline(ui, "Other", COLOR_OTHER);
+                }).response.on_hover_text("Link protocols. Color shows protocol, thickness reflects relative traffic volume.");
+            });
     });
+
+    // Use panel rect directly - it's already in screen coordinates
+    // and represents the full panel area (ui.max_rect() excludes internal padding)
+    let panel_rect = inner_response.response.rect;
+    state.graph_rect = Some(panel_rect);
+}
+
+/// Handle screenshot export state machine.
+/// Uses a 2-frame approach:
+/// - Frame N: user clicks export → HidingOverlays
+/// - Frame N+1: overlays hidden → request screenshot → WaitingForScreenshot
+/// - Frame N+2: screenshot received → extract graph region → save → Idle
+fn handle_screenshot_export(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
+    // Transition: HidingOverlays → WaitingForScreenshot (request screenshot)
+    if state.export_state == ExportState::HidingOverlays {
+        state.export_state = ExportState::WaitingForScreenshot;
+        ui.ctx()
+            .send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::default()));
+    }
+
+    // Handle screenshot result
+    ui.input(|i| {
+        for event in &i.raw.events {
+            if let egui::Event::Screenshot { image, .. } = event {
+                if state.export_state == ExportState::WaitingForScreenshot {
+                    if let Some(graph_rect) = state.graph_rect {
+                        let graph_image = image.region(&graph_rect, Some(i.pixels_per_point()));
+                        save_graph_png(&graph_image);
+                    } else {
+                        log::error!("No graph rect stored for screenshot export");
+                    }
+                    state.export_state = ExportState::Idle;
+                }
+            }
+        }
+    });
+}
+
+/// Save the graph screenshot as a PNG file.
+fn save_graph_png(image: &egui::ColorImage) {
+    let width = image.width() as u32;
+    let height = image.height() as u32;
+    let pixels = image.as_raw();
+
+    // Convert RGBA to ImageBuffer
+    let img_buffer = image::RgbaImage::from_raw(width, height, pixels.to_vec())
+        .expect("Failed to create image buffer");
+
+    // Generate filename with timestamp
+    let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
+    let filename = format!("fosr_graph_{}.png", timestamp);
+
+    // Convert to PNG bytes
+    let mut buffer = Vec::new();
+    match img_buffer.write_to(
+        &mut std::io::Cursor::new(&mut buffer),
+        image::ImageFormat::Png,
+    ) {
+        Ok(_) => {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                match crate::shared::file_io::save_file_desktop(&buffer, &filename) {
+                    Ok(file_handle) => {
+                        log::info!("Exported graph to {}", file_handle.path().to_string_lossy());
+                    }
+                    Err(e) => {
+                        log::error!("Failed to save graph PNG: {:?}", e);
+                    }
+                }
+            }
+
+            #[cfg(target_arch = "wasm32")]
+            {
+                let filename_clone = filename.clone();
+                wasm_bindgen_futures::spawn_local(async move {
+                    match crate::shared::file_io::save_file_wasm(&buffer, &filename_clone).await {
+                        Ok(_) => log::info!("Exported graph to {}", filename_clone),
+                        Err(e) => log::error!("Failed to save PNG on WASM: {:?}", e),
+                    }
+                });
+            }
+        }
+        Err(e) => log::error!("Failed to write PNG to buffer: {}", e),
+    }
 }

@@ -1,29 +1,25 @@
 use super::generation_core::generate;
 use super::generation_ui_components::{show_field_error, show_status, timezone_picker};
-use super::generation_utils::{
-    duration_string_from_slider, duration_to_slider, slider_from_duration_string,
-};
 use super::generation_validation::{
     FieldValidation, first_invalid_param, validate_duration, validate_optional_u64,
     validate_timezone,
 };
-use crate::shared::configuration_file::{
-    ConfigurationFileState, configuration_file_picker, load_config_file_contents,
-};
+use crate::shared::configuration_file::{ConfigurationFileState, load_config_file_contents};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::save_file_desktop;
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::save_file_wasm;
-use chrono::{NaiveDate, NaiveTime};
+use crate::shared::ui_utils::info_icon;
+use crate::timepicker::TimePickerButton;
+use chrono::{Datelike, Local, NaiveDate, NaiveTime, TimeZone};
 use chrono_tz::Tz;
 use eframe::egui;
-use eframe::egui::{SliderClamping, Widget};
+use eframe::egui::Widget;
 use egui_extras::DatePickerButton;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, channel};
 use std::time::Duration;
-use crate::timepicker::TimePickerButton;
 
 // Time interval for the slider.
 pub const DURATION_MIN: Duration = Duration::from_secs(60); // 1 min
@@ -41,7 +37,6 @@ pub enum UiStatus {
     #[cfg(not(target_arch = "wasm32"))]
     Error(String),
 }
-
 
 /// Represents the state of the generation tab.
 pub struct GenerationTabState {
@@ -61,7 +56,6 @@ pub struct GenerationTabState {
     pub order_pcap: bool,
     pub taint: bool,
     pub duration_str: String,
-    pub duration_slider_value: f32,
     pub use_seed: bool,
     pub seed_input: String,
     pub timezone_input: String,
@@ -70,13 +64,17 @@ pub struct GenerationTabState {
     pub start_date: NaiveDate,
     pub start_hour: NaiveTime,
     pub output_file_name: String,
+    /// Holds the temporary PCAP file opened in Wireshark.
+    ///
+    /// `NamedTempFile` automatically deletes the file when dropped. By storing it here,
+    /// the file stays alive until: (1) the app closes, or (2) a new file is opened
+    /// (which replaces this value, dropping the previous file).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub temp_pcap_file: Option<tempfile::NamedTempFile>,
 }
 
 impl Default for GenerationTabState {
     fn default() -> Self {
-        let default_duration = "1h".to_string();
-        let duration_slider_value = slider_from_duration_string(default_duration.clone()).unwrap();
-
         Self {
             progress: 0.0,
             progress_receiver: None,
@@ -93,31 +91,19 @@ impl Default for GenerationTabState {
             // Parameters
             order_pcap: true,
             taint: false,
-            duration_str: default_duration,
-            duration_slider_value,
+            duration_str: "1h".to_string(),
             use_seed: false,
             seed_input: String::new(),
             timezone_input: String::new(),
             use_current_time: true,
             use_local_timezone: true,
-            start_date: NaiveDate::from_ymd_opt(2025, 1, 1).unwrap(),
-            start_hour: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+            start_date: Local::now().date_naive(),
+            start_hour: Local::now().time(),
             output_file_name: "output.pcap".to_string(),
+            #[cfg(not(target_arch = "wasm32"))]
+            temp_pcap_file: None,
         }
     }
-}
-
-/// Display a small info icon with a tooltip.
-fn info_icon(ui: &mut egui::Ui, tooltip: &str) {
-    // Reduce spacing before the icon
-    ui.add_space(-4.0);
-    // Reduce tooltip delay
-    ui.ctx().style_mut(|s| s.interaction.tooltip_delay = 0.1);
-    ui.label(egui::RichText::new("ℹ").color(egui::Color32::GRAY).size(14.0))
-        .on_hover_ui(|ui| {
-            ui.set_max_width(300.0);
-            ui.label(tooltip);
-        });
 }
 
 pub fn show_generation_tab_content(
@@ -128,28 +114,16 @@ pub fn show_generation_tab_content(
     // Eagerly load config file contents when a file is selected
     load_config_file_contents(configuration_file_state);
 
-    configuration_file_picker(ui, configuration_file_state);
-
-    ui.separator();
-
     ui.horizontal(|ui| {
         ui.label("Duration");
-        info_icon(ui, "Minimum pcap traffic duration described in human-friendly time, such as \"30m\", \"1h\", \"2d\" or \"15days 30min 5s\".");
+        info_icon(ui, "Minimum pcap traffic duration described in human-friendly time, such as \"30m\", \"1h\", \"2d\" or \"2days 30min 5s\".");
 
-        // The only way to set the slider width currently is to set it globally.
-        // If we need another slider at some point, this value should be mutated
-        // again before adding it.
-        ui.style_mut().spacing.slider_width = 150.0;
-        let slider_response = ui.add(
-            egui::Slider::new(&mut state.duration_slider_value, 0.0..=1.0)
-                .show_value(false)
-                .clamping(SliderClamping::Never),
-        );
-
-        if slider_response.changed() {
-            let s = duration_string_from_slider(state.duration_slider_value);
-            state.duration_str = s;
-            state.duration_validation.set_ok();
+        // Preset buttons
+        for preset in ["5min", "1h", "24h"] {
+            if ui.small_button(preset).clicked() {
+                state.duration_str = preset.to_string();
+                state.duration_validation.set_ok();
+            }
         }
 
         let text_response = egui::TextEdit::singleline(&mut state.duration_str)
@@ -159,9 +133,8 @@ pub fn show_generation_tab_content(
 
         if text_response.changed() {
             match validate_duration(&state.duration_str) {
-                Ok(d) => {
+                Ok(_) => {
                     state.duration_validation.set_ok();
-                    state.duration_slider_value = duration_to_slider(d);
                 }
                 Err(msg) => {
                     state.duration_validation.set_err(msg);
@@ -182,8 +155,16 @@ pub fn show_generation_tab_content(
     if !state.use_current_time {
         ui.horizontal(|ui| {
             ui.label("Start time");
-            ui.add(DatePickerButton::new(&mut state.start_date));
-            ui.add(TimePickerButton::new(&mut state.start_hour).show_seconds(true).use_dragvalue(true));
+            let current_year = Local::now().date_naive().year();
+            ui.add(
+                DatePickerButton::new(&mut state.start_date)
+                    .start_end_years((current_year - 5)..=(current_year + 30)),
+            );
+            ui.add(
+                TimePickerButton::new(&mut state.start_hour)
+                    .show_seconds(true)
+                    .use_dragvalue(true),
+            );
         });
 
         ui.add_space(10.0);
@@ -214,6 +195,36 @@ pub fn show_generation_tab_content(
         });
     } else {
         state.timezone_validation.set_ok();
+    }
+
+    // Show the equivalent UTC start time
+    let utc_label = if state.use_current_time {
+        Some(chrono::Utc::now())
+    } else {
+        let local_dt = state.start_date.and_time(state.start_hour);
+        if state.use_local_timezone {
+            Local::now()
+                .timezone()
+                .from_local_datetime(&local_dt)
+                .earliest()
+                .map(|dt| dt.with_timezone(&chrono::Utc))
+        } else {
+            state
+                .timezone_input
+                .parse::<Tz>()
+                .ok()
+                .and_then(|tz| local_dt.and_local_timezone(tz).earliest())
+                .map(|dt| dt.with_timezone(&chrono::Utc))
+        }
+    };
+    if let Some(utc) = utc_label {
+        ui.label(
+            egui::RichText::new(format!(
+                "Start time (UTC): {}",
+                utc.format("%Y-%m-%d %H:%M:%S")
+            ))
+            .color(egui::Color32::GRAY),
+        );
     }
 
     ui.add_space(10.0);
@@ -264,11 +275,16 @@ pub fn show_generation_tab_content(
     ui.horizontal(|ui| {
         if is_generating {
             let stop_button = egui::Button::new(
-                egui::RichText::new("Stop").size(13.0),
+                egui::RichText::new(format!("{} Stop", egui_material_icons::icons::ICON_STOP))
+                    .size(13.0),
             )
-                .fill(egui::Color32::from_rgb(200, 80, 80))
-                .min_size(egui::vec2(75.0, 24.0));
-            if ui.add(stop_button).clicked() {
+            .fill(egui::Color32::from_rgb(200, 80, 80))
+            .min_size(egui::vec2(75.0, 24.0));
+            if ui
+                .add(stop_button)
+                .on_hover_text("Cancel generation")
+                .clicked()
+            {
                 state.cancelled.store(true, Ordering::Relaxed);
                 state.status = UiStatus::Idle;
                 state.progress = 0.0;
@@ -282,11 +298,19 @@ pub fn show_generation_tab_content(
             ui.add_enabled_ui(can_generate, |ui| {
                 let accent = ui.visuals().selection.bg_fill;
                 let generate_button = egui::Button::new(
-                    egui::RichText::new("Generate").size(13.0),
+                    egui::RichText::new(format!(
+                        "{} Generate",
+                        egui_material_icons::icons::ICON_PLAY_ARROW
+                    ))
+                    .size(13.0),
                 )
-                    .fill(accent)
-                    .min_size(egui::vec2(75.0, 24.0));
-                if ui.add(generate_button).clicked() {
+                .fill(accent)
+                .min_size(egui::vec2(85.0, 24.0));
+                if ui
+                    .add(generate_button)
+                    .on_hover_text("Generate PCAP from configuration")
+                    .clicked()
+                {
                     state.status = UiStatus::Generating;
 
                     // Reset state
@@ -409,14 +433,21 @@ pub fn show_generation_tab_content(
                 state.status = UiStatus::Generated;
             }
             #[cfg(not(target_arch = "wasm32"))]
-            let save_button_label = "Save";
+            let save_button_text = format!("{} Save", egui_material_icons::icons::ICON_SAVE);
             #[cfg(target_arch = "wasm32")]
-            let save_button_label = "Download";
-            let save_button = egui::Button::new(
-                egui::RichText::new(save_button_label).size(13.0),
-            )
+            let save_button_text =
+                format!("{} Download", egui_material_icons::icons::ICON_DOWNLOAD);
+            #[cfg(not(target_arch = "wasm32"))]
+            let save_button_tooltip = "Save PCAP file";
+            #[cfg(target_arch = "wasm32")]
+            let save_button_tooltip = "Download PCAP file";
+            let save_button = egui::Button::new(egui::RichText::new(save_button_text).size(13.0))
                 .min_size(egui::vec2(75.0, 24.0));
-            if ui.add(save_button).clicked() {
+            if ui
+                .add(save_button)
+                .on_hover_text(save_button_tooltip)
+                .clicked()
+            {
                 let pcap_bytes = state.pcap_bytes.clone();
                 #[cfg(not(target_arch = "wasm32"))]
                 {
@@ -456,6 +487,34 @@ pub fn show_generation_tab_content(
                     });
                 }
             }
+
+            // Open in Wireshark button (native only)
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let open_button = egui::Button::new(
+                    egui::RichText::new(format!("{} Open", egui_material_icons::icons::ICON_LAN))
+                        .size(13.0),
+                )
+                .min_size(egui::vec2(75.0, 24.0));
+                if ui
+                    .add(open_button)
+                    .on_hover_text("Open with default application (e.g. Wireshark)")
+                    .clicked()
+                {
+                    if let Some(ref pcap_bytes) = state.pcap_bytes {
+                        match open_in_wireshark(pcap_bytes, &mut state.temp_pcap_file) {
+                            Ok(_) => {
+                                log::info!("Opened PCAP in Wireshark");
+                            }
+                            Err(e) => {
+                                log::error!("Failed to open in Wireshark: {:?}", e);
+                                state.status =
+                                    UiStatus::Error(format!("Failed to open in Wireshark: {e}"));
+                            }
+                        }
+                    }
+                }
+            }
         }
     });
 
@@ -481,4 +540,41 @@ pub fn show_generation_tab_content(
             format!("Invalid parameter: {name}. Expected: {spec}. ({err})"),
         );
     }
+}
+
+/// Opens the PCAP data in the system's default application (e.g., Wireshark).
+///
+/// This creates a temporary file with `.pcap` extension and opens it using `open::that()`.
+/// The `NamedTempFile` handle is stored in `temp_file_storage` to keep the file alive.
+/// When the handle is dropped (app closes or a new file is opened), the temp file is deleted.
+#[cfg(not(target_arch = "wasm32"))]
+fn open_in_wireshark(
+    pcap_bytes: &[u8],
+    temp_file_storage: &mut Option<tempfile::NamedTempFile>,
+) -> Result<(), String> {
+    use std::io::Write;
+
+    // Create a temporary file with .pcap extension
+    let mut temp_file = tempfile::Builder::new()
+        .suffix(".pcap")
+        .tempfile()
+        .map_err(|e| format!("Failed to create temp file: {e}"))?;
+
+    // Write the PCAP data
+    temp_file
+        .write_all(pcap_bytes)
+        .map_err(|e| format!("Failed to write PCAP data: {e}"))?;
+
+    // Get the path
+    let path = temp_file.path().to_path_buf();
+
+    log::info!("Opening PCAP file at: {}", path.display());
+
+    // Store the temp file to keep it alive until app closes
+    *temp_file_storage = Some(temp_file);
+
+    // Open with system default application (Wireshark for .pcap files)
+    open::that(&path).map_err(|e| format!("Failed to open file: {e}"))?;
+
+    Ok(())
 }

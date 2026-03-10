@@ -1,5 +1,20 @@
 use eframe::egui;
 
+/// Display a small info icon with a tooltip.
+pub fn info_icon(ui: &mut egui::Ui, tooltip: &str) {
+    ui.add_space(-4.0);
+    ui.label(
+        egui::RichText::new("ℹ")
+            .color(egui::Color32::GRAY)
+            .size(14.0),
+    )
+    .on_hover_cursor(egui::CursorIcon::Help)
+    .on_hover_ui(|ui| {
+        ui.set_max_width(300.0);
+        ui.label(tooltip);
+    });
+}
+
 /// Displays an editor for an `Option<String>` field in an egui UI.
 ///
 /// This helper is designed for configuration fields that are **optional**:
@@ -50,12 +65,50 @@ pub fn edit_optional_string(
         }
 
         // Explicit clear button
-        if ui.button("Clear").clicked() {
+        if ui
+            .button(egui_material_icons::icons::ICON_CLEAR)
+            .on_hover_text("Clear")
+            .clicked()
+        {
             *value = None;
         }
     });
 }
 
+/// Segmented toggle button between two options.
+/// Displays two buttons side by side in a grouped frame.
+/// Rendering order follows the parent layout direction.
+pub fn labeled_toggle(
+    ui: &mut egui::Ui,
+    is_first_selected: &mut bool,
+    first_label: &str,
+    second_label: &str,
+    tooltip_first: &str,
+    tooltip_second: &str,
+) {
+    // Use a group frame with tight padding to auto-size around the content
+    let resp = egui::Frame::group(ui.style())
+        .inner_margin(3.0)
+        .show(ui, |ui| {
+            // Remove the hover stroke on selectable labels inside this toggle
+            ui.style_mut().visuals.widgets.hovered.bg_stroke = egui::Stroke::NONE;
+            ui.spacing_mut().item_spacing = egui::vec2(3.0, 0.0);
+            ui.horizontal(|ui| {
+                let first = ui.selectable_label(*is_first_selected, first_label);
+                if first.clicked() {
+                    *is_first_selected = true;
+                }
+                first.on_hover_text(tooltip_first);
+
+                let second = ui.selectable_label(!*is_first_selected, second_label);
+                if second.clicked() {
+                    *is_first_selected = false;
+                }
+                second.on_hover_text(tooltip_second);
+            });
+        });
+    let _ = resp;
+}
 
 /// Displays a multiline editor for an `Option<String>`.
 ///
@@ -89,7 +142,11 @@ pub fn edit_optional_multiline_string(
         }
     }
 
-    if ui.button("Clear").clicked() {
+    if ui
+        .button(egui_material_icons::icons::ICON_CLEAR)
+        .on_hover_text("Clear")
+        .clicked()
+    {
         *value = None;
     }
 }
