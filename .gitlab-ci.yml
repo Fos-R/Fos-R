@@ -269,10 +269,10 @@ evaluate-cupid:
     - cd crates/fosr-lib/default_models/cupid/automata
     - sed -i 's/ N(.*"/"/g' * # to make the automata more readable
     - echo -e "## Automata\n\n" >> ../../../../../public/dataset-cupid.md
-    - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/cupid/$file.png -Gdip=150; echo -e "### ${file/%".dot"}\n\n<center><img style='max-width: 100%; width: auto' src='cupid/$file.png'></center>\n" >> ../../../../../public/dataset-cupid.md; done
+    - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/cupid/$file.png -Gdip=150; echo -e "### ${file/%'.dot'}\n\n<center><img style='max-width:100%; width:auto' src='cupid/$file.png'></center>\n" >> ../../../../../public/dataset-cupid.md; done
     - cd ../../../../..
     - cp crates/fosr-lib/default_models/cupid/bn/bn_common.png public/cupid/bn.png
-    - echo -e "## Bayesian network\n\n<center><img style='max-width: 100%; width: auto' src='cupid/bn.png'></center>\n" >> public/dataset-cupid.md
+    - echo -e "## Bayesian network\n\n<center><img style='max-width:100%; width:auto' src='cupid/bn.png'></center>\n" >> public/dataset-cupid.md
     - mv public/dataset-cupid.md public/cupid.md
   artifacts:
     expire_in: 3 days
