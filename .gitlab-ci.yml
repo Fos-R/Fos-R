@@ -239,9 +239,13 @@ analysis-cupid:
   script:
     - apt update
     - apt install -y tshark suricata
+    # process all the pcaps
     - cd data/cupid/cupid-fosr
     - ../../pcap-analysis.sh
-    - suricata -c /etc/suricata/suricata.yaml -r data.pcap > suricata.txt
+    - cd ../cupid-eval
+    - ../../pcap-analysis.sh
+    - cd ../cupid-reference
+    - ../../pcap-analysis.sh
   artifacts:
     expire_in: 3 days
     paths:
@@ -256,9 +260,13 @@ analysis-cicids17:
   script:
     - apt update
     - apt install -y tshark suricata
+    # process all the pcaps
     - cd data/cicids17/cicids17-fosr
     - ../../pcap-analysis.sh
-    - suricata -c /etc/suricata/suricata.yaml -r data.pcap > suricata.txt
+    - cd ../cicids17-eval
+    - ../../pcap-analysis.sh
+    - cd ../cicids17-reference
+    - ../../pcap-analysis.sh
   artifacts:
     expire_in: 3 days
     paths:
