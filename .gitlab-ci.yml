@@ -274,7 +274,7 @@ evaluate-cupid:
   stage: evaluate
   script:
     - apt update
-    - apt install graphviz
+    - apt install -y graphviz
     - mkdir public/cupid
     # evaluation
     - cd evaluation
