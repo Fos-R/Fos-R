@@ -256,7 +256,7 @@ analysis-cicids17:
   script:
     - apt update
     - apt install -y tshark suricata
-    - cd data/cicids17/cicicds17-fosr
+    - cd data/cicids17/cicids17-fosr
     - ../../pcap-analysis.sh
     - suricata -c /etc/suricata/suricata.yaml -r data.pcap > suricata.txt
   artifacts:
@@ -297,7 +297,7 @@ evaluate-cupid:
       - public/cupid.md
       - public/cupid/
 
-cicids17-dataset:
+.cicids17-dataset:
   image: alpine
   tags:
     - ci.inria.fr
