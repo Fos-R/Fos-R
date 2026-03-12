@@ -266,7 +266,7 @@ generate:
     expire_in: 3 days
     when: always
     paths:
-      - data/
+      - data/*/*-fosr/data.pcap
 
 tests:
   tags:
@@ -313,8 +313,10 @@ analysis-cupid:
     - ../../pcap-analysis.sh
   artifacts:
     expire_in: 3 days
-    paths:
-      - data/cupid/cupid-fosr
+    paths: # do not export the pcap files
+      - data/**/*.csv
+      - data/**/*.log
+      - data/**/*.txt
 
 analysis-cicids17:
   image: zeek/zeek
@@ -340,8 +342,10 @@ analysis-cicids17:
     - ../../pcap-analysis.sh
   artifacts:
     expire_in: 3 days
-    paths:
-      - data/cicids17/cicids17-fosr
+    paths: # do not export the pcap files
+      - data/**/*.csv
+      - data/**/*.log
+      - data/**/*.txt
 
 ### EVALUATE
 

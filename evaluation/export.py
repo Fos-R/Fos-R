@@ -37,5 +37,6 @@ if __name__ == '__main__':
             s += f"{results['results'][k]['value']:.3f}|"
 
     output = f"results-{args.dataset}.md"
+    print(f"Output file: {output}")
     with open(output, "w") as f:
         f.write(s)
