@@ -14,6 +14,7 @@ build-linux-x86-64:
   stage: build
   image: rust
   variables:
+    GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
     - git config lfs.fetchexclude "*"
@@ -47,6 +48,7 @@ build-linux-x86-32:
   stage: build
   image: rust
   variables:
+    GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
     - git config lfs.fetchexclude "*"
@@ -72,6 +74,7 @@ build-linux-legacy-raspberry-pi:
   stage: build
   image: rust
   variables:
+    GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
     - git config lfs.fetchexclude "*"
@@ -98,6 +101,7 @@ build-linux-arm-32:
   stage: build
   image: rust
   variables:
+    GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
     - git config lfs.fetchexclude "*"
@@ -123,6 +127,7 @@ build-linux-arm-64:
   stage: build
   image: rust
   variables:
+    GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
     - git config lfs.fetchexclude "*"
@@ -148,6 +153,7 @@ build-win64-x86:
   stage: build
   image: rust
   variables:
+    GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
     - git config lfs.fetchexclude "*"
@@ -168,6 +174,7 @@ build-win32-x86:
   stage: build
   image: rust
   variables:
+    GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
     - git config lfs.fetchexclude "*"
@@ -188,6 +195,7 @@ build-wasm32:
   stage: build
   image: rust
   variables:
+    GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
     - git config lfs.fetchexclude "*"
@@ -210,7 +218,12 @@ test-audit:
     - large
   stage: test
   image: rust
+  variables:
+    GIT_STRATEGY: clone
+    GIT_CHECKOUT: "false"
   script:
+    - git config lfs.fetchexclude "*"
+    - git checkout $CI_COMMIT_REF_NAME
     - cargo install cargo-audit
     - cargo audit -D unsound -D yanked
   allow_failure: true
@@ -221,7 +234,12 @@ test-publish:
     - large
   stage: test
   image: rust
+  variables:
+    GIT_STRATEGY: clone
+    GIT_CHECKOUT: "false"
   script:
+    - git config lfs.fetchexclude "*"
+    - git checkout $CI_COMMIT_REF_NAME
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
     - cargo build --release
@@ -234,7 +252,12 @@ generate:
     - large
   stage: test
   image: rust
+  variables:
+    GIT_STRATEGY: clone
+    GIT_CHECKOUT: "false"
   script:
+    - git config lfs.fetchexclude "*"
+    - git checkout $CI_COMMIT_REF_NAME
     - mkdir -p data/cupid/cupid-fosr
     - cargo run -- augment-dataset -o data/cupid/cupid-fosr/data.pcap -s 0 -d 1day -t 0 -p fast --tz CET -m cupid
     - mkdir -p data/cicids17/cicids17-fosr
@@ -251,7 +274,12 @@ tests:
     - large
   stage: test
   image: rust
+  variables:
+    GIT_STRATEGY: clone
+    GIT_CHECKOUT: "false"
   script:
+    - git config lfs.fetchexclude "*"
+    - git checkout $CI_COMMIT_REF_NAME
     - cargo test -p fosr -- --nocapture
   artifacts:
     expire_in: 3 days
@@ -268,7 +296,12 @@ analysis-cupid:
     - ci.inria.fr
     - large_more_disk
   stage: analyze
+  variables:
+    GIT_STRATEGY: clone
+    GIT_CHECKOUT: "false"
   script:
+    - git config lfs.fetchinclude "data/cupid"
+    - git checkout $CI_COMMIT_REF_NAME
     - apt update
     - apt install -y tshark suricata
     # process all the pcaps
@@ -290,6 +323,12 @@ analysis-cicids17:
     - large_more_disk
   stage: analyze
   script:
+  variables:
+    GIT_STRATEGY: clone
+    GIT_CHECKOUT: "false"
+  script:
+    - git config lfs.fetchinclude "data/cicids17"
+    - git checkout $CI_COMMIT_REF_NAME
     - apt update
     - apt install -y tshark suricata
     # process all the pcaps
@@ -312,7 +351,12 @@ evaluate-cupid:
     - ci.inria.fr
     - large_more_disk
   stage: evaluate
+  variables:
+    GIT_STRATEGY: clone
+    GIT_CHECKOUT: "false"
   script:
+    - git config lfs.fetchinclude "data/cupid"
+    - git checkout $CI_COMMIT_REF_NAME
     - apt update
     - apt install -y graphviz
     - mkdir public/cupid
@@ -371,7 +415,12 @@ pages:
     publish: public
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+  variables:
+    GIT_STRATEGY: clone
+    GIT_CHECKOUT: "false"
   script:
+    - git config lfs.fetchexclude "*"
+    - git checkout $CI_COMMIT_REF_NAME
     - apt update
     - apt install -y pandoc
     - mv doc public/
