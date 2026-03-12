@@ -13,7 +13,11 @@ build-linux-x86-64:
     - large
   stage: build
   image: rust
+  variables:
+    GIT_CHECKOUT: "false"
   script:
+    - git config lfs.fetchexclude "*"
+    - git checkout $CI_COMMIT_REF_NAME
     # version without network injection
     - cargo build -p fosr
     # version without ebpf and with iptables
@@ -42,7 +46,11 @@ build-linux-x86-32:
     - large
   stage: build
   image: rust
+  variables:
+    GIT_CHECKOUT: "false"
   script:
+    - git config lfs.fetchexclude "*"
+    - git checkout $CI_COMMIT_REF_NAME
     - cargo install cargo-deb
     - apt update
     - apt install -y gcc-i686-linux-gnu
@@ -63,7 +71,11 @@ build-linux-legacy-raspberry-pi:
     - large
   stage: build
   image: rust
+  variables:
+    GIT_CHECKOUT: "false"
   script:
+    - git config lfs.fetchexclude "*"
+    - git checkout $CI_COMMIT_REF_NAME
     - cargo install cargo-deb
     - apt update
     - apt install -y gcc-arm-linux-gnueabihf
@@ -85,7 +97,11 @@ build-linux-arm-32:
     - large
   stage: build
   image: rust
+  variables:
+    GIT_CHECKOUT: "false"
   script:
+    - git config lfs.fetchexclude "*"
+    - git checkout $CI_COMMIT_REF_NAME
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
     - cargo install cargo-deb
@@ -106,7 +122,11 @@ build-linux-arm-64:
     - large
   stage: build
   image: rust
+  variables:
+    GIT_CHECKOUT: "false"
   script:
+    - git config lfs.fetchexclude "*"
+    - git checkout $CI_COMMIT_REF_NAME
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
     - cargo install cargo-deb
@@ -127,7 +147,11 @@ build-win64-x86:
     - large
   stage: build
   image: rust
+  variables:
+    GIT_CHECKOUT: "false"
   script:
+    - git config lfs.fetchexclude "*"
+    - git checkout $CI_COMMIT_REF_NAME
     - apt update
     - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
     - rustup target add x86_64-pc-windows-gnu
@@ -143,7 +167,11 @@ build-win32-x86:
     - large
   stage: build
   image: rust
+  variables:
+    GIT_CHECKOUT: "false"
   script:
+    - git config lfs.fetchexclude "*"
+    - git checkout $CI_COMMIT_REF_NAME
     - apt update
     - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
     - rustup target add i686-pc-windows-gnu
@@ -159,7 +187,11 @@ build-wasm32:
     - large
   stage: build
   image: rust
+  variables:
+    GIT_CHECKOUT: "false"
   script:
+    - git config lfs.fetchexclude "*"
+    - git checkout $CI_COMMIT_REF_NAME
     - rustup target add wasm32-unknown-unknown
     - cargo install wasm-bindgen-cli
     - cargo build -p fosr-gui -r --target wasm32-unknown-unknown --no-default-features --features models
@@ -234,7 +266,7 @@ analysis-cupid:
   image: zeek/zeek
   tags:
     - ci.inria.fr
-    - small
+    - large_more_disk
   stage: analyze
   script:
     - apt update
@@ -255,7 +287,7 @@ analysis-cicids17:
   image: zeek/zeek
   tags:
     - ci.inria.fr
-    - small
+    - large_more_disk
   stage: analyze
   script:
     - apt update
@@ -278,7 +310,7 @@ evaluate-cupid:
   image: python
   tags:
     - ci.inria.fr
-    - small
+    - large_more_disk
   stage: evaluate
   script:
     - apt update
@@ -309,7 +341,7 @@ evaluate-cupid:
   image: alpine
   tags:
     - ci.inria.fr
-    - small
+    - large_more_disk
   stage: evaluate
   script:
     - apk add graphviz
