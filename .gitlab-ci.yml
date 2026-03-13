@@ -302,6 +302,7 @@ analysis-cupid:
   script:
     - git config lfs.fetchinclude "data/cupid"
     - git checkout $CI_COMMIT_REF_NAME
+    - git lfs pull
     - apt update
     - apt install -y tshark suricata
     # process all the pcaps
@@ -331,6 +332,7 @@ analysis-cicids17:
   script:
     - git config lfs.fetchinclude "data/cicids17"
     - git checkout $CI_COMMIT_REF_NAME
+    - git lfs pull
     - apt update
     - apt install -y tshark suricata
     # process all the pcaps
@@ -361,6 +363,7 @@ evaluate-cupid:
   script:
     - git config lfs.fetchinclude "data/cupid"
     - git checkout $CI_COMMIT_REF_NAME
+    - git lfs pull
     - apt update
     - apt install -y graphviz
     - mkdir public/cupid
