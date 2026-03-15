@@ -20,7 +20,7 @@ if __name__ == '__main__':
         print("No results")
         exit(1)
 
-    s = f"## Experiment on {args.dataset}\n\n|Feature|Data level|Metric|"
+    s = f"# Experimental results\n\n|Feature|Data level|Metric|"
     for dic in l:
         s += f"{dic['method']}|"
     s += "\n|-:|-:|-:|"
