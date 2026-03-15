@@ -37,11 +37,12 @@ build-linux-x86-64:
   artifacts:
     expire_in: 3 days
     paths:
-      - target/*/release/fosr
-      - target/debian/*.deb
+      # - target/*/release/fosr
+      # - target/debian/*.deb
+      - target # so next stages can reuse it
       - doc
 
-build-linux-x86-32:
+.build-linux-x86-32:
   tags:
     - ci.inria.fr
     - large
@@ -66,7 +67,7 @@ build-linux-x86-32:
       - target/*/release/fosr
       - target/debian/*.deb
 
-build-linux-legacy-raspberry-pi:
+.build-linux-legacy-raspberry-pi:
   # a build targeting old rapsberry pi with armv6 processors
   tags:
     - ci.inria.fr
@@ -94,7 +95,7 @@ build-linux-legacy-raspberry-pi:
       - target/*/release/fosr
       - target/debian/*.deb
 
-build-linux-arm-32:
+.build-linux-arm-32:
   tags:
     - ci.inria.fr
     - large
@@ -120,7 +121,7 @@ build-linux-arm-32:
       - target/*/release/fosr
       - target/debian/*.deb
 
-build-linux-arm-64:
+.build-linux-arm-64:
   tags:
     - ci.inria.fr
     - large
@@ -146,7 +147,7 @@ build-linux-arm-64:
       - target/*/release/fosr
       - target/debian/*.deb
 
-build-win64-x86:
+.build-win64-x86:
   tags:
     - ci.inria.fr
     - large
@@ -167,7 +168,7 @@ build-win64-x86:
     paths:
       - target/*/release/fosr.exe
 
-build-win32-x86:
+.build-win32-x86:
   tags:
     - ci.inria.fr
     - large
@@ -188,7 +189,7 @@ build-win32-x86:
     paths:
       - target/*/release/fosr.exe
 
-build-wasm32:
+.build-wasm32:
   tags:
     - ci.inria.fr
     - large
@@ -212,7 +213,7 @@ build-wasm32:
 
 ### TEST
 
-test-audit:
+.test-audit:
   tags:
     - ci.inria.fr
     - large
@@ -228,7 +229,7 @@ test-audit:
     - cargo audit -D unsound -D yanked
   allow_failure: true
 
-test-publish:
+.test-publish:
   tags:
     - ci.inria.fr
     - large
@@ -268,7 +269,7 @@ generate:
     paths:
       - data/*/*-fosr/data.pcap
 
-tests:
+.tests:
   tags:
     - ci.inria.fr
     - large
@@ -372,9 +373,9 @@ evaluate-cupid:
     - pip install -r requirements.txt
     - python3 ./evaluation.py --eval ../data/cupid/cupid-eval/ --synthetic ../data/cupid/cupid-fosr --ref ../data/cupid/cupid-reference --output cupid
     - python3 ./export.py --dataset cupid
-    - echo results-cupid.md >> public/dataset-cupid.md
+    - cat results-cupid.md >> ../public/dataset-cupid.md
     # prepare model descriptions to public/
-    - cd crates/fosr-lib/default_models/cupid/automata
+    - cd ../crates/fosr-lib/default_models/cupid/automata
     - sed -i 's/ N(.*"/"/g' * # to make the automata more readable
     - echo -e "## Automata\n\n" >> ../../../../../public/dataset-cupid.md
     - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/cupid/$file.png -Gdip=150; echo -e "### ${file/%'.dot'}\n\n<center><img style='max-width:100%; width:auto' src='cupid/$file.png'></center>\n" >> ../../../../../public/dataset-cupid.md; done
