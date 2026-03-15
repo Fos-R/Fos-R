@@ -7,7 +7,7 @@ stages:
 
 ### BUILD
 
-build-linux-x86-64:
+.build-linux-x86-64:
   tags:
     - ci.inria.fr
     - large
@@ -37,9 +37,8 @@ build-linux-x86-64:
   artifacts:
     expire_in: 3 days
     paths:
-      # - target/*/release/fosr
-      # - target/debian/*.deb
-      - target # so next stages can reuse it
+      - target/*/release/fosr
+      - target/debian/*.deb
       - doc
 
 .build-linux-x86-32:
