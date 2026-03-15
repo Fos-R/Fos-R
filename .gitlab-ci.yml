@@ -377,7 +377,7 @@ evaluate-cupid:
     # prepare model descriptions to public/
     - cd ../crates/fosr-lib/default_models/cupid/automata
     - sed -i 's/ N(.*"/"/g' * # to make the automata more readable
-    - echo -e "# Automata\n\n" >> ../../../../../public/dataset-cupid.md
+    - echo -e "\n\n# Automata\n\n" >> ../../../../../public/dataset-cupid.md
     - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/cupid/$file.png -Gdip=150; echo -e "## ${file/%'.dot'}\n\n<center><img style='max-width:100%; width:auto' src='cupid/$file.png'></center>\n" >> ../../../../../public/dataset-cupid.md; done
     - cd ../../../../..
     - cp crates/fosr-lib/default_models/cupid/bn/bn_common.png public/cupid/bn.png
@@ -389,22 +389,38 @@ evaluate-cupid:
       - public/cupid.md
       - public/cupid/
 
-.cicids17-dataset:
-  image: alpine
+evaluate-cicids17:
+  image: python
   tags:
     - ci.inria.fr
     - large_more_disk
   stage: evaluate
+  variables:
+    GIT_STRATEGY: clone
+    GIT_CHECKOUT: "false"
   script:
-    - apk add graphviz
+    - git config lfs.fetchinclude "data/cicids17"
+    - git checkout $CI_COMMIT_REF_NAME
+    - apt update
+    - apt install -y graphviz git-lfs
+    - git lfs pull
     - mkdir public/cicids17
-    - cd crates/fosr-lib/default_models/cicids17/automata
-    - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/cicids17/$file.png -Gdip=150; echo - \[$file\]\(cicids17/$file.png\) >> ../../../../../public/dataset-cicids17.md; done
+    # evaluation
+    - cp data/cicids17/README.md public/dataset-cicids17.md
+    - cd evaluation
+    - pip install -r requirements.txt
+    - python3 ./evaluation.py --eval ../data/cicids17/cicids17-eval/ --synthetic ../data/cicids17/cicids17-fosr --ref ../data/cicids17/cicids17-reference --output cicids17
+    - python3 ./export.py --dataset cicids17
+    - cat results-cicids17.md >> ../public/dataset-cicids17.md
+    # prepare model descriptions to public/
+    - cd ../crates/fosr-lib/default_models/cicids17/automata
+    - sed -i 's/ N(.*"/"/g' * # to make the automata more readable
+    - echo -e "\n\n# Automata\n\n" >> ../../../../../public/dataset-cicids17.md
+    - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/cicids17/$file.png -Gdip=150; echo -e "## ${file/%'.dot'}\n\n<center><img style='max-width:100%; width:auto' src='cicids17/$file.png'></center>\n" >> ../../../../../public/dataset-cicids17.md; done
     - cd ../../../../..
     - cp crates/fosr-lib/default_models/cicids17/bn/bn_common.png public/cicids17/bn.png
-    - echo -e "\n## Bayesian network\n![](cicids17/bn.png)" >> public/dataset-cicids17.md
+    - echo -e "# Bayesian network\n\n<center><img style='max-width:100%; width:auto' src='cicids17/bn.png'></center>\n" >> public/dataset-cicids17.md
     - mv public/dataset-cicids17.md public/cicids17.md
-    # TODO: add evaluation
   artifacts:
     expire_in: 3 days
     paths:
