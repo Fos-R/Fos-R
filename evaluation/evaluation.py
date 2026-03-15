@@ -232,11 +232,11 @@ if __name__ == '__main__':
         # evaluate with the first 10 MB (due to scalability issue)
         max_index = 10_000_000
         with open(os.path.join(args.eval, "data.pcap"), "rb") as file:
-            pcap_eval = file.read()[:max_index]
+            pcap_eval = file.read(max_index)
         with open(os.path.join(args.reference, "data.pcap"), "rb") as file:
-            pcap_ref = file.read()[:max_index]
+            pcap_ref = file.read(max_index)
         with open(os.path.join(args.synthetic, "data.pcap"), "rb") as file:
-            pcap_synthetic = file.read()[:max_index]
+            pcap_synthetic = file.read(max_index)
     except Exception as e:
         print(f"Cannot process data.pcap!",e)
         exit(1)
