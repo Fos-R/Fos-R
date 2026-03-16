@@ -12,6 +12,7 @@ description: "A network synthetic traffic generator"
 <img style="width: auto" src="https://img.shields.io/crates/d/fosr?label=downloads%20%28crates.io%29"> <!-- downloads -->
 <img style="width: auto" src="https://img.shields.io/crates/l/fosr"><!-- license -->
 <img style="width: auto" src="https://img.shields.io/gitlab/last-commit/pirat-public%2FFos-R?gitlab_url=https%3A%2F%2Fgitlab.inria.fr%2F"> <!-- last commit -->
+<a href="https://deepwiki.com/Fos-R/Fos-R"><img style="width: auto" src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </center>
 
 Fos-R is a high-quality and high-throughput network traffic generator based on ML models. Fos-R can be used for:
