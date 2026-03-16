@@ -4,7 +4,7 @@ use crate::stage2::*;
 
 use chrono::Timelike;
 use rand_distr::weighted::WeightedIndex;
-use rand_distr::{Distribution, Normal, Uniform};
+use rand_distr::{Distribution, Normal};
 use rand_pcg::Pcg32;
 use serde::Deserialize;
 use std::cmp::min;
@@ -1002,7 +1002,7 @@ impl Stage2 for BNGenerator {
             }
 
             domain_vector.timestamp = Some(ts.data.unix_time);
-            let uniform = OS::Windows::get_ephemeral_port_distr(); // TODO: use the actual OS
+            let uniform = OS::Windows.get_ephemeral_port_distr(); // TODO: use the actual OS
             domain_vector.src_port = Some(uniform.sample(&mut rng) as u16);
             if domain_vector.dst_port.is_none() {
                 // Some protocol have random destination port, like FTP-data
