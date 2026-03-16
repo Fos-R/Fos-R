@@ -1,7 +1,9 @@
 /target
-/data
 .vagrant/
 *.pcap
+*.pdf
+*.dot
+*.png
 learning/tadam_*
 public/fosr_gui.js
 public/fosr_gui_bg.wasm
