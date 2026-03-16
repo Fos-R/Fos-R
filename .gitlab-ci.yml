@@ -7,7 +7,7 @@ stages:
 
 ### BUILD
 
-build-linux-x86-64:
+.build-linux-x86-64:
   tags:
     - ci.inria.fr
     - large
@@ -50,7 +50,6 @@ build-linux-x86-64:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git config lfs.fetchexclude "*"
     - git checkout $CI_COMMIT_REF_NAME
     - cargo install cargo-deb
     - apt update
@@ -76,7 +75,6 @@ build-linux-x86-64:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git config lfs.fetchexclude "*"
     - git checkout $CI_COMMIT_REF_NAME
     - cargo install cargo-deb
     - apt update
@@ -103,7 +101,6 @@ build-linux-x86-64:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git config lfs.fetchexclude "*"
     - git checkout $CI_COMMIT_REF_NAME
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
@@ -129,7 +126,6 @@ build-linux-x86-64:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git config lfs.fetchexclude "*"
     - git checkout $CI_COMMIT_REF_NAME
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
@@ -155,7 +151,6 @@ build-linux-x86-64:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git config lfs.fetchexclude "*"
     - git checkout $CI_COMMIT_REF_NAME
     - apt update
     - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
@@ -176,7 +171,6 @@ build-linux-x86-64:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git config lfs.fetchexclude "*"
     - git checkout $CI_COMMIT_REF_NAME
     - apt update
     - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
@@ -197,7 +191,6 @@ build-linux-x86-64:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git config lfs.fetchexclude "*"
     - git checkout $CI_COMMIT_REF_NAME
     - rustup target add wasm32-unknown-unknown
     - cargo install wasm-bindgen-cli
@@ -221,7 +214,6 @@ build-linux-x86-64:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git config lfs.fetchexclude "*"
     - git checkout $CI_COMMIT_REF_NAME
     - cargo install cargo-audit
     - cargo audit -D unsound -D yanked
@@ -237,7 +229,6 @@ build-linux-x86-64:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git config lfs.fetchexclude "*"
     - git checkout $CI_COMMIT_REF_NAME
     - rustup toolchain install nightly --component rust-src
     - cargo install bpf-linker
@@ -255,7 +246,6 @@ generate:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git config lfs.fetchexclude "*"
     - git checkout $CI_COMMIT_REF_NAME
     - mkdir -p data/cupid/cupid-fosr
     - cargo run -- augment-dataset -o data/cupid/cupid-fosr/data.pcap -s 0 -d 1day -t 0 -p fast --tz CET -m cupid
@@ -277,7 +267,6 @@ generate:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git config lfs.fetchexclude "*"
     - git checkout $CI_COMMIT_REF_NAME
     - cargo test -p fosr -- --nocapture
   artifacts:
@@ -365,23 +354,30 @@ evaluate-cupid:
     - apt update
     - apt install -y graphviz git-lfs
     - git lfs pull
-    - mkdir public/cupid
     # evaluation
-    - cp data/cupid/README.md public/dataset-cupid.md
+    - cp data/cupid/README.md public/cupid.md
     - cd evaluation
     - pip install -r requirements.txt
     - python3 ./evaluation.py --eval ../data/cupid/cupid-eval/ --synthetic ../data/cupid/cupid-fosr --ref ../data/cupid/cupid-reference --output cupid
     - python3 ./export.py --dataset cupid
-    - cat results-cupid.md >> ../public/dataset-cupid.md
+    # copy the results table
+    - cat results-cupid.md >> ../public/cupid.md
+    - echo -e "\n\n# Figures\n\n" >> ../public/cupid.md
+    - cd cupid
+    # copy all experiments images
+    - ls *.png | while read file; do echo -e "## ${file/%'.png'}\n\n<center><img style='max-width:100%; width:auto' src='cupid/$file'></center>\n" >> ../public/cupid.md; done
+    - cd ..
+    - mv cupid ../public
     # prepare model descriptions to public/
+    # copy the automata
     - cd ../crates/fosr-lib/default_models/cupid/automata
     - sed -i 's/ N(.*"/"/g' * # to make the automata more readable
-    - echo -e "\n\n# Automata\n\n" >> ../../../../../public/dataset-cupid.md
-    - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/cupid/$file.png -Gdip=150; echo -e "## ${file/%'.dot'}\n\n<center><img style='max-width:100%; width:auto' src='cupid/$file.png'></center>\n" >> ../../../../../public/dataset-cupid.md; done
+    - echo -e "\n\n# Automata\n\n" >> ../../../../../public/cupid.md
+    - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/cupid/$file.png -Gdip=150; echo -e "## ${file/%'.dot'}\n\n<center><img style='max-width:100%; width:auto' src='cupid/$file.png'></center>\n" >> ../../../../../public/cupid.md; done
     - cd ../../../../..
+    # copy the BN
     - cp crates/fosr-lib/default_models/cupid/bn/bn_common.png public/cupid/bn.png
-    - echo -e "# Bayesian network\n\n<center><img style='max-width:100%; width:auto' src='cupid/bn.png'></center>\n" >> public/dataset-cupid.md
-    - mv public/dataset-cupid.md public/cupid.md
+    - echo -e "# Bayesian network\n\n<center><img style='max-width:100%; width:auto' src='cupid/bn.png'></center>\n" >> public/cupid.md
   artifacts:
     expire_in: 3 days
     paths:
