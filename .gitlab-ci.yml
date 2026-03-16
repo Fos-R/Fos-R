@@ -343,7 +343,7 @@ evaluate-dataset:
     - echo -e "\n\n# Figures\n\n" >> ../public/$DATASET.md
     - cd $DATASET
     # copy all experiments images
-    - ls *.png | while read file; do echo -e "## ${file/%'.png'}\n\n<center><img style='max-width:100%; width:auto' src='$DATASET/$file'></center>\n" >> ../public/$DATASET.md; done
+    - ls *.png | while read file; do echo -e "## ${file/%'.png'}\n\n<center><img style='max-width:100%; width:auto' src='$DATASET/$file'></center>\n" >> ../../public/$DATASET.md; done
     - cd ..
     - mv $DATASET ../public
     # prepare model descriptions to public/
