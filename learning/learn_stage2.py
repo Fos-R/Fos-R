@@ -26,8 +26,10 @@ def group_ip_dst(value):
             return 'Local'
     return 'Internet'
 
-def keep_first_service(value):
-    return value.split(",")[0]
+def reorder_services(value):
+    l = value.split(",")
+    l.sort()
+    return ",".join(l)
 
 def remove_public_ip(value):
     if group_ip_dst(value) == "Internet":
@@ -43,6 +45,11 @@ def get_network_role(ip, clients, servers):
         return "Internet"
 
 rare_ports = None
+
+def ttl_to_string(n):
+    if n == "":
+        return ""
+    return "ttl-"+f'{n:03}'
 
 def port_to_string(n):
     if n in rare_ports:
@@ -130,12 +137,12 @@ if __name__ == '__main__':
 
     tcp_fosr = None
     try:
-        tcp_fosr = pd.read_csv(tcp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service", "flags", "conn_state"])
+        tcp_fosr = pd.read_csv(tcp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service", "flags", "conn_state"])
     except Exception as e:
         print("No TCP data:",e)
     udp_fosr = None
     try:
-        udp_fosr = pd.read_csv(udp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service"])
+        udp_fosr = pd.read_csv(udp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service"])
     except Exception as e:
         print("No UDP data", e)
     ttl_fosr = pd.read_csv(ttl_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["uid", "ip", "ttl", "proto"]);
@@ -155,14 +162,27 @@ if __name__ == '__main__':
         flow = flow.join(tcp_fosr.set_index("uid"), on="uid", rsuffix="_tcp_fosr")
         flow['Connection State'] = flow['conn_state_tcp_fosr']
         flow = flow[(flow["Connection State"]!="other")] # remove rare and OTH connection states
-        flow["service_tcp_fosr"] = flow["service_tcp_fosr"].fillna("")
+        for v in ["service_tcp_fosr", "orig_l2_addr", "resp_l2_addr"]:
+            flow[v] = flow[v].fillna("") # prepare fields for concatenation
+        for v in ["orig_ttl", "resp_ttl"]:
+            flow[v] = flow[v].replace("-", "999") # marker for absent TTL (for example, no answer in a flow)
+            flow[v] = flow[v].fillna("")
 
     if udp_fosr is not None:
         flow = flow.join(udp_fosr.set_index("uid"), on="uid", rsuffix="_udp_fosr")
         flow["service_udp_fosr"] = flow["service_udp_fosr"].fillna("")
+        for v in ["service_udp_fosr", "orig_l2_addr_udp_fosr", "resp_l2_addr_udp_fosr"]:
+            flow[v] = flow[v].fillna("")
+        for v in ["orig_ttl_udp_fosr", "resp_ttl_udp_fosr"]:
+            flow[v] = flow[v].replace("-", "999")
+            flow[v] = flow[v].fillna("")
 
     # one or the other will be empty
     flow['Applicative Proto'] = flow['service_tcp_fosr'] + flow['service_udp_fosr']
+    flow['Src MAC'] = flow["orig_l2_addr"] + flow["orig_l2_addr_udp_fosr"]
+    flow['Dst MAC'] = (flow["resp_l2_addr"] + flow["resp_l2_addr_udp_fosr"]) # TODO: autocomplete
+    flow['Src TTL'] = flow["orig_ttl"].apply(ttl_to_string) + flow["orig_ttl_udp_fosr"].apply(ttl_to_string)
+    flow['Dst TTL'] = (flow["resp_ttl"].apply(ttl_to_string) + flow["resp_ttl_udp_fosr"].apply(ttl_to_string)) # TODO: autocomplete
 
     # remove flows with unknown service
     flow = flow[flow["Applicative Proto"] != ""]
@@ -174,7 +194,7 @@ if __name__ == '__main__':
     flow["Applicative Proto"] = flow["Applicative Proto"].apply(functools.partial(complete_proto,services))
     # we remove flows with unknown service
     flow = flow.dropna(subset="Applicative Proto")
-    flow['Applicative Proto'] = flow['Applicative Proto'].apply(keep_first_service)
+    flow['Applicative Proto'] = flow['Applicative Proto'].apply(reorder_services)
 
     m = 20 # at least 20 examples
     print("Removed rare services:\n",flow["Applicative Proto"].value_counts()[flow["Applicative Proto"].value_counts() < m])
