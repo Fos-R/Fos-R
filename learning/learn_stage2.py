@@ -118,8 +118,6 @@ if __name__ == '__main__':
     tcp_input = os.path.join(args.input, "fosr_tcp.log")
     udp_input = os.path.join(args.input, "fosr_udp.log")
 
-    ttl_input = os.path.join(args.input, "fosr_ttl.log")
-
     random.seed(0)
     gum.initRandom(seed=42)
 
@@ -145,7 +143,6 @@ if __name__ == '__main__':
         udp_fosr = pd.read_csv(udp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service"])
     except Exception as e:
         print("No UDP data", e)
-    ttl_fosr = pd.read_csv(ttl_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["uid", "ip", "ttl", "proto"]);
 
     print("Services in the TCP file:\n",tcp_fosr["service"].value_counts())
     print("Services in the UDP file:\n",udp_fosr["service"].value_counts())
@@ -235,7 +232,7 @@ if __name__ == '__main__':
     clients = []
     servers = []
 
-    ttl = {}
+    # ttl = {}
 
     for ip in ips:
         occurrences_dst = sum(flow["Dst IP Addr"]==ip)
@@ -247,12 +244,12 @@ if __name__ == '__main__':
             # print(ip,"is a server")
             servers.append(ip)
 
-        # broadcast IP will be have no TTL
-        if ip in ttl_fosr["ip"].values:
-            # use the most common TTL
-            ttl[ip] = int(ttl_fosr[ttl_fosr["ip"] == ip]["ttl"].mode()[0])
+    #     # broadcast IP will be have no TTL
+    #     if ip in ttl_fosr["ip"].values:
+    #         # use the most common TTL
+    #         ttl[ip] = int(ttl_fosr[ttl_fosr["ip"] == ip]["ttl"].mode()[0])
 
-    output["ttl"] = ttl
+    # output["ttl"] = ttl
     print("Local clients:",list(clients))
     print("Local servers:",list(servers))
 
@@ -267,14 +264,14 @@ if __name__ == '__main__':
         UDP_out_pkt_count = np.array(flow[flow['Proto']=="UDP"]["orig_pkts"]).reshape(-1,1)
         UDP_in_pkt_count = np.array(flow[flow['Proto']=="UDP"]["resp_pkts"]).reshape(-1,1)
 
-    def categorize(pkt_count):
+    def categorize(out_pkt_count, in_pkt_count):
         best_bic = None
-        # pkt_count = np.array([c + random.random() - 0.5 for c in pkt_count])
-        for i in range(5): # limit on the number of components
-            if i+1 > len(pkt_count): # at most as many components as the number of points
+        pkt_count = np.array([[out_pkt_count[i][0],in_pkt_count[i][0]] for i in range(len(out_pkt_count))])
+        for i in range(1,10): # limit on the number of components
+            if i > max(len(in_pkt_count), len(out_pkt_count)): # at most as many components as the number of points
                 break
             try:
-                m = GaussianMixture(n_components=i + 1, random_state=42, covariance_type="spherical")
+                m = GaussianMixture(n_components=i, random_state=42, covariance_type="full")
                 labels = m.fit_predict(pkt_count)
                 bic = m.bic(pkt_count)
                 if best_bic is None or best_bic > bic:
@@ -283,32 +280,24 @@ if __name__ == '__main__':
                     best_labels = labels
             except Exception as e:
                 print("Error during GaussianMixture:",e)
-        assert best_bic is not None
+
+        assert best_bic is not None # at least i==1
         best_labels = list(map(cluster_to_string,best_labels)) # make the variable discrete
-        return best_model.means_.reshape(1,-1)[0].tolist(), best_model.covariances_.tolist(), best_labels
-        # return best_model.means_.reshape(1,-1)[0].tolist(), [max(1e-6, v - 1/12) for v in best_model.covariances_], best_labels
+        return best_model.means_.tolist(), best_model.covariances_.tolist(), best_labels
 
-    # if tcp_fosr is not None:
-    #     print("Gaussian mixture for TCP out packet count")
-    #     mu, cov, labels = categorize(TCP_out_pkt_count)
-    #     output["tcp_out_pkt_gaussians"] = {"mu": mu, "cov": cov}
-    #     flow.loc[flow['Proto']=="TCP", ["Cat Out Packet"]] = labels
+    if tcp_fosr is not None:
+        print("Gaussian mixture for TCP packet count")
+        means, covar, labels = categorize(TCP_out_pkt_count, TCP_in_pkt_count)
+        output["tcp_pkt"] = { "mu": means, "cov": covar }
+        print(output)
+        flow.loc[flow['Proto']=="TCP", ["Cat Packet"]] = labels
 
-    #     print("Gaussian mixture for TCP in packet count")
-    #     mu, cov, labels = categorize(TCP_in_pkt_count)
-    #     output["tcp_in_pkt_gaussians"] = {"mu": mu, "cov": cov}
-    #     flow.loc[flow['Proto']=="TCP", ["Cat In Packet"]] = labels
-
-    # if udp_fosr is not None:
-    #     print("Gaussian mixture for UDP out packet count")
-    #     mu, cov, labels = categorize(UDP_out_pkt_count)
-    #     output["udp_out_pkt_gaussians"] = {"mu": mu, "cov": cov}
-    #     flow.loc[flow['Proto']=="UDP", ["Cat Out Packet"]] = labels
-
-    #     print("Gaussian mixture for UDP in packet count")
-    #     mu, cov, labels = categorize(UDP_in_pkt_count)
-    #     output["udp_in_pkt_gaussians"] = {"mu": mu, "cov": cov}
-    #     flow.loc[flow['Proto']=="UDP", ["Cat In Packet"]] = labels
+    if udp_fosr is not None:
+        print("Gaussian mixture for UDP packet count")
+        means, covar, labels = categorize(UDP_out_pkt_count, UDP_out_pkt_count)
+        output["udp_pkt"] = { "mu": means, "cov": covar }
+        print(output)
+        flow.loc[flow['Proto']=="UDP", ["Cat Packet"]] = labels
 
     flow = flow.replace("-", "none") # "-" causes pyagrum to parse the value as a number, leading to an exception
 
