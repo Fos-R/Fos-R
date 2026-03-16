@@ -10,13 +10,17 @@
 - New stage 2 with Bayesian networks
 - New default models (CICIDS17 and CUPID)
 
-#### fosr
+#### fosr-cli
 
+- Crate `fosr` renamed to `fosr-cli`
 - Faster (up to ~5x) generation
 - Added `--tz` option and timezone support more generally
 - Added `--jobs` option
-- Added `--default-models` and `--custom-models` options
 - Two generation profiles: fast or efficient
+
+#### fosr
+
+- New crate with an unstable GUI
 
 #### other
 
@@ -29,13 +33,14 @@
 
 #### fosr-lib
 
-- `fosr` crate split into `fosr-lib` and `fosr`
+- `fosr` crate split into `fosr-lib` and `fosr-cli`
 - Stage renaming (0->1, 1->2, 2->3, 3->4)
 - `stage4` module renamed to `inject`
 - Created the `export` module
 - Transformed panics into `Result`s
 - Slight modification of automata json format
 - Better library documentation
+- Split `augment-dataset` and `create-pcap` subcommands
 - Bugfixes
 
 #### fosr
@@ -46,7 +51,8 @@
 
 ### Removed
 
-- Pcap2flow mode
+- Removed pcap2flow mode
+- Removed `--packets-count`
 
 ## v0.1.2
 
