@@ -7,7 +7,7 @@ stages:
 
 ### BUILD
 
-.build-linux-x86-64:
+build-linux-x86-64:
   tags:
     - ci.inria.fr
     - large
@@ -17,7 +17,6 @@ stages:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git config lfs.fetchexclude "*"
     - git checkout $CI_COMMIT_REF_NAME
     # version without network injection
     - cargo build -p fosr
