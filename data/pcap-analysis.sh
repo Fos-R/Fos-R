@@ -1,4 +1,6 @@
 #!/bin/sh
+# This script is used to extract data for evaluation purposes
+
 if [ -f "data.pcap" ]; then
     echo "Zeek analysis"
     zeek -C -r data.pcap
