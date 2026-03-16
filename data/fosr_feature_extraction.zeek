@@ -16,6 +16,10 @@ export {
             vector of double &log;
         forward_list:
             vector of bool &log;
+        orig_l2_addr:
+            string &log &optional;
+        resp_l2_addr:
+            string &log &optional;
         orig_ttl:
             int &log;
         resp_ttl:
@@ -39,6 +43,10 @@ export {
             vector of double &log;
         forward_list:
             vector of bool &log;
+        orig_l2_addr:
+            string &log &optional;
+        resp_l2_addr:
+            string &log &optional;
         orig_ttl:
             int &log;
         resp_ttl:
@@ -60,6 +68,10 @@ export {
             vector of double &log;
         forward_list:
             vector of bool &log;
+        orig_l2_addr:
+            string &log &optional;
+        resp_l2_addr:
+            string &log &optional;
         orig_ttl:
             int &log;
         resp_ttl:
@@ -79,7 +91,8 @@ const max_packet_number = 1000;
 global iat_result_list : table[string] of vector of double;
 global src_ttl_result : table[string] of int;
 global dst_ttl_result : table[string] of int;
-#global mac_result : table[addr] of string;
+global orig_mac : table[string] of string;
+global resp_mac : table[string] of string;
 
 global flags_result_list : table[string] of vector of string;
 global forward_result_list : table[string] of vector of bool;
@@ -146,18 +159,14 @@ event new_packet(c : connection,
     }
 }
 
-#event connection_state_remove(c: connection) &priority=-10 {
-#    print c$orig;
-#    print c$resp;
-#    if (!(c$id$orig_h in mac_result) && c$orig?$l2_addr) {
-#        print "OK 1";
-#        mac_result[c$id$orig_h] = c$orig$l2_addr;
-#    }
-#    if (!(c$id$resp_h in mac_result) && c$resp?$l2_addr) {
-#        print "OK 2";
-#        mac_result[c$id$resp_h] = c$resp$l2_addr;
-#    }
-#}
+event connection_state_remove(c: connection) {
+    if (c$orig?$l2_addr) {
+        orig_mac[c$uid] = c$orig$l2_addr;
+    }
+    if (c$resp?$l2_addr) {
+        resp_mac[c$uid] = c$resp$l2_addr;
+    }
+}
 
 
 # For each TCP packet, log its direction, flags, payload and IAT
@@ -258,6 +267,8 @@ event connection_state_remove(c : connection) {
                     $iat = iat_result_list[c$uid],
                     $forward_list = forward_result_list[c$uid],
                     $orig_ttl = src_ttl_result[c$uid],
+                    $orig_l2_addr = orig_mac[c$uid],
+                    $resp_l2_addr = resp_mac[c$uid],
                     $conn_state = conn_state_category);
                 if (c$uid in dst_ttl_result) {
                     rec_tcp$resp_ttl = dst_ttl_result[c$uid];
@@ -270,6 +281,8 @@ event connection_state_remove(c : connection) {
                 Log::write(LOG_TCP, rec_tcp);
             }
 
+            delete orig_mac[c$uid];
+            delete resp_mac[c$uid];
             delete dst_ttl_result[c$uid];
             delete src_ttl_result[c$uid];
             delete first_time[c$uid];
@@ -285,6 +298,8 @@ event connection_state_remove(c : connection) {
                             $payloads = payloads_result_list[c$uid],
                             $iat = iat_result_list[c$uid],
                             $forward_list = forward_result_list[c$uid],
+                            $orig_l2_addr = orig_mac[c$uid],
+                            $resp_l2_addr = resp_mac[c$uid],
                             $orig_ttl = src_ttl_result[c$uid]);
                 if (c$uid in dst_ttl_result) {
                     rec_udp$resp_ttl = dst_ttl_result[c$uid];
@@ -297,6 +312,8 @@ event connection_state_remove(c : connection) {
                 Log::write(LOG_UDP, rec_udp);
             }
 
+            delete orig_mac[c$uid];
+            delete resp_mac[c$uid];
             delete dst_ttl_result[c$uid];
             delete src_ttl_result[c$uid];
             delete first_time[c$uid];
@@ -312,6 +329,8 @@ event connection_state_remove(c : connection) {
                             $codes = icmp_code_list[c$uid],
                             $iat = iat_result_list[c$uid],
                             $forward_list = forward_result_list[c$uid],
+                            $orig_l2_addr = orig_mac[c$uid],
+                            $resp_l2_addr = resp_mac[c$uid],
                             $orig_ttl = src_ttl_result[c$uid]);
                 if (c$uid in dst_ttl_result) {
                     rec_icmp$resp_ttl = dst_ttl_result[c$uid];
@@ -319,6 +338,8 @@ event connection_state_remove(c : connection) {
             Log::write(LOG_ICMP, rec_icmp);
             }
 
+            delete orig_mac[c$uid];
+            delete resp_mac[c$uid];
             delete dst_ttl_result[c$uid];
             delete src_ttl_result[c$uid];
             delete first_time[c$uid];
