@@ -3,7 +3,7 @@
 module FosR;
 
 export {
-    redef enum Log::ID += {LOG_TCP, LOG_UDP, LOG_ICMP, LOG_TTL};
+    redef enum Log::ID += {LOG_TCP, LOG_UDP, LOG_ICMP};
 
     type InfoTCP : record {
         ts:
@@ -16,6 +16,10 @@ export {
             vector of double &log;
         forward_list:
             vector of bool &log;
+        orig_ttl:
+            int &log;
+        resp_ttl:
+            int &log &optional;
         service:
             string &log &optional;
         flags:
@@ -23,8 +27,6 @@ export {
         conn_state:
             string &log;
     };
-
-# TODO: passer TTL dans InfoUDP, InfoICMP et InfoTCP
 
     type InfoUDP : record {
         ts:
@@ -37,6 +39,10 @@ export {
             vector of double &log;
         forward_list:
             vector of bool &log;
+        orig_ttl:
+            int &log;
+        resp_ttl:
+            int &log &optional;
         service:
             string &log &optional;
     };
@@ -54,19 +60,10 @@ export {
             vector of double &log;
         forward_list:
             vector of bool &log;
-    };
-
-    type InfoTTL : record {
-        uid:
-            string &log;
-        ip:
-            addr &log;
-        ttl:
+        orig_ttl:
             int &log;
-#        mac_addr:
-#            string &log;
-        proto:
-            count &log;
+        resp_ttl:
+            int &log &optional;
     };
 
 }
@@ -90,7 +87,6 @@ global payloads_result_list : table[string] of vector of string;
 global last_time : table[string] of double;
 global first_time : table[string] of time;
 global proto_list : table[string] of string;
-global proto_int_list: table[string] of count;
 global icmp_type_list : table[string] of vector of count;
 global icmp_code_list : table[string] of vector of count;
 global icmp_origin_list : table[string] of addr;
@@ -99,15 +95,11 @@ event zeek_init() {
     Log::create_stream(LOG_UDP, [ $columns = InfoUDP, $path = "fosr_udp" ]);
     Log::create_stream(LOG_TCP, [ $columns = InfoTCP, $path = "fosr_tcp" ]);
     Log::create_stream(LOG_ICMP, [ $columns = InfoICMP, $path = "fosr_icmp" ]);
-    Log::create_stream(LOG_TTL, [ $columns = InfoTTL, $path = "fosr_ttl" ]);
 }
 
 # Extract TTL from the first packets sent in that connection
 event new_packet(c : connection,
                  p : pkt_hdr) {
-    if (!(c$uid in proto_int_list)) {
-        proto_int_list[c$uid] = c$id$proto;
-    }
     if (p?$ip) { # IPv4 packet
         local ttl = p$ip$ttl;
         if (p$ip$src == c$id$orig_h) { # forward packet
@@ -125,7 +117,6 @@ event new_packet(c : connection,
 
 # ICMP: cette approche ne convient pas. Il faut regarder paquet par paquet pour obtenir les bons types et codes.
 # https://docs.zeek.org/en/master/scripts/base/init-bare.zeek.html#type-pkt_hdr
-
 
     if (c$id$proto == 1) { # ICMP
         local exists = c$uid in proto_list;
@@ -177,90 +168,70 @@ event tcp_packet(c : connection,
                  ack : count,
                  len : count,
                  payload : string) {
-    local exists = c$uid in proto_list;
-    if (!exists) {
-        first_time[c$uid] = network_time();
-        flags_result_list[c$uid] = vector();
-        iat_result_list[c$uid] = vector();
-        forward_result_list[c$uid] = vector();
-        payloads_result_list[c$uid] = vector();
-        proto_list[c$uid] = "tcp";
-    }
-    if (|flags_result_list[c$uid]| < max_packet_number) {
-        flags_result_list[c$uid][| flags_result_list[c$uid] |] = flags;
-        forward_result_list[c$uid][| forward_result_list[c$uid] |] = is_orig;
-        payloads_result_list[c$uid][| payloads_result_list[c$uid] |] =
-            encode_base64(payload);
+    if (is_v4_addr(c$id$orig_h)) { # IPv4 only
+        local exists = c$uid in proto_list;
         if (!exists) {
-            iat_result_list[c$uid][| iat_result_list[c$uid] |] = 0;
-        } else {
-            local iat = time_to_double(network_time()) - last_time[c$uid];
-            if (iat < 0) {
-                print "Negative IAT!";
+            first_time[c$uid] = network_time();
+            flags_result_list[c$uid] = vector();
+            iat_result_list[c$uid] = vector();
+            forward_result_list[c$uid] = vector();
+            payloads_result_list[c$uid] = vector();
+            proto_list[c$uid] = "tcp";
+        }
+        if (|flags_result_list[c$uid]| < max_packet_number) {
+            flags_result_list[c$uid][| flags_result_list[c$uid] |] = flags;
+            forward_result_list[c$uid][| forward_result_list[c$uid] |] = is_orig;
+            payloads_result_list[c$uid][| payloads_result_list[c$uid] |] =
+                encode_base64(payload);
+            if (!exists) {
                 iat_result_list[c$uid][| iat_result_list[c$uid] |] = 0;
             } else {
-                iat_result_list[c$uid][| iat_result_list[c$uid] |] = iat;
+                local iat = time_to_double(network_time()) - last_time[c$uid];
+                if (iat < 0) {
+                    print "Negative IAT!";
+                    iat_result_list[c$uid][| iat_result_list[c$uid] |] = 0;
+                } else {
+                    iat_result_list[c$uid][| iat_result_list[c$uid] |] = iat;
+                }
             }
         }
+        last_time[c$uid] = time_to_double(network_time());
     }
-    last_time[c$uid] = time_to_double(network_time());
 }
 
 # For each UDP packet, log its direction, payload and IAT
 event udp_contents(c : connection, is_orig : bool, contents : string) {
-    local exists = c$uid in proto_list;
-    if (!exists) {
-        first_time[c$uid] = network_time();
-        iat_result_list[c$uid] = vector();
-        forward_result_list[c$uid] = vector();
-        payloads_result_list[c$uid] = vector();
-        proto_list[c$uid] = "udp";
-    }
-    if (|forward_result_list[c$uid]| < max_packet_number) {
-        forward_result_list[c$uid][| forward_result_list[c$uid] |] = is_orig;
-        payloads_result_list[c$uid][| payloads_result_list[c$uid] |] =
-            encode_base64(contents);
+    if (is_v4_addr(c$id$orig_h)) { # IPv4 only
+        local exists = c$uid in proto_list;
         if (!exists) {
-            iat_result_list[c$uid][| iat_result_list[c$uid] |] = 0;
-        } else {
-            local iat = time_to_double(network_time()) - last_time[c$uid];
-            if (iat < 0) {
-                print "Negative IAT!";
+            first_time[c$uid] = network_time();
+            iat_result_list[c$uid] = vector();
+            forward_result_list[c$uid] = vector();
+            payloads_result_list[c$uid] = vector();
+            proto_list[c$uid] = "udp";
+        }
+        if (|forward_result_list[c$uid]| < max_packet_number) {
+            forward_result_list[c$uid][| forward_result_list[c$uid] |] = is_orig;
+            payloads_result_list[c$uid][| payloads_result_list[c$uid] |] =
+                encode_base64(contents);
+            if (!exists) {
                 iat_result_list[c$uid][| iat_result_list[c$uid] |] = 0;
             } else {
-                iat_result_list[c$uid][| iat_result_list[c$uid] |] = iat;
+                local iat = time_to_double(network_time()) - last_time[c$uid];
+                if (iat < 0) {
+                    print "Negative IAT!";
+                    iat_result_list[c$uid][| iat_result_list[c$uid] |] = 0;
+                } else {
+                    iat_result_list[c$uid][| iat_result_list[c$uid] |] = iat;
+                }
             }
         }
+        last_time[c$uid] = time_to_double(network_time());
     }
-    last_time[c$uid] = time_to_double(network_time());
 }
 
 # At the connection closure, save the connection data
 event connection_state_remove(c : connection) {
-    if (c$uid in src_ttl_result) {
-        local rec_src_ttl = InfoTTL(
-            $uid = c$uid,
-            $ip = c$id$orig_h,
-            $ttl = src_ttl_result[c$uid],
-#            $mac_addr = mac_result[c$id$orig_h],
-            $proto = proto_int_list[c$uid]);
-        Log::write(LOG_TTL, rec_src_ttl);
-        delete src_ttl_result[c$uid];
-#        delete mac_result[c$id$orig_h];
-    }
-    if (c$uid in dst_ttl_result) {
-        local rec_dst_ttl = InfoTTL(
-            $uid = c$uid,
-            $ip = c$id$resp_h,
-            $ttl = dst_ttl_result[c$uid],
-#            $mac_addr = mac_result[c$id$resp_h],
-            $proto = proto_int_list[c$uid]);
-        Log::write(LOG_TTL, rec_dst_ttl);
-        delete dst_ttl_result[c$uid];
-#        delete mac_result[c$id$resp_h];
-    }
-    delete proto_int_list[c$uid];
-
     if (c$uid in proto_list) {
         if (proto_list[c$uid] == "tcp") {
             local conn_state_category: string;
@@ -278,53 +249,78 @@ event connection_state_remove(c : connection) {
                 conn_state_category = "other";
             }
 
-            local rec_tcp = InfoTCP(
-                $ts = first_time[c$uid],
-                $uid = c$uid,
-                $payloads = payloads_result_list[c$uid],
-                $flags = flags_result_list[c$uid],
-                $iat = iat_result_list[c$uid],
-                $forward_list = forward_result_list[c$uid],
-                $conn_state = conn_state_category);
-            if (c$conn?$service) {
-                rec_tcp$service = c$conn$service + ":" + cat(c$id$resp_p);
-            } else {
-                rec_tcp$service = cat(c$id$resp_p);
+            if (c$uid in src_ttl_result) { # incomplete flows may miss it
+                local rec_tcp = InfoTCP(
+                    $ts = first_time[c$uid],
+                    $uid = c$uid,
+                    $payloads = payloads_result_list[c$uid],
+                    $flags = flags_result_list[c$uid],
+                    $iat = iat_result_list[c$uid],
+                    $forward_list = forward_result_list[c$uid],
+                    $orig_ttl = src_ttl_result[c$uid],
+                    $conn_state = conn_state_category);
+                if (c$uid in dst_ttl_result) {
+                    rec_tcp$resp_ttl = dst_ttl_result[c$uid];
+                }
+                if (c$conn?$service) {
+                    rec_tcp$service = c$conn$service + ":" + cat(c$id$resp_p);
+                } else {
+                    rec_tcp$service = cat(c$id$resp_p);
+                }
+                Log::write(LOG_TCP, rec_tcp);
             }
 
+            delete dst_ttl_result[c$uid];
+            delete src_ttl_result[c$uid];
             delete first_time[c$uid];
             delete flags_result_list[c$uid];
             delete payloads_result_list[c$uid];
             delete iat_result_list[c$uid];
             delete forward_result_list[c$uid];
-            Log::write(LOG_TCP, rec_tcp);
         } else if (proto_list[c$uid] == "udp") {
-            local rec_udp =
-                InfoUDP($ts = first_time[c$uid],
-                        $uid = c$uid,
-                        $payloads = payloads_result_list[c$uid],
-                        $iat = iat_result_list[c$uid],
-                        $forward_list = forward_result_list[c$uid]);
-            if (c$conn?$service) {
-                rec_udp$service = c$conn$service + ":" + cat(c$id$resp_p);
-            } else {
-                rec_udp$service = cat(c$id$resp_p);
+            if (c$uid in src_ttl_result) { # incomplete flows may miss it
+                local rec_udp =
+                    InfoUDP($ts = first_time[c$uid],
+                            $uid = c$uid,
+                            $payloads = payloads_result_list[c$uid],
+                            $iat = iat_result_list[c$uid],
+                            $forward_list = forward_result_list[c$uid],
+                            $orig_ttl = src_ttl_result[c$uid]);
+                if (c$uid in dst_ttl_result) {
+                    rec_udp$resp_ttl = dst_ttl_result[c$uid];
+                }
+                if (c$conn?$service) {
+                    rec_udp$service = c$conn$service + ":" + cat(c$id$resp_p);
+                } else {
+                    rec_udp$service = cat(c$id$resp_p);
+                }
+                Log::write(LOG_UDP, rec_udp);
             }
 
+            delete dst_ttl_result[c$uid];
+            delete src_ttl_result[c$uid];
             delete first_time[c$uid];
             delete payloads_result_list[c$uid];
             delete iat_result_list[c$uid];
             delete forward_result_list[c$uid];
-            Log::write(LOG_UDP, rec_udp);
         } else if (proto_list[c$uid] == "icmp") {
-            local rec_icmp =
-                InfoICMP($ts = first_time[c$uid],
-                        $uid = c$uid,
-                        $types = icmp_type_list[c$uid],
-                        $codes = icmp_code_list[c$uid],
-                        $iat = iat_result_list[c$uid],
-                        $forward_list = forward_result_list[c$uid]);
+            if (c$uid in src_ttl_result) { # incomplete flows may miss it
+                local rec_icmp =
+                    InfoICMP($ts = first_time[c$uid],
+                            $uid = c$uid,
+                            $types = icmp_type_list[c$uid],
+                            $codes = icmp_code_list[c$uid],
+                            $iat = iat_result_list[c$uid],
+                            $forward_list = forward_result_list[c$uid],
+                            $orig_ttl = src_ttl_result[c$uid]);
+                if (c$uid in dst_ttl_result) {
+                    rec_icmp$resp_ttl = dst_ttl_result[c$uid];
+                }
+            Log::write(LOG_ICMP, rec_icmp);
+            }
 
+            delete dst_ttl_result[c$uid];
+            delete src_ttl_result[c$uid];
             delete first_time[c$uid];
             delete payloads_result_list[c$uid];
             delete iat_result_list[c$uid];
@@ -332,7 +328,6 @@ event connection_state_remove(c : connection) {
             delete icmp_type_list[c$uid];
             delete icmp_code_list[c$uid];
             delete icmp_origin_list[c$uid];
-            Log::write(LOG_ICMP, rec_icmp);
         }
     }
 }
