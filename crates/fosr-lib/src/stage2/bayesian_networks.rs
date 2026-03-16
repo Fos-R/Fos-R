@@ -1002,7 +1002,7 @@ impl Stage2 for BNGenerator {
             }
 
             domain_vector.timestamp = Some(ts.data.unix_time);
-            let uniform = Uniform::new(32000, 65535).unwrap();
+            let uniform = OS::Windows::get_ephemeral_port_distr(); // TODO: use the actual OS
             domain_vector.src_port = Some(uniform.sample(&mut rng) as u16);
             if domain_vector.dst_port.is_none() {
                 // Some protocol have random destination port, like FTP-data

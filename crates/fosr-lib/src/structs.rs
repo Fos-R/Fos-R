@@ -7,6 +7,7 @@ use std::fmt::{Debug, Display};
 use std::net::Ipv4Addr;
 use std::time::Duration;
 use thingbuf::Recycle;
+use rand_distr::Uniform;
 
 /// A general wrapper to pass a seed along with actual data
 #[derive(Debug, Clone)]
@@ -149,6 +150,14 @@ impl OS {
         match self {
             OS::Linux => 64,
             OS::Windows => 128,
+        }
+    }
+
+    // Source: https://en.wikipedia.org/wiki/Ephemeral_port
+    pub fn get_ephemeral_port_distr(&self) -> Uniform<u16> {
+        match self {
+            OS::Linux => Uniform::new(32768, 60999).unwrap(),
+            OS::Windows => Uniform::new(49152, 65535).unwrap(),
         }
     }
 }
