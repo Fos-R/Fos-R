@@ -247,15 +247,18 @@ generate:
     GIT_CHECKOUT: "false"
   script:
     - git checkout $CI_COMMIT_REF_NAME
-    - mkdir -p data/cupid/cupid-fosr
-    - cargo run -- augment-dataset -o data/cupid/cupid-fosr/data.pcap -s 0 -d 1day -t 0 -p fast --tz CET -m cupid
-    - mkdir -p data/cicids17/cicids17-fosr
-    - cargo run -- augment-dataset -o data/cicids17/cicids17-fosr/data.pcap -s 0 -d 1day -t 0 -p fast --tz CET -m cicids17
+    - mkdir -p data/$DATASET/$DATASET-fosr
+    - cargo run -- augment-dataset -o data/$DATASET/$DATASET-fosr/data.pcap -s 0 -d 1day -t 0 -p fast --tz CET -m $DATASET
+  parallel:
+    matrix:
+      - DATASET:
+        - cupid
+        - cicids17
   artifacts:
     expire_in: 3 days
     when: always
     paths:
-      - data/*/*-fosr/data.pcap
+      - data/$DATASET/$DATASET-fosr/data.pcap
 
 .tests:
   tags:
@@ -278,7 +281,7 @@ generate:
 
 ### ANALYZE
 
-analysis-cupid:
+analyze-dataset:
   image: zeek/zeek
   tags:
     - ci.inria.fr
@@ -288,48 +291,23 @@ analysis-cupid:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git config lfs.fetchinclude "data/cupid"
+    - git config lfs.fetchinclude "data/$DATASET"
     - git checkout $CI_COMMIT_REF_NAME
     - apt update
     - apt install -y tshark suricata git-lfs
     - git lfs pull
     # process all the pcaps
-    - cd data/cupid/cupid-fosr
+    - cd data/$DATASET/$DATASET-fosr
     - ../../pcap-analysis.sh
-    - cd ../cupid-eval
+    - cd ../$DATASET-eval
     - ../../pcap-analysis.sh
-    - cd ../cupid-reference
+    - cd ../$DATASET-reference
     - ../../pcap-analysis.sh
-  artifacts:
-    expire_in: 3 days
-    paths: # do not export the pcap files
-      - data/**/*.csv
-      - data/**/*.log
-      - data/**/*.txt
-
-analysis-cicids17:
-  image: zeek/zeek
-  tags:
-    - ci.inria.fr
-    - large_more_disk
-  stage: analyze
-  script:
-  variables:
-    GIT_STRATEGY: clone
-    GIT_CHECKOUT: "false"
-  script:
-    - git config lfs.fetchinclude "data/cicids17"
-    - git checkout $CI_COMMIT_REF_NAME
-    - apt update
-    - apt install -y tshark suricata git-lfs
-    - git lfs pull
-    # process all the pcaps
-    - cd data/cicids17/cicids17-fosr
-    - ../../pcap-analysis.sh
-    - cd ../cicids17-eval
-    - ../../pcap-analysis.sh
-    - cd ../cicids17-reference
-    - ../../pcap-analysis.sh
+  parallel:
+    matrix:
+      - DATASET:
+        - cupid
+        - cicids17
   artifacts:
     expire_in: 3 days
     paths: # do not export the pcap files
@@ -339,7 +317,7 @@ analysis-cicids17:
 
 ### EVALUATE
 
-evaluate-cupid:
+evaluate-dataset:
   image: python
   tags:
     - ci.inria.fr
@@ -349,78 +327,45 @@ evaluate-cupid:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git config lfs.fetchinclude "data/cupid"
+    - git config lfs.fetchinclude "data/$DATASET"
     - git checkout $CI_COMMIT_REF_NAME
     - apt update
     - apt install -y graphviz git-lfs
     - git lfs pull
     # evaluation
-    - cp data/cupid/README.md public/cupid.md
+    - cp data/$DATASET/README.md public/$DATASET.md
     - cd evaluation
     - pip install -r requirements.txt
-    - python3 ./evaluation.py --eval ../data/cupid/cupid-eval/ --synthetic ../data/cupid/cupid-fosr --ref ../data/cupid/cupid-reference --output cupid
-    - python3 ./export.py --dataset cupid
+    - python3 ./evaluation.py --eval ../data/$DATASET/$DATASET-eval/ --synthetic ../data/$DATASET/$DATASET-fosr --ref ../data/$DATASET/$DATASET-reference --output $DATASET
+    - python3 ./export.py --dataset $DATASET
     # copy the results table
-    - cat results-cupid.md >> ../public/cupid.md
-    - echo -e "\n\n# Figures\n\n" >> ../public/cupid.md
-    - cd cupid
+    - cat results-$DATASET.md >> ../public/$DATASET.md
+    - echo -e "\n\n# Figures\n\n" >> ../public/$DATASET.md
+    - cd $DATASET
     # copy all experiments images
-    - ls *.png | while read file; do echo -e "## ${file/%'.png'}\n\n<center><img style='max-width:100%; width:auto' src='cupid/$file'></center>\n" >> ../public/cupid.md; done
+    - ls *.png | while read file; do echo -e "## ${file/%'.png'}\n\n<center><img style='max-width:100%; width:auto' src='$DATASET/$file'></center>\n" >> ../public/$DATASET.md; done
     - cd ..
-    - mv cupid ../public
+    - mv $DATASET ../public
     # prepare model descriptions to public/
     # copy the automata
-    - cd ../crates/fosr-lib/default_models/cupid/automata
+    - cd ../crates/fosr-lib/default_models/$DATASET/automata
     - sed -i 's/ N(.*"/"/g' * # to make the automata more readable
-    - echo -e "\n\n# Automata\n\n" >> ../../../../../public/cupid.md
-    - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/cupid/$file.png -Gdip=150; echo -e "## ${file/%'.dot'}\n\n<center><img style='max-width:100%; width:auto' src='cupid/$file.png'></center>\n" >> ../../../../../public/cupid.md; done
+    - echo -e "\n\n# Automata\n\n" >> ../../../../../public/$DATASET.md
+    - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/$DATASET/$file.png -Gdip=150; echo -e "## ${file/%'.dot'}\n\n<center><img style='max-width:100%; width:auto' src='$DATASET/$file.png'></center>\n" >> ../../../../../public/$DATASET.md; done
     - cd ../../../../..
     # copy the BN
-    - cp crates/fosr-lib/default_models/cupid/bn/bn_common.png public/cupid/bn.png
-    - echo -e "# Bayesian network\n\n<center><img style='max-width:100%; width:auto' src='cupid/bn.png'></center>\n" >> public/cupid.md
+    - cp crates/fosr-lib/default_models/$DATASET/bn/bn_common.png public/$DATASET/bn.png
+    - echo -e "# Bayesian network\n\n<center><img style='max-width:100%; width:auto' src='$DATASET/bn.png'></center>\n" >> public/$DATASET.md
+  parallel:
+    matrix:
+      - DATASET:
+        - cupid
+        - cicids17
   artifacts:
     expire_in: 3 days
     paths:
-      - public/cupid.md
-      - public/cupid/
-
-evaluate-cicids17:
-  image: python
-  tags:
-    - ci.inria.fr
-    - large_more_disk
-  stage: evaluate
-  variables:
-    GIT_STRATEGY: clone
-    GIT_CHECKOUT: "false"
-  script:
-    - git config lfs.fetchinclude "data/cicids17"
-    - git checkout $CI_COMMIT_REF_NAME
-    - apt update
-    - apt install -y graphviz git-lfs
-    - git lfs pull
-    - mkdir public/cicids17
-    # evaluation
-    - cp data/cicids17/README.md public/dataset-cicids17.md
-    - cd evaluation
-    - pip install -r requirements.txt
-    - python3 ./evaluation.py --eval ../data/cicids17/cicids17-eval/ --synthetic ../data/cicids17/cicids17-fosr --ref ../data/cicids17/cicids17-reference --output cicids17
-    - python3 ./export.py --dataset cicids17
-    - cat results-cicids17.md >> ../public/dataset-cicids17.md
-    # prepare model descriptions to public/
-    - cd ../crates/fosr-lib/default_models/cicids17/automata
-    - sed -i 's/ N(.*"/"/g' * # to make the automata more readable
-    - echo -e "\n\n# Automata\n\n" >> ../../../../../public/dataset-cicids17.md
-    - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/cicids17/$file.png -Gdip=150; echo -e "## ${file/%'.dot'}\n\n<center><img style='max-width:100%; width:auto' src='cicids17/$file.png'></center>\n" >> ../../../../../public/dataset-cicids17.md; done
-    - cd ../../../../..
-    - cp crates/fosr-lib/default_models/cicids17/bn/bn_common.png public/cicids17/bn.png
-    - echo -e "# Bayesian network\n\n<center><img style='max-width:100%; width:auto' src='cicids17/bn.png'></center>\n" >> public/dataset-cicids17.md
-    - mv public/dataset-cicids17.md public/cicids17.md
-  artifacts:
-    expire_in: 3 days
-    paths:
-      - public/cicids17.md
-      - public/cicids17/
+      - public/$DATASET.md
+      - public/$DATASET/
 
 # DEPLOY
 
@@ -463,7 +408,7 @@ pages:
     - pandoc intro.md compile.md howto-pcap.md howto-inject.md howto-untaint.md config_doc.md other_software.md schema.md lib.md roadmap.md usecases.md analysis.md limitations.md refs.md footer.md -o index.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
     - pandoc changelog.md -o changelog.html --template template.html --include-after-body footer.html --standalone --toc
     - pandoc cupid.md -o cupid.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
-    - pandoc cicids17.md -o cicids17.html --template template.html --include-after-body footer.html --standalone --toc
+    - pandoc cicids17.md -o cicids17.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
     - rm *.md
   artifacts:
     expire_in: 3 days
