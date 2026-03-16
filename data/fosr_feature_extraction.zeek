@@ -17,7 +17,7 @@ export {
         forward_list:
             vector of bool &log;
         orig_l2_addr:
-            string &log &optional;
+            string &log;
         resp_l2_addr:
             string &log &optional;
         orig_ttl:
@@ -44,7 +44,7 @@ export {
         forward_list:
             vector of bool &log;
         orig_l2_addr:
-            string &log &optional;
+            string &log;
         resp_l2_addr:
             string &log &optional;
         orig_ttl:
