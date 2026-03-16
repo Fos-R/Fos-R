@@ -74,6 +74,8 @@ build-linux-crosscompile:
       - TARGET: arm-unknown-linux-musleabihf # legacy raspberry pi
         DEPENDENCIES: gcc-arm-linux-gnueabihf
         GCC: arm-linux-gnueabihf-gcc
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   artifacts:
     expire_in: 3 days
     paths:
@@ -100,6 +102,8 @@ build-win-x86:
       - TARGET:
         - x86_64-pc-windows-gnu # x86-64
         - i686-pc-windows-gnu # x86-32
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   artifacts:
     expire_in: 3 days
     paths:
@@ -120,6 +124,8 @@ build-wasm32:
     - cargo install wasm-bindgen-cli
     - cargo build -p fosr-gui -r --target wasm32-unknown-unknown --no-default-features --features models
     - wasm-bindgen --out-dir public --target web target/wasm32-unknown-unknown/release/fosr_gui.wasm --no-typescript
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   artifacts:
     expire_in: 3 days
     paths:
@@ -128,7 +134,7 @@ build-wasm32:
 
 ### TEST
 
-.test-audit:
+test-audit:
   tags:
     - ci.inria.fr
     - large
@@ -137,13 +143,15 @@ build-wasm32:
   variables:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
     - git checkout $CI_COMMIT_REF_NAME
     - cargo install cargo-audit
     - cargo audit -D unsound -D yanked
   allow_failure: true
 
-.test-publish:
+test-publish:
   tags:
     - ci.inria.fr
     - large
@@ -152,6 +160,8 @@ build-wasm32:
   variables:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
     - git checkout $CI_COMMIT_REF_NAME
     - rustup toolchain install nightly --component rust-src
@@ -184,7 +194,7 @@ generate:
     paths:
       - data/$DATASET/$DATASET-fosr/data.pcap
 
-.tests:
+tests:
   tags:
     - ci.inria.fr
     - large
