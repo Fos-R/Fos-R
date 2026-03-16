@@ -7,7 +7,7 @@ stages:
 
 ### BUILD
 
-.build-linux-x86-64:
+build-linux-x86-64:
   tags:
     - ci.inria.fr
     - large
@@ -40,31 +40,7 @@ stages:
       - target/debian/*.deb
       - doc
 
-.build-linux-x86-32:
-  tags:
-    - ci.inria.fr
-    - large
-  stage: build
-  image: rust
-  variables:
-    GIT_STRATEGY: clone
-    GIT_CHECKOUT: "false"
-  script:
-    - git checkout $CI_COMMIT_REF_NAME
-    - cargo install cargo-deb
-    - apt update
-    - apt install -y gcc-i686-linux-gnu
-    - rustup target add i686-unknown-linux-gnu
-    # Aya doesn’t compile for some reason
-    - cargo build --target=i686-unknown-linux-gnu --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\" -p fosr -r
-    - cargo deb --target=i686-unknown-linux-gnu -p fosr -- --config target.i686-unknown-linux-gnu.linker=\"i686-linux-gnu-gcc\"
-  artifacts:
-    expire_in: 3 days
-    paths:
-      - target/*/release/fosr
-      - target/debian/*.deb
-
-.build-linux-legacy-raspberry-pi:
+build-linux-legacy-raspberry-pi:
   # a build targeting old rapsberry pi with armv6 processors
   tags:
     - ci.inria.fr
@@ -91,7 +67,7 @@ stages:
       - target/*/release/fosr
       - target/debian/*.deb
 
-.build-linux-arm-32:
+build-linux-crosscompile:
   tags:
     - ci.inria.fr
     - large
@@ -106,42 +82,28 @@ stages:
     - cargo install bpf-linker
     - cargo install cargo-deb
     - apt update
-    - apt install -y gcc-arm-linux-gnueabihf
-    - rustup target add arm-unknown-linux-gnueabihf
-    - cargo build --target=arm-unknown-linux-gnueabihf --config target.arm-unknown-linux-gnueabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
-    - cargo deb --target=arm-unknown-linux-gnueabihf -p fosr -- --config target.arm-unknown-linux-gnueabihf.linker=\"arm-linux-gnueabihf-gcc\"
+    - apt install -y $DEPENDENCIES
+    - rustup target add $TARGET
+    - cargo build --target=$TARGET --config target.$TARGET.linker=\"$GCC\" -p fosr -r
+    - cargo deb --target=$TARGET -p fosr -- --config target.$TARGET.linker=\"$GCC\"
+  parallel:
+    matrix:
+      - TARGET: aarch64-unknown-linux-gnu # ARM64
+        DEPENDENCIES: gcc-aarch64-linux-gnu
+        GCC: aarch64-linux-gnu-gcc 
+      - TARGET: arm-unknown-linux-gnueabihf # ARM32
+        DEPENDENCIES: gcc-arm-linux-gnueabihf
+        GCC: arm-linux-gnueabihf-gcc
+      - TARGET: i686-unknown-linux-gnu #x86-32
+        DEPENDENCIES: gcc-i686-linux-gnu
+        GCC: i686-linux-gnu-gcc
   artifacts:
     expire_in: 3 days
     paths:
       - target/*/release/fosr
       - target/debian/*.deb
 
-.build-linux-arm-64:
-  tags:
-    - ci.inria.fr
-    - large
-  stage: build
-  image: rust
-  variables:
-    GIT_STRATEGY: clone
-    GIT_CHECKOUT: "false"
-  script:
-    - git checkout $CI_COMMIT_REF_NAME
-    - rustup toolchain install nightly --component rust-src
-    - cargo install bpf-linker
-    - cargo install cargo-deb
-    - apt update
-    - apt install -y gcc-aarch64-linux-gnu
-    - rustup target add aarch64-unknown-linux-gnu
-    - cargo build --target=aarch64-unknown-linux-gnu --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\" -p fosr -r
-    - cargo deb --target=aarch64-unknown-linux-gnu -p fosr -- --config target.aarch64-unknown-linux-gnu.linker=\"aarch64-linux-gnu-gcc\"
-  artifacts:
-    expire_in: 3 days
-    paths:
-      - target/*/release/fosr
-      - target/debian/*.deb
-
-.build-win64-x86:
+build-win-x86:
   tags:
     - ci.inria.fr
     - large
@@ -154,34 +116,19 @@ stages:
     - git checkout $CI_COMMIT_REF_NAME
     - apt update
     - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
-    - rustup target add x86_64-pc-windows-gnu
-    - cargo build --target=x86_64-pc-windows-gnu -p fosr -r
+    - rustup target add $TARGET
+    - cargo build --target=$TARGET -p fosr -r
+  parallel:
+    matrix:
+      - TARGET:
+        - x86_64-pc-windows-gnu
+        - i686-pc-windows-gnu
   artifacts:
     expire_in: 3 days
     paths:
       - target/*/release/fosr.exe
 
-.build-win32-x86:
-  tags:
-    - ci.inria.fr
-    - large
-  stage: build
-  image: rust
-  variables:
-    GIT_STRATEGY: clone
-    GIT_CHECKOUT: "false"
-  script:
-    - git checkout $CI_COMMIT_REF_NAME
-    - apt update
-    - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
-    - rustup target add i686-pc-windows-gnu
-    - cargo build --target=i686-pc-windows-gnu -p fosr -r
-  artifacts:
-    expire_in: 3 days
-    paths:
-      - target/*/release/fosr.exe
-
-.build-wasm32:
+build-wasm32:
   tags:
     - ci.inria.fr
     - large
