@@ -40,33 +40,6 @@ build-linux-x86-64:
       - target/debian/*.deb
       - doc
 
-build-linux-legacy-raspberry-pi:
-  # a build targeting old rapsberry pi with armv6 processors
-  tags:
-    - ci.inria.fr
-    - large
-  stage: build
-  image: rust
-  variables:
-    GIT_STRATEGY: clone
-    GIT_CHECKOUT: "false"
-  script:
-    - git checkout $CI_COMMIT_REF_NAME
-    - cargo install cargo-deb
-    - apt update
-    - apt install -y gcc-arm-linux-gnueabihf
-    - rustup target add arm-unknown-linux-musleabihf
-    - cargo build --target=arm-unknown-linux-musleabihf --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\" -p fosr -r
-    - cargo deb --target=arm-unknown-linux-musleabihf -p fosr -- --config target.arm-unknown-linux-musleabihf.linker=\"arm-linux-gnueabihf-gcc\"
-    - cd target/debian
-    - debname=$(ls *.deb)
-    - mv $debname rpi_$debname
-  artifacts:
-    expire_in: 3 days
-    paths:
-      - target/*/release/fosr
-      - target/debian/*.deb
-
 build-linux-crosscompile:
   tags:
     - ci.inria.fr
@@ -86,6 +59,7 @@ build-linux-crosscompile:
     - rustup target add $TARGET
     - cargo build --target=$TARGET --config target.$TARGET.linker=\"$GCC\" -p fosr -r
     - cargo deb --target=$TARGET -p fosr -- --config target.$TARGET.linker=\"$GCC\"
+    - if [ $TARGET = "arm-unknown-linux-musleabihf" ]; then cd target/debian; debname=$(ls *.deb); mv $debname rpi_$debname; fi
   parallel:
     matrix:
       - TARGET: aarch64-unknown-linux-gnu # ARM64
@@ -97,6 +71,9 @@ build-linux-crosscompile:
       - TARGET: i686-unknown-linux-gnu #x86-32
         DEPENDENCIES: gcc-i686-linux-gnu
         GCC: i686-linux-gnu-gcc
+      - TARGET: arm-unknown-linux-musleabihf # legacy raspberry pi
+        DEPENDENCIES: gcc-arm-linux-gnueabihf
+        GCC: arm-linux-gnueabihf-gcc
   artifacts:
     expire_in: 3 days
     paths:
@@ -121,8 +98,8 @@ build-win-x86:
   parallel:
     matrix:
       - TARGET:
-        - x86_64-pc-windows-gnu
-        - i686-pc-windows-gnu
+        - x86_64-pc-windows-gnu # x86-64
+        - i686-pc-windows-gnu # x86-32
   artifacts:
     expire_in: 3 days
     paths:
@@ -330,14 +307,11 @@ pages:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git config lfs.fetchexclude "*"
     - git checkout $CI_COMMIT_REF_NAME
     - apt update
     - apt install -y pandoc
     - mv doc public/
     - mv target public/bin
-    - mv *.zip public/
-    - mv sample.pcap public/
     - cat CHANGELOG.md >> public/changelog.md
     - cd public
     # update the build number
