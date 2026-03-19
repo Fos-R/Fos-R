@@ -1,3 +1,5 @@
+use crate::shared::ui_utils::egui::TextFormat;
+use crate::shared::ui_utils::egui::text::LayoutJob;
 use eframe::egui;
 
 /// Display a small info icon with a tooltip.
@@ -149,4 +151,28 @@ pub fn edit_optional_multiline_string(
     {
         *value = None;
     }
+}
+
+// Helper for required label with red *
+pub fn required_label(ui: &mut egui::Ui, text: &str) {
+    let mut job = LayoutJob::default();
+
+    job.append(
+        text,
+        0.0,
+        TextFormat {
+            color: ui.visuals().text_color(),
+            ..Default::default()
+        },
+    );
+
+    job.append(
+        "*",
+        0.0,
+        TextFormat {
+            color: egui::Color32::RED,
+            ..Default::default()
+        },
+    );
+    ui.label(job).on_hover_text("Mandatory");
 }
