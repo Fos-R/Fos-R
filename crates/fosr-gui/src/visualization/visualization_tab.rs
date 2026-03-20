@@ -526,8 +526,8 @@ fn handle_config_changes(
                 Ok(config) => {
                     state.update_from_config(&config);
                     state.config_content = Some(config_content.clone());
-                    // Only auto-restart if the user has started the visualization at least once
-                    if state.user_has_started {
+                    // Only auto-restart if visualization was running before config change
+                    if was_running {
                         state.auto_start_countdown = Some(10);
                     }
                     state.reset_view_requested = true;
