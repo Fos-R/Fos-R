@@ -27,6 +27,9 @@ use web_time::Instant;
 /// Special IP address representing "The Internet" node
 pub const INTERNET_IP: Ipv4Addr = Ipv4Addr::new(0, 0, 0, 1);
 
+/// Color for stop/danger buttons
+const STOP_BUTTON_COLOR: egui::Color32 = egui::Color32::from_rgb(200, 80, 80);
+
 /// Node type for visualization (extends HostType with Internet)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NodeType {
@@ -1063,8 +1066,13 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
                     ui.horizontal(|ui| {
                         if !state.visualization_running {
                             // Play / Continue: resume without resetting flow counts
-                            let play_tooltip = if state.user_has_started { "Continue" } else { "Start" };
-                            if ui.button(egui_material_icons::icons::ICON_PLAY_ARROW).on_hover_text(play_tooltip).clicked() {
+                            let play_text = if state.user_has_started { "Continue" } else { "Start" };
+                            let accent = ui.visuals().selection.bg_fill;
+                            let play_button = egui::Button::new(
+                                egui::RichText::new(format!("{} {}", egui_material_icons::icons::ICON_PLAY_ARROW, play_text)),
+                            )
+                            .fill(accent);
+                            if ui.add(play_button).clicked() {
                                 state.user_has_started = true;
                                 // Pass the user config if loaded, otherwise None (uses default BN model)
                                 let config = state.config_content.clone();
@@ -1085,7 +1093,11 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
                                 }
                             }
                         } else {
-                            if ui.button(egui_material_icons::icons::ICON_STOP).on_hover_text("Stop").clicked() {
+                            let stop_button = egui::Button::new(
+                                egui::RichText::new(format!("{} Stop", egui_material_icons::icons::ICON_STOP)),
+                            )
+                            .fill(STOP_BUTTON_COLOR);
+                            if ui.add(stop_button).clicked() {
                                 state.stop_visualization();
                             }
                         }
