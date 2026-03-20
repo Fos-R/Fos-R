@@ -1,6 +1,4 @@
-use crate::shared::ui_utils::egui::TextFormat;
-use crate::shared::ui_utils::egui::text::LayoutJob;
-use eframe::egui;
+use eframe::egui::{self, TextFormat, text::LayoutJob};
 
 /// Display a small info icon with a tooltip.
 pub fn info_icon(ui: &mut egui::Ui, tooltip: &str) {
