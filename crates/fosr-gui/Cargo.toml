@@ -55,4 +55,5 @@ getrandom = { version = "0.4", features = ["wasm_js"] }
 env_logger = { version = "0.11.8", default-features = false, features = ["auto-color", "humantime"] }
 tempfile = "3.26.0"
 open = "5.3.3"
+which = "8.0.2"
 

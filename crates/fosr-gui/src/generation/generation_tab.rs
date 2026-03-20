@@ -63,13 +63,22 @@ pub struct GenerationTabState {
     pub start_date: NaiveDate,
     pub start_hour: NaiveTime,
     pub output_file_name: String,
-    /// Holds the temporary PCAP file opened in Wireshark.
+    /// Holds temporary PCAP files opened in Wireshark along with their background thread handles.
     ///
-    /// `NamedTempFile` automatically deletes the file when dropped. By storing it here,
-    /// the file stays alive until: (1) the app closes, or (2) a new file is opened
-    /// (which replaces this value, dropping the previous file).
+    /// `NamedTempFile` automatically deletes the file when dropped. By storing them here,
+    /// the files stay alive until the app closes. Multiple files can be open simultaneously
+    /// for comparison purposes.
+    ///
+    /// The `JoinHandle` comes from `open::with_in_background()`. The thread stays alive while
+    /// Wireshark is running, so `is_finished()` can detect active sessions.
     #[cfg(not(target_arch = "wasm32"))]
-    pub temp_pcap_file: Option<tempfile::NamedTempFile>,
+    pub temp_pcap_files: Vec<(
+        std::thread::JoinHandle<std::io::Result<()>>,
+        tempfile::NamedTempFile,
+    )>,
+    /// Whether Wireshark is available on the system
+    #[cfg(not(target_arch = "wasm32"))]
+    pub wireshark_available: bool,
 }
 
 impl Default for GenerationTabState {
@@ -100,7 +109,9 @@ impl Default for GenerationTabState {
             start_hour: Local::now().time(),
             output_file_name: "output.pcap".to_string(),
             #[cfg(not(target_arch = "wasm32"))]
-            temp_pcap_file: None,
+            temp_pcap_files: Vec::new(),
+            #[cfg(not(target_arch = "wasm32"))]
+            wireshark_available: which::which("wireshark").is_ok(),
         }
     }
 }
@@ -495,13 +506,15 @@ pub fn show_generation_tab_content(
                         .size(13.0),
                 )
                 .min_size(egui::vec2(75.0, 24.0));
-                if ui
-                    .add(open_button)
-                    .on_hover_text("Open with default application (e.g. Wireshark)")
-                    .clicked()
-                {
+                let response = ui.add_enabled(state.wireshark_available, open_button);
+                let response = if state.wireshark_available {
+                    response.on_hover_text("Open in Wireshark")
+                } else {
+                    response.on_disabled_hover_text("Wireshark not found in PATH")
+                };
+                if response.clicked() {
                     if let Some(ref pcap_bytes) = state.pcap_bytes {
-                        match open_in_wireshark(pcap_bytes, &mut state.temp_pcap_file) {
+                        match open_in_wireshark(pcap_bytes, &mut state.temp_pcap_files) {
                             Ok(_) => {
                                 log::info!("Opened PCAP in Wireshark");
                             }
@@ -541,15 +554,23 @@ pub fn show_generation_tab_content(
     }
 }
 
-/// Opens the PCAP data in the system's default application (e.g., Wireshark).
+/// Opens the PCAP data in Wireshark.
 ///
-/// This creates a temporary file with `.pcap` extension and opens it using `open::that()`.
-/// The `NamedTempFile` handle is stored in `temp_file_storage` to keep the file alive.
-/// When the handle is dropped (app closes or a new file is opened), the temp file is deleted.
+/// This creates a temporary file with `.pcap` extension and opens it in Wireshark.
+/// The `NamedTempFile` handle and `JoinHandle` are stored to keep the file alive.
+/// When the handle is dropped (app closed), the temp file is deleted.
+///
+/// Platform-specific behavior:
+/// - **Linux**: Uses `open::with_in_background()` which spawns Wireshark directly.
+///   The thread stays alive while Wireshark is running.
+/// - **macOS**: Uses `open -n -W -a Wireshark` which waits for the app to close.
 #[cfg(not(target_arch = "wasm32"))]
 fn open_in_wireshark(
     pcap_bytes: &[u8],
-    temp_file_storage: &mut Option<tempfile::NamedTempFile>,
+    temp_files: &mut Vec<(
+        std::thread::JoinHandle<std::io::Result<()>>,
+        tempfile::NamedTempFile,
+    )>,
 ) -> Result<(), String> {
     use std::io::Write;
 
@@ -567,13 +588,28 @@ fn open_in_wireshark(
     // Get the path
     let path = temp_file.path().to_path_buf();
 
-    log::info!("Opening PCAP file at: {}", path.display());
+    log::info!("Opening PCAP file in Wireshark: {}", path.display());
 
-    // Store the temp file to keep it alive until app closes
-    *temp_file_storage = Some(temp_file);
+    // Platform-specific launch
+    #[cfg(target_os = "macos")]
+    let handle = {
+        // On macOS, use `open -n -W -a Wireshark`:
+        // - `-n` opens a new instance even if one is already running
+        // - `-W` waits for the app to close
+        std::thread::spawn(move || {
+            std::process::Command::new("open")
+                .args(["-n", "-W", "-a", "Wireshark"])
+                .arg(&path)
+                .status()
+                .map(|_| ())
+        })
+    };
 
-    // Open with system default application (Wireshark for .pcap files)
-    open::that(&path).map_err(|e| format!("Failed to open file: {e}"))?;
+    #[cfg(not(target_os = "macos"))]
+    let handle = open::with_in_background(&path, "wireshark");
+
+    // Store the handle and temp file to keep them alive until app closes
+    temp_files.push((handle, temp_file));
 
     Ok(())
 }
