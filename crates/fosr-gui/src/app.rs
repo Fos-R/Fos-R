@@ -41,6 +41,10 @@ pub struct FosrApp {
     configuration_tab_state: ConfigurationTabState,
     visualization_tab_state: VisualizationTabState,
     generation_tab_state: GenerationTabState,
+    /// Whether to show the close confirmation dialog
+    show_close_confirmation: bool,
+    /// Whether the user has confirmed they want to close
+    allowed_to_close: bool,
 }
 
 impl eframe::App for FosrApp {
@@ -85,6 +89,25 @@ impl eframe::App for FosrApp {
         #[cfg(target_arch = "wasm32")]
         ctx.set_theme(egui::Theme::Dark);
 
+        // Handle close confirmation if there are active Wireshark sessions
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let has_active_sessions = self
+                .generation_tab_state
+                .temp_pcap_files
+                .iter()
+                .any(|(handle, _)| !handle.is_finished());
+
+            if ctx.input(|i| i.viewport().close_requested()) {
+                if self.allowed_to_close {
+                    // Do nothing, let the app close
+                } else if has_active_sessions {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+                    self.show_close_confirmation = true;
+                }
+            }
+        }
+
         // Startup modal: choose configuration source
         if !self.configuration_file_state.config_chosen {
             // Render empty CentralPanel for background, then modal on top
@@ -93,87 +116,127 @@ impl eframe::App for FosrApp {
             return;
         }
 
+        // Close confirmation dialog
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.show_close_confirmation {
+            egui::Modal::new(egui::Id::new("close_confirmation_modal")).show(ctx, |ui| {
+                ui.set_width(370.0);
+                ui.heading("Confirm Exit");
+                ui.add_space(8.0);
+                ui.label("You have Wireshark session(s) open with temporary PCAP files.");
+                ui.label("Closing will delete these files.");
+                ui.add_space(12.0);
+                ui.horizontal(|ui| {
+                    if ui.button("Cancel").clicked() {
+                        self.show_close_confirmation = false;
+                    }
+                    if ui.button("Exit").clicked() {
+                        self.show_close_confirmation = false;
+                        self.allowed_to_close = true;
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                });
+            });
+        }
+
         // The Top Panel is logically at the top of the window.
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // Add a Menu Bar to host the tabs buttons
-            egui::MenuBar::new().ui(ui, |ui| {
-                if ui
-                    .selectable_label(
-                        self.current_tab == CurrentTab::Visualization,
-                        "Live Preview",
+        egui::TopBottomPanel::top("top_panel")
+            .frame(egui::Frame::side_top_panel(&ctx.style()).inner_margin(egui::Margin::symmetric(4, 3)))
+            .show(ctx, |ui| {
+                // Add a Menu Bar to host the tabs buttons
+                egui::MenuBar::new().ui(ui, |ui| {
+                    ui.spacing_mut().button_padding = egui::vec2(5.0, 2.0);
+                    let tab_text_size = 14.0;
+                    let live_preview_button = egui::Button::new(
+                        egui::RichText::new("Live Preview").size(tab_text_size),
                     )
-                    .on_hover_text("Simulation of network traffic based on the current configuration. No real traffic is generated.")
-                    .clicked()
-                {
-                    self.current_tab = CurrentTab::Visualization;
-                }
-                {
-                    let label_text = if self.configuration_file_state.has_errors {
-                        egui::RichText::new("⚠ Configuration").color(egui::Color32::RED)
+                        .selected(self.current_tab == CurrentTab::Visualization);
+
+                    let has_errors = self.configuration_file_state.has_errors;
+
+                    let response = ui.add_enabled(!has_errors, live_preview_button);
+
+                    let response = if has_errors {
+                        response.on_disabled_hover_text("Configuration is invalid. Fix errors in the Configuration tab to enable Live Preview.")
                     } else {
-                        egui::RichText::new("Configuration")
+                        response.on_hover_text("Simulation of network traffic based on the current configuration. No real traffic is generated.")
+                    };
+
+                    if !has_errors && response.clicked() {
+                        self.current_tab = CurrentTab::Visualization;
+                    }
+
+                    let label_text = if self.configuration_file_state.has_errors {
+                        egui::RichText::new("⚠ Configuration").color(egui::Color32::RED).size(tab_text_size)
+                    } else {
+                        egui::RichText::new("Configuration").size(tab_text_size)
                     };
                     if ui
-                        .selectable_label(
-                            self.current_tab == CurrentTab::Configuration,
-                            label_text,
-                        )
+                        .add(egui::Button::new(label_text)
+                            .selected(self.current_tab == CurrentTab::Configuration))
                         .on_hover_text("Edit the network configuration: hosts, interfaces, and services.")
                         .clicked()
                     {
                         self.current_tab = CurrentTab::Configuration;
+                    };
+
+                    let generation_button = egui::Button::new(
+                        egui::RichText::new("Generation").size(tab_text_size),
+                    ).selected(self.current_tab == CurrentTab::Generation);
+                    let response = ui.add_enabled(!has_errors, generation_button);
+                    let response = if has_errors {
+                        response.on_disabled_hover_text("Configuration is invalid. Fix errors in the Configuration tab to enable Generation.")
+                    } else {
+                        response.on_hover_text("Generate a PCAP file from the current network configuration.")
+                    };
+                    if !has_errors && response.clicked() {
+                        self.current_tab = CurrentTab::Generation;
                     }
-                }
-                if ui
-                    .selectable_label(self.current_tab == CurrentTab::Generation, "Generation")
-                    .on_hover_text("Generate a PCAP file from the current network configuration.")
-                    .clicked()
-                {
-                    self.current_tab = CurrentTab::Generation;
-                }
-                if ui
-                    .selectable_label(self.current_tab == CurrentTab::About, "About")
-                    .on_hover_text("About Fos-R and its authors.")
-                    .clicked()
-                {
-                    self.current_tab = CurrentTab::About;
-                }
-
-                // Right-align utility buttons so they sit on the opposite side of the tabs
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    // On native, show the theme switch (using system theme by default)
-                    #[cfg(not(target_arch = "wasm32"))]
-                    global_theme_preference_switch(ui);
-
-                    // On web, show a fullscreen toggle button
-                    #[cfg(target_arch = "wasm32")]
+                    if ui
+                        .add(egui::Button::new(
+                            egui::RichText::new("About").size(tab_text_size),
+                        ).selected(self.current_tab == CurrentTab::About))
+                        .on_hover_text("About Fos-R and its authors.")
+                        .clicked()
                     {
-                        let is_fullscreen = web_sys::window()
-                            .and_then(|w| w.document())
-                            .and_then(|d| d.fullscreen_element())
-                            .is_some();
+                        self.current_tab = CurrentTab::About;
+                    }
 
-                        let (icon, tooltip) = if is_fullscreen {
-                            (egui_material_icons::icons::ICON_FULLSCREEN_EXIT, "Exit fullscreen")
-                        } else {
-                            (egui_material_icons::icons::ICON_FULLSCREEN, "Fullscreen")
-                        };
+                    // Right-align utility buttons so they sit on the opposite side of the tabs
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        // On native, show the theme switch (using system theme by default)
+                        #[cfg(not(target_arch = "wasm32"))]
+                        global_theme_preference_switch(ui);
 
-                        if ui.button(icon).on_hover_text(tooltip).clicked() {
-                            if let Some(window) = web_sys::window() {
-                                if let Some(document) = window.document() {
-                                    if is_fullscreen {
-                                        document.exit_fullscreen();
-                                    } else if let Some(canvas) = document.get_element_by_id("fosr_gui_canvas") {
-                                        let _ = canvas.request_fullscreen();
+                        // On web, show a fullscreen toggle button
+                        #[cfg(target_arch = "wasm32")]
+                        {
+                            let is_fullscreen = web_sys::window()
+                                .and_then(|w| w.document())
+                                .and_then(|d| d.fullscreen_element())
+                                .is_some();
+
+                            let (icon, tooltip) = if is_fullscreen {
+                                (egui_material_icons::icons::ICON_FULLSCREEN_EXIT, "Exit fullscreen")
+                            } else {
+                                (egui_material_icons::icons::ICON_FULLSCREEN, "Fullscreen")
+                            };
+
+                            if ui.button(icon).on_hover_text(tooltip).clicked() {
+                                if let Some(window) = web_sys::window() {
+                                    if let Some(document) = window.document() {
+                                        if is_fullscreen {
+                                            document.exit_fullscreen();
+                                        } else if let Some(canvas) = document.get_element_by_id("fosr_gui_canvas") {
+                                            let _ = canvas.request_fullscreen();
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
+                    });
                 });
             });
-        });
 
         // The Central Panel is the region left after adding the Top, Bottom and Side panels.
         egui::CentralPanel::default().show(ctx, |ui| {
