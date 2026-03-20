@@ -3,8 +3,7 @@
 use crate::visualization::visualization_tab::{
     EdgeData, EdgeState, LinkDirection, NodeData, NodeType,
 };
-use eframe::egui;
-use egui::{Color32, Pos2, Rect, Shape, TextureOptions, Vec2, load::SizeHint};
+use eframe::egui::{self, Color32, Pos2, Rect, Shape, TextureOptions, Vec2, load::SizeHint};
 use egui_graphs::{DisplayEdge, DisplayNode, DrawContext, Node, NodeProps};
 use fosr_lib::L7Proto;
 

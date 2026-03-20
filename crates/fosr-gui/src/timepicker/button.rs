@@ -3,8 +3,7 @@
 // Licensed under the MIT License (see mod.rs for full text).
 
 use chrono::NaiveTime;
-use eframe::egui;
-use egui::{Area, Button, Frame, InnerResponse, Key, Order, RichText, Widget};
+use eframe::egui::{self, Area, Button, Frame, InnerResponse, Key, Order, RichText, Widget};
 
 use super::popup::TimePickerPopup;
 

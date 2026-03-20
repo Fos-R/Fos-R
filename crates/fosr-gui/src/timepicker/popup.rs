@@ -5,10 +5,9 @@
 use std::fmt::Display;
 
 use chrono::{NaiveTime, Timelike};
-use eframe::egui;
-use egui::{
-    Align2, Color32, DragValue, FontId, Id, Layout, Painter, Pos2, Response, RichText, Sense, Ui,
-    Vec2,
+use eframe::egui::{
+    self, Align2, Color32, DragValue, FontId, Id, Layout, Painter, Pos2, Response, RichText, Sense,
+    Ui, Vec2,
 };
 
 use super::button::TimePickerButtonState;
