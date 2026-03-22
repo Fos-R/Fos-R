@@ -2,6 +2,7 @@ mod about_tab;
 mod app;
 mod configuration;
 mod generation;
+mod run;
 mod shared;
 mod templates;
 mod timepicker;
