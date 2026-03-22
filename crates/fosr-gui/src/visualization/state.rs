@@ -19,9 +19,6 @@ use web_time::Instant;
 /// Special IP address representing "The Internet" node
 pub const INTERNET_IP: Ipv4Addr = Ipv4Addr::new(0, 0, 0, 1);
 
-/// Color for stop/danger buttons
-pub const STOP_BUTTON_COLOR: egui::Color32 = egui::Color32::from_rgb(200, 80, 80);
-
 /// Node type for visualization (extends HostType with Internet)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NodeType {

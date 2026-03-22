@@ -4,10 +4,19 @@ use crate::about_tab::show_about_tab_content;
 use crate::config_templates::{all_templates, load_template_by_id};
 use crate::configuration::tab::{ConfigurationTabState, show_configuration_tab_content};
 use crate::run::{RunState, show_run_tab_content};
+use crate::shared::colors::{COLOR_ERROR, COLOR_TEXT_MUTED};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::configuration_file::poll_file_import;
 use crate::shared::configuration_file::{
     ConfigurationFileState, StartupModalState, trigger_file_import,
+};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::shared::ui_constants::MODAL_WIDTH_SM;
+use crate::shared::ui_constants::{
+    BUTTON_PADDING, ICON_SIZE_LG, MODAL_WIDTH_MD, PANEL_INNER_MARGIN, SPACING_LG, SPACING_SM,
+    SPACING_XL, SPACING_XS, STARTUP_CARD_HEIGHT, STARTUP_COLUMNS_INITIAL,
+    STARTUP_COLUMNS_TEMPLATES, TEXT_SIZE_DEFAULT, TEXT_SIZE_LG, TEXT_SIZE_SM, TOOLTIP_DELAY,
+    ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP,
 };
 use eframe::egui;
 use eframe::egui::global_theme_preference_switch;
@@ -24,11 +33,6 @@ impl Default for CurrentTab {
         CurrentTab::Run
     }
 }
-
-#[cfg(target_arch = "wasm32")]
-pub const DEFAULT_ZOOM: f32 = 1.2;
-#[cfg(not(target_arch = "wasm32"))]
-pub const DEFAULT_ZOOM: f32 = 1.4;
 
 #[derive(Default)]
 pub struct FosrApp {
@@ -51,15 +55,23 @@ impl eframe::App for FosrApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Set default zoom once
         if !self.style_initialized {
-            self.zoom_factor = DEFAULT_ZOOM;
+            self.zoom_factor = ZOOM_DEFAULT;
             ctx.options_mut(|option| option.zoom_factor = self.zoom_factor);
-            ctx.style_mut(|s| s.interaction.tooltip_delay = 0.1);
+            ctx.style_mut(|s| s.interaction.tooltip_delay = TOOLTIP_DELAY);
 
             // On web, use dark theme to match with the Fos-R website's theme
             #[cfg(target_arch = "wasm32")]
             ctx.set_theme(egui::Theme::Dark);
 
             self.style_initialized = true;
+        }
+
+        // Clamp zoom to min/max (prevents Ctrl+/- from exceeding limits)
+        let current_zoom = ctx.zoom_factor();
+        if current_zoom < ZOOM_MIN || current_zoom > ZOOM_MAX {
+            let clamped_zoom = current_zoom.clamp(ZOOM_MIN, ZOOM_MAX);
+            ctx.set_zoom_factor(clamped_zoom);
+            self.zoom_factor = clamped_zoom;
         }
 
         // Set the image loaders
@@ -123,12 +135,12 @@ impl eframe::App for FosrApp {
         #[cfg(not(target_arch = "wasm32"))]
         if self.show_close_confirmation {
             egui::Modal::new(egui::Id::new("close_confirmation_modal")).show(ctx, |ui| {
-                ui.set_width(370.0);
+                ui.set_width(MODAL_WIDTH_SM);
                 ui.heading("Confirm Exit");
-                ui.add_space(8.0);
+                ui.add_space(SPACING_LG);
                 ui.label("You have Wireshark session(s) open with temporary PCAP files.");
                 ui.label("Closing will delete these files.");
-                ui.add_space(12.0);
+                ui.add_space(SPACING_XL);
                 ui.horizontal(|ui| {
                     if ui.button("Cancel").clicked() {
                         self.show_close_confirmation = false;
@@ -144,12 +156,12 @@ impl eframe::App for FosrApp {
 
         // The Top Panel is logically at the top of the window.
         egui::TopBottomPanel::top("top_panel")
-            .frame(egui::Frame::side_top_panel(&ctx.style()).inner_margin(egui::Margin::symmetric(4, 3)))
+            .frame(egui::Frame::side_top_panel(&ctx.style()).inner_margin(egui::Margin::symmetric(PANEL_INNER_MARGIN.0, PANEL_INNER_MARGIN.1)))
             .show(ctx, |ui| {
                 // Add a Menu Bar to host the tabs buttons
                 egui::MenuBar::new().ui(ui, |ui| {
-                    ui.spacing_mut().button_padding = egui::vec2(5.0, 2.0);
-                    let tab_text_size = 14.0;
+                    ui.spacing_mut().button_padding = egui::vec2(BUTTON_PADDING.0, BUTTON_PADDING.1);
+                    let tab_text_size = TEXT_SIZE_DEFAULT;
 
                     let has_errors = self.configuration_file_state.has_errors;
 
@@ -173,7 +185,7 @@ impl eframe::App for FosrApp {
 
                     // Configuration tab
                     let label_text = if self.configuration_file_state.has_errors {
-                        egui::RichText::new("⚠ Configuration").color(egui::Color32::RED).size(tab_text_size)
+                        egui::RichText::new("⚠ Configuration").color(COLOR_ERROR).size(tab_text_size)
                     } else {
                         egui::RichText::new("Configuration").size(tab_text_size)
                     };
@@ -227,7 +239,7 @@ impl eframe::App for FosrApp {
                         }
 
                         #[cfg(not(target_arch = "wasm32"))]
-                        ui.add_space(4.0);
+                        ui.add_space(SPACING_SM);
 
                         // Show the theme switch
                         global_theme_preference_switch(ui);
@@ -239,7 +251,7 @@ impl eframe::App for FosrApp {
                             .clicked()
                         {
                             let current_zoom = ctx.zoom_factor();
-                            let new_zoom = (current_zoom + 0.1).min(3.0);
+                            let new_zoom = (current_zoom + ZOOM_STEP).min(ZOOM_MAX);
                             ctx.set_zoom_factor(new_zoom);
                             self.zoom_factor = new_zoom;
                         }
@@ -250,7 +262,7 @@ impl eframe::App for FosrApp {
                             .clicked()
                         {
                             let current_zoom = ctx.zoom_factor();
-                            let new_zoom = (current_zoom - 0.1).max(0.5);
+                            let new_zoom = (current_zoom - ZOOM_STEP).max(ZOOM_MIN);
                             ctx.set_zoom_factor(new_zoom);
                             self.zoom_factor = new_zoom;
                         }
@@ -294,7 +306,7 @@ impl eframe::App for FosrApp {
 /// A clickable card with icon, title and description. Returns true if clicked.
 fn startup_card(ui: &mut egui::Ui, icon: &str, title: &str, description: &str) -> bool {
     // Reserve the full width and detect hover/click on the whole area
-    let desired_size = egui::vec2(ui.available_width(), 120.0);
+    let desired_size = egui::vec2(ui.available_width(), STARTUP_CARD_HEIGHT);
     let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::click());
 
     // Choose fill color based on hover
@@ -312,17 +324,17 @@ fn startup_card(ui: &mut egui::Ui, icon: &str, title: &str, description: &str) -
             ui.style_mut().interaction.selectable_labels = false;
             ui.set_width(ui.available_width());
             ui.vertical_centered(|ui| {
-                ui.add_space(8.0);
-                ui.label(egui::RichText::new(icon).size(28.0));
-                ui.add_space(4.0);
-                ui.strong(egui::RichText::new(title).size(16.0));
-                ui.add_space(2.0);
+                ui.add_space(SPACING_LG);
+                ui.label(egui::RichText::new(icon).size(ICON_SIZE_LG));
+                ui.add_space(SPACING_SM);
+                ui.strong(egui::RichText::new(title).size(TEXT_SIZE_LG));
+                ui.add_space(SPACING_XS);
                 ui.label(
                     egui::RichText::new(description)
-                        .size(12.0)
-                        .color(egui::Color32::GRAY),
+                        .size(TEXT_SIZE_SM)
+                        .color(COLOR_TEXT_MUTED),
                 );
-                ui.add_space(8.0);
+                ui.add_space(SPACING_LG);
             });
         });
     });
@@ -344,13 +356,13 @@ fn render_startup_modal(ctx: &egui::Context, state: &mut ConfigurationFileState)
 fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigurationFileState) {
     // Use the same modal ID as template selection to avoid flicker when transitioning
     egui::Modal::new(egui::Id::new("startup_modal")).show(ctx, |ui| {
-        ui.set_width(400.0);
+        ui.set_width(MODAL_WIDTH_MD);
         ui.heading("Welcome to Fos-R");
-        ui.add_space(4.0);
+        ui.add_space(SPACING_SM);
         ui.label("Choose a configuration to get started:");
-        ui.add_space(12.0);
+        ui.add_space(SPACING_XL);
 
-        ui.columns(2, |cols| {
+        ui.columns(STARTUP_COLUMNS_INITIAL, |cols| {
             // Left: default config
             if startup_card(
                 &mut cols[0],
@@ -380,7 +392,7 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigurationFileState)
 fn render_template_selection_modal(ctx: &egui::Context, state: &mut ConfigurationFileState) {
     // Use the same modal ID as initial modal to avoid flicker when transitioning
     egui::Modal::new(egui::Id::new("startup_modal")).show(ctx, |ui| {
-        ui.set_width(400.0);
+        ui.set_width(MODAL_WIDTH_MD);
 
         // Header with back button
         ui.horizontal(|ui| {
@@ -394,14 +406,14 @@ fn render_template_selection_modal(ctx: &egui::Context, state: &mut Configuratio
             ui.heading("Choose a template");
         });
 
-        ui.add_space(12.0);
+        ui.add_space(SPACING_XL);
 
         // Grid of template cards
         let templates = all_templates();
-        ui.columns(3, |cols| {
+        ui.columns(STARTUP_COLUMNS_TEMPLATES, |cols| {
             for (i, template) in templates.iter().enumerate() {
                 if startup_card(
-                    &mut cols[i % 3],
+                    &mut cols[i % STARTUP_COLUMNS_TEMPLATES],
                     template.icon,
                     template.title,
                     template.description,

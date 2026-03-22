@@ -1,8 +1,11 @@
 //! Node click handling and info/edit modal for the visualization graph.
 
-use super::shapes::{ICON_TINT_DARK, ICON_TINT_LIGHT};
 use super::state::{NodeType, VisualizationState};
+use crate::shared::colors::{COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT};
 use crate::shared::configuration_file::ConfigurationFileState;
+use crate::shared::ui_constants::{
+    INDENT_STANDARD, LEGEND_ICON_SIZE, NODE_MODAL_WIDTH, SPACING_LG, SPACING_SM,
+};
 use eframe::egui;
 use egui_graphs::events::{Event, PayloadNodeClick};
 
@@ -57,7 +60,7 @@ pub fn render_node_info_modal(
 
     let mut save_clicked = false;
     let modal = egui::Modal::new(egui::Id::new("node_info_modal")).show(ctx, |ui| {
-        ui.set_width(250.0);
+        ui.set_width(NODE_MODAL_WIDTH);
         if has_edit_buffer {
             ui.heading("Edit Node Information");
         } else {
@@ -77,19 +80,19 @@ pub fn render_node_info_modal(
                 ),
             };
             let tint = if ui.style().visuals.dark_mode {
-                ICON_TINT_DARK
+                COLOR_ICON_TINT_DARK
             } else {
-                ICON_TINT_LIGHT
+                COLOR_ICON_TINT_LIGHT
             };
             ui.add(
                 egui::Image::new(image)
-                    .fit_to_exact_size(egui::vec2(20.0, 20.0))
+                    .fit_to_exact_size(egui::vec2(LEGEND_ICON_SIZE, LEGEND_ICON_SIZE))
                     .tint(tint),
             );
             ui.label(egui::RichText::new(type_str).strong());
         });
 
-        ui.add_space(4.0);
+        ui.add_space(SPACING_SM);
 
         // Editable fields if we have an edit buffer (config loaded and host found)
         if let Some(ref mut host) = state.modal_edit_buffer {
@@ -138,7 +141,7 @@ pub fn render_node_info_modal(
             ui.label("IP Addresses:");
             for iface in &mut host.interfaces {
                 ui.horizontal(|ui| {
-                    ui.add_space(16.0);
+                    ui.add_space(INDENT_STANDARD);
                     ui.add(egui::TextEdit::singleline(&mut iface.ip_addr).hint_text("0.0.0.0"));
                 });
             }
@@ -159,14 +162,14 @@ pub fn render_node_info_modal(
                 ui.label("IP Addresses:");
                 for ip in &node_data.ip_addrs {
                     ui.horizontal(|ui| {
-                        ui.add_space(16.0);
+                        ui.add_space(INDENT_STANDARD);
                         ui.label(egui::RichText::new(ip.to_string()).monospace());
                     });
                 }
             }
         }
 
-        ui.add_space(8.0);
+        ui.add_space(SPACING_LG);
 
         if has_edit_buffer {
             ui.horizontal(|ui| {

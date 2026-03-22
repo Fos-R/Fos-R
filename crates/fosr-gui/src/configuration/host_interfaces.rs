@@ -1,14 +1,19 @@
 //! Network interface editing UI: IP, MAC address, and associated services.
 
 use crate::configuration::host_services;
+use crate::shared::colors::COLOR_ERROR;
 use crate::shared::config_model::{Host, Interface};
+use crate::shared::network_constants::{
+    IP_LOCAL_MAX, IP_LOCAL_MIN, MAC_ADDRESS_BYTES, MAC_LOCAL_BIT, MAC_LOCAL_MASK,
+};
+use crate::shared::ui_constants::{SPACING_MD, SPACING_SM};
 use crate::shared::ui_utils::{edit_optional_string, required_label};
 use eframe::egui;
 use std::collections::HashMap;
 
 /// Scans all interfaces to find the next available IP in 192.168.0.x
 fn next_free_ip(ip_counts: &HashMap<String, usize>) -> Option<String> {
-    for x in 1..=254 {
+    for x in IP_LOCAL_MIN..=IP_LOCAL_MAX {
         let candidate = format!("192.168.0.{x}");
         if !ip_counts.contains_key(&candidate) {
             return Some(candidate);
@@ -39,7 +44,7 @@ pub fn ui_interfaces_section(
                     services: Vec::new(),
                 });
             } else {
-                ui.colored_label(egui::Color32::RED, "No free IP available in 192.168.0.0/24");
+                ui.colored_label(COLOR_ERROR, "No free IP available in 192.168.0.0/24");
             }
         }
     });
@@ -70,23 +75,23 @@ pub fn ui_interfaces_section(
                 });
             })
             .body(|ui| {
-                ui.add_space(4.0);
+                ui.add_space(SPACING_SM);
                 ui.horizontal(|ui| {
                     required_label(ui, "IP");
                     ui.text_edit_singleline(&mut iface.ip_addr);
                     if ip_counts.get(&iface.ip_addr).copied().unwrap_or(0) > 1 {
-                        ui.colored_label(egui::Color32::RED, "IP already in used");
+                        ui.colored_label(COLOR_ERROR, "IP already in used");
                     }
                 });
                 edit_optional_string(ui, "MAC", &mut iface.mac_addr, "00:14:2A:3F:47:D8");
                 if let Some(mac) = &iface.mac_addr {
                     if mac_counts.get(mac).copied().unwrap_or(0) > 1 {
-                        ui.colored_label(egui::Color32::RED, "MAC already in use");
+                        ui.colored_label(COLOR_ERROR, "MAC already in use");
                     }
                 }
                 host_services::ui_services_section(ui, if_idx, host_idx, iface);
             });
-        ui.add_space(6.0);
+        ui.add_space(SPACING_MD);
     }
 
     if let Some(idx) = iface_to_remove {
@@ -96,10 +101,10 @@ pub fn ui_interfaces_section(
 
 /// Generate a random mac address
 fn random_mac() -> String {
-    let mut bytes: [u8; 6] = rand::random();
+    let mut bytes: [u8; MAC_ADDRESS_BYTES] = rand::random();
 
     // Forcing local MAC
-    bytes[0] = (bytes[0] | 0x02) & 0xFE;
+    bytes[0] = (bytes[0] | MAC_LOCAL_BIT) & MAC_LOCAL_MASK;
 
     format!(
         "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",

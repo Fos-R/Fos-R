@@ -1,6 +1,10 @@
 //! Service editing UI: HTTP, SSH, DNS, etc. with custom port support.
 
 use crate::shared::config_model::Interface;
+use crate::shared::network_constants::{PORT_DEFAULT_UNKNOWN, PORT_MAX, PORT_MIN};
+use crate::shared::ui_constants::{
+    PANEL_MIN_WIDTH, POPUP_MAX_HEIGHT, POPUP_MIN_WIDTH, SPACING_SM, SPACING_XS,
+};
 use crate::shared::ui_utils::info_icon;
 use eframe::egui;
 
@@ -55,7 +59,7 @@ pub fn ui_services_section(
             egui::Popup::from_toggle_button_response(&add_btn_resp)
                 .id(popup_id)
                 .show(|ui| {
-                    ui.set_min_width(180.0);
+                    ui.set_min_width(POPUP_MIN_WIDTH);
 
                     let search_id = ui.make_persistent_id(("svc_search", host_idx, iface_idx));
                     let mut search_text =
@@ -72,10 +76,10 @@ pub fn ui_services_section(
                     ui.separator();
 
                     egui::ScrollArea::vertical()
-                        .max_height(200.0)
+                        .max_height(POPUP_MAX_HEIGHT)
                         .auto_shrink([true; 2])
                         .show(ui, |ui| {
-                            ui.set_width(250.0);
+                            ui.set_width(PANEL_MIN_WIDTH);
 
                             let filter = search_text.to_lowercase();
                             let mut any_shown = false;
@@ -108,7 +112,7 @@ pub fn ui_services_section(
                         });
                 });
 
-            ui.add_space(4.0);
+            ui.add_space(SPACING_SM);
 
             let mut svc_to_remove: Option<usize> = None;
 
@@ -121,7 +125,7 @@ pub fn ui_services_section(
                     svc_raw,
                     &mut svc_to_remove,
                 );
-                ui.add_space(2.0);
+                ui.add_space(SPACING_XS);
             }
 
             if let Some(idx) = svc_to_remove {
@@ -145,7 +149,7 @@ fn ui_single_service(
         .iter()
         .find(|(n, _)| *n == svc_name)
         .and_then(|(_, p)| *p)
-        .unwrap_or(0);
+        .unwrap_or(PORT_DEFAULT_UNKNOWN);
 
     let custom_port_id = ui.make_persistent_id(("custom_port", host_idx, iface_idx, svc_idx));
     let is_custom_by_default = svc_port.map_or(false, |p| p != default_port);
@@ -181,7 +185,7 @@ fn ui_single_service(
                 .add(
                     egui::DragValue::new(&mut port_val)
                         .speed(1)
-                        .range(1..=65535),
+                        .range(PORT_MIN..=PORT_MAX),
                 )
                 .changed()
             {
