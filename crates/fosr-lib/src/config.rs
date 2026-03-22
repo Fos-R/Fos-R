@@ -14,7 +14,7 @@ pub struct Configuration {
     /// The metadata of the configuration
     pub metadata: Metadata,
     /// The list of hosts
-    // pub hosts: Vec<Host>,
+    pub hosts: Vec<Host>,
     /// A hashmap that maps an IP to a MAC address (if it is defined in the config file)
     // pub mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
     /// A hashmap that maps an IP to an OS (if it is defined in the config file)
@@ -153,9 +153,11 @@ impl From<ConfigurationYaml> for Configuration {
             assert!(users_per_service.contains_key(service));
         }
 
+        let hosts = c.internet.into_iter().chain(c.networks.into_iter().map(|n| n.hosts.into_iter()).flatten()).collect();
+
         Configuration {
             metadata: c.metadata,
-            // hosts: c.hosts,
+            hosts: hosts,
             os_map,
             // usages_map,
             // mac_addr_map,
