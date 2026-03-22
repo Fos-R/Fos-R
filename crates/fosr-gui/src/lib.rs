@@ -1,12 +1,14 @@
+//! WASM entry point for the Fos-R GUI web application.
+//! Initializes eframe and starts the app in the browser canvas.
+
 #![cfg(target_arch = "wasm32")]
 mod about_tab;
 mod app;
+mod config_templates;
 mod configuration;
-mod generation;
+mod run;
 mod shared;
-mod templates;
 mod timepicker;
-mod visualization;
 
 use app::FosrApp;
 use eframe::wasm_bindgen::JsCast;

@@ -1,38 +1,19 @@
-//! Custom node and edge shapes for network visualization
+//! Custom node and edge shapes with protocol colors, icons, and dynamic sizing.
 
-use crate::visualization::visualization_tab::{
-    EdgeData, EdgeState, LinkDirection, NodeData, NodeType,
+use super::state::{EdgeData, EdgeState, LinkDirection, NodeData, NodeType};
+use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
+use crate::shared::colors::{
+    COLOR_EDGE_INACTIVE, COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT, COLOR_PROTOCOL_DNS,
+    COLOR_PROTOCOL_HTTP, COLOR_PROTOCOL_HTTPS, COLOR_PROTOCOL_OTHER, COLOR_PROTOCOL_SMTP,
+    COLOR_PROTOCOL_SSH, COLOR_TEXT_MUTED,
+};
+use crate::shared::ui_constants::{
+    EDGE_ARROW_ANGLE_RAD, EDGE_ARROW_SIZE, EDGE_FLOW_SCALE, EDGE_WIDTH_MAX, EDGE_WIDTH_MIN,
+    NODE_FLOW_SCALE_FACTOR, NODE_RADIUS_MAX, NODE_RADIUS_MIN, SPACING_XS, TEXT_SIZE_DEFAULT,
 };
 use eframe::egui::{self, Color32, Pos2, Rect, Shape, TextureOptions, Vec2, load::SizeHint};
 use egui_graphs::{DisplayEdge, DisplayNode, DrawContext, Node, NodeProps};
 use fosr_lib::L7Proto;
-
-// Embedded node images
-const IMG_SERVER: egui::ImageSource = egui::include_image!("../../assets/server.png");
-const IMG_COMPUTER: egui::ImageSource = egui::include_image!("../../assets/computer.png");
-const IMG_INTERNET: egui::ImageSource = egui::include_image!("../../assets/internet.png");
-
-// Icon tint: gray instead of pure black/white
-pub const ICON_TINT_DARK: Color32 = Color32::from_rgb(180, 180, 180);
-pub const ICON_TINT_LIGHT: Color32 = Color32::from_rgb(40, 40, 40);
-
-// Color constants for edge states
-pub const COLOR_INACTIVE: Color32 = Color32::from_rgb(200, 200, 200); // Light gray
-pub const COLOR_HTTP: Color32 = Color32::from_rgb(52, 152, 219); // Blue
-pub const COLOR_HTTPS: Color32 = Color32::from_rgb(46, 204, 113); // Green
-pub const COLOR_SSH: Color32 = Color32::from_rgb(155, 89, 182); // Purple
-pub const COLOR_DNS: Color32 = Color32::from_rgb(230, 126, 34); // Orange
-pub const COLOR_SMTP: Color32 = Color32::from_rgb(241, 196, 15); // Yellow
-pub const COLOR_OTHER: Color32 = Color32::from_rgb(149, 165, 166); // Gray
-
-// Node radius constants - all nodes grow with flow count
-const RADIUS_MIN: f32 = 15.0; // Starting size for all nodes
-const RADIUS_MAX: f32 = 25.0; // Maximum size
-const FLOW_SCALE_FACTOR: f32 = 0.3; // Radius increase per flow
-
-const EDGE_WIDTH_MIN: f32 = 0.0;
-const EDGE_WIDTH_MAX: f32 = 3.0;
-const EDGE_FLOW_SCALE: f32 = 0.2; // Width increase per flow (linear phase)
 
 /// Custom node shape that displays hostname and IP, with icon based on node type
 #[derive(Clone)]
@@ -48,10 +29,10 @@ impl NetworkNodeShape {
     /// Compute node style from payload data.
     fn style_from_payload(payload: &NodeData) -> (f32, NodeType, Option<String>, Vec<String>) {
         // Hybrid linear/proportional radius scaling
-        let max_linear = RADIUS_MIN + payload.max_flow_count as f32 * FLOW_SCALE_FACTOR;
-        let radius = if max_linear < RADIUS_MAX {
+        let max_linear = NODE_RADIUS_MIN + payload.max_flow_count as f32 * NODE_FLOW_SCALE_FACTOR;
+        let radius = if max_linear < NODE_RADIUS_MAX {
             // Linear phase: everyone grows normally
-            RADIUS_MIN + payload.flow_count as f32 * FLOW_SCALE_FACTOR
+            NODE_RADIUS_MIN + payload.flow_count as f32 * NODE_FLOW_SCALE_FACTOR
         } else {
             // Proportional phase: scale by ratio to max
             let ratio = if payload.max_flow_count > 0 {
@@ -59,7 +40,7 @@ impl NetworkNodeShape {
             } else {
                 0.0
             };
-            RADIUS_MIN + ratio * (RADIUS_MAX - RADIUS_MIN)
+            NODE_RADIUS_MIN + ratio * (NODE_RADIUS_MAX - NODE_RADIUS_MIN)
         };
 
         let ips: Vec<String> = payload.ip_addrs.iter().map(|ip| ip.to_string()).collect();
@@ -123,17 +104,17 @@ impl DisplayNode<NodeData, EdgeData, petgraph::Undirected, petgraph::stable_grap
         {
             let uv = Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
             let tint = if ctx.ctx.style().visuals.dark_mode {
-                ICON_TINT_DARK
+                COLOR_ICON_TINT_DARK
             } else {
-                ICON_TINT_LIGHT
+                COLOR_ICON_TINT_LIGHT
             };
             shapes.push(Shape::image(texture.id, rect, uv, tint));
         }
 
         // Draw text label: hostname (italic) and IPs (normal)
-        let font_size = 14.0;
+        let font_size = TEXT_SIZE_DEFAULT;
         let font_id = egui::FontId::proportional(font_size);
-        let mut current_y = pos.y + radius + 2.0;
+        let mut current_y = pos.y + radius + SPACING_XS;
 
         ctx.ctx.fonts_mut(|f| {
             // Draw hostname in italic
@@ -144,15 +125,15 @@ impl DisplayNode<NodeData, EdgeData, petgraph::Undirected, petgraph::stable_grap
                     0.0,
                     egui::TextFormat {
                         font_id: font_id.clone(),
-                        color: Color32::GRAY,
+                        color: COLOR_TEXT_MUTED,
                         italics: true,
                         ..Default::default()
                     },
                 );
                 let galley = f.layout_job(job);
                 let label_pos = Pos2::new(pos.x - galley.size().x / 2.0, current_y);
-                shapes.push(Shape::galley(label_pos, galley, Color32::GRAY));
-                current_y += font_size + 2.0;
+                shapes.push(Shape::galley(label_pos, galley, COLOR_TEXT_MUTED));
+                current_y += font_size + SPACING_XS;
             }
 
             // Draw IPs (normal) - skip for Internet node
@@ -164,14 +145,14 @@ impl DisplayNode<NodeData, EdgeData, petgraph::Undirected, petgraph::stable_grap
                         0.0,
                         egui::TextFormat {
                             font_id: font_id.clone(),
-                            color: Color32::GRAY,
+                            color: COLOR_TEXT_MUTED,
                             ..Default::default()
                         },
                     );
                     let galley = f.layout_job(job);
                     let label_pos = Pos2::new(pos.x - galley.size().x / 2.0, current_y);
-                    shapes.push(Shape::galley(label_pos, galley, Color32::GRAY));
-                    current_y += font_size + 2.0;
+                    shapes.push(Shape::galley(label_pos, galley, COLOR_TEXT_MUTED));
+                    current_y += font_size + SPACING_XS;
                 }
             }
         });
@@ -212,7 +193,7 @@ fn edge_style(edge_data: &EdgeData) -> (Color32, f32, bool, bool) {
                 };
                 EDGE_WIDTH_MIN + ratio * (EDGE_WIDTH_MAX - EDGE_WIDTH_MIN)
             };
-            (COLOR_INACTIVE, width, false, false)
+            (COLOR_EDGE_INACTIVE, width, false, false)
         }
         EdgeState::Active {
             protocol,
@@ -220,12 +201,12 @@ fn edge_style(edge_data: &EdgeData) -> (Color32, f32, bool, bool) {
             ..
         } => {
             let color = match protocol {
-                L7Proto::HTTP => COLOR_HTTP,
-                L7Proto::HTTPS => COLOR_HTTPS,
-                L7Proto::SSH => COLOR_SSH,
-                L7Proto::DNS => COLOR_DNS,
-                L7Proto::SMTP => COLOR_SMTP,
-                _ => COLOR_OTHER,
+                L7Proto::HTTP => COLOR_PROTOCOL_HTTP,
+                L7Proto::HTTPS => COLOR_PROTOCOL_HTTPS,
+                L7Proto::SSH => COLOR_PROTOCOL_SSH,
+                L7Proto::DNS => COLOR_PROTOCOL_DNS,
+                L7Proto::SMTP => COLOR_PROTOCOL_SMTP,
+                _ => COLOR_PROTOCOL_OTHER,
             };
             let (arrow_start, arrow_end) = match direction {
                 LinkDirection::Forward => (false, true),
@@ -308,8 +289,8 @@ impl
             egui::Stroke::new(ctx.meta.canvas_to_screen_size(self.width), self.color),
         )];
 
-        let arrow_size = ctx.meta.canvas_to_screen_size(16.0);
-        let arrow_angle = std::f32::consts::PI / 6.0;
+        let arrow_size = ctx.meta.canvas_to_screen_size(EDGE_ARROW_SIZE);
+        let arrow_angle = EDGE_ARROW_ANGLE_RAD;
         // Extend arrow tip past the line to avoid square appearance due to line width
         let arrow_tip_offset = ctx.meta.canvas_to_screen_size(self.width);
 

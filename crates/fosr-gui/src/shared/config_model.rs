@@ -1,3 +1,5 @@
+//! Configuration data model: Metadata, Host, Interface structs for YAML serde.
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

@@ -1,3 +1,5 @@
+//! Predefined configuration templates: Home, Enterprise, Datacenter.
+
 use crate::shared::config_model::Configuration;
 use crate::shared::configuration_file::ConfigurationFileState;
 use egui_material_icons::icons;
