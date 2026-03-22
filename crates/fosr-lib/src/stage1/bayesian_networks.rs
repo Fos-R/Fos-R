@@ -568,8 +568,9 @@ impl BayesianModel {
                                             .into_iter()
                                             .map(|ip| {
                                                 if proto_users.contains(&ip) {
+                                                    1f64
                                                     // this IP can be sampled
-                                                    *config.usages_map.get(&ip).unwrap()
+                                                    // *config.usages_map.get(&ip).unwrap()
                                                 } else {
                                                     // this IP cannot be sampled
                                                     0.0f64
@@ -586,15 +587,16 @@ impl BayesianModel {
                                             .into_iter()
                                             .map(|ip| {
                                                 if proto_servers.contains(&ip) {
+                                                    1f64
                                                     // this IP can be sampled
-                                                    *config.usages_map.get(&ip).unwrap()
+                                                    // *config.usages_map.get(&ip).unwrap()
                                                 } else {
                                                     // this IP cannot be sampled
                                                     0.0f64
                                                 }
                                             })
                                             .chain(iter::once(0.0f64)); // no internet
-                                        cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}")));
+                                        cpt.push(Some(WeightedIndex::new(proba).expect(&format!("Cannot create the probability distribution of SrcIp for {p:?} and {role:?}"))));
                                     }
                                     IpRole::Internet => {
                                         let mut proba: Vec<f64> = vec![];
@@ -644,7 +646,8 @@ impl BayesianModel {
                                             .map(|ip| {
                                                 if proto_users.contains(&ip) {
                                                     // this IP can be sampled
-                                                    *config.usages_map.get(&ip).unwrap()
+                                                    1f64
+                                                    // *config.usages_map.get(&ip).unwrap()
                                                 } else {
                                                     // this IP cannot be sampled
                                                     0.0f64
@@ -661,8 +664,9 @@ impl BayesianModel {
                                             .into_iter()
                                             .map(|ip| {
                                                 if proto_servers.contains(&ip) {
+                                                    1f64
                                                     // this IP can be sampled
-                                                    *config.usages_map.get(&ip).unwrap()
+                                                    // *config.usages_map.get(&ip).unwrap()
                                                 } else {
                                                     // this IP cannot be sampled
                                                     0.0f64
