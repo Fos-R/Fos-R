@@ -5,6 +5,7 @@ mod config_handling;
 mod flow_processing;
 mod generation_options;
 mod generation_process;
+mod graph_view;
 mod state;
 mod tab;
 
