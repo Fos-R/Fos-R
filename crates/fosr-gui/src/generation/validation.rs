@@ -1,4 +1,6 @@
-use super::generation_state::{DURATION_MAX, DURATION_MIN, GenerationTabState};
+//! Input validation helpers for duration, seed, and timezone fields.
+
+use super::state::{DURATION_MAX, DURATION_MIN, GenerationState};
 use chrono_tz::Tz;
 use std::time::Duration;
 
@@ -24,7 +26,7 @@ const SPEC_TIMEZONE: &str = "a valid timezone";
 
 // return the first invalid parameter
 pub fn first_invalid_param(
-    state: &GenerationTabState,
+    state: &GenerationState,
 ) -> Option<(&'static str, &'static str, String)> {
     if let Some(err) = &state.duration_validation.error {
         return Some(("Duration", SPEC_DURATION, err.clone()));

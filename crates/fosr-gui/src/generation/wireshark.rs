@@ -1,3 +1,5 @@
+//! Wireshark integration: opens PCAP files in a temporary file for analysis.
+
 /// Opens the PCAP data in Wireshark.
 ///
 /// This creates a temporary file with `.pcap` extension and opens it in Wireshark.

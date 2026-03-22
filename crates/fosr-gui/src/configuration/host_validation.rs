@@ -1,3 +1,5 @@
+//! Host validation: IP/MAC format, conflicts, and type/service consistency.
+
 use crate::shared::config_model::{Configuration, Host};
 use std::collections::HashMap;
 

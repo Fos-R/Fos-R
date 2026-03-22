@@ -1,3 +1,5 @@
+//! Reusable UI widgets: info icons, optional string editors, toggles, labels.
+
 use eframe::egui::{self, TextFormat, text::LayoutJob};
 
 /// Display a small info icon with a tooltip.

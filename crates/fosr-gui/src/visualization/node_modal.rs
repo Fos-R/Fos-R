@@ -1,12 +1,14 @@
-use super::visualization_shapes::{ICON_TINT_DARK, ICON_TINT_LIGHT};
-use super::visualization_state::{NodeType, VisualizationTabState};
+//! Node click handling and info/edit modal for the visualization graph.
+
+use super::shapes::{ICON_TINT_DARK, ICON_TINT_LIGHT};
+use super::state::{NodeType, VisualizationState};
 use crate::shared::configuration_file::ConfigurationFileState;
 use eframe::egui;
 use egui_graphs::events::{Event, PayloadNodeClick};
 
 /// Process graph click events from the event buffer
 pub fn process_graph_events(
-    state: &mut VisualizationTabState,
+    state: &mut VisualizationState,
     configuration_file_state: &ConfigurationFileState,
 ) {
     let events: Vec<Event> = state.events_buffer.borrow_mut().drain(..).collect();
@@ -32,7 +34,7 @@ pub fn process_graph_events(
 /// Render the node information modal for the clicked node
 pub fn render_node_info_modal(
     ctx: &egui::Context,
-    state: &mut VisualizationTabState,
+    state: &mut VisualizationState,
     config_file_state: &mut ConfigurationFileState,
 ) {
     if !state.node_info_modal_open {

@@ -1,3 +1,5 @@
+//! Service editing UI: HTTP, SSH, DNS, etc. with custom port support.
+
 use crate::shared::config_model::Interface;
 use crate::shared::ui_utils::info_icon;
 use eframe::egui;

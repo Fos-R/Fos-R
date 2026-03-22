@@ -1,3 +1,5 @@
+//! About tab: Fos-R information, usage guide, and repository links.
+
 use eframe::egui;
 
 pub fn show_about_tab_content(ui: &mut egui::Ui) {

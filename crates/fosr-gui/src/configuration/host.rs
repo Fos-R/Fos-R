@@ -1,4 +1,6 @@
-use crate::configuration::{host_validation, interface_ui, service_ui};
+//! Host editing UI: hostname, OS, type, and client protocols.
+
+use crate::configuration::{host_interfaces, host_services, host_validation};
 use crate::shared::config_model::{Configuration, Host};
 use crate::shared::ui_utils::{edit_optional_string, info_icon};
 use eframe::egui;
@@ -123,7 +125,7 @@ fn ui_single_host(
             ui_host_type_selector(ui, index, host);
             ui_host_client_protocols(ui, index, host);
             ui.separator();
-            interface_ui::ui_interfaces_section(ui, index, host, ip_counts, mac_counts);
+            host_interfaces::ui_interfaces_section(ui, index, host, ip_counts, mac_counts);
         });
 }
 
@@ -277,7 +279,7 @@ fn ui_host_client_protocols(ui: &mut egui::Ui, host_idx: usize, host: &mut Host)
                         let filter = search_text.to_lowercase();
                         let mut any_shown = false;
 
-                        for (name, _) in service_ui::KNOWN_SERVICES {
+                        for (name, _) in host_services::KNOWN_SERVICES {
                             if (filter.is_empty() || name.to_lowercase().contains(&filter))
                                 && !host.client.contains(&name.to_string())
                             {

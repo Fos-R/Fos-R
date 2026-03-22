@@ -1,3 +1,6 @@
+//! Time picker button widget that toggles a popup on click.
+//! Derived from egui_timepicker (MIT License).
+
 // This file is derived from egui_timepicker.
 // Copyright (c) 2025 Tilen Pintarič
 // Licensed under the MIT License (see mod.rs for full text).

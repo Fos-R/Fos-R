@@ -1,5 +1,7 @@
-use super::visualization_state::ExportState;
-use super::visualization_state::VisualizationTabState;
+//! Graph screenshot export with a 2-frame state machine for clean PNG output.
+
+use super::state::ExportState;
+use super::state::VisualizationState;
 use eframe::egui;
 
 /// Handle screenshot export state machine.
@@ -7,7 +9,7 @@ use eframe::egui;
 /// - Frame N: user clicks export → HidingOverlays
 /// - Frame N+1: overlays hidden → request screenshot → WaitingForScreenshot
 /// - Frame N+2: screenshot received → extract graph region → save → Idle
-pub fn handle_screenshot_export(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
+pub fn handle_screenshot_export(ui: &mut egui::Ui, state: &mut VisualizationState) {
     // Transition: HidingOverlays → WaitingForScreenshot (request screenshot)
     if state.export_state == ExportState::HidingOverlays {
         state.export_state = ExportState::WaitingForScreenshot;

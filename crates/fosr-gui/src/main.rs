@@ -1,10 +1,13 @@
+//! Entry point for the Fos-R GUI application.
+//! Compiles natively for desktop; delegates to lib.rs for WASM builds.
+
 mod about_tab;
 mod app;
+mod config_templates;
 mod configuration;
 mod generation;
 mod run;
 mod shared;
-mod templates;
 mod timepicker;
 mod visualization;
 

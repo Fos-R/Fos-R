@@ -1,3 +1,5 @@
+//! Graph layout utilities: circular node distribution for initial display.
+
 use eframe::egui;
 
 /// Distributes the graph nodes in a circle layout.

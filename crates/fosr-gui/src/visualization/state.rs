@@ -1,6 +1,8 @@
-use super::visualization_shapes::{NetworkEdgeShape, NetworkNodeShape};
-use super::visualization_stream::{FlowEvent, FlowStreamer};
-use super::visualization_utils::distribute_nodes_circle;
+//! Visualization state: graph data, active links, flow processing, and export.
+
+use super::shapes::{NetworkEdgeShape, NetworkNodeShape};
+use super::stream::{FlowEvent, FlowStreamer};
+use super::utils::distribute_nodes_circle;
 use crate::shared::config_model::Host;
 use eframe::egui;
 use egui_graphs::events::Event;
@@ -174,7 +176,7 @@ pub enum ExportState {
 }
 
 /// Represents the state of the visualization tab.
-pub struct VisualizationTabState {
+pub struct VisualizationState {
     pub graph: VisualizationGraph,
     pub flow_receiver: Option<Receiver<FlowEvent>>,
     pub active_links: HashMap<(Ipv4Addr, Ipv4Addr), ActiveLink>,
@@ -222,7 +224,7 @@ pub struct VisualizationTabState {
     pub export_state: ExportState,
 }
 
-impl Default for VisualizationTabState {
+impl Default for VisualizationState {
     fn default() -> Self {
         // Start with an empty graph; the default config from ConfigurationFileState
         // will be detected by handle_config_changes() on the first frame.
@@ -256,7 +258,7 @@ impl Default for VisualizationTabState {
     }
 }
 
-impl VisualizationTabState {
+impl VisualizationState {
     /// Update state from a configuration (preserves some state)
     /// Note: caller should stop visualization before calling this if running
     pub fn update_from_config(&mut self, config: &config::Configuration) {

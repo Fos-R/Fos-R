@@ -1,5 +1,7 @@
-mod run_state;
-mod run_tab;
+//! Run module: combines live visualization and PCAP generation in a single tab.
 
-pub use run_state::RunState;
-pub use run_tab::show_run_tab_content;
+mod state;
+mod tab;
+
+pub use state::RunState;
+pub use tab::show_run_tab_content;

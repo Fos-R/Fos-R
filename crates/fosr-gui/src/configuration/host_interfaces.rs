@@ -1,4 +1,6 @@
-use crate::configuration::service_ui;
+//! Network interface editing UI: IP, MAC address, and associated services.
+
+use crate::configuration::host_services;
 use crate::shared::config_model::{Host, Interface};
 use crate::shared::ui_utils::{edit_optional_string, required_label};
 use eframe::egui;
@@ -82,7 +84,7 @@ pub fn ui_interfaces_section(
                         ui.colored_label(egui::Color32::RED, "MAC already in use");
                     }
                 }
-                service_ui::ui_services_section(ui, if_idx, host_idx, iface);
+                host_services::ui_services_section(ui, if_idx, host_idx, iface);
             });
         ui.add_space(6.0);
     }

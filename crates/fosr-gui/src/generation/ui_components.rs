@@ -1,3 +1,5 @@
+//! UI components for generation: timezone picker and field error display.
+
 // The `timezone_picker` function is inspired by egui's ComboBox (combo_box.rs).
 //
 // egui is licensed under MIT OR Apache-2.0.
@@ -24,8 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use super::generation_state::GenerationTabState;
-use super::generation_validation::FieldValidation;
+use super::state::GenerationState;
+use super::validation::FieldValidation;
 use chrono_tz::TZ_VARIANTS;
 use eframe::egui::{self, epaint};
 
@@ -37,7 +39,7 @@ pub fn show_field_error(ui: &mut egui::Ui, validation: &FieldValidation) {
     }
 }
 
-pub fn timezone_picker(ui: &mut egui::Ui, state: &mut GenerationTabState) {
+pub fn timezone_picker(ui: &mut egui::Ui, state: &mut GenerationState) {
     let popup_id = ui.make_persistent_id("tz_popup");
     let is_open = egui::Popup::is_id_open(ui.ctx(), popup_id);
 
