@@ -24,7 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use super::generation_tab::{GenerationTabState, UiStatus};
+use super::generation_state::GenerationTabState;
 use super::generation_validation::FieldValidation;
 use chrono_tz::TZ_VARIANTS;
 use eframe::egui::{self, epaint};
@@ -34,26 +34,6 @@ pub fn show_field_error(ui: &mut egui::Ui, validation: &FieldValidation) {
     if let Some(msg) = &validation.error {
         ui.add_space(6.0);
         ui.colored_label(egui::Color32::RED, msg);
-    }
-}
-
-pub fn show_status(ui: &mut egui::Ui, status: &UiStatus) {
-    match status {
-        UiStatus::Idle => {}
-        UiStatus::Generating => {
-            ui.label("Generating file…");
-        }
-        UiStatus::Generated => {
-            ui.label("File generated. You can save it.");
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        UiStatus::Saved(msg) => {
-            ui.label(format!("File saved. {}", msg));
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        UiStatus::Error(msg) => {
-            ui.colored_label(egui::Color32::RED, format!("Error: {msg}"));
-        }
     }
 }
 

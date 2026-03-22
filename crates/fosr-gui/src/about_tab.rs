@@ -18,19 +18,16 @@ pub fn show_about_tab_content(ui: &mut egui::Ui) {
     ui.heading("Usage Guide");
     ui.add_space(5.0);
 
-    ui.label("This GUI helps you design a Fos-R network configuration visually and generate synthetic network traffic as PCAP files. The Live Preview gives you immediate feedback on your topology before generating. Use the CLI to inject this traffic into a real network.");
+    ui.label("This GUI helps you design a Fos-R network configuration visually and generate synthetic network traffic as PCAP files. Export your configuration to use it with the CLI, which can generate and inject live traffic directly on a network.");
     ui.add_space(10.0);
 
-    ui.label(egui::RichText::new("Live Preview").strong());
-    ui.label("Visualize what Fos-R would generate based on your configuration. This is a real-time simulation, not the actual generation. Use it to quickly verify your network topology. Click on a node to adjust some properties.");
+    ui.label(egui::RichText::new("Run").strong());
+    ui.label("• Live Preview: visualize what Fos-R would generate based on your configuration. This is a real-time simulation, not the actual generation. Use it to quickly verify your network topology. Click on a node to adjust some properties.");
+    ui.label("• Generation: generate the PCAP file from your configuration. Set parameters like duration and start time. For reproducible results, use a fixed seed. On desktop, open the result in Wireshark to take a quick look.");
     ui.add_space(8.0);
 
     ui.label(egui::RichText::new("Configuration").strong());
     ui.label("Define your network: hosts, their interfaces, and the services they provide. Create a configuration from a template or import an existing YAML file. Switch between visual editing and raw YAML at any time.");
-    ui.add_space(8.0);
-
-    ui.label(egui::RichText::new("Generation").strong());
-    ui.label("Generate the PCAP file from your configuration. Set parameters like duration and start time. For reproducible results, use a fixed seed. On desktop, open the result in Wireshark to take a quick look.");
     ui.add_space(15.0);
 
     ui.heading("Repository Information");

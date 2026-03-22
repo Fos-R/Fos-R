@@ -1,4 +1,4 @@
-use super::generation_tab::{DURATION_MAX, DURATION_MIN, GenerationTabState};
+use super::generation_state::{DURATION_MAX, DURATION_MIN, GenerationTabState};
 use chrono_tz::Tz;
 use std::time::Duration;
 

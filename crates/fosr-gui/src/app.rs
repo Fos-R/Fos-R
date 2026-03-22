@@ -2,34 +2,32 @@ use crate::about_tab::show_about_tab_content;
 use crate::configuration::configuration_tab::{
     ConfigurationTabState, show_configuration_tab_content,
 };
-use crate::generation::generation_tab::{GenerationTabState, show_generation_tab_content};
+use crate::run::{RunState, show_run_tab_content};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::configuration_file::poll_file_import;
 use crate::shared::configuration_file::{
     ConfigurationFileState, StartupModalState, trigger_file_import,
 };
 use crate::templates::{all_templates, load_template_by_id};
-use crate::visualization::visualization_tab::{
-    VisualizationTabState, show_visualization_tab_content,
-};
 use eframe::egui;
-#[cfg(not(target_arch = "wasm32"))]
 use eframe::egui::global_theme_preference_switch;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum CurrentTab {
     Configuration,
-    Visualization,
-    Generation,
+    Run,
     About,
 }
 
 impl Default for CurrentTab {
     fn default() -> Self {
-        CurrentTab::Visualization
+        CurrentTab::Run
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+pub const DEFAULT_ZOOM: f32 = 1.2;
+#[cfg(not(target_arch = "wasm32"))]
 pub const DEFAULT_ZOOM: f32 = 1.4;
 
 #[derive(Default)]
@@ -37,13 +35,15 @@ pub struct FosrApp {
     current_tab: CurrentTab,
     style_initialized: bool,
     images_preloaded: bool,
+    zoom_factor: f32,
     configuration_file_state: ConfigurationFileState,
     configuration_tab_state: ConfigurationTabState,
-    visualization_tab_state: VisualizationTabState,
-    generation_tab_state: GenerationTabState,
+    run_state: RunState,
     /// Whether to show the close confirmation dialog
+    #[cfg(not(target_arch = "wasm32"))]
     show_close_confirmation: bool,
     /// Whether the user has confirmed they want to close
+    #[cfg(not(target_arch = "wasm32"))]
     allowed_to_close: bool,
 }
 
@@ -51,8 +51,14 @@ impl eframe::App for FosrApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Set default zoom once
         if !self.style_initialized {
-            ctx.options_mut(|option| option.zoom_factor = DEFAULT_ZOOM);
+            self.zoom_factor = DEFAULT_ZOOM;
+            ctx.options_mut(|option| option.zoom_factor = self.zoom_factor);
             ctx.style_mut(|s| s.interaction.tooltip_delay = 0.1);
+
+            // On web, use dark theme to match with the Fos-R website's theme
+            #[cfg(target_arch = "wasm32")]
+            ctx.set_theme(egui::Theme::Dark);
+
             self.style_initialized = true;
         }
 
@@ -85,15 +91,12 @@ impl eframe::App for FosrApp {
             self.images_preloaded = true;
         }
 
-        // On web, use dark theme to match with the Fos-R website's theme
-        #[cfg(target_arch = "wasm32")]
-        ctx.set_theme(egui::Theme::Dark);
-
         // Handle close confirmation if there are active Wireshark sessions
         #[cfg(not(target_arch = "wasm32"))]
         {
             let has_active_sessions = self
-                .generation_tab_state
+                .run_state
+                .generation
                 .temp_pcap_files
                 .iter()
                 .any(|(handle, _)| !handle.is_finished());
@@ -147,25 +150,28 @@ impl eframe::App for FosrApp {
                 egui::MenuBar::new().ui(ui, |ui| {
                     ui.spacing_mut().button_padding = egui::vec2(5.0, 2.0);
                     let tab_text_size = 14.0;
-                    let live_preview_button = egui::Button::new(
-                        egui::RichText::new("Live Preview").size(tab_text_size),
-                    )
-                        .selected(self.current_tab == CurrentTab::Visualization);
 
                     let has_errors = self.configuration_file_state.has_errors;
 
-                    let response = ui.add_enabled(!has_errors, live_preview_button);
+                    // Run tab (combines Live Preview + Generation)
+                    let run_button = egui::Button::new(
+                        egui::RichText::new("Run").size(tab_text_size),
+                    )
+                        .selected(self.current_tab == CurrentTab::Run);
+
+                    let response = ui.add_enabled(!has_errors, run_button);
 
                     let response = if has_errors {
-                        response.on_disabled_hover_text("Configuration is invalid. Fix errors in the Configuration tab to enable Live Preview.")
+                        response.on_disabled_hover_text("Configuration is invalid. Fix errors in the Configuration tab to enable Run.")
                     } else {
-                        response.on_hover_text("Simulation of network traffic based on the current configuration. No real traffic is generated.")
+                        response.on_hover_text("Live preview and PCAP generation from the current configuration.")
                     };
 
                     if !has_errors && response.clicked() {
-                        self.current_tab = CurrentTab::Visualization;
+                        self.current_tab = CurrentTab::Run;
                     }
 
+                    // Configuration tab
                     let label_text = if self.configuration_file_state.has_errors {
                         egui::RichText::new("⚠ Configuration").color(egui::Color32::RED).size(tab_text_size)
                     } else {
@@ -180,18 +186,7 @@ impl eframe::App for FosrApp {
                         self.current_tab = CurrentTab::Configuration;
                     };
 
-                    let generation_button = egui::Button::new(
-                        egui::RichText::new("Generation").size(tab_text_size),
-                    ).selected(self.current_tab == CurrentTab::Generation);
-                    let response = ui.add_enabled(!has_errors, generation_button);
-                    let response = if has_errors {
-                        response.on_disabled_hover_text("Configuration is invalid. Fix errors in the Configuration tab to enable Generation.")
-                    } else {
-                        response.on_hover_text("Generate a PCAP file from the current network configuration.")
-                    };
-                    if !has_errors && response.clicked() {
-                        self.current_tab = CurrentTab::Generation;
-                    }
+                    // About tab
                     if ui
                         .add(egui::Button::new(
                             egui::RichText::new("About").size(tab_text_size),
@@ -204,10 +199,6 @@ impl eframe::App for FosrApp {
 
                     // Right-align utility buttons so they sit on the opposite side of the tabs
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        // On native, show the theme switch (using system theme by default)
-                        #[cfg(not(target_arch = "wasm32"))]
-                        global_theme_preference_switch(ui);
-
                         // On web, show a fullscreen toggle button
                         #[cfg(target_arch = "wasm32")]
                         {
@@ -234,42 +225,68 @@ impl eframe::App for FosrApp {
                                 }
                             }
                         }
+
+                        #[cfg(not(target_arch = "wasm32"))]
+                        ui.add_space(4.0);
+
+                        // Show the theme switch
+                        global_theme_preference_switch(ui);
+
+                        // Zoom controls
+                        if ui
+                            .button(egui_material_icons::icons::ICON_ADD)
+                            .on_hover_text("Zoom in")
+                            .clicked()
+                        {
+                            let current_zoom = ctx.zoom_factor();
+                            let new_zoom = (current_zoom + 0.1).min(3.0);
+                            ctx.set_zoom_factor(new_zoom);
+                            self.zoom_factor = new_zoom;
+                        }
+                        ui.label(format!("{:.0}%", ctx.zoom_factor() * 100.0));
+                        if ui
+                            .button(egui_material_icons::icons::ICON_REMOVE)
+                            .on_hover_text("Zoom out")
+                            .clicked()
+                        {
+                            let current_zoom = ctx.zoom_factor();
+                            let new_zoom = (current_zoom - 0.1).max(0.5);
+                            ctx.set_zoom_factor(new_zoom);
+                            self.zoom_factor = new_zoom;
+                        }
                     });
                 });
             });
 
         // The Central Panel is the region left after adding the Top, Bottom and Side panels.
         egui::CentralPanel::default().show(ctx, |ui| {
-            // Wrap in ScrollArea for vertical scrolling
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                // Display the tab content depending on the currently select tab
-                match self.current_tab {
-                    CurrentTab::Generation => {
-                        show_generation_tab_content(
-                            ui,
-                            &mut self.generation_tab_state,
-                            &mut self.configuration_file_state,
-                        );
-                    }
-                    CurrentTab::Configuration => {
+            // Display the tab content depending on the currently select tab
+            // Note: Run tab doesn't use ScrollArea as it has its own layout
+            match self.current_tab {
+                CurrentTab::Run => {
+                    show_run_tab_content(
+                        ui,
+                        &mut self.run_state,
+                        &mut self.configuration_file_state,
+                    );
+                }
+                CurrentTab::Configuration => {
+                    // Wrap in ScrollArea for vertical scrolling
+                    egui::ScrollArea::vertical().show(ui, |ui| {
                         show_configuration_tab_content(
                             ui,
                             &mut self.configuration_tab_state,
                             &mut self.configuration_file_state,
                         );
-                    }
-                    CurrentTab::Visualization => {
-                        show_visualization_tab_content(
-                            ui,
-                            &mut self.visualization_tab_state,
-                            &mut self.configuration_file_state,
-                        );
-                    }
-                    CurrentTab::About => {
-                        show_about_tab_content(ui);
-                    }
+                    });
                 }
-            });
+                CurrentTab::About => {
+                    // Wrap in ScrollArea for vertical scrolling
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        show_about_tab_content(ui);
+                    });
+                }
+            }
         });
     }
 }
