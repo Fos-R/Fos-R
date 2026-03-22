@@ -1,14 +1,14 @@
+//! Main Fos-R application: tab navigation, startup modal, and app state.
+
 use crate::about_tab::show_about_tab_content;
-use crate::configuration::configuration_tab::{
-    ConfigurationTabState, show_configuration_tab_content,
-};
+use crate::config_templates::{all_templates, load_template_by_id};
+use crate::configuration::tab::{ConfigurationTabState, show_configuration_tab_content};
 use crate::run::{RunState, show_run_tab_content};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::configuration_file::poll_file_import;
 use crate::shared::configuration_file::{
     ConfigurationFileState, StartupModalState, trigger_file_import,
 };
-use crate::templates::{all_templates, load_template_by_id};
 use eframe::egui;
 use eframe::egui::global_theme_preference_switch;
 

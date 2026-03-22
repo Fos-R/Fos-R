@@ -1,10 +1,12 @@
+//! Configuration file state management: loading, parsing, and dirty tracking.
+
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::{read_file_desktop, save_file_desktop, show_file_picker_desktop};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::{read_file_wasm, save_file_wasm, show_file_picker_wasm};
 use crate::{
-    configuration::configuration_tab::ConfigurationTabState, shared::config_model::Configuration,
-    shared::ui_utils::labeled_toggle, templates::load_template_by_id,
+    config_templates::load_template_by_id, configuration::tab::ConfigurationTabState,
+    shared::config_model::Configuration, shared::ui_utils::labeled_toggle,
 };
 use chrono::{DateTime, Local};
 use eframe::egui;
@@ -137,7 +139,7 @@ pub fn configuration_file_picker(
         // Template dropdown menu (always visible)
         let template_menu =
             ui.menu_button(egui_material_icons::icons::ICON_DESCRIPTION, |menu_ui| {
-                for template in crate::templates::all_templates() {
+                for template in crate::config_templates::all_templates() {
                     if menu_ui
                         .button(format!("{} {}", template.icon, template.title))
                         .clicked()

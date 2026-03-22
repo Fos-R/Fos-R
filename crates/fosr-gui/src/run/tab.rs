@@ -1,11 +1,13 @@
-use super::run_state::RunState;
-use crate::generation::generation_core::generate;
-use crate::generation::generation_ui_components::{show_field_error, timezone_picker};
-use crate::generation::generation_validation::{
+//! Run tab: live network visualization combined with PCAP generation controls.
+
+use super::state::RunState;
+use crate::generation::core::generate;
+use crate::generation::ui_components::{show_field_error, timezone_picker};
+use crate::generation::validation::{
     first_invalid_param, validate_duration, validate_optional_u64, validate_timezone,
 };
 #[cfg(not(target_arch = "wasm32"))]
-use crate::generation::generation_wireshark::open_in_wireshark;
+use crate::generation::wireshark::open_in_wireshark;
 use crate::shared::configuration_file::{ConfigurationFileState, load_config_file_contents};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::save_file_desktop;
@@ -13,18 +15,18 @@ use crate::shared::file_io::save_file_desktop;
 use crate::shared::file_io::save_file_wasm;
 use crate::shared::ui_utils::info_icon;
 use crate::timepicker::TimePickerButton;
-use crate::visualization::visualization_modal::{process_graph_events, render_node_info_modal};
-use crate::visualization::visualization_overlays::{
+use crate::visualization::node_modal::{process_graph_events, render_node_info_modal};
+use crate::visualization::overlays::{
     render_overlay_buttons, render_overlay_edge_legend, render_overlay_node_legend,
     render_overlay_stats,
 };
-use crate::visualization::visualization_screenshot::handle_screenshot_export;
-use crate::visualization::visualization_shapes::{NetworkEdgeShape, NetworkNodeShape};
-use crate::visualization::visualization_state::{
+use crate::visualization::screenshot::handle_screenshot_export;
+use crate::visualization::shapes::{NetworkEdgeShape, NetworkNodeShape};
+use crate::visualization::state::{
     ActiveLink, EdgeData, EdgeState, ExportState, INTERNET_IP, LinkDirection, NodeData,
-    VisualizationTabState,
+    VisualizationState,
 };
-use crate::visualization::visualization_stream::FlowEvent;
+use crate::visualization::stream::FlowEvent;
 use chrono::{Datelike, Local, TimeZone};
 use chrono_tz::Tz;
 use eframe::egui::{self, Widget};
@@ -96,7 +98,7 @@ pub fn show_run_tab_content(
 
 /// Handle configuration file changes
 fn handle_config_changes(
-    state: &mut VisualizationTabState,
+    state: &mut VisualizationState,
     configuration_file_state: &ConfigurationFileState,
 ) {
     // Check if config was removed or is empty
@@ -118,7 +120,7 @@ fn handle_config_changes(
             state.stop_visualization();
         }
         state.config_content = None;
-        *state = VisualizationTabState::default();
+        *state = VisualizationState::default();
         state.reset_view_requested = true;
         log::warn!("Config removed or empty, visualization reset to default");
         return;
@@ -166,7 +168,7 @@ fn handle_config_changes(
                     // Log the error once and reset to default state instead of crashing
                     // Store the config content so we don't retry parsing every frame
                     log::error!("Failed to parse configuration: {:?}", e);
-                    *state = VisualizationTabState::default();
+                    *state = VisualizationState::default();
                     state.config_content = Some(config_content.clone());
                     state.reset_view_requested = true;
                 }
@@ -176,7 +178,7 @@ fn handle_config_changes(
 }
 
 /// Process incoming flow events from the streamer
-fn process_flow_events(state: &mut VisualizationTabState) {
+fn process_flow_events(state: &mut VisualizationState) {
     let events: Vec<FlowEvent> = if let Some(ref receiver) = state.flow_receiver {
         receiver.try_iter().collect()
     } else {
@@ -301,7 +303,7 @@ fn process_flow_events(state: &mut VisualizationTabState) {
 }
 
 /// Update active links (remove expired ones)
-fn update_active_links(state: &mut VisualizationTabState) {
+fn update_active_links(state: &mut VisualizationState) {
     let now = web_time::Instant::now();
     // Base display time is 0.5s, adjusted by speed (faster = shorter display)
     let base_timeout_ms = 500.0;
@@ -314,7 +316,7 @@ fn update_active_links(state: &mut VisualizationTabState) {
 }
 
 /// Update graph edges based on active links
-fn update_graph_edges(state: &mut VisualizationTabState) {
+fn update_graph_edges(state: &mut VisualizationState) {
     let graph = &mut state.graph;
 
     // Collect edge info first to avoid borrow issues

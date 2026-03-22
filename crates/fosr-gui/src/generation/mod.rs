@@ -1,5 +1,7 @@
-pub mod generation_core;
-pub mod generation_state;
-pub mod generation_ui_components;
-pub mod generation_validation;
-pub mod generation_wireshark;
+//! PCAP generation module: core logic, state, validation, and Wireshark integration.
+
+pub mod core;
+pub mod state;
+pub mod ui_components;
+pub mod validation;
+pub mod wireshark;

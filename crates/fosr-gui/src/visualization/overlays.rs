@@ -1,8 +1,10 @@
-use super::visualization_shapes::{
+//! Graph overlay UI: control buttons, stats display, and legends for nodes/edges.
+
+use super::shapes::{
     COLOR_DNS, COLOR_HTTP, COLOR_HTTPS, COLOR_INACTIVE, COLOR_OTHER, COLOR_SMTP, COLOR_SSH,
     ICON_TINT_DARK, ICON_TINT_LIGHT,
 };
-use super::visualization_state::{STOP_BUTTON_COLOR, VisualizationTabState};
+use super::state::{STOP_BUTTON_COLOR, VisualizationState};
 use eframe::egui;
 
 /// Helper to render a single legend item inline (for edges)
@@ -35,7 +37,7 @@ fn legend_item_with_image(ui: &mut egui::Ui, label: &str, image: egui::ImageSour
 }
 
 /// Render overlay buttons in the top-left corner of the graph
-pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationTabState) {
+pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState) {
     let local_rect = ui.max_rect();
 
     egui::Area::new(egui::Id::new("viz_overlay_buttons"))
@@ -110,8 +112,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationTabSta
                             .on_hover_text("Export as PNG")
                             .clicked()
                         {
-                            state.export_state =
-                                super::visualization_state::ExportState::HidingOverlays;
+                            state.export_state = super::state::ExportState::HidingOverlays;
                         }
 
                         ui.separator();
@@ -158,7 +159,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationTabSta
 }
 
 /// Render overlay stats in the bottom-left corner of the graph
-pub fn render_overlay_stats(ui: &mut egui::Ui, state: &VisualizationTabState) {
+pub fn render_overlay_stats(ui: &mut egui::Ui, state: &VisualizationState) {
     let local_rect = ui.max_rect();
 
     egui::Area::new(egui::Id::new("viz_overlay_stats"))

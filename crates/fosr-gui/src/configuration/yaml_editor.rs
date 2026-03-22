@@ -1,3 +1,5 @@
+//! YAML editor with syntax highlighting and error line markers.
+
 use crate::shared::configuration_file::{ConfigurationFileState, parse_config_yaml};
 use eframe::egui;
 

@@ -1,6 +1,6 @@
-//! Custom node and edge shapes for network visualization
+//! Custom node and edge shapes with protocol colors, icons, and dynamic sizing.
 
-use super::visualization_state::{EdgeData, EdgeState, LinkDirection, NodeData, NodeType};
+use super::state::{EdgeData, EdgeState, LinkDirection, NodeData, NodeType};
 use eframe::egui::{self, Color32, Pos2, Rect, Shape, TextureOptions, Vec2, load::SizeHint};
 use egui_graphs::{DisplayEdge, DisplayNode, DrawContext, Node, NodeProps};
 use fosr_lib::L7Proto;

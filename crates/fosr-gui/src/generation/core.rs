@@ -1,3 +1,5 @@
+//! Core PCAP generation: runs the 4-stage Fos-R pipeline (S0→S1→S2→S3).
+
 use chrono::{DateTime, Offset, TimeZone};
 use chrono_tz::Tz;
 use fosr_lib::{

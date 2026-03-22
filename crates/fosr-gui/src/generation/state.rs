@@ -1,4 +1,6 @@
-use super::generation_validation::FieldValidation;
+//! Generation state: parameters, progress tracking, and validation states.
+
+use super::validation::FieldValidation;
 use chrono::{Local, NaiveDate, NaiveTime};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -13,7 +15,7 @@ pub const DURATION_MAX: Duration = Duration::from_secs(3 * 24 * 3600); // 3 days
 pub const DURATION_MAX: Duration = Duration::from_secs(24 * 3600); // 1 day (browser tab memory is limited)
 
 /// Represents the state of the generation tab.
-pub struct GenerationTabState {
+pub struct GenerationState {
     pub progress: f32,
     pub progress_receiver: Option<Receiver<f32>>,
     pub pcap_bytes: Option<Vec<u8>>,
@@ -57,7 +59,7 @@ pub struct GenerationTabState {
     pub wireshark_available: bool,
 }
 
-impl GenerationTabState {
+impl GenerationState {
     /// Returns true if generation is currently in progress
     pub fn is_generating(&self) -> bool {
         self.progress_receiver.is_some()
@@ -69,7 +71,7 @@ impl GenerationTabState {
     }
 }
 
-impl Default for GenerationTabState {
+impl Default for GenerationState {
     fn default() -> Self {
         Self {
             progress: 0.0,

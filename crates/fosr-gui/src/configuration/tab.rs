@@ -1,4 +1,6 @@
-use crate::configuration::{host_ui, host_validation, yaml_editor};
+//! Configuration tab: toggles between visual mode and YAML editor.
+
+use crate::configuration::{host, host_validation, yaml_editor};
 use crate::shared::config_model::Configuration;
 use crate::shared::configuration_file::{
     ConfigurationFileState, configuration_file_picker, load_config_file_contents,
@@ -42,7 +44,7 @@ pub fn show_configuration_tab_content(
             if !tab_state.is_code_mode {
                 // Visual mode
                 if let Some(model) = file_state.config_model.as_mut() {
-                    host_ui::ui_hosts_section(ui, model);
+                    host::ui_hosts_section(ui, model);
                     ui.separator();
                     let meta_id = ui.make_persistent_id("metadata_section");
                     egui::collapsing_header::CollapsingState::load_with_default_open(
