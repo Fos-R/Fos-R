@@ -2,6 +2,7 @@
 
 mod config_handling;
 mod flow_processing;
+mod generation_options;
 mod state;
 mod tab;
 
