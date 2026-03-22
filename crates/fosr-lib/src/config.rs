@@ -13,8 +13,10 @@ pub struct Configuration {
     // TODO: faire du tri dans ce qui n’est pas utile
     /// The metadata of the configuration
     pub metadata: Metadata,
-    /// The list of hosts
-    pub hosts: Vec<Host>,
+    // /// The list of hosts
+    // pub hosts: Vec<Host>,
+    /// The list of networks
+    pub networks: Vec<Network>,
     /// A hashmap that maps an IP to a MAC address (if it is defined in the config file)
     // pub mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
     /// A hashmap that maps an IP to an OS (if it is defined in the config file)
@@ -42,7 +44,7 @@ struct ConfigurationYaml {
 }
 
 #[derive(Deserialize, Debug)]
-struct Network {
+pub struct Network {
     pub subnet: Ipv4Addr,
     pub mask: u8,
     pub name: String,
@@ -153,11 +155,14 @@ impl From<ConfigurationYaml> for Configuration {
             assert!(users_per_service.contains_key(service));
         }
 
-        let hosts = c.internet.into_iter().chain(c.networks.into_iter().map(|n| n.hosts.into_iter()).flatten()).collect();
+        // let hosts = c.internet.into_iter().chain(c.networks.into_iter().map(|n| n.hosts.into_iter()).flatten()).collect();
+
+        let mut networks = c.networks;
+        networks.push(Network { subnet: Ipv4Addr::new(0,0,0,0), mask: 0, name: "Internet".to_string(), hosts: c.internet });
 
         Configuration {
             metadata: c.metadata,
-            hosts: hosts,
+            networks,
             os_map,
             // usages_map,
             // mac_addr_map,
@@ -172,6 +177,11 @@ impl From<ConfigurationYaml> for Configuration {
 }
 
 impl Configuration {
+    pub fn get_hosts(&self) -> Vec<&Host> {
+        let out: Vec<&Host> = self.networks.iter().map(|n| n.hosts.iter()).flatten().collect();
+        out
+    }
+
     /// Get the list of servers that provide a service
     pub fn get_servers_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
         self.servers_per_service

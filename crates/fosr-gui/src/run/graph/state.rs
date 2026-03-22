@@ -282,7 +282,7 @@ impl VisualizationState {
         let mut node_to_host: HashMap<petgraph::graph::NodeIndex, usize> = HashMap::new();
 
         // Add one node per host (with all its IPs)
-        for (host_idx, host) in config.hosts.iter().enumerate() {
+        for (host_idx, host) in config.get_hosts().iter().enumerate() {
             let all_ips: Vec<Ipv4Addr> = host.interfaces.iter().map(|i| i.ip_addr).collect();
 
             let node_data = NodeData {
