@@ -3,11 +3,11 @@
 //! This module handles the processing of flow events from the streamer,
 //! updating active links, and synchronizing graph edge states.
 
-use crate::shared::ui_constants::ACTIVE_LINK_BASE_TIMEOUT_MS;
-use crate::visualization::state::{
+use super::state::{
     ActiveLink, EdgeState, INTERNET_IP, LinkDirection, VisualizationState,
 };
-use crate::visualization::stream::FlowEvent;
+use super::stream::FlowEvent;
+use crate::shared::ui_constants::ACTIVE_LINK_BASE_TIMEOUT_MS;
 
 /// Process incoming flow events from the streamer.
 ///

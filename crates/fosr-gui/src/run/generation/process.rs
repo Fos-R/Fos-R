@@ -2,8 +2,8 @@
 //!
 //! This module handles starting generation threads and polling for updates.
 
-use super::state::RunState;
-use crate::generation::core::generate;
+use super::core::generate;
+use crate::run::state::RunState;
 use crate::shared::configuration_file::ConfigurationFileState;
 use eframe::egui;
 use std::sync::Arc;

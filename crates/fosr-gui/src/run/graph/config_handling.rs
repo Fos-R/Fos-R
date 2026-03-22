@@ -3,9 +3,9 @@
 //! This module monitors the configuration file state and triggers
 //! visualization updates when the configuration changes.
 
+use super::state::VisualizationState;
 use crate::shared::configuration_file::ConfigurationFileState;
 use crate::shared::ui_constants::DELAY_FRAMES_NORMAL;
-use crate::visualization::state::VisualizationState;
 
 /// Handle configuration file changes and update visualization state.
 ///

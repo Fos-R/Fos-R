@@ -1,6 +1,7 @@
 //! Node click handling and info/edit modal for the visualization graph.
 
 use super::state::{NodeType, VisualizationState};
+use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
 use crate::shared::colors::{COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT};
 use crate::shared::configuration_file::ConfigurationFileState;
 use crate::shared::ui_constants::{
@@ -72,12 +73,9 @@ pub fn render_node_info_modal(
         // Node type with icon
         ui.horizontal(|ui| {
             let (image, type_str) = match node_data.node_type {
-                NodeType::Server => (egui::include_image!("../../assets/server.png"), "Server"),
-                NodeType::User => (egui::include_image!("../../assets/computer.png"), "User"),
-                NodeType::Internet => (
-                    egui::include_image!("../../assets/internet.png"),
-                    "Internet",
-                ),
+                NodeType::Server => (IMG_SERVER, "Server"),
+                NodeType::User => (IMG_COMPUTER, "User"),
+                NodeType::Internet => (IMG_INTERNET, "Internet"),
             };
             let tint = if ui.style().visuals.dark_mode {
                 COLOR_ICON_TINT_DARK
