@@ -1,3 +1,5 @@
+//! Cross-platform file I/O: desktop (native) and WASM (async) implementations.
+
 use rfd::FileHandle;
 use std::io::Error;
 

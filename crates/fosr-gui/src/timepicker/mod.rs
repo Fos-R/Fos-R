@@ -1,3 +1,5 @@
+//! Time picker widget (derived from egui_timepicker) with theme support.
+
 // Portions of this software are derived from egui_timepicker v0.1.0 (https://crates.io/crates/egui_timepicker).
 //
 // MIT License

@@ -1,3 +1,5 @@
+//! UI components for generation: timezone picker and field error display.
+
 // The `timezone_picker` function is inspired by egui's ComboBox (combo_box.rs).
 //
 // egui is licensed under MIT OR Apache-2.0.
@@ -24,49 +26,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use super::generation_tab::{GenerationTabState, UiStatus};
-use super::generation_validation::FieldValidation;
+use super::state::GenerationState;
+use super::validation::FieldValidation;
+use crate::shared::colors::COLOR_ERROR;
+use crate::shared::ui_constants::{
+    SPACING_MD, TIMEZONE_LIST_MAX_HEIGHT, TIMEZONE_PICKER_WIDTH, TIMEZONE_POPUP_MAX_HEIGHT,
+};
 use chrono_tz::TZ_VARIANTS;
 use eframe::egui::{self, epaint};
 
 /// Display the error in red
 pub fn show_field_error(ui: &mut egui::Ui, validation: &FieldValidation) {
     if let Some(msg) = &validation.error {
-        ui.add_space(6.0);
-        ui.colored_label(egui::Color32::RED, msg);
+        ui.add_space(SPACING_MD);
+        ui.colored_label(COLOR_ERROR, msg);
     }
 }
 
-pub fn show_status(ui: &mut egui::Ui, status: &UiStatus) {
-    match status {
-        UiStatus::Idle => {}
-        UiStatus::Generating => {
-            ui.label("Generating file…");
-        }
-        UiStatus::Generated => {
-            ui.label("File generated. You can save it.");
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        UiStatus::Saved(msg) => {
-            ui.label(format!("File saved. {}", msg));
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        UiStatus::Error(msg) => {
-            ui.colored_label(egui::Color32::RED, format!("Error: {msg}"));
-        }
-    }
-}
-
-pub fn timezone_picker(ui: &mut egui::Ui, state: &mut GenerationTabState) {
+pub fn timezone_picker(ui: &mut egui::Ui, state: &mut GenerationState) {
     let popup_id = ui.make_persistent_id("tz_popup");
     let is_open = egui::Popup::is_id_open(ui.ctx(), popup_id);
 
     // --- ComboBox-style button (inspired by egui's combo_box.rs button_frame) ---
-    let width = 160.0_f32;
     let margin = ui.spacing().button_padding;
     let icon_spacing = ui.spacing().icon_spacing;
     let icon_size = egui::Vec2::splat(ui.spacing().icon_width);
-    let desired_size = egui::vec2(width, ui.spacing().interact_size.y);
+    let desired_size = egui::vec2(TIMEZONE_PICKER_WIDTH, ui.spacing().interact_size.y);
 
     let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::click());
 
@@ -126,7 +111,7 @@ pub fn timezone_picker(ui: &mut egui::Ui, state: &mut GenerationTabState) {
             ui.set_min_width(response.rect.width());
             // Override cached Area height constraint
             // (workaround for https://github.com/emilk/egui/issues/5225)
-            ui.set_max_height(450.0);
+            ui.set_max_height(TIMEZONE_POPUP_MAX_HEIGHT);
 
             // Search input with auto-focus on open
             let edit_id = ui.make_persistent_id("tz_search");
@@ -143,7 +128,7 @@ pub fn timezone_picker(ui: &mut egui::Ui, state: &mut GenerationTabState) {
 
             // Filtered timezone list
             egui::ScrollArea::vertical()
-                .max_height(400.0)
+                .max_height(TIMEZONE_LIST_MAX_HEIGHT)
                 .show(ui, |ui| {
                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
                     let filter = state.timezone_input.to_lowercase();

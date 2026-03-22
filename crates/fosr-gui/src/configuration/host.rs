@@ -1,5 +1,12 @@
-use crate::configuration::{host_validation, interface_ui, service_ui};
+//! Host editing UI: hostname, OS, type, and client protocols.
+
+use crate::configuration::{host_interfaces, host_services, host_validation};
+use crate::shared::colors::COLOR_ERROR;
 use crate::shared::config_model::{Configuration, Host};
+use crate::shared::network_constants::HOST_USAGE_DEFAULT;
+use crate::shared::ui_constants::{
+    PANEL_MIN_WIDTH, POPUP_MAX_HEIGHT, POPUP_MIN_WIDTH, SPACING_MD, SPACING_SM,
+};
 use crate::shared::ui_utils::{edit_optional_string, info_icon};
 use eframe::egui;
 use std::collections::HashMap;
@@ -16,7 +23,7 @@ pub fn ui_hosts_section(ui: &mut egui::Ui, model: &mut Configuration) {
             model.hosts.insert(0, Host::default());
         }
     });
-    ui.add_space(6.0);
+    ui.add_space(SPACING_MD);
 
     if model.hosts.is_empty() {
         ui.label("No hosts in this configuration.");
@@ -43,7 +50,7 @@ pub fn ui_hosts_section(ui: &mut egui::Ui, model: &mut Configuration) {
 
     for (idx, host) in model.hosts.iter_mut().enumerate() {
         ui_single_host(ui, idx, host, &ip_counts, &mac_counts, &mut host_to_remove);
-        ui.add_space(6.0);
+        ui.add_space(SPACING_MD);
     }
 
     if let Some(idx) = host_to_remove {
@@ -76,7 +83,7 @@ fn ui_single_host(
                     let error_text = errors.join(", ");
 
                     let label_text = format!("{} {} - {}", warning_icon, host_name, error_text);
-                    ui.colored_label(egui::Color32::RED, label_text)
+                    ui.colored_label(COLOR_ERROR, label_text)
                         .on_hover_ui(|ui| {
                             ui_host_summary_tooltip(ui, host);
                         });
@@ -99,13 +106,13 @@ fn ui_single_host(
 
             ui.horizontal(|ui| {
                 ui.label("Usage");
-                info_icon(ui, "Optional (default value: 1.0). The usage intensity of the host. 1 is the baseline, < 1 means less usage than usual, and > 1 means higher usage");
-                let mut usage_val = host.usage.unwrap_or(1.0);
+                info_icon(ui, &format!("Optional (default value: {0}). The usage intensity of the host. {0} is the baseline, < {0} means less usage than usual, and > {0} means higher usage", HOST_USAGE_DEFAULT));
+                let mut usage_val = host.usage.unwrap_or(HOST_USAGE_DEFAULT);
                 if ui
                     .add(egui::DragValue::new(&mut usage_val).speed(0.1))
                     .changed()
                 {
-                    host.usage = if (usage_val - 1.0).abs() < f32::EPSILON {
+                    host.usage = if (usage_val - HOST_USAGE_DEFAULT).abs() < f32::EPSILON {
                         None
                     } else {
                         Some(usage_val)
@@ -123,7 +130,7 @@ fn ui_single_host(
             ui_host_type_selector(ui, index, host);
             ui_host_client_protocols(ui, index, host);
             ui.separator();
-            interface_ui::ui_interfaces_section(ui, index, host, ip_counts, mac_counts);
+            host_interfaces::ui_interfaces_section(ui, index, host, ip_counts, mac_counts);
         });
 }
 
@@ -142,7 +149,7 @@ fn ui_host_summary_tooltip(ui: &mut egui::Ui, host: &Host) {
         });
     }
 
-    ui.add_space(4.0);
+    ui.add_space(SPACING_SM);
 
     ui.label("Interfaces :");
     if host.interfaces.is_empty() {
@@ -250,7 +257,7 @@ fn ui_host_client_protocols(ui: &mut egui::Ui, host_idx: usize, host: &mut Host)
         egui::Popup::from_toggle_button_response(&add_btn_resp)
             .id(popup_id)
             .show(|ui| {
-                ui.set_min_width(180.0);
+                ui.set_min_width(POPUP_MIN_WIDTH);
 
                 let search_id = ui.make_persistent_id(("proto_search", host_idx));
                 let mut search_text =
@@ -268,16 +275,15 @@ fn ui_host_client_protocols(ui: &mut egui::Ui, host_idx: usize, host: &mut Host)
                 ui.separator();
 
                 egui::ScrollArea::vertical()
-                    .max_height(200.0)
+                    .max_height(POPUP_MAX_HEIGHT)
                     .auto_shrink([true; 2])
                     .show(ui, |ui| {
-                        let desired_content_width = 250.0;
-                        ui.set_width(desired_content_width);
+                        ui.set_width(PANEL_MIN_WIDTH);
 
                         let filter = search_text.to_lowercase();
                         let mut any_shown = false;
 
-                        for (name, _) in service_ui::KNOWN_SERVICES {
+                        for (name, _) in host_services::KNOWN_SERVICES {
                             if (filter.is_empty() || name.to_lowercase().contains(&filter))
                                 && !host.client.contains(&name.to_string())
                             {

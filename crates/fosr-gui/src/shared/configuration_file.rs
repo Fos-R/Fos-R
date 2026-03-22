@@ -1,10 +1,14 @@
+//! Configuration file state management: loading, parsing, and dirty tracking.
+
+use crate::shared::colors::COLOR_WARNING;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::{read_file_desktop, save_file_desktop, show_file_picker_desktop};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::{read_file_wasm, save_file_wasm, show_file_picker_wasm};
+use crate::shared::ui_constants::SPACING_LG;
 use crate::{
-    configuration::configuration_tab::ConfigurationTabState, shared::config_model::Configuration,
-    shared::ui_utils::labeled_toggle, templates::load_template_by_id,
+    config_templates::load_template_by_id, configuration::tab::ConfigurationTabState,
+    shared::config_model::Configuration, shared::ui_utils::labeled_toggle,
 };
 use chrono::{DateTime, Local};
 use eframe::egui;
@@ -19,9 +23,6 @@ pub enum StartupModalState {
     Initial,
     TemplateSelection,
 }
-
-/// Warning color (amber/orange).
-const COLOR_WARNING: egui::Color32 = egui::Color32::from_rgb(230, 160, 0);
 
 pub struct ConfigurationFileState {
     pub picked_config_file: Option<FileHandle>,
@@ -137,7 +138,7 @@ pub fn configuration_file_picker(
         // Template dropdown menu (always visible)
         let template_menu =
             ui.menu_button(egui_material_icons::icons::ICON_DESCRIPTION, |menu_ui| {
-                for template in crate::templates::all_templates() {
+                for template in crate::config_templates::all_templates() {
                     if menu_ui
                         .button(format!("{} {}", template.icon, template.title))
                         .clicked()
@@ -243,7 +244,7 @@ pub fn configuration_file_picker(
         }
 
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.add_space(8.0);
+            ui.add_space(SPACING_LG);
             // In RTL layout, rendering order is reversed,
             // so Code is passed first to appear visually on the right.
             labeled_toggle(
