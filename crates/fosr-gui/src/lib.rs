@@ -6,11 +6,9 @@ mod about_tab;
 mod app;
 mod config_templates;
 mod configuration;
-mod generation;
 mod run;
 mod shared;
 mod timepicker;
-mod visualization;
 
 use app::FosrApp;
 use eframe::wasm_bindgen::JsCast;

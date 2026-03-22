@@ -1,7 +1,7 @@
 //! Combined state for the Run tab: visualization and generation with panel toggle.
 
-use crate::generation::state::GenerationState;
-use crate::visualization::state::VisualizationState;
+use super::generation::state::GenerationState;
+use super::graph::state::VisualizationState;
 
 /// State for the unified Run tab.
 /// Combines visualization (live preview) and generation state.

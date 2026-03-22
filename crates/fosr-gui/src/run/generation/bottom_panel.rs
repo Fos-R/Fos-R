@@ -3,12 +3,12 @@
 //! Contains the action bar with Generate/Stop/Save buttons and
 //! the expandable generation options panel.
 
-use super::generation_options::show_generation_options;
-use super::generation_process::start_generation;
-use super::state::RunState;
-use crate::generation::validation::first_invalid_param;
+use super::options::show_generation_options;
+use super::process::start_generation;
+use super::validation::first_invalid_param;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::generation::wireshark::open_in_wireshark;
+use super::wireshark::open_in_wireshark;
+use crate::run::state::RunState;
 use crate::shared::colors::{COLOR_ERROR, COLOR_STOP, COLOR_SUCCESS};
 use crate::shared::configuration_file::ConfigurationFileState;
 #[cfg(not(target_arch = "wasm32"))]

@@ -1,6 +1,7 @@
 //! Graph overlay UI: control buttons, stats display, and legends for nodes/edges.
 
 use super::state::VisualizationState;
+use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
 use crate::shared::colors::{
     COLOR_EDGE_INACTIVE, COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT, COLOR_PROTOCOL_DNS,
     COLOR_PROTOCOL_HTTP, COLOR_PROTOCOL_HTTPS, COLOR_PROTOCOL_OTHER, COLOR_PROTOCOL_SMTP,
@@ -68,7 +69,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                                 egui_material_icons::icons::ICON_PLAY_ARROW,
                                 play_text
                             )))
-                            .fill(accent);
+                                .fill(accent);
                             if ui.add(play_button).clicked() {
                                 state.user_has_started = true;
                                 // Pass the user config if loaded, otherwise None (uses default BN model)
@@ -102,7 +103,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                                 "{} Stop",
                                 egui_material_icons::icons::ICON_STOP
                             )))
-                            .fill(COLOR_STOP);
+                                .fill(COLOR_STOP);
                             if ui.add(stop_button).clicked() {
                                 state.stop_visualization();
                             }
@@ -203,21 +204,9 @@ pub fn render_overlay_node_legend(ui: &mut egui::Ui) {
             egui::Frame::popup(ui.style())
                 .shadow(egui::epaint::Shadow::NONE)
                 .show(ui, |ui| {
-                    legend_item_with_image(
-                        ui,
-                        "Server",
-                        egui::include_image!("../../assets/server.png"),
-                    );
-                    legend_item_with_image(
-                        ui,
-                        "User",
-                        egui::include_image!("../../assets/computer.png"),
-                    );
-                    legend_item_with_image(
-                        ui,
-                        "Internet",
-                        egui::include_image!("../../assets/internet.png"),
-                    );
+                    legend_item_with_image(ui, "Server", IMG_SERVER);
+                    legend_item_with_image(ui, "User", IMG_COMPUTER);
+                    legend_item_with_image(ui, "Internet", IMG_INTERNET);
                 })
                 .response
                 .on_hover_text("Node types. Size reflects relative traffic activity.");

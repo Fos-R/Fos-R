@@ -3,15 +3,15 @@
 //! Renders the network visualization with custom node/edge shapes,
 //! overlays, and screenshot export handling.
 
-use super::state::RunState;
-use crate::shared::ui_constants::FIT_TO_SCREEN_PADDING;
-use crate::visualization::overlays::{
+use super::overlays::{
     render_overlay_buttons, render_overlay_edge_legend, render_overlay_node_legend,
     render_overlay_stats,
 };
-use crate::visualization::screenshot::handle_screenshot_export;
-use crate::visualization::shapes::{NetworkEdgeShape, NetworkNodeShape};
-use crate::visualization::state::{EdgeData, ExportState, NodeData};
+use super::screenshot::handle_screenshot_export;
+use super::shapes::{NetworkEdgeShape, NetworkNodeShape};
+use super::state::{EdgeData, ExportState, NodeData};
+use crate::run::state::RunState;
+use crate::shared::ui_constants::FIT_TO_SCREEN_PADDING;
 use eframe::egui;
 
 /// Render the graph view with overlays.

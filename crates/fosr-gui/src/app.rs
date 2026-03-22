@@ -4,6 +4,7 @@ use crate::about_tab::show_about_tab_content;
 use crate::config_templates::{all_templates, load_template_by_id};
 use crate::configuration::tab::{ConfigurationTabState, show_configuration_tab_content};
 use crate::run::{RunState, show_run_tab_content};
+use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_LOGO, IMG_SERVER};
 use crate::shared::colors::{COLOR_ERROR, COLOR_TEXT_MUTED};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::configuration_file::poll_file_import;
@@ -80,26 +81,10 @@ impl eframe::App for FosrApp {
 
         // Preload all images to avoid spinners/fallbacks on first visit
         if !self.images_preloaded {
-            let _ = egui::include_image!("../assets/server.png").load(
-                ctx,
-                Default::default(),
-                Default::default(),
-            );
-            let _ = egui::include_image!("../assets/computer.png").load(
-                ctx,
-                Default::default(),
-                Default::default(),
-            );
-            let _ = egui::include_image!("../assets/internet.png").load(
-                ctx,
-                Default::default(),
-                Default::default(),
-            );
-            let _ = egui::include_image!("../../../public/logo.png").load(
-                ctx,
-                Default::default(),
-                Default::default(),
-            );
+            let _ = IMG_SERVER.load(ctx, Default::default(), Default::default());
+            let _ = IMG_COMPUTER.load(ctx, Default::default(), Default::default());
+            let _ = IMG_INTERNET.load(ctx, Default::default(), Default::default());
+            let _ = IMG_LOGO.load(ctx, Default::default(), Default::default());
             self.images_preloaded = true;
         }
 

@@ -1,13 +1,13 @@
 //! Run tab: live network visualization combined with PCAP generation controls.
 
-use super::bottom_panel::show_bottom_panel;
-use super::config_handling::handle_config_changes;
-use super::flow_processing::{process_flow_events, update_active_links, update_graph_edges};
-use super::generation_process::poll_generation_receivers;
-use super::graph_view::render_graph_view;
+use super::generation::bottom_panel::show_bottom_panel;
+use super::generation::process::poll_generation_receivers;
+use super::graph::config_handling::handle_config_changes;
+use super::graph::flow_processing::{process_flow_events, update_active_links, update_graph_edges};
+use super::graph::node_modal::{process_graph_events, render_node_info_modal};
+use super::graph::view::render_graph_view;
 use super::state::RunState;
 use crate::shared::configuration_file::{ConfigurationFileState, load_config_file_contents};
-use crate::visualization::node_modal::{process_graph_events, render_node_info_modal};
 use eframe::egui;
 
 pub fn show_run_tab_content(

@@ -1,6 +1,7 @@
 //! Custom node and edge shapes with protocol colors, icons, and dynamic sizing.
 
 use super::state::{EdgeData, EdgeState, LinkDirection, NodeData, NodeType};
+use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
 use crate::shared::colors::{
     COLOR_EDGE_INACTIVE, COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT, COLOR_PROTOCOL_DNS,
     COLOR_PROTOCOL_HTTP, COLOR_PROTOCOL_HTTPS, COLOR_PROTOCOL_OTHER, COLOR_PROTOCOL_SMTP,
@@ -13,11 +14,6 @@ use crate::shared::ui_constants::{
 use eframe::egui::{self, Color32, Pos2, Rect, Shape, TextureOptions, Vec2, load::SizeHint};
 use egui_graphs::{DisplayEdge, DisplayNode, DrawContext, Node, NodeProps};
 use fosr_lib::L7Proto;
-
-// Embedded node images
-const IMG_SERVER: egui::ImageSource = egui::include_image!("../../assets/server.png");
-const IMG_COMPUTER: egui::ImageSource = egui::include_image!("../../assets/computer.png");
-const IMG_INTERNET: egui::ImageSource = egui::include_image!("../../assets/internet.png");
 
 /// Custom node shape that displays hostname and IP, with icon based on node type
 #[derive(Clone)]

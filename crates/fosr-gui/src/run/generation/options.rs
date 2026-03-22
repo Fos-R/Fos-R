@@ -3,9 +3,10 @@
 //! This module provides the UI for configuring PCAP generation parameters:
 //! duration, start time, timezone, seed, and advanced options.
 
-use super::state::RunState;
-use crate::generation::ui_components::{show_field_error, timezone_picker};
-use crate::generation::validation::{
+use crate::run::state::RunState;
+
+use super::ui_components::{show_field_error, timezone_picker};
+use super::validation::{
     first_invalid_param, validate_duration, validate_optional_u64, validate_timezone,
 };
 use crate::shared::colors::{COLOR_ERROR, COLOR_TEXT_MUTED};

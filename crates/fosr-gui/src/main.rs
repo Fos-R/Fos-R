@@ -5,11 +5,9 @@ mod about_tab;
 mod app;
 mod config_templates;
 mod configuration;
-mod generation;
 mod run;
 mod shared;
 mod timepicker;
-mod visualization;
 
 // Desktop: native compilation
 #[cfg(not(target_arch = "wasm32"))]
