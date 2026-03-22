@@ -6,6 +6,11 @@
 //! Flows are emitted based on their timestamps relative to visualization start,
 //! allowing multiple flows to be displayed in parallel.
 
+#[cfg(target_arch = "wasm32")]
+use crate::shared::network_constants::STREAM_MAX_PER_CYCLE_WASM;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::shared::network_constants::STREAM_RATE_LIMIT_MS;
+use crate::shared::network_constants::{STREAM_BUFFER_AHEAD_SECS, STREAM_CHECK_INTERVAL_MS};
 use chrono::{DateTime, Offset, TimeZone};
 use fosr_lib::{L7Proto, models, stage0, stage1::Stage1, stage1::bayesian_networks::BNGenerator};
 use std::collections::BinaryHeap;
@@ -181,9 +186,9 @@ impl FlowStreamer {
 
         // Buffer size: generate flows up to this much ahead of current time
         // This avoids overloading the CPU by continuously generating flows
-        let buffer_ahead = Duration::from_secs(5);
+        let buffer_ahead = Duration::from_secs(STREAM_BUFFER_AHEAD_SECS);
         // How often to check for flows to emit
-        let check_interval = Duration::from_millis(50);
+        let check_interval = Duration::from_millis(STREAM_CHECK_INTERVAL_MS);
 
         // Track virtual time by integrating speed changes
         //
@@ -220,7 +225,7 @@ impl FlowStreamer {
                 .map_or(true, |f| f.scheduled_time < buffer_target)
             {
                 // Limit generation rate to avoid CPU spinning
-                if last_generation.elapsed() < Duration::from_millis(100)
+                if last_generation.elapsed() < Duration::from_millis(STREAM_RATE_LIMIT_MS)
                     && !pending_flows.is_empty()
                 {
                     break;
@@ -311,8 +316,8 @@ impl FlowStreamer {
         speed: Arc<RwLock<f32>>,
     ) {
         let mut pending_flows: BinaryHeap<ScheduledFlow> = BinaryHeap::new();
-        let buffer_ahead = Duration::from_secs(5);
-        let check_interval = Duration::from_millis(50);
+        let buffer_ahead = Duration::from_secs(STREAM_BUFFER_AHEAD_SECS);
+        let check_interval = Duration::from_millis(STREAM_CHECK_INTERVAL_MS);
 
         // Track virtual time by integrating speed changes
         let mut virtual_elapsed = Duration::ZERO;
@@ -335,7 +340,7 @@ impl FlowStreamer {
             while pending_flows
                 .peek()
                 .map_or(true, |f| f.scheduled_time < buffer_target)
-                && generated_this_cycle < 10
+                && generated_this_cycle < STREAM_MAX_PER_CYCLE_WASM
             {
                 if let Some(timestamp) = s0.next() {
                     if let Ok(flows) = s1.generate_flows(timestamp) {

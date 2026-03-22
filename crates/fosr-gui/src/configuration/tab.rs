@@ -1,10 +1,12 @@
 //! Configuration tab: toggles between visual mode and YAML editor.
 
 use crate::configuration::{host, host_validation, yaml_editor};
+use crate::shared::colors::{COLOR_ERROR, COLOR_SUCCESS, COLOR_WARNING};
 use crate::shared::config_model::Configuration;
 use crate::shared::configuration_file::{
     ConfigurationFileState, configuration_file_picker, load_config_file_contents,
 };
+use crate::shared::ui_constants::{SPACING_MD, TEXT_EDIT_DEFAULT_ROWS};
 use crate::shared::ui_utils::{
     edit_optional_multiline_string, edit_optional_string, required_label,
 };
@@ -95,12 +97,12 @@ pub fn show_configuration_tab_content(
 fn ui_parsing_status(ui: &mut egui::Ui, state: &ConfigurationFileState) {
     if state.picked_config_file.is_some() {
         if let Some(err) = &state.parse_error {
-            ui.colored_label(egui::Color32::RED, "YAML parsing failed:");
+            ui.colored_label(COLOR_ERROR, "YAML parsing failed:");
             ui.label(err);
         } else if state.config_model.is_some() {
-            ui.colored_label(egui::Color32::GREEN, "YAML parsed successfully");
+            ui.colored_label(COLOR_SUCCESS, "YAML parsed successfully");
         } else if state.config_file_content.is_some() {
-            ui.colored_label(egui::Color32::YELLOW, "YAML loaded, but not parsed yet.");
+            ui.colored_label(COLOR_WARNING, "YAML loaded, but not parsed yet.");
         }
         ui.separator();
     }
@@ -108,7 +110,7 @@ fn ui_parsing_status(ui: &mut egui::Ui, state: &ConfigurationFileState) {
 
 /// Metadata rendering
 fn ui_metadata(ui: &mut egui::Ui, model: &mut Configuration) {
-    ui.add_space(6.0);
+    ui.add_space(SPACING_MD);
 
     // Title
     ui.horizontal(|ui| {
@@ -122,7 +124,7 @@ fn ui_metadata(ui: &mut egui::Ui, model: &mut Configuration) {
         "Description",
         &mut model.metadata.desc,
         "Optional description",
-        3,
+        TEXT_EDIT_DEFAULT_ROWS,
     );
 
     edit_optional_string(ui, "Author", &mut model.metadata.author, "Jane Doe");

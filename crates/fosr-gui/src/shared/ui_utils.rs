@@ -1,18 +1,23 @@
 //! Reusable UI widgets: info icons, optional string editors, toggles, labels.
 
+use crate::shared::colors::{COLOR_ERROR, COLOR_TEXT_MUTED};
+use crate::shared::ui_constants::{
+    INFO_ICON_SIZE, INFO_ICON_SPACING, INFO_TOOLTIP_MAX_WIDTH, TOGGLE_INNER_MARGIN,
+    TOGGLE_ITEM_SPACING,
+};
 use eframe::egui::{self, TextFormat, text::LayoutJob};
 
 /// Display a small info icon with a tooltip.
 pub fn info_icon(ui: &mut egui::Ui, tooltip: &str) {
-    ui.add_space(-4.0);
+    ui.add_space(INFO_ICON_SPACING);
     ui.label(
         egui::RichText::new("ℹ")
-            .color(egui::Color32::GRAY)
-            .size(14.0),
+            .color(COLOR_TEXT_MUTED)
+            .size(INFO_ICON_SIZE),
     )
     .on_hover_cursor(egui::CursorIcon::Help)
     .on_hover_ui(|ui| {
-        ui.set_max_width(300.0);
+        ui.set_max_width(INFO_TOOLTIP_MAX_WIDTH);
         ui.label(tooltip);
     });
 }
@@ -90,11 +95,11 @@ pub fn labeled_toggle(
 ) {
     // Use a group frame with tight padding to auto-size around the content
     let resp = egui::Frame::group(ui.style())
-        .inner_margin(3.0)
+        .inner_margin(TOGGLE_INNER_MARGIN)
         .show(ui, |ui| {
             // Remove the hover stroke on selectable labels inside this toggle
             ui.style_mut().visuals.widgets.hovered.bg_stroke = egui::Stroke::NONE;
-            ui.spacing_mut().item_spacing = egui::vec2(3.0, 0.0);
+            ui.spacing_mut().item_spacing = egui::vec2(TOGGLE_ITEM_SPACING, 0.0);
             ui.horizontal(|ui| {
                 let first = ui.selectable_label(*is_first_selected, first_label);
                 if first.clicked() {
@@ -170,7 +175,7 @@ pub fn required_label(ui: &mut egui::Ui, text: &str) {
         "*",
         0.0,
         TextFormat {
-            color: egui::Color32::RED,
+            color: COLOR_ERROR,
             ..Default::default()
         },
     );

@@ -1,6 +1,8 @@
 //! YAML editor with syntax highlighting and error line markers.
 
+use crate::shared::colors::COLOR_ERROR;
 use crate::shared::configuration_file::{ConfigurationFileState, parse_config_yaml};
+use crate::shared::ui_constants::{YAML_EDITOR_ROWS, YAML_GUTTER_PADDING, YAML_ICON_COL_WIDTH};
 use eframe::egui;
 
 fn parse_error_lines(err: &str) -> Vec<usize> {
@@ -28,13 +30,13 @@ pub fn ui_yaml_editor(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
 
     let error_lines: Vec<usize> = if let Some(err) = &state.parse_error {
         ui.colored_label(
-            egui::Color32::RED,
+            COLOR_ERROR,
             format!(
                 "{} YAML parsing failed",
                 egui_material_icons::icons::ICON_WARNING
             ),
         );
-        ui.colored_label(egui::Color32::RED, err);
+        ui.colored_label(COLOR_ERROR, err);
         ui.separator();
         parse_error_lines(err)
     } else {
@@ -49,11 +51,10 @@ pub fn ui_yaml_editor(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
     let line_height = ui.fonts_mut(|f| f.row_height(&font_id));
     let digit_width = ui.fonts_mut(|f| f.glyph_width(&font_id, '0'));
     let digits = line_count.to_string().len();
-    let icon_col_width = 20.0;
-    let gutter_width = digit_width * digits as f32 + 6.0 + icon_col_width;
+    let gutter_width = digit_width * digits as f32 + YAML_GUTTER_PADDING + YAML_ICON_COL_WIDTH;
 
     let gutter_color = ui.visuals().weak_text_color();
-    let error_color = egui::Color32::from_rgb(220, 50, 50);
+    let error_color = COLOR_ERROR;
     let gutter_bg = ui.visuals().extreme_bg_color;
 
     let scroll_offset_id = ui.make_persistent_id("yaml_editor_scroll_y");
@@ -101,7 +102,7 @@ pub fn ui_yaml_editor(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
             if is_error {
                 let icon_rect = egui::Rect::from_min_size(
                     egui::pos2(num_col_right, y),
-                    egui::vec2(icon_col_width, line_height),
+                    egui::vec2(YAML_ICON_COL_WIDTH, line_height),
                 );
                 ui.scope_builder(egui::UiBuilder::new().max_rect(icon_rect), |ui| {
                     ui.colored_label(error_color, egui_material_icons::icons::ICON_WARNING);
@@ -128,7 +129,7 @@ pub fn ui_yaml_editor(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
                     egui::TextEdit::multiline(&mut content)
                         .font(egui::TextStyle::Monospace)
                         .code_editor()
-                        .desired_rows(20)
+                        .desired_rows(YAML_EDITOR_ROWS)
                         .lock_focus(true)
                         .desired_width(f32::INFINITY)
                         .layouter(&mut layouter),

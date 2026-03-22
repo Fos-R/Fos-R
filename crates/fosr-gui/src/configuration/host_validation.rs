@@ -1,6 +1,7 @@
 //! Host validation: IP/MAC format, conflicts, and type/service consistency.
 
 use crate::shared::config_model::{Configuration, Host};
+use crate::shared::network_constants::{MAC_ADDRESS_PARTS, MAC_PART_LENGTH};
 use std::collections::HashMap;
 
 /// Function to validate if a host is correct
@@ -73,10 +74,10 @@ pub fn has_model_errors(model: &Configuration) -> bool {
 /// Check MAC format (ex: 00:14:2A:3F:47:D8)
 fn is_valid_mac(mac: &str) -> bool {
     let parts: Vec<&str> = mac.split(':').collect();
-    if parts.len() != 6 {
+    if parts.len() != MAC_ADDRESS_PARTS {
         return false;
     }
     parts
         .iter()
-        .all(|p| p.len() == 2 && u8::from_str_radix(p, 16).is_ok())
+        .all(|p| p.len() == MAC_PART_LENGTH && u8::from_str_radix(p, 16).is_ok())
 }

@@ -1,19 +1,26 @@
 //! Graph overlay UI: control buttons, stats display, and legends for nodes/edges.
 
-use super::shapes::{
-    COLOR_DNS, COLOR_HTTP, COLOR_HTTPS, COLOR_INACTIVE, COLOR_OTHER, COLOR_SMTP, COLOR_SSH,
-    ICON_TINT_DARK, ICON_TINT_LIGHT,
+use super::state::VisualizationState;
+use crate::shared::colors::{
+    COLOR_EDGE_INACTIVE, COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT, COLOR_PROTOCOL_DNS,
+    COLOR_PROTOCOL_HTTP, COLOR_PROTOCOL_HTTPS, COLOR_PROTOCOL_OTHER, COLOR_PROTOCOL_SMTP,
+    COLOR_PROTOCOL_SSH, COLOR_STOP,
 };
-use super::state::{STOP_BUTTON_COLOR, VisualizationState};
+use crate::shared::ui_constants::{
+    LEGEND_ICON_SIZE, LEGEND_MARKER_RADIUS, OVERLAY_MARGIN, PLAYBACK_SPEED_EPSILON,
+    PLAYBACK_SPEED_STEPS, SPACING_NEGATIVE_XS,
+};
 use eframe::egui;
 
 /// Helper to render a single legend item inline (for edges)
 fn legend_item_inline(ui: &mut egui::Ui, label: &str, color: egui::Color32) {
     ui.horizontal(|ui| {
-        let rect = ui.allocate_space(egui::vec2(12.0, 12.0)).1;
+        let rect = ui
+            .allocate_space(egui::vec2(LEGEND_ICON_SIZE, LEGEND_ICON_SIZE))
+            .1;
         let painter = ui.painter();
-        painter.circle_filled(rect.center(), 6.0, color);
-        ui.add_space(-2.0);
+        painter.circle_filled(rect.center(), LEGEND_MARKER_RADIUS, color);
+        ui.add_space(SPACING_NEGATIVE_XS);
         ui.label(label);
     });
 }
@@ -22,16 +29,16 @@ fn legend_item_inline(ui: &mut egui::Ui, label: &str, color: egui::Color32) {
 fn legend_item_with_image(ui: &mut egui::Ui, label: &str, image: egui::ImageSource) {
     ui.horizontal(|ui| {
         let tint = if ui.style().visuals.dark_mode {
-            ICON_TINT_DARK
+            COLOR_ICON_TINT_DARK
         } else {
-            ICON_TINT_LIGHT
+            COLOR_ICON_TINT_LIGHT
         };
         ui.add(
             egui::Image::new(image)
-                .fit_to_exact_size(egui::vec2(20.0, 20.0))
+                .fit_to_exact_size(egui::vec2(LEGEND_ICON_SIZE, LEGEND_ICON_SIZE))
                 .tint(tint),
         );
-        ui.add_space(-2.0);
+        ui.add_space(SPACING_NEGATIVE_XS);
         ui.label(label);
     });
 }
@@ -41,7 +48,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
     let local_rect = ui.max_rect();
 
     egui::Area::new(egui::Id::new("viz_overlay_buttons"))
-        .fixed_pos(local_rect.left_top() + egui::vec2(4.0, 4.0))
+        .fixed_pos(local_rect.left_top() + egui::vec2(OVERLAY_MARGIN, OVERLAY_MARGIN))
         .order(egui::Order::Foreground)
         .show(ui.ctx(), |ui| {
             egui::Frame::popup(ui.style())
@@ -95,7 +102,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                                 "{} Stop",
                                 egui_material_icons::icons::ICON_STOP
                             )))
-                            .fill(STOP_BUTTON_COLOR);
+                            .fill(COLOR_STOP);
                             if ui.add(stop_button).clicked() {
                                 state.stop_visualization();
                             }
@@ -118,13 +125,12 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                         ui.separator();
 
                         // Playback speed: −/+ buttons with discrete steps
-                        let speed_steps: &[f32] = &[0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0];
                         // Speed is an Arc, we cannot use it directly with the buttons,
                         // we need to read and write its value manually.
                         let mut speed_value = *state.speed.read().unwrap();
-                        let current_idx = speed_steps
+                        let current_idx = PLAYBACK_SPEED_STEPS
                             .iter()
-                            .position(|&s| (s - speed_value).abs() < 0.01);
+                            .position(|&s| (s - speed_value).abs() < PLAYBACK_SPEED_EPSILON);
 
                         if ui
                             .button(egui_material_icons::icons::ICON_REMOVE)
@@ -133,7 +139,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                         {
                             if let Some(idx) = current_idx {
                                 if idx > 0 {
-                                    speed_value = speed_steps[idx - 1];
+                                    speed_value = PLAYBACK_SPEED_STEPS[idx - 1];
                                     *state.speed.write().unwrap() = speed_value;
                                 }
                             }
@@ -147,8 +153,8 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                             .clicked()
                         {
                             if let Some(idx) = current_idx {
-                                if idx < speed_steps.len() - 1 {
-                                    speed_value = speed_steps[idx + 1];
+                                if idx < PLAYBACK_SPEED_STEPS.len() - 1 {
+                                    speed_value = PLAYBACK_SPEED_STEPS[idx + 1];
                                     *state.speed.write().unwrap() = speed_value;
                                 }
                             }
@@ -163,7 +169,7 @@ pub fn render_overlay_stats(ui: &mut egui::Ui, state: &VisualizationState) {
     let local_rect = ui.max_rect();
 
     egui::Area::new(egui::Id::new("viz_overlay_stats"))
-        .fixed_pos(local_rect.left_bottom() + egui::vec2(4.0, 0.0))
+        .fixed_pos(local_rect.left_bottom() + egui::vec2(OVERLAY_MARGIN, 0.0))
         .pivot(egui::Align2::LEFT_BOTTOM)
         .order(egui::Order::Foreground)
         .show(ui.ctx(), |ui| {
@@ -191,7 +197,7 @@ pub fn render_overlay_node_legend(ui: &mut egui::Ui) {
 
     egui::Area::new(egui::Id::new("viz_overlay_node_legend"))
         .pivot(egui::Align2::RIGHT_TOP)
-        .fixed_pos(local_rect.right_top() + egui::vec2(-4.0, 4.0))
+        .fixed_pos(local_rect.right_top() + egui::vec2(-OVERLAY_MARGIN, OVERLAY_MARGIN))
         .order(egui::Order::Foreground)
         .show(ui.ctx(), |ui| {
             egui::Frame::popup(ui.style())
@@ -224,19 +230,19 @@ pub fn render_overlay_edge_legend(ui: &mut egui::Ui) {
 
     egui::Area::new(egui::Id::new("viz_overlay_edge_legend"))
         .pivot(egui::Align2::RIGHT_BOTTOM)
-        .fixed_pos(local_rect.right_bottom() + egui::vec2(-4.0, -4.0))
+        .fixed_pos(local_rect.right_bottom() + egui::vec2(-OVERLAY_MARGIN, -OVERLAY_MARGIN))
         .order(egui::Order::Foreground)
         .show(ui.ctx(), |ui| {
             egui::Frame::popup(ui.style())
                 .shadow(egui::epaint::Shadow::NONE)
                 .show(ui, |ui| {
-                    legend_item_inline(ui, "Inactive", COLOR_INACTIVE);
-                    legend_item_inline(ui, "HTTP", COLOR_HTTP);
-                    legend_item_inline(ui, "HTTPS", COLOR_HTTPS);
-                    legend_item_inline(ui, "SSH", COLOR_SSH);
-                    legend_item_inline(ui, "DNS", COLOR_DNS);
-                    legend_item_inline(ui, "SMTP", COLOR_SMTP);
-                    legend_item_inline(ui, "Other", COLOR_OTHER);
+                    legend_item_inline(ui, "Inactive", COLOR_EDGE_INACTIVE);
+                    legend_item_inline(ui, "HTTP", COLOR_PROTOCOL_HTTP);
+                    legend_item_inline(ui, "HTTPS", COLOR_PROTOCOL_HTTPS);
+                    legend_item_inline(ui, "SSH", COLOR_PROTOCOL_SSH);
+                    legend_item_inline(ui, "DNS", COLOR_PROTOCOL_DNS);
+                    legend_item_inline(ui, "SMTP", COLOR_PROTOCOL_SMTP);
+                    legend_item_inline(ui, "Other", COLOR_PROTOCOL_OTHER);
                 })
                 .response
                 .on_hover_text(

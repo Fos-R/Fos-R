@@ -15,6 +15,9 @@ mod visualization;
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
     use crate::app::FosrApp;
+    use crate::shared::ui_constants::{
+        WINDOW_DEFAULT_HEIGHT, WINDOW_DEFAULT_WIDTH, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH,
+    };
     use eframe::egui;
     use env_logger;
 
@@ -22,8 +25,8 @@ fn main() -> eframe::Result {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let shared_viewport = egui::ViewportBuilder::default()
-        .with_inner_size([1200.0, 1000.0])
-        .with_min_inner_size([550.0, 500.0])
+        .with_inner_size([WINDOW_DEFAULT_WIDTH, WINDOW_DEFAULT_HEIGHT])
+        .with_min_inner_size([WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT])
         .with_title("Fos-R");
 
     #[cfg(target_os = "macos")]

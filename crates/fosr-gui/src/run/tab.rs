@@ -8,11 +8,19 @@ use crate::generation::validation::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 use crate::generation::wireshark::open_in_wireshark;
+use crate::shared::colors::{COLOR_ERROR, COLOR_STOP, COLOR_SUCCESS, COLOR_TEXT_MUTED};
 use crate::shared::configuration_file::{ConfigurationFileState, load_config_file_contents};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::save_file_desktop;
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::save_file_wasm;
+use crate::shared::ui_constants::{
+    ACTIVE_LINK_BASE_TIMEOUT_MS, BOTTOM_BAR_INNER_MARGIN, BUTTON_HEIGHT, BUTTON_MIN_WIDTH_LG,
+    BUTTON_MIN_WIDTH_SM, DELAY_FRAMES_NORMAL, DELAY_FRAMES_QUICK, DURATION_TEXT_WIDTH,
+    FIT_TO_SCREEN_PADDING, GENERATION_COL1_MIN_WIDTH, GENERATION_COL2_MIN_WIDTH,
+    GENERATION_OPTIONS_COLUMNS, OPTIONS_PANEL_INNER_MARGIN, SEED_INPUT_WIDTH, SPACING_LG,
+    TEXT_SIZE_MD,
+};
 use crate::shared::ui_utils::info_icon;
 use crate::timepicker::TimePickerButton;
 use crate::visualization::node_modal::{process_graph_events, render_node_info_modal};
@@ -160,7 +168,7 @@ fn handle_config_changes(
                     state.config_content = Some(config_content.clone());
                     // Only auto-restart if visualization was running before config change
                     if was_running {
-                        state.auto_start_countdown = Some(10);
+                        state.auto_start_countdown = Some(DELAY_FRAMES_NORMAL);
                     }
                     state.reset_view_requested = true;
                 }
@@ -306,7 +314,7 @@ fn process_flow_events(state: &mut VisualizationState) {
 fn update_active_links(state: &mut VisualizationState) {
     let now = web_time::Instant::now();
     // Base display time is 0.5s, adjusted by speed (faster = shorter display)
-    let base_timeout_ms = 500.0;
+    let base_timeout_ms = ACTIVE_LINK_BASE_TIMEOUT_MS;
     let speed = *state.speed.read().unwrap();
     let timeout = std::time::Duration::from_millis((base_timeout_ms / speed) as u64);
 
@@ -377,10 +385,10 @@ fn update_graph_edges(state: &mut VisualizationState) {
 
 /// Show the generation options
 fn show_generation_options(ui: &mut egui::Ui, state: &mut RunState) {
-    ui.columns(2, |cols| {
+    ui.columns(GENERATION_OPTIONS_COLUMNS, |cols| {
         // --- Column 1: Duration & Time ---
         let col1 = &mut cols[0];
-        col1.set_min_width(280.0);
+        col1.set_min_width(GENERATION_COL1_MIN_WIDTH);
 
         // Duration
         col1.horizontal(|ui| {
@@ -396,7 +404,7 @@ fn show_generation_options(ui: &mut egui::Ui, state: &mut RunState) {
             }
 
             let text_response = egui::TextEdit::singleline(&mut state.generation.duration_str)
-                .desired_width(80.0)
+                .desired_width(DURATION_TEXT_WIDTH)
                 .hint_text("ex: 30m, 1h, 2d")
                 .ui(ui);
 
@@ -414,7 +422,7 @@ fn show_generation_options(ui: &mut egui::Ui, state: &mut RunState) {
             show_field_error(ui, &state.generation.duration_validation);
         });
 
-        col1.add_space(8.0);
+        col1.add_space(SPACING_LG);
 
         // Use current time
         col1.horizontal(|ui| {
@@ -437,7 +445,7 @@ fn show_generation_options(ui: &mut egui::Ui, state: &mut RunState) {
                 );
             });
 
-            col1.add_space(8.0);
+            col1.add_space(SPACING_LG);
 
             col1.horizontal(|ui| {
                 if ui
@@ -506,13 +514,13 @@ fn show_generation_options(ui: &mut egui::Ui, state: &mut RunState) {
         if let Some(text) = utc_text {
             col1.label(
                 egui::RichText::new(format!("Start time (UTC): {}", text))
-                    .color(egui::Color32::GRAY),
+                    .color(COLOR_TEXT_MUTED),
             );
         }
 
         // --- Column 2: Seed & Advanced ---
         let col2 = &mut cols[1];
-        col2.set_min_width(200.0);
+        col2.set_min_width(GENERATION_COL2_MIN_WIDTH);
 
         // Seed
         col2.horizontal(|ui| {
@@ -523,7 +531,7 @@ fn show_generation_options(ui: &mut egui::Ui, state: &mut RunState) {
                 let response = ui.add(
                     egui::TextEdit::singleline(&mut state.generation.seed_input)
                         .hint_text("enter a seed value")
-                        .desired_width(120.0),
+                        .desired_width(SEED_INPUT_WIDTH),
                 );
 
                 if response.changed() {
@@ -543,7 +551,7 @@ fn show_generation_options(ui: &mut egui::Ui, state: &mut RunState) {
             }
         });
 
-        col2.add_space(8.0);
+        col2.add_space(SPACING_LG);
 
         // Advanced options
         col2.horizontal(|ui| {
@@ -555,12 +563,12 @@ fn show_generation_options(ui: &mut egui::Ui, state: &mut RunState) {
             info_icon(ui, "Enable temporal sorting of the generated pcap. Disable to reduce significantly the RAM usage.");
         });
 
-        col2.add_space(8.0);
+        col2.add_space(SPACING_LG);
 
         // Validation errors
         if let Some((name, spec, err)) = first_invalid_param(&state.generation) {
             col2.colored_label(
-                egui::Color32::RED,
+                COLOR_ERROR,
                 format!("Invalid parameter: {name}. Expected: {spec}. ({err})"),
             );
         }
@@ -698,7 +706,10 @@ fn show_bottom_panel(
         egui::TopBottomPanel::bottom("run_options_panel")
             .frame(
                 egui::Frame::side_top_panel(&ctx.style())
-                    .inner_margin(egui::Margin::symmetric(8, 8))
+                    .inner_margin(egui::Margin::symmetric(
+                        OPTIONS_PANEL_INNER_MARGIN.0,
+                        OPTIONS_PANEL_INNER_MARGIN.1,
+                    ))
                     .fill(ctx.style().visuals.panel_fill),
             )
             .resizable(false)
@@ -710,7 +721,10 @@ fn show_bottom_panel(
     // Action bar (always visible)
     egui::TopBottomPanel::bottom("run_bottom_bar")
         .frame(
-            egui::Frame::side_top_panel(&ctx.style()).inner_margin(egui::Margin::symmetric(8, 4)),
+            egui::Frame::side_top_panel(&ctx.style()).inner_margin(egui::Margin::symmetric(
+                BOTTOM_BAR_INNER_MARGIN.0,
+                BOTTOM_BAR_INNER_MARGIN.1,
+            )),
         )
         .show(ctx, |ui| {
             let is_generating = state.generation.is_generating();
@@ -727,10 +741,10 @@ fn show_bottom_panel(
                                 "{} Generate",
                                 egui_material_icons::icons::ICON_PLAY_ARROW
                             ))
-                            .size(13.0),
+                            .size(TEXT_SIZE_MD),
                         )
                         .fill(accent)
-                        .min_size(egui::vec2(85.0, 24.0));
+                        .min_size(egui::vec2(BUTTON_MIN_WIDTH_LG, BUTTON_HEIGHT));
                         if ui
                             .add(generate_button)
                             .on_hover_text("Generate PCAP from configuration")
@@ -748,10 +762,10 @@ fn show_bottom_panel(
                             "{} Stop",
                             egui_material_icons::icons::ICON_STOP
                         ))
-                        .size(13.0),
+                        .size(TEXT_SIZE_MD),
                     )
-                    .fill(egui::Color32::from_rgb(200, 80, 80))
-                    .min_size(egui::vec2(75.0, 24.0));
+                    .fill(COLOR_STOP)
+                    .min_size(egui::vec2(BUTTON_MIN_WIDTH_SM, BUTTON_HEIGHT));
                     if ui
                         .add(stop_button)
                         .on_hover_text("Cancel generation")
@@ -773,8 +787,9 @@ fn show_bottom_panel(
                     let save_text =
                         format!("{} Download", egui_material_icons::icons::ICON_DOWNLOAD);
 
-                    let save_button = egui::Button::new(egui::RichText::new(save_text).size(13.0))
-                        .min_size(egui::vec2(75.0, 24.0));
+                    let save_button =
+                        egui::Button::new(egui::RichText::new(save_text).size(TEXT_SIZE_MD))
+                            .min_size(egui::vec2(BUTTON_MIN_WIDTH_SM, BUTTON_HEIGHT));
                     if ui.add(save_button).clicked() {
                         let pcap_bytes = state.generation.pcap_bytes.clone();
                         #[cfg(not(target_arch = "wasm32"))]
@@ -816,9 +831,9 @@ fn show_bottom_panel(
                                 "{} Open",
                                 egui_material_icons::icons::ICON_LAN
                             ))
-                            .size(13.0),
+                            .size(TEXT_SIZE_MD),
                         )
-                        .min_size(egui::vec2(75.0, 24.0));
+                        .min_size(egui::vec2(BUTTON_MIN_WIDTH_SM, BUTTON_HEIGHT));
                         let response =
                             ui.add_enabled(state.generation.wireshark_available, open_button);
                         let response = if state.generation.wireshark_available {
@@ -846,7 +861,7 @@ fn show_bottom_panel(
 
                 // Error display (when there's an error)
                 if let Some(error) = &state.generation.error {
-                    ui.colored_label(egui::Color32::RED, error);
+                    ui.colored_label(COLOR_ERROR, error);
                 }
 
                 // Options toggle button (right-aligned) with progress bar and throughput
@@ -868,7 +883,7 @@ fn show_bottom_panel(
                         .clicked()
                     {
                         state.panel_open = !state.panel_open;
-                        state.visualization.delayed_fit_countdown = Some(2); // Delay by 2 frames
+                        state.visualization.delayed_fit_countdown = Some(DELAY_FRAMES_QUICK);
                     }
 
                     // Throughput (when complete) - left of Options
@@ -882,7 +897,7 @@ fn show_bottom_panel(
                     if is_generating {
                         let progress = egui::ProgressBar::new(state.generation.progress)
                             .text("")
-                            .fill(egui::Color32::from_rgb(144, 238, 144));
+                            .fill(COLOR_SUCCESS);
                         ui.add(progress);
                     }
                 });
@@ -932,7 +947,7 @@ fn render_graph_view(ui: &mut egui::Ui, state: &mut RunState) {
         .with_navigations(
             &egui_graphs::SettingsNavigation::new()
                 .with_fit_to_screen_enabled(fit_to_screen)
-                .with_fit_to_screen_padding(0.15) // padding to avoid cropping with labels and overlays
+                .with_fit_to_screen_padding(FIT_TO_SCREEN_PADDING) // padding to avoid cropping with labels and overlays
                 .with_zoom_and_pan_enabled(true),
         );
 
