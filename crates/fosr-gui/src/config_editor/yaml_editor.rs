@@ -1,9 +1,9 @@
 //! YAML editor with syntax highlighting and error line markers.
 
-use crate::shared::colors::COLOR_ERROR;
 use crate::shared::config::parser::parse_config_yaml;
 use crate::shared::config::state::ConfigurationFileState;
-use crate::shared::ui_constants::{YAML_EDITOR_ROWS, YAML_GUTTER_PADDING, YAML_ICON_COL_WIDTH};
+use crate::shared::constants::colors::COLOR_ERROR;
+use crate::shared::constants::ui::{YAML_EDITOR_ROWS, YAML_GUTTER_PADDING, YAML_ICON_COL_WIDTH};
 use eframe::egui;
 
 fn parse_error_lines(err: &str) -> Vec<usize> {

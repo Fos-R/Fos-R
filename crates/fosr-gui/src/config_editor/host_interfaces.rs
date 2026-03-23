@@ -1,12 +1,12 @@
 //! Network interface editing UI: IP, MAC address, and associated services.
 
 use crate::config_editor::host_services;
-use crate::shared::colors::COLOR_ERROR;
 use crate::shared::config::model::{Host, Interface};
-use crate::shared::network_constants::{
+use crate::shared::constants::colors::COLOR_ERROR;
+use crate::shared::constants::network::{
     IP_LOCAL_MAX, IP_LOCAL_MIN, MAC_ADDRESS_BYTES, MAC_LOCAL_BIT, MAC_LOCAL_MASK,
 };
-use crate::shared::ui_constants::{SPACING_MD, SPACING_SM};
+use crate::shared::constants::ui::{SPACING_MD, SPACING_SM};
 use crate::shared::ui_utils::{edit_optional_string, required_label};
 use eframe::egui;
 use std::collections::HashMap;

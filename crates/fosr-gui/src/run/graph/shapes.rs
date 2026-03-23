@@ -2,12 +2,12 @@
 
 use super::state::{EdgeData, EdgeState, LinkDirection, NodeData, NodeType};
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
-use crate::shared::colors::{
+use crate::shared::constants::colors::{
     COLOR_EDGE_INACTIVE, COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT, COLOR_PROTOCOL_DNS,
     COLOR_PROTOCOL_HTTP, COLOR_PROTOCOL_HTTPS, COLOR_PROTOCOL_OTHER, COLOR_PROTOCOL_SMTP,
     COLOR_PROTOCOL_SSH, COLOR_TEXT_MUTED,
 };
-use crate::shared::ui_constants::{
+use crate::shared::constants::ui::{
     EDGE_ARROW_ANGLE_RAD, EDGE_ARROW_SIZE, EDGE_FLOW_SCALE, EDGE_WIDTH_MAX, EDGE_WIDTH_MIN,
     NODE_FLOW_SCALE_FACTOR, NODE_RADIUS_MAX, NODE_RADIUS_MIN, SPACING_XS, TEXT_SIZE_DEFAULT,
 };

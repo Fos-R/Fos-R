@@ -11,7 +11,7 @@ use super::screenshot::handle_screenshot_export;
 use super::shapes::{NetworkEdgeShape, NetworkNodeShape};
 use super::state::{EdgeData, ExportState, NodeData};
 use crate::run::state::RunTabState;
-use crate::shared::ui_constants::FIT_TO_SCREEN_PADDING;
+use crate::shared::constants::ui::FIT_TO_SCREEN_PADDING;
 use eframe::egui;
 
 /// Render the graph view with overlays.

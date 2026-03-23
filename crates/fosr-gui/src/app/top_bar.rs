@@ -1,9 +1,9 @@
 //! Top bar rendering: tab navigation, zoom controls, and theme switch.
 
-use crate::shared::colors::COLOR_ERROR;
+use crate::shared::constants::colors::COLOR_ERROR;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::shared::ui_constants::SPACING_SM;
-use crate::shared::ui_constants::{
+use crate::shared::constants::ui::SPACING_SM;
+use crate::shared::constants::ui::{
     BUTTON_PADDING, PANEL_INNER_MARGIN, TEXT_SIZE_DEFAULT, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP,
 };
 use eframe::egui;

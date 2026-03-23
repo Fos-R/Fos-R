@@ -1,6 +1,6 @@
 //! Graph layout utilities: circular node distribution for initial display.
 
-use crate::shared::ui_constants::{GRAPH_LAYOUT_RADIUS_BASE, GRAPH_LAYOUT_RADIUS_MULTIPLIER};
+use crate::shared::constants::ui::{GRAPH_LAYOUT_RADIUS_BASE, GRAPH_LAYOUT_RADIUS_MULTIPLIER};
 use eframe::egui;
 
 /// Distributes the graph nodes in a circle layout.

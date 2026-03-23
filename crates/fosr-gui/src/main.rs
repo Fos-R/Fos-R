@@ -13,7 +13,7 @@ mod timepicker;
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
     use crate::app::FosrApp;
-    use crate::shared::ui_constants::{
+    use crate::shared::constants::ui::{
         WINDOW_DEFAULT_HEIGHT, WINDOW_DEFAULT_WIDTH, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH,
     };
     use eframe::egui;

@@ -5,7 +5,7 @@
 
 use super::state::{ActiveLink, EdgeState, INTERNET_IP, LinkDirection, VisualizationState};
 use super::stream::FlowEvent;
-use crate::shared::ui_constants::ACTIVE_LINK_BASE_TIMEOUT_MS;
+use crate::shared::constants::ui::ACTIVE_LINK_BASE_TIMEOUT_MS;
 
 /// Process incoming flow events from the streamer.
 ///

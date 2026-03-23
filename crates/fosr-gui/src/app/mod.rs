@@ -11,7 +11,7 @@ use crate::config_editor::tab::show_configuration_tab_content;
 use crate::run::{RunTabState, show_run_tab_content};
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_LOGO, IMG_SERVER};
 use crate::shared::config::state::ConfigurationFileState;
-use crate::shared::ui_constants::{TOOLTIP_DELAY, ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN};
+use crate::shared::constants::ui::{TOOLTIP_DELAY, ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN};
 #[cfg(not(target_arch = "wasm32"))]
 use close_dialog::render_close_confirmation_dialog;
 use eframe::egui;

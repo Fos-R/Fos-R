@@ -2,15 +2,15 @@
 
 use crate::config_editor::state::ConfigurationTabState;
 use crate::config_templates::load_template_by_id;
-use crate::shared::colors::COLOR_WARNING;
 use crate::shared::config::model::Configuration;
 use crate::shared::config::parser::parse_config_yaml;
 use crate::shared::config::state::ConfigurationFileState;
+use crate::shared::constants::colors::COLOR_WARNING;
+use crate::shared::constants::ui::SPACING_LG;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::{read_file_desktop, save_file_desktop, show_file_picker_desktop};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::{read_file_wasm, save_file_wasm, show_file_picker_wasm};
-use crate::shared::ui_constants::SPACING_LG;
 use crate::shared::ui_utils::labeled_toggle;
 use chrono::{DateTime, Local};
 use eframe::egui;

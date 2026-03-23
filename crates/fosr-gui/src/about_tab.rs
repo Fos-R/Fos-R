@@ -1,7 +1,7 @@
 //! About tab: Fos-R information, usage guide, and repository links.
 
 use crate::shared::assets::IMG_LOGO;
-use crate::shared::ui_constants::{LOGO_MAX_WIDTH, SPACING_LG, SPACING_SM, SPACING_XXL};
+use crate::shared::constants::ui::{LOGO_MAX_WIDTH, SPACING_LG, SPACING_SM, SPACING_XXL};
 use eframe::egui;
 
 pub fn show_about_tab_content(ui: &mut egui::Ui) {
