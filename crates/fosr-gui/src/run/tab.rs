@@ -26,9 +26,9 @@ pub fn show_run_tab_content(
     if let Some(countdown) = state.visualization.auto_start_countdown {
         if countdown > 0 {
             state.visualization.auto_start_countdown = Some(countdown - 1);
-        } else if !state.visualization.visualization_running {
+        } else if !state.visualization.flow.running {
             let config = state.visualization.config_content.clone();
-            let speed = state.visualization.speed.clone();
+            let speed = state.visualization.flow.speed.clone();
             if let Err(e) = state
                 .visualization
                 .start_visualization(config.as_deref(), speed, true)
@@ -40,12 +40,12 @@ pub fn show_run_tab_content(
     }
 
     // Handle delayed fit-to-screen (after panel toggle or on initial load)
-    if let Some(countdown) = state.visualization.delayed_fit_countdown {
+    if let Some(countdown) = state.visualization.view.delayed_fit_countdown {
         if countdown > 0 {
-            state.visualization.delayed_fit_countdown = Some(countdown - 1);
+            state.visualization.view.delayed_fit_countdown = Some(countdown - 1);
         } else {
-            state.visualization.reset_view_requested = true;
-            state.visualization.delayed_fit_countdown = None;
+            state.visualization.view.reset_requested = true;
+            state.visualization.view.delayed_fit_countdown = None;
         }
     }
 

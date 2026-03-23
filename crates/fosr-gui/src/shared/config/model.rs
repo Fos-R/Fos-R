@@ -50,7 +50,7 @@ pub struct Interface {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mac_addr: Option<String>,
 
-    // Mandatory dans ton YAML -> String (si absent, parsing échoue)
+    /// Required: the IPv4 address of this interface.
     pub ip_addr: String,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

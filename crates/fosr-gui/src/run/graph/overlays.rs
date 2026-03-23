@@ -1,6 +1,6 @@
 //! Graph overlay UI: control buttons, stats display, and legends for nodes/edges.
 
-use super::state::VisualizationState;
+use super::state::{ScreenshotStateMachine, VisualizationState};
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
 use crate::shared::constants::colors::{
     COLOR_EDGE_INACTIVE, COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT, COLOR_PROTOCOL_DNS,
@@ -56,7 +56,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                 .shadow(egui::epaint::Shadow::NONE)
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        if !state.visualization_running {
+                        if !state.flow.running {
                             // Play / Continue: resume without resetting flow counts
                             let play_text = if state.user_has_started {
                                 "Continue"
@@ -69,12 +69,12 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                                 egui_material_icons::icons::ICON_PLAY_ARROW,
                                 play_text
                             )))
-                            .fill(accent);
+                                .fill(accent);
                             if ui.add(play_button).clicked() {
                                 state.user_has_started = true;
                                 // Pass the user config if loaded, otherwise None (uses default BN model)
                                 let config = state.config_content.clone();
-                                let speed = state.speed.clone();
+                                let speed = state.flow.speed.clone();
                                 if let Err(e) =
                                     state.start_visualization(config.as_deref(), speed, false)
                                 {
@@ -90,7 +90,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                                     .clicked()
                                 {
                                     let config = state.config_content.clone();
-                                    let speed = state.speed.clone();
+                                    let speed = state.flow.speed.clone();
                                     if let Err(e) =
                                         state.start_visualization(config.as_deref(), speed, true)
                                     {
@@ -103,7 +103,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                                 "{} Stop",
                                 egui_material_icons::icons::ICON_STOP
                             )))
-                            .fill(COLOR_STOP);
+                                .fill(COLOR_STOP);
                             if ui.add(stop_button).clicked() {
                                 state.stop_visualization();
                             }
@@ -113,14 +113,14 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                             .on_hover_text("Fit to screen")
                             .clicked()
                         {
-                            state.reset_view_requested = true;
+                            state.view.reset_requested = true;
                         }
                         if ui
                             .button(egui_material_icons::icons::ICON_IMAGE)
                             .on_hover_text("Export as PNG")
                             .clicked()
                         {
-                            state.export_state = super::state::ExportState::HidingOverlays;
+                            state.screenshot_export = ScreenshotStateMachine::HidingOverlays;
                         }
 
                         ui.separator();
@@ -128,7 +128,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                         // Playback speed: −/+ buttons with discrete steps
                         // Speed is an Arc, we cannot use it directly with the buttons,
                         // we need to read and write its value manually.
-                        let mut speed_value = *state.speed.read().unwrap();
+                        let mut speed_value = *state.flow.speed.read().unwrap();
                         let current_idx = PLAYBACK_SPEED_STEPS
                             .iter()
                             .position(|&s| (s - speed_value).abs() < PLAYBACK_SPEED_EPSILON);
@@ -141,7 +141,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                             if let Some(idx) = current_idx {
                                 if idx > 0 {
                                     speed_value = PLAYBACK_SPEED_STEPS[idx - 1];
-                                    *state.speed.write().unwrap() = speed_value;
+                                    *state.flow.speed.write().unwrap() = speed_value;
                                 }
                             }
                         }
@@ -156,7 +156,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                             if let Some(idx) = current_idx {
                                 if idx < PLAYBACK_SPEED_STEPS.len() - 1 {
                                     speed_value = PLAYBACK_SPEED_STEPS[idx + 1];
-                                    *state.speed.write().unwrap() = speed_value;
+                                    *state.flow.speed.write().unwrap() = speed_value;
                                 }
                             }
                         }
@@ -178,12 +178,12 @@ pub fn render_overlay_stats(ui: &mut egui::Ui, state: &VisualizationState) {
                 .shadow(egui::epaint::Shadow::NONE)
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        ui.label(format!("Active: {}", state.active_links.len()))
+                        ui.label(format!("Active: {}", state.flow.active_links.len()))
                             .on_hover_text(
                                 "Number of network links currently transmitting data.",
                             );
                         ui.separator();
-                        ui.label(format!("Total flows: {}", state.total_flows))
+                        ui.label(format!("Total flows: {}", state.flow.total_flows))
                             .on_hover_text(
                                 "Cumulative number of flows generated since the simulation started.",
                             );

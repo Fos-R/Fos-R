@@ -34,12 +34,12 @@ pub fn handle_config_changes(
 
     if should_reset {
         // Stop visualization if running, then reset to default
-        if state.visualization_running {
+        if state.flow.running {
             state.stop_visualization();
         }
         state.config_content = None;
         *state = VisualizationState::default();
-        state.reset_view_requested = true;
+        state.view.reset_requested = true;
         log::warn!("Config removed or empty, visualization reset to default");
         return;
     }
@@ -62,7 +62,7 @@ pub fn handle_config_changes(
     if needs_update {
         if let Some(config_content) = &configuration_file_state.config_file_content {
             // Stop visualization if running before updating config
-            let was_running = state.visualization_running;
+            let was_running = state.flow.running;
             if was_running {
                 state.stop_visualization();
             }
@@ -80,7 +80,7 @@ pub fn handle_config_changes(
                     if was_running {
                         state.auto_start_countdown = Some(DELAY_FRAMES_NORMAL);
                     }
-                    state.reset_view_requested = true;
+                    state.view.reset_requested = true;
                 }
                 Err(e) => {
                     // Log the error once and reset to default state instead of crashing
@@ -88,7 +88,7 @@ pub fn handle_config_changes(
                     log::error!("Failed to parse configuration: {:?}", e);
                     *state = VisualizationState::default();
                     state.config_content = Some(config_content.clone());
-                    state.reset_view_requested = true;
+                    state.view.reset_requested = true;
                 }
             }
         }
