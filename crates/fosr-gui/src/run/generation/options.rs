@@ -15,7 +15,7 @@ use crate::shared::constants::ui::{
     GENERATION_OPTIONS_COLUMNS, SEED_INPUT_WIDTH, SPACING_LG,
 };
 use crate::shared::widgets::helpers::info_icon;
-use crate::shared::widgets::time_picker::TimePickerButton;
+use crate::shared::widgets::time_picker::button::TimePickerButton;
 use crate::shared::widgets::timezone_picker::timezone_picker;
 use chrono::{Datelike, Local, TimeZone};
 use chrono_tz::Tz;

@@ -31,7 +31,5 @@
 // - Switch clock face to match whichever drag value is being interacted with
 // - Remove unused builder methods (id_salt, show_icon, format, show_clockface, use_12_hour_clock)
 
-mod button;
+pub mod button;
 mod popup;
-
-pub use button::TimePickerButton;
