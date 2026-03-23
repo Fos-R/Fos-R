@@ -3,7 +3,7 @@
 use super::shapes::{NetworkEdgeShape, NetworkNodeShape};
 use super::stream::{FlowEvent, FlowStreamer};
 use super::utils::distribute_nodes_circle;
-use crate::shared::config_model::Host;
+use crate::shared::config::model::Host;
 use eframe::egui;
 use egui_graphs::events::Event;
 use fosr_lib::{L7Proto, OS, config, config::HostType};

@@ -1,6 +1,6 @@
 //! Host validation: IP/MAC format, conflicts, and type/service consistency.
 
-use crate::shared::config_model::{Configuration, Host};
+use crate::shared::config::model::{Configuration, Host};
 use crate::shared::network_constants::{MAC_ADDRESS_PARTS, MAC_PART_LENGTH};
 use std::collections::HashMap;
 

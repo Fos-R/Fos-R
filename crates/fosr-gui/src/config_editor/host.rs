@@ -2,7 +2,7 @@
 
 use crate::config_editor::{host_interfaces, host_services, host_validation};
 use crate::shared::colors::COLOR_ERROR;
-use crate::shared::config_model::{Configuration, Host};
+use crate::shared::config::model::{Configuration, Host};
 use crate::shared::network_constants::HOST_USAGE_DEFAULT;
 use crate::shared::ui_constants::{
     PANEL_MIN_WIDTH, POPUP_MAX_HEIGHT, POPUP_MIN_WIDTH, SPACING_MD, SPACING_SM,

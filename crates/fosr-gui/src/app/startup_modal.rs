@@ -3,10 +3,9 @@
 use crate::config_templates::{all_templates, load_template_by_id};
 use crate::shared::colors::COLOR_TEXT_MUTED;
 #[cfg(target_arch = "wasm32")]
-use crate::shared::configuration_file::poll_file_import;
-use crate::shared::configuration_file::{
-    ConfigurationFileState, StartupModalState, trigger_file_import,
-};
+use crate::shared::config::file_ops::poll_file_import;
+use crate::shared::config::file_ops::trigger_file_import;
+use crate::shared::config::state::{ConfigurationFileState, StartupModalState};
 use crate::shared::ui_constants::{
     ICON_SIZE_LG, MODAL_WIDTH_MD, SPACING_LG, SPACING_SM, SPACING_XL, SPACING_XS,
     STARTUP_CARD_HEIGHT, STARTUP_COLUMNS_INITIAL, STARTUP_COLUMNS_TEMPLATES, TEXT_SIZE_LG,

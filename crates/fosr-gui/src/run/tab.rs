@@ -7,7 +7,8 @@ use super::graph::flow_processing::{process_flow_events, update_active_links, up
 use super::graph::node_modal::{process_graph_events, render_node_info_modal};
 use super::graph::view::render_graph_view;
 use super::state::RunTabState;
-use crate::shared::configuration_file::{ConfigurationFileState, load_config_file_contents};
+use crate::shared::config::file_ops::load_config_file_contents;
+use crate::shared::config::state::ConfigurationFileState;
 use eframe::egui;
 
 pub fn show_run_tab_content(

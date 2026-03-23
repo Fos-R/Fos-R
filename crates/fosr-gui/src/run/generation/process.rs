@@ -4,7 +4,7 @@
 
 use super::core::generate;
 use crate::run::state::RunTabState;
-use crate::shared::configuration_file::ConfigurationFileState;
+use crate::shared::config::state::ConfigurationFileState;
 use eframe::egui;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;

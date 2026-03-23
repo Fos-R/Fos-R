@@ -2,7 +2,7 @@
 
 use crate::config_editor::host_services;
 use crate::shared::colors::COLOR_ERROR;
-use crate::shared::config_model::{Host, Interface};
+use crate::shared::config::model::{Host, Interface};
 use crate::shared::network_constants::{
     IP_LOCAL_MAX, IP_LOCAL_MIN, MAC_ADDRESS_BYTES, MAC_LOCAL_BIT, MAC_LOCAL_MASK,
 };

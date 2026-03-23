@@ -4,7 +4,7 @@
 //! visualization updates when the configuration changes.
 
 use super::state::VisualizationState;
-use crate::shared::configuration_file::ConfigurationFileState;
+use crate::shared::config::state::ConfigurationFileState;
 use crate::shared::ui_constants::DELAY_FRAMES_NORMAL;
 
 /// Handle configuration file changes and update visualization state.
