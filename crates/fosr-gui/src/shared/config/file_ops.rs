@@ -1,9 +1,11 @@
-//! Configuration file state management: loading, parsing, and dirty tracking.
+//! Configuration file operations: loading, saving, and file picker UI.
 
 use crate::config_editor::state::ConfigurationTabState;
 use crate::config_templates::load_template_by_id;
 use crate::shared::colors::COLOR_WARNING;
-use crate::shared::config_model::Configuration;
+use crate::shared::config::model::Configuration;
+use crate::shared::config::parser::parse_config_yaml;
+use crate::shared::config::state::ConfigurationFileState;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::{read_file_desktop, save_file_desktop, show_file_picker_desktop};
 #[cfg(target_arch = "wasm32")]
@@ -12,61 +14,8 @@ use crate::shared::ui_constants::SPACING_LG;
 use crate::shared::ui_utils::labeled_toggle;
 use chrono::{DateTime, Local};
 use eframe::egui;
-use rfd::FileHandle;
 #[cfg(target_arch = "wasm32")]
-use std::sync::mpsc::{Receiver, channel};
-
-/// State for the startup modal flow.
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
-pub enum StartupModalState {
-    #[default]
-    Initial,
-    TemplateSelection,
-}
-
-pub struct ConfigurationFileState {
-    pub picked_config_file: Option<FileHandle>,
-    #[cfg(target_arch = "wasm32")]
-    pub config_file_receiver: Option<Receiver<Option<FileHandle>>>,
-    pub config_file_content: Option<String>,
-    #[cfg(target_arch = "wasm32")]
-    pub config_file_content_receiver: Option<Receiver<Option<String>>>,
-    pub config_model: Option<Configuration>,
-    pub parse_error: Option<String>,
-    /// Whether the user has chosen a configuration (default or imported).
-    /// When false, the startup modal is shown.
-    pub config_chosen: bool,
-    pub is_dirty: bool,
-    pub clean_snapshot: Option<Configuration>,
-    /// Whether the configuration has any errors (parse errors or validation errors).
-    /// Updated by the configuration tab rendering each frame.
-    pub has_errors: bool,
-    /// Current state of the startup modal.
-    pub modal_state: StartupModalState,
-    /// The ID of the currently loaded template, if any.
-    pub loaded_template_id: Option<String>,
-}
-
-impl Default for ConfigurationFileState {
-    fn default() -> Self {
-        Self {
-            picked_config_file: None,
-            #[cfg(target_arch = "wasm32")]
-            config_file_receiver: None,
-            config_file_content: None,
-            #[cfg(target_arch = "wasm32")]
-            config_file_content_receiver: None,
-            config_model: None,
-            parse_error: None,
-            config_chosen: false,
-            is_dirty: false,
-            clean_snapshot: None,
-            has_errors: false,
-            modal_state: StartupModalState::Initial,
-            loaded_template_id: None,
-        }
-    }
-}
+use std::sync::mpsc::channel;
 
 /// Trigger a file import dialog (works on both desktop and WASM).
 /// On desktop this is synchronous; on WASM the result arrives via `config_file_receiver`.
@@ -297,26 +246,6 @@ pub fn load_config_file_contents(configuration_file_state: &mut ConfigurationFil
                 }
             }
         }
-    }
-}
-
-pub fn parse_config_yaml(configuration_file_state: &mut ConfigurationFileState) {
-    configuration_file_state.config_model = None;
-    configuration_file_state.parse_error = None;
-
-    let Some(yaml) = configuration_file_state.config_file_content.as_deref() else {
-        return;
-    };
-
-    match serde_yaml::from_str::<Configuration>(yaml) {
-        Ok(model) => {
-            if configuration_file_state.clean_snapshot.is_none() {
-                configuration_file_state.clean_snapshot = Some(model.clone());
-            }
-            configuration_file_state.config_model = Some(model);
-            configuration_file_state.is_dirty = true;
-        }
-        Err(e) => configuration_file_state.parse_error = Some(e.to_string()),
     }
 }
 

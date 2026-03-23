@@ -10,7 +10,7 @@ use super::validation::first_invalid_param;
 use super::wireshark::open_in_wireshark;
 use crate::run::state::RunTabState;
 use crate::shared::colors::{COLOR_ERROR, COLOR_STOP, COLOR_SUCCESS};
-use crate::shared::configuration_file::ConfigurationFileState;
+use crate::shared::config::state::ConfigurationFileState;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::save_file_desktop;
 #[cfg(target_arch = "wasm32")]

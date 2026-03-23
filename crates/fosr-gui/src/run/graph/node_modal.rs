@@ -3,7 +3,7 @@
 use super::state::{NodeType, VisualizationState};
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
 use crate::shared::colors::{COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT};
-use crate::shared::configuration_file::ConfigurationFileState;
+use crate::shared::config::state::ConfigurationFileState;
 use crate::shared::ui_constants::{
     INDENT_STANDARD, LEGEND_ICON_SIZE, NODE_MODAL_WIDTH, SPACING_LG, SPACING_SM,
 };

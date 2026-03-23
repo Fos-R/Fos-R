@@ -1,7 +1,7 @@
 //! Predefined configuration templates: Home, Enterprise, Datacenter.
 
-use crate::shared::config_model::Configuration;
-use crate::shared::configuration_file::ConfigurationFileState;
+use crate::shared::config::model::Configuration;
+use crate::shared::config::state::ConfigurationFileState;
 use egui_material_icons::icons;
 
 /// A predefined configuration template.

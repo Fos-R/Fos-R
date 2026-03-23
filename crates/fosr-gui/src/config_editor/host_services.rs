@@ -1,6 +1,6 @@
 //! Service editing UI: HTTP, SSH, DNS, etc. with custom port support.
 
-use crate::shared::config_model::Interface;
+use crate::shared::config::model::Interface;
 use crate::shared::network_constants::{PORT_DEFAULT_UNKNOWN, PORT_MAX, PORT_MIN};
 use crate::shared::ui_constants::{
     PANEL_MIN_WIDTH, POPUP_MAX_HEIGHT, POPUP_MIN_WIDTH, SPACING_SM, SPACING_XS,
