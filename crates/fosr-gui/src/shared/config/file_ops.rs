@@ -11,7 +11,7 @@ use crate::shared::constants::ui::SPACING_LG;
 use crate::shared::file_io::{read_file_desktop, save_file_desktop, show_file_picker_desktop};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::{read_file_wasm, save_file_wasm, show_file_picker_wasm};
-use crate::shared::ui_utils::labeled_toggle;
+use crate::shared::widgets::helpers::labeled_toggle;
 use chrono::{DateTime, Local};
 use eframe::egui;
 #[cfg(target_arch = "wasm32")]

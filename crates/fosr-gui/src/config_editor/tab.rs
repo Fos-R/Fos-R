@@ -7,7 +7,7 @@ use crate::shared::config::model::Configuration;
 use crate::shared::config::state::ConfigurationFileState;
 use crate::shared::constants::colors::{COLOR_ERROR, COLOR_SUCCESS, COLOR_WARNING};
 use crate::shared::constants::ui::{SPACING_MD, TEXT_EDIT_DEFAULT_ROWS};
-use crate::shared::ui_utils::{
+use crate::shared::widgets::helpers::{
     edit_optional_multiline_string, edit_optional_string, required_label,
 };
 use eframe::egui;

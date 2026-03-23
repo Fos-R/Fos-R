@@ -5,7 +5,7 @@ use crate::shared::constants::network::{PORT_DEFAULT_UNKNOWN, PORT_MAX, PORT_MIN
 use crate::shared::constants::ui::{
     PANEL_MIN_WIDTH, POPUP_MAX_HEIGHT, POPUP_MIN_WIDTH, SPACING_SM, SPACING_XS,
 };
-use crate::shared::ui_utils::info_icon;
+use crate::shared::widgets::helpers::info_icon;
 use eframe::egui;
 
 pub const KNOWN_SERVICES: &[(&str, Option<u16>)] = &[

@@ -4,4 +4,4 @@ pub mod assets;
 pub mod config;
 pub mod constants;
 pub mod file_io;
-pub mod ui_utils;
+pub mod widgets;

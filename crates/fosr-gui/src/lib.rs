@@ -8,7 +8,6 @@ mod config_editor;
 mod config_templates;
 mod run;
 mod shared;
-mod timepicker;
 
 use app::FosrApp;
 use eframe::wasm_bindgen::JsCast;

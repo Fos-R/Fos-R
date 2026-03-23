@@ -5,6 +5,5 @@ pub mod core;
 pub mod options;
 pub mod process;
 pub mod state;
-pub mod ui_components;
 pub mod validation;
 pub mod wireshark;

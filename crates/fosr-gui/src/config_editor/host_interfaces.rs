@@ -7,7 +7,7 @@ use crate::shared::constants::network::{
     IP_LOCAL_MAX, IP_LOCAL_MIN, MAC_ADDRESS_BYTES, MAC_LOCAL_BIT, MAC_LOCAL_MASK,
 };
 use crate::shared::constants::ui::{SPACING_MD, SPACING_SM};
-use crate::shared::ui_utils::{edit_optional_string, required_label};
+use crate::shared::widgets::helpers::{edit_optional_string, required_label};
 use eframe::egui;
 use std::collections::HashMap;
 
