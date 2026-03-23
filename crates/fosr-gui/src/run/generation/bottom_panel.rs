@@ -214,7 +214,7 @@ pub fn show_bottom_panel(
                         .clicked()
                     {
                         state.panel_open = !state.panel_open;
-                        state.visualization.delayed_fit_countdown = Some(DELAY_FRAMES_QUICK);
+                        state.visualization.view.delayed_fit_countdown = Some(DELAY_FRAMES_QUICK);
                     }
 
                     // Throughput (when complete) - left of Options

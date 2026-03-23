@@ -1,6 +1,6 @@
 //! Graph screenshot export with a 2-frame state machine for clean PNG output.
 
-use super::state::ExportState;
+use super::state::ScreenshotStateMachine;
 use super::state::VisualizationState;
 use eframe::egui;
 
@@ -11,8 +11,8 @@ use eframe::egui;
 /// - Frame N+2: screenshot received → extract graph region → save → Idle
 pub fn handle_screenshot_export(ui: &mut egui::Ui, state: &mut VisualizationState) {
     // Transition: HidingOverlays → WaitingForScreenshot (request screenshot)
-    if state.export_state == ExportState::HidingOverlays {
-        state.export_state = ExportState::WaitingForScreenshot;
+    if state.screenshot_export == ScreenshotStateMachine::HidingOverlays {
+        state.screenshot_export = ScreenshotStateMachine::WaitingForScreenshot;
         ui.ctx()
             .send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::default()));
     }
@@ -21,14 +21,14 @@ pub fn handle_screenshot_export(ui: &mut egui::Ui, state: &mut VisualizationStat
     ui.input(|i| {
         for event in &i.raw.events {
             if let egui::Event::Screenshot { image, .. } = event {
-                if state.export_state == ExportState::WaitingForScreenshot {
-                    if let Some(graph_rect) = state.graph_rect {
+                if state.screenshot_export == ScreenshotStateMachine::WaitingForScreenshot {
+                    if let Some(graph_rect) = state.view.graph_rect {
                         let graph_image = image.region(&graph_rect, Some(i.pixels_per_point()));
                         save_graph_png(&graph_image);
                     } else {
                         log::error!("No graph rect stored for screenshot export");
                     }
-                    state.export_state = ExportState::Idle;
+                    state.screenshot_export = ScreenshotStateMachine::Idle;
                 }
             }
         }

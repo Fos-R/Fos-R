@@ -16,7 +16,7 @@ use crate::shared::constants::ui::ACTIVE_LINK_BASE_TIMEOUT_MS;
 ///
 /// Flows between two unknown IPs (Internet<->Internet) are filtered out.
 pub fn process_flow_events(state: &mut VisualizationState) {
-    let events: Vec<FlowEvent> = if let Some(ref receiver) = state.flow_receiver {
+    let events: Vec<FlowEvent> = if let Some(ref receiver) = state.flow.receiver {
         receiver.try_iter().collect()
     } else {
         return;
@@ -47,7 +47,7 @@ pub fn process_flow_events(state: &mut VisualizationState) {
         }
 
         // Increment total flows counter
-        state.total_flows += 1;
+        state.flow.total_flows += 1;
 
         // Map IPs to display IPs (unknown -> INTERNET_IP)
         let display_src = if src_known { event.src_ip } else { INTERNET_IP };
@@ -63,13 +63,13 @@ pub fn process_flow_events(state: &mut VisualizationState) {
         let key = (display_src, display_dst);
         let reverse_key = (display_dst, display_src);
 
-        let direction = if state.active_links.contains_key(&reverse_key) {
+        let direction = if state.flow.active_links.contains_key(&reverse_key) {
             LinkDirection::Bidirectional
         } else {
             LinkDirection::Forward
         };
 
-        state.active_links.insert(
+        state.flow.active_links.insert(
             key,
             ActiveLink {
                 protocol: event.protocol,
@@ -80,26 +80,27 @@ pub fn process_flow_events(state: &mut VisualizationState) {
 
         // Increment flow counters on nodes and edges
         if let (Some(&src_idx), Some(&dst_idx)) = (
-            state.ip_to_node.get(&display_src),
-            state.ip_to_node.get(&display_dst),
+            state.network.ip_to_node.get(&display_src),
+            state.network.ip_to_node.get(&display_dst),
         ) {
             // Find the edge (undirected graph, so check both directions)
             let edge_idx = state
+                .network
                 .graph
                 .g()
                 .find_edge(src_idx, dst_idx)
-                .or_else(|| state.graph.g().find_edge(dst_idx, src_idx));
+                .or_else(|| state.network.graph.g().find_edge(dst_idx, src_idx));
 
             if let Some(edge_idx) = edge_idx {
                 // Increment node flow counters
-                if let Some(node) = state.graph.g_mut().node_weight_mut(src_idx) {
+                if let Some(node) = state.network.graph.g_mut().node_weight_mut(src_idx) {
                     node.payload_mut().flow_count += 1;
                 }
-                if let Some(node) = state.graph.g_mut().node_weight_mut(dst_idx) {
+                if let Some(node) = state.network.graph.g_mut().node_weight_mut(dst_idx) {
                     node.payload_mut().flow_count += 1;
                 }
                 // Increment edge flow counter (for thickness)
-                if let Some(edge) = state.graph.g_mut().edge_weight_mut(edge_idx) {
+                if let Some(edge) = state.network.graph.g_mut().edge_weight_mut(edge_idx) {
                     edge.payload_mut().flow_count += 1;
                 }
             }
@@ -108,32 +109,34 @@ pub fn process_flow_events(state: &mut VisualizationState) {
 
     // Update max_flow_count for all nodes (for proportional sizing)
     let max_node_flow = state
+        .network
         .graph
         .g()
         .node_indices()
-        .filter_map(|idx| state.graph.g().node_weight(idx))
+        .filter_map(|idx| state.network.graph.g().node_weight(idx))
         .map(|n| n.payload().flow_count)
         .max()
         .unwrap_or(0);
 
-    for idx in state.graph.g().node_indices().collect::<Vec<_>>() {
-        if let Some(node) = state.graph.g_mut().node_weight_mut(idx) {
+    for idx in state.network.graph.g().node_indices().collect::<Vec<_>>() {
+        if let Some(node) = state.network.graph.g_mut().node_weight_mut(idx) {
             node.payload_mut().max_flow_count = max_node_flow;
         }
     }
 
     // Update max_flow_count for all edges (for proportional sizing)
     let max_edge_flow = state
+        .network
         .graph
         .g()
         .edge_indices()
-        .filter_map(|idx| state.graph.g().edge_weight(idx))
+        .filter_map(|idx| state.network.graph.g().edge_weight(idx))
         .map(|e| e.payload().flow_count)
         .max()
         .unwrap_or(0);
 
-    for idx in state.graph.g().edge_indices().collect::<Vec<_>>() {
-        if let Some(edge) = state.graph.g_mut().edge_weight_mut(idx) {
+    for idx in state.network.graph.g().edge_indices().collect::<Vec<_>>() {
+        if let Some(edge) = state.network.graph.g_mut().edge_weight_mut(idx) {
             edge.payload_mut().max_flow_count = max_edge_flow;
         }
     }
@@ -146,10 +149,11 @@ pub fn update_active_links(state: &mut VisualizationState) {
     let now = web_time::Instant::now();
     // Base display time is 0.5s, adjusted by speed (faster = shorter display)
     let base_timeout_ms = ACTIVE_LINK_BASE_TIMEOUT_MS;
-    let speed = *state.speed.read().unwrap();
+    let speed = *state.flow.speed.read().unwrap();
     let timeout = std::time::Duration::from_millis((base_timeout_ms / speed) as u64);
 
     state
+        .flow
         .active_links
         .retain(|_, link| now.duration_since(link.start_time) < timeout);
 }
@@ -159,7 +163,7 @@ pub fn update_active_links(state: &mut VisualizationState) {
 /// For each edge, checks if any IP combination has an active link
 /// and updates the edge's visual state accordingly.
 pub fn update_graph_edges(state: &mut VisualizationState) {
-    let graph = &mut state.graph;
+    let graph = &mut state.network.graph;
 
     // Collect edge info first to avoid borrow issues
     // Each node can have multiple IPs, so we collect all IP lists for matching
@@ -187,14 +191,14 @@ pub fn update_graph_edges(state: &mut VisualizationState) {
                 let forward_key = (*src_ip, *dst_ip);
                 let reverse_key = (*dst_ip, *src_ip);
 
-                if let Some(link) = state.active_links.get(&forward_key) {
+                if let Some(link) = state.flow.active_links.get(&forward_key) {
                     new_state = EdgeState::Active {
                         protocol: link.protocol,
                         start_time: link.start_time,
                         direction: link.direction.clone(),
                     };
                     break 'outer;
-                } else if let Some(link) = state.active_links.get(&reverse_key) {
+                } else if let Some(link) = state.flow.active_links.get(&reverse_key) {
                     new_state = EdgeState::Active {
                         protocol: link.protocol,
                         start_time: link.start_time,

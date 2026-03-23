@@ -4,9 +4,11 @@ use super::shapes::{NetworkEdgeShape, NetworkNodeShape};
 use super::stream::{FlowEvent, FlowStreamer};
 use super::utils::distribute_nodes_circle;
 use crate::shared::config::model::Host;
+use crate::shared::constants::ui::DELAY_FRAMES_QUICK;
 use eframe::egui;
 use egui_graphs::events::Event;
 use fosr_lib::{L7Proto, OS, config, config::HostType};
+use petgraph::graph::NodeIndex;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -163,7 +165,7 @@ pub type VisualizationGraph = egui_graphs::Graph<
 
 /// State machine for screenshot export
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ExportState {
+pub enum ScreenshotStateMachine {
     #[default]
     Idle,
     /// Hide overlays on next frame before taking screenshot
@@ -172,85 +174,121 @@ pub enum ExportState {
     WaitingForScreenshot,
 }
 
+/// Network structure and IP/Node lookups
+pub struct NetworkData {
+    pub graph: VisualizationGraph,
+    pub known_ips: HashSet<Ipv4Addr>,
+    pub ip_to_node: HashMap<Ipv4Addr, NodeIndex>,
+    pub node_to_host: HashMap<NodeIndex, usize>,
+}
+
+impl Default for NetworkData {
+    fn default() -> Self {
+        Self {
+            graph: VisualizationGraph::new(petgraph::stable_graph::StableGraph::default()),
+            known_ips: HashSet::new(),
+            ip_to_node: HashMap::new(),
+            node_to_host: HashMap::new(),
+        }
+    }
+}
+
+/// Flow processing and streaming state
+pub struct FlowState {
+    pub receiver: Option<Receiver<FlowEvent>>,
+    pub active_links: HashMap<(Ipv4Addr, Ipv4Addr), ActiveLink>,
+    pub streamer: Option<FlowStreamer>,
+    pub running: bool,
+    pub speed: Arc<RwLock<f32>>,
+    pub total_flows: u32,
+    pub visualization_start: Option<Instant>,
+}
+
+impl Default for FlowState {
+    fn default() -> Self {
+        Self {
+            receiver: None,
+            active_links: HashMap::new(),
+            streamer: None,
+            running: false,
+            speed: Arc::new(RwLock::new(1.0)),
+            total_flows: 0,
+            visualization_start: None,
+        }
+    }
+}
+
+/// Layout and rendering state
+pub struct ViewState {
+    pub layout_initialized: bool,
+    pub reset_requested: bool,
+    pub delayed_fit_countdown: Option<u8>,
+    pub last_screen_size: Option<egui::Vec2>,
+    pub graph_rect: Option<egui::Rect>,
+}
+
+impl Default for ViewState {
+    fn default() -> Self {
+        Self {
+            layout_initialized: false,
+            reset_requested: false,
+            delayed_fit_countdown: Some(DELAY_FRAMES_QUICK), // Delay initial fit for bottom panel
+            last_screen_size: None,
+            graph_rect: None,
+        }
+    }
+}
+
+/// Node info modal state
+pub struct ModalState {
+    pub events_buffer: Rc<RefCell<Vec<Event>>>,
+    pub clicked_node: Option<NodeIndex>,
+    pub open: bool,
+    pub edit_buffer: Option<Host>,
+}
+
+impl Default for ModalState {
+    fn default() -> Self {
+        Self {
+            events_buffer: Rc::new(RefCell::new(Vec::new())),
+            clicked_node: None,
+            open: false,
+            edit_buffer: None,
+        }
+    }
+}
+
 /// Represents the state of the visualization tab.
 pub struct VisualizationState {
-    pub graph: VisualizationGraph,
-    pub flow_receiver: Option<Receiver<FlowEvent>>,
-    pub active_links: HashMap<(Ipv4Addr, Ipv4Addr), ActiveLink>,
-    pub visualization_running: bool,
-    pub config_content: Option<String>,
-    pub streamer: Option<FlowStreamer>,
-    pub layout_initialized: bool,
-    /// Set of known IPs from the configuration (for filtering Internet flows)
-    pub known_ips: HashSet<Ipv4Addr>,
-    /// Map from IP to node index for quick lookup
-    pub ip_to_node: HashMap<Ipv4Addr, petgraph::graph::NodeIndex>,
-    /// Visualization start time (for timestamp-based flow display)
-    pub visualization_start: Option<Instant>,
-    /// Speed multiplier (0.5 to 4.0) - shared for runtime updates
-    pub speed: Arc<RwLock<f32>>,
-    /// Buffer for graph events (clicks, etc.)
-    pub events_buffer: Rc<RefCell<Vec<Event>>>,
-    /// Clicked node for info modal display
-    pub clicked_node: Option<petgraph::graph::NodeIndex>,
-    /// Node info modal open state
-    pub node_info_modal_open: bool,
-    /// Map from graph NodeIndex to config_model.hosts index
-    pub node_to_host: HashMap<petgraph::graph::NodeIndex, usize>,
-    /// Frames to wait before auto-starting.
-    /// Using a countdown instead of a boolean allows to render the UI before starting the visualization.
-    /// This avoids lag when clicking on the Visualization tab.
-    /// Note: 10 frames is an arbitrary value that gives enough time for the UI to render and images to load.
-    pub auto_start_countdown: Option<u8>,
-    /// Total number of flows processed since visualization started
-    pub total_flows: u32,
-    /// Flag to request a zoom/pan reset on the next frame
-    pub reset_view_requested: bool,
-    /// Countdown to delay fit-to-screen (waiting for layout to settle, e.g., after panel toggle or on initial load)
-    pub delayed_fit_countdown: Option<u8>,
-    /// Previous screen size (to reset view on window resize)
-    pub last_screen_size: Option<egui::Vec2>,
-    /// Whether the user has manually started the visualization at least once.
-    /// Auto-restart on config change is only enabled after this.
-    pub user_has_started: bool,
-    /// Edit buffer for the node info modal (cloned from config on open, applied on Save)
-    pub modal_edit_buffer: Option<Host>,
-    /// The rect of the graph panel (updated each frame, used for screenshot region)
-    pub graph_rect: Option<egui::Rect>,
+    /// Network structure and lookups
+    pub network: NetworkData,
+    /// Flow processing and streaming
+    pub flow: FlowState,
+    /// Layout and rendering
+    pub view: ViewState,
+    /// Node info modal
+    pub modal: ModalState,
     /// Screenshot export state machine
-    pub export_state: ExportState,
+    pub screenshot_export: ScreenshotStateMachine,
+    /// Config content tracking (for detecting changes)
+    pub config_content: Option<String>,
+    /// Auto-start countdown frames
+    pub auto_start_countdown: Option<u8>,
+    /// Whether user has manually started visualization
+    pub user_has_started: bool,
 }
 
 impl Default for VisualizationState {
     fn default() -> Self {
-        // Start with an empty graph; the default config from ConfigurationFileState
-        // will be detected by handle_config_changes() on the first frame.
-        let graph = VisualizationGraph::new(petgraph::stable_graph::StableGraph::default());
         Self {
-            graph,
-            flow_receiver: None,
-            active_links: HashMap::new(),
-            visualization_running: false,
+            network: NetworkData::default(),
+            flow: FlowState::default(),
+            view: ViewState::default(),
+            modal: ModalState::default(),
+            screenshot_export: ScreenshotStateMachine::default(),
             config_content: None,
-            streamer: None,
-            layout_initialized: false,
-            known_ips: HashSet::new(),
-            ip_to_node: HashMap::new(),
-            visualization_start: None,
-            speed: Arc::new(RwLock::new(1.0)),
-            events_buffer: Rc::new(RefCell::new(Vec::new())),
-            clicked_node: None,
-            node_info_modal_open: false,
-            node_to_host: HashMap::new(),
             auto_start_countdown: None,
-            total_flows: 0,
             user_has_started: false,
-            reset_view_requested: false,
-            delayed_fit_countdown: Some(2), // Delay initial fit for bottom panel to be laid out
-            last_screen_size: None,
-            modal_edit_buffer: None,
-            graph_rect: None,
-            export_state: ExportState::Idle,
         }
     }
 }
@@ -260,11 +298,11 @@ impl VisualizationState {
     /// Note: caller should stop visualization before calling this if running
     pub fn update_from_config(&mut self, config: &config::Configuration) {
         let (graph, known_ips, ip_to_node, node_to_host) = Self::build_graph_from_config(config);
-        self.graph = graph;
-        self.known_ips = known_ips;
-        self.ip_to_node = ip_to_node;
-        self.node_to_host = node_to_host;
-        self.layout_initialized = false;
+        self.network.graph = graph;
+        self.network.known_ips = known_ips;
+        self.network.ip_to_node = ip_to_node;
+        self.network.node_to_host = node_to_host;
+        self.view.layout_initialized = false;
     }
 
     /// Build graph from configuration (shared logic)
@@ -273,13 +311,13 @@ impl VisualizationState {
     ) -> (
         VisualizationGraph,
         HashSet<Ipv4Addr>,
-        HashMap<Ipv4Addr, petgraph::graph::NodeIndex>,
-        HashMap<petgraph::graph::NodeIndex, usize>,
+        HashMap<Ipv4Addr, NodeIndex>,
+        HashMap<NodeIndex, usize>,
     ) {
         let mut graph = VisualizationGraph::new(petgraph::stable_graph::StableGraph::default());
         let mut known_ips = HashSet::new();
-        let mut ip_to_node: HashMap<Ipv4Addr, petgraph::graph::NodeIndex> = HashMap::new();
-        let mut node_to_host: HashMap<petgraph::graph::NodeIndex, usize> = HashMap::new();
+        let mut ip_to_node: HashMap<Ipv4Addr, NodeIndex> = HashMap::new();
+        let mut node_to_host: HashMap<NodeIndex, usize> = HashMap::new();
 
         // Add one node per host (with all its IPs)
         for (host_idx, host) in config.get_hosts().iter().enumerate() {
@@ -335,21 +373,21 @@ impl VisualizationState {
 
     /// Check if an IP is a known (configured) IP
     pub fn is_known_ip(&self, ip: Ipv4Addr) -> bool {
-        self.known_ips.contains(&ip)
+        self.network.known_ips.contains(&ip)
     }
 
     /// Reset all flow counts on nodes and edges
     fn reset_flow_counts(&mut self) {
-        self.total_flows = 0;
-        for idx in self.graph.g().node_indices().collect::<Vec<_>>() {
-            if let Some(node) = self.graph.g_mut().node_weight_mut(idx) {
+        self.flow.total_flows = 0;
+        for idx in self.network.graph.g().node_indices().collect::<Vec<_>>() {
+            if let Some(node) = self.network.graph.g_mut().node_weight_mut(idx) {
                 let payload = node.payload_mut();
                 payload.flow_count = 0;
                 payload.max_flow_count = 0;
             }
         }
-        for idx in self.graph.g().edge_indices().collect::<Vec<_>>() {
-            if let Some(edge) = self.graph.g_mut().edge_weight_mut(idx) {
+        for idx in self.network.graph.g().edge_indices().collect::<Vec<_>>() {
+            if let Some(edge) = self.network.graph.g_mut().edge_weight_mut(idx) {
                 let payload = edge.payload_mut();
                 payload.flow_count = 0;
                 payload.max_flow_count = 0;
@@ -373,9 +411,9 @@ impl VisualizationState {
 
         log::debug!(
             "Starting visualization with {} known IPs:",
-            self.known_ips.len()
+            self.network.known_ips.len()
         );
-        for ip in &self.known_ips {
+        for ip in &self.network.known_ips {
             log::debug!("  - {}", ip);
         }
 
@@ -384,10 +422,10 @@ impl VisualizationState {
         let streamer = FlowStreamer::new(config_content, speed.clone(), sender)?;
         streamer.start();
 
-        self.streamer = Some(streamer);
-        self.flow_receiver = Some(receiver);
-        self.visualization_running = true;
-        self.visualization_start = Some(Instant::now());
+        self.flow.streamer = Some(streamer);
+        self.flow.receiver = Some(receiver);
+        self.flow.running = true;
+        self.flow.visualization_start = Some(Instant::now());
         log::info!(
             "Flow visualization started (config: {}, speed: {}x)",
             if config_content.is_some() {
@@ -403,14 +441,14 @@ impl VisualizationState {
 
     /// Stop visualization
     pub fn stop_visualization(&mut self) {
-        self.visualization_running = false;
-        if let Some(streamer) = &self.streamer {
+        self.flow.running = false;
+        if let Some(streamer) = &self.flow.streamer {
             streamer.stop();
         }
-        self.streamer = None;
-        self.flow_receiver = None;
-        self.active_links.clear();
-        self.visualization_start = None;
+        self.flow.streamer = None;
+        self.flow.receiver = None;
+        self.flow.active_links.clear();
+        self.flow.visualization_start = None;
         log::info!("Flow visualization stopped");
     }
 }

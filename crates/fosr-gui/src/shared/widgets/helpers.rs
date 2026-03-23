@@ -145,7 +145,7 @@ pub fn edit_optional_multiline_string(
         if trimmed.is_empty() {
             *value = None;
         } else {
-            *value = Some(buffer); // garde les retours à la ligne
+            *value = Some(buffer); // preserve line breaks
         }
     }
 

@@ -1,4 +1,10 @@
 //! Custom node and edge shapes with protocol colors, icons, and dynamic sizing.
+//!
+//! egui_graphs rendering:
+//! - `DisplayNode` trait: defines how a node is drawn (shapes, labels, icons)
+//! - `DisplayEdge` trait: defines how an edge is drawn (lines, arrows, colors)
+//! - `closest_boundary_point`: where edges connect to the node boundary
+//! - `is_inside`: hit-testing for clicking and dragging
 
 use super::state::{EdgeData, EdgeState, LinkDirection, NodeData, NodeType};
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
@@ -15,6 +21,58 @@ use eframe::egui::{self, Color32, Pos2, Rect, Shape, TextureOptions, Vec2, load:
 use egui_graphs::{DisplayEdge, DisplayNode, DrawContext, Node, NodeProps};
 use fosr_lib::L7Proto;
 
+// ============================================================================
+// HYBRID SCALING FUNCTIONS
+// ============================================================================
+
+/// Calculate node radius using hybrid linear/proportional scaling.
+///
+/// The scaling works in two phases:
+/// 1. **Linear phase**: While the maximum possible radius is below `NODE_RADIUS_MAX`,
+///    each node grows proportionally to its flow count.
+/// 2. **Proportional phase**: Once we would exceed `NODE_RADIUS_MAX`, switch to
+///    ratio-based scaling so the most active node is always at max size.
+///
+/// This ensures nodes grow smoothly at low traffic, but remain comparable at high traffic.
+fn calculate_node_radius(flow_count: u32, max_flow_count: u32) -> f32 {
+    let max_linear = NODE_RADIUS_MIN + max_flow_count as f32 * NODE_FLOW_SCALE_FACTOR;
+
+    if max_linear < NODE_RADIUS_MAX {
+        // Linear phase: everyone grows normally
+        NODE_RADIUS_MIN + flow_count as f32 * NODE_FLOW_SCALE_FACTOR
+    } else {
+        // Proportional phase: scale by ratio to max
+        let ratio = if max_flow_count > 0 {
+            flow_count as f32 / max_flow_count as f32
+        } else {
+            0.0
+        };
+        NODE_RADIUS_MIN + ratio * (NODE_RADIUS_MAX - NODE_RADIUS_MIN)
+    }
+}
+
+/// Calculate edge width using hybrid linear/proportional scaling.
+///
+/// Uses the same two-phase approach as `calculate_node_radius`:
+/// 1. **Linear phase**: Edges grow proportionally while below `EDGE_WIDTH_MAX`.
+/// 2. **Proportional phase**: Ratio-based scaling to keep the busiest edge at max width.
+fn calculate_edge_width(flow_count: u32, max_flow_count: u32) -> f32 {
+    let max_linear = EDGE_WIDTH_MIN + max_flow_count as f32 * EDGE_FLOW_SCALE;
+
+    if max_linear < EDGE_WIDTH_MAX {
+        // Linear phase: all edges grow normally
+        EDGE_WIDTH_MIN + flow_count as f32 * EDGE_FLOW_SCALE
+    } else {
+        // Proportional phase: scale by ratio to max
+        let ratio = if max_flow_count > 0 {
+            flow_count as f32 / max_flow_count as f32
+        } else {
+            0.0
+        };
+        EDGE_WIDTH_MIN + ratio * (EDGE_WIDTH_MAX - EDGE_WIDTH_MIN)
+    }
+}
+
 /// Custom node shape that displays hostname and IP, with icon based on node type
 #[derive(Clone)]
 pub struct NetworkNodeShape {
@@ -28,21 +86,7 @@ pub struct NetworkNodeShape {
 impl NetworkNodeShape {
     /// Compute node style from payload data.
     fn style_from_payload(payload: &NodeData) -> (f32, NodeType, Option<String>, Vec<String>) {
-        // Hybrid linear/proportional radius scaling
-        let max_linear = NODE_RADIUS_MIN + payload.max_flow_count as f32 * NODE_FLOW_SCALE_FACTOR;
-        let radius = if max_linear < NODE_RADIUS_MAX {
-            // Linear phase: everyone grows normally
-            NODE_RADIUS_MIN + payload.flow_count as f32 * NODE_FLOW_SCALE_FACTOR
-        } else {
-            // Proportional phase: scale by ratio to max
-            let ratio = if payload.max_flow_count > 0 {
-                payload.flow_count as f32 / payload.max_flow_count as f32
-            } else {
-                0.0
-            };
-            NODE_RADIUS_MIN + ratio * (NODE_RADIUS_MAX - NODE_RADIUS_MIN)
-        };
-
+        let radius = calculate_node_radius(payload.flow_count, payload.max_flow_count);
         let ips: Vec<String> = payload.ip_addrs.iter().map(|ip| ip.to_string()).collect();
         (
             radius,
@@ -179,20 +223,7 @@ impl DisplayNode<NodeData, EdgeData, petgraph::Undirected, petgraph::stable_grap
 fn edge_style(edge_data: &EdgeData) -> (Color32, f32, bool, bool) {
     match &edge_data.state {
         EdgeState::Inactive => {
-            // Hybrid linear/proportional width scaling (same approach as nodes)
-            let max_linear = EDGE_WIDTH_MIN + edge_data.max_flow_count as f32 * EDGE_FLOW_SCALE;
-            let width = if max_linear < EDGE_WIDTH_MAX {
-                // Linear phase: all edges grow normally
-                EDGE_WIDTH_MIN + edge_data.flow_count as f32 * EDGE_FLOW_SCALE
-            } else {
-                // Proportional phase: scale by ratio to max
-                let ratio = if edge_data.max_flow_count > 0 {
-                    edge_data.flow_count as f32 / edge_data.max_flow_count as f32
-                } else {
-                    0.0
-                };
-                EDGE_WIDTH_MIN + ratio * (EDGE_WIDTH_MAX - EDGE_WIDTH_MIN)
-            };
+            let width = calculate_edge_width(edge_data.flow_count, edge_data.max_flow_count);
             (COLOR_EDGE_INACTIVE, width, false, false)
         }
         EdgeState::Active {

@@ -15,17 +15,17 @@ pub fn process_graph_events(
     state: &mut VisualizationState,
     configuration_file_state: &ConfigurationFileState,
 ) {
-    let events: Vec<Event> = state.events_buffer.borrow_mut().drain(..).collect();
+    let events: Vec<Event> = state.modal.events_buffer.borrow_mut().drain(..).collect();
 
     for event in events {
         if let Event::NodeClick(PayloadNodeClick { id }) = event {
             let node_idx = petgraph::graph::NodeIndex::new(id);
-            state.clicked_node = Some(node_idx);
-            state.node_info_modal_open = true;
+            state.modal.clicked_node = Some(node_idx);
+            state.modal.open = true;
 
             // Clone the host into the edit buffer
-            let host_idx = state.node_to_host.get(&node_idx).copied();
-            state.modal_edit_buffer = host_idx.and_then(|idx| {
+            let host_idx = state.network.node_to_host.get(&node_idx).copied();
+            state.modal.edit_buffer = host_idx.and_then(|idx| {
                 configuration_file_state
                     .config_model
                     .as_ref()
@@ -41,23 +41,23 @@ pub fn render_node_info_modal(
     state: &mut VisualizationState,
     config_file_state: &mut ConfigurationFileState,
 ) {
-    if !state.node_info_modal_open {
+    if !state.modal.open {
         return;
     }
 
-    let Some(node_idx) = state.clicked_node else {
+    let Some(node_idx) = state.modal.clicked_node else {
         return;
     };
 
-    let Some(node) = state.graph.g().node_weight(node_idx) else {
-        state.node_info_modal_open = false;
-        state.clicked_node = None;
+    let Some(node) = state.network.graph.g().node_weight(node_idx) else {
+        state.modal.open = false;
+        state.modal.clicked_node = None;
         return;
     };
 
     let node_data = node.payload().clone();
-    let host_idx = state.node_to_host.get(&node_idx).copied();
-    let has_edit_buffer = state.modal_edit_buffer.is_some();
+    let host_idx = state.network.node_to_host.get(&node_idx).copied();
+    let has_edit_buffer = state.modal.edit_buffer.is_some();
 
     let mut save_clicked = false;
     let modal = egui::Modal::new(egui::Id::new("node_info_modal")).show(ctx, |ui| {
@@ -93,7 +93,7 @@ pub fn render_node_info_modal(
         ui.add_space(SPACING_SM);
 
         // Editable fields if we have an edit buffer (config loaded and host found)
-        if let Some(ref mut host) = state.modal_edit_buffer {
+        if let Some(ref mut host) = state.modal.edit_buffer {
             // Hostname
             ui.horizontal(|ui| {
                 ui.label("Hostname:");
@@ -200,7 +200,7 @@ pub fn render_node_info_modal(
 
     // Apply changes to config model on Save
     if save_clicked {
-        if let (Some(idx), Some(buffer)) = (host_idx, state.modal_edit_buffer.take()) {
+        if let (Some(idx), Some(buffer)) = (host_idx, state.modal.edit_buffer.take()) {
             if let Some(host) = config_file_state
                 .config_model
                 .as_mut()
@@ -219,8 +219,8 @@ pub fn render_node_info_modal(
 
     // Close on Escape or click outside (discard changes)
     if modal.should_close() {
-        state.node_info_modal_open = false;
-        state.clicked_node = None;
-        state.modal_edit_buffer = None;
+        state.modal.open = false;
+        state.modal.clicked_node = None;
+        state.modal.edit_buffer = None;
     }
 }

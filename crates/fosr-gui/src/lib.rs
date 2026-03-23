@@ -2,12 +2,7 @@
 //! Initializes eframe and starts the app in the browser canvas.
 
 #![cfg(target_arch = "wasm32")]
-mod about_tab;
-mod app;
-mod config_editor;
-mod config_templates;
-mod run;
-mod shared;
+include!("modules.rs");
 
 use app::FosrApp;
 use eframe::wasm_bindgen::JsCast;
@@ -16,7 +11,9 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 pub async fn start(canvas_id: &str) -> Result<(), JsValue> {
     // Redirect `log` message to `console.log`:
-    eframe::WebLogger::init(log::LevelFilter::Info).ok();
+    if let Err(e) = eframe::WebLogger::init(log::LevelFilter::Info) {
+        log::warn!("WebLogger initialization failed: {:?}", e);
+    }
 
     let web_options = eframe::WebOptions::default();
 
