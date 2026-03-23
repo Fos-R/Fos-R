@@ -21,6 +21,57 @@ use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use web_time::{Instant, SystemTime, UNIX_EPOCH};
 
+/// Tracks virtual time that progresses at a variable speed.
+///
+/// Virtual time integrates speed changes smoothly: when speed changes,
+/// only future time is affected, not the accumulated elapsed time.
+/// This prevents "time travel" when reducing speed.
+///
+/// # Why virtual time?
+///
+/// Without this integration, changing speed would scale the entire elapsed time,
+/// causing discontinuities. For example:
+/// - Elapsed time is 20s at speed 1.0
+/// - Speed changes to 0.5
+/// - Naive approach: `elapsed = 20 * 0.5 = 10s` → goes back in time!
+///
+/// With integration, only the delta since the last tick is scaled:
+/// - After 20s at 1.0: virtual_elapsed = 20s
+/// - Next tick with 1s real delta at 0.5x: virtual_elapsed = 20 + 0.5 = 20.5s
+struct VirtualTime {
+    /// Accumulated virtual time (integrated over all speed changes)
+    elapsed: Duration,
+    /// Last real time measurement (for calculating delta)
+    last_tick: Instant,
+}
+
+impl VirtualTime {
+    /// Create a new virtual time tracker starting at zero.
+    fn new() -> Self {
+        Self {
+            elapsed: Duration::ZERO,
+            last_tick: Instant::now(),
+        }
+    }
+
+    /// Advance virtual time by the real time elapsed since last tick,
+    /// scaled by the current speed.
+    fn tick(&mut self, speed: f32) {
+        let now = Instant::now();
+        let real_delta = now.duration_since(self.last_tick);
+        self.last_tick = now;
+
+        // Scale the delta by speed and accumulate
+        let virtual_delta = Duration::from_secs_f64(real_delta.as_secs_f64() * speed as f64);
+        self.elapsed += virtual_delta;
+    }
+
+    /// Get the current virtual elapsed time.
+    fn elapsed(&self) -> Duration {
+        self.elapsed
+    }
+}
+
 /// A flow event (subset of FlowData)
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FlowEvent {
@@ -190,16 +241,8 @@ impl FlowStreamer {
         // How often to check for flows to emit
         let check_interval = Duration::from_millis(STREAM_CHECK_INTERVAL_MS);
 
-        // Track virtual time by integrating speed changes
-        //
-        // Why do we need virtual time? Because when we change the speed value at runtime,
-        // the elapsed time so far should not be scaled, only the time that elapses from the moment
-        // the speed has changed. If we scale the whole elapsed time, and reduce the speed, we will
-        // "go back in time" (e.g., elapsed time is 20s, we reduce speed from 1.0 to 0.5, elapsed time
-        // would become 10s. We would need to wait 10s before new packets are emitted again).
-        let mut virtual_elapsed = Duration::ZERO;
-
-        let mut last_loop_time = Instant::now();
+        // Track virtual time (see VirtualTime struct for explanation)
+        let mut virtual_time = VirtualTime::new();
 
         log::info!(
             "Flow streaming loop started (timestamp-based, speed: {}x)",
@@ -207,14 +250,10 @@ impl FlowStreamer {
         );
 
         while running.load(Ordering::SeqCst) {
-            let now = Instant::now();
-            let delta = now.duration_since(last_loop_time);
-            last_loop_time = now;
-
-            // Integrate speed over time to avoid discontinuities (see previous comment)
-            let speed = *speed.read().unwrap();
-            let virtual_delta = Duration::from_secs_f64(delta.as_secs_f64() * speed as f64);
-            virtual_elapsed += virtual_delta;
+            // Advance virtual time
+            let current_speed = *speed.read().unwrap();
+            virtual_time.tick(current_speed);
+            let virtual_elapsed = virtual_time.elapsed();
 
             // Generate more flows if buffer is running low
             let buffer_target = virtual_elapsed + buffer_ahead;
@@ -305,7 +344,6 @@ impl FlowStreamer {
         );
     }
 
-    // TODO: check if this works properly and update comments to match with native arch
     #[cfg(target_arch = "wasm32")]
     async fn streaming_loop_wasm(
         mut s0: stage0::BinBasedGenerator,
@@ -319,19 +357,14 @@ impl FlowStreamer {
         let buffer_ahead = Duration::from_secs(STREAM_BUFFER_AHEAD_SECS);
         let check_interval = Duration::from_millis(STREAM_CHECK_INTERVAL_MS);
 
-        // Track virtual time by integrating speed changes
-        let mut virtual_elapsed = Duration::ZERO;
-        let mut last_loop_time = Instant::now();
+        // Track virtual time (see VirtualTime struct for explanation)
+        let mut virtual_time = VirtualTime::new();
 
         while running.load(Ordering::SeqCst) {
-            let now = Instant::now();
-            let delta = now.duration_since(last_loop_time);
-            last_loop_time = now;
-
-            // Integrate speed over time to avoid discontinuities
-            let speed = *speed.read().unwrap();
-            let virtual_delta = Duration::from_secs_f64(delta.as_secs_f64() * speed as f64);
-            virtual_elapsed += virtual_delta;
+            // Advance virtual time
+            let current_speed = *speed.read().unwrap();
+            virtual_time.tick(current_speed);
+            let virtual_elapsed = virtual_time.elapsed();
 
             // Generate more flows if buffer is running low
             let buffer_target = virtual_elapsed + buffer_ahead;
