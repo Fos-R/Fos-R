@@ -1,7 +1,7 @@
 //! Reusable UI widgets: info icons, optional string editors, toggles, labels.
 
-use crate::shared::colors::{COLOR_ERROR, COLOR_TEXT_MUTED};
-use crate::shared::ui_constants::{
+use crate::shared::constants::colors::{COLOR_ERROR, COLOR_TEXT_MUTED};
+use crate::shared::constants::ui::{
     INFO_ICON_SIZE, INFO_ICON_SPACING, INFO_TOOLTIP_MAX_WIDTH, TOGGLE_INNER_MARGIN,
     TOGGLE_ITEM_SPACING,
 };

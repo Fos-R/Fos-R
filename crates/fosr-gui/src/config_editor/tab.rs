@@ -2,11 +2,11 @@
 
 use crate::config_editor::state::ConfigurationTabState;
 use crate::config_editor::{host, host_validation, yaml_editor};
-use crate::shared::colors::{COLOR_ERROR, COLOR_SUCCESS, COLOR_WARNING};
 use crate::shared::config::file_ops::{configuration_file_picker, load_config_file_contents};
 use crate::shared::config::model::Configuration;
 use crate::shared::config::state::ConfigurationFileState;
-use crate::shared::ui_constants::{SPACING_MD, TEXT_EDIT_DEFAULT_ROWS};
+use crate::shared::constants::colors::{COLOR_ERROR, COLOR_SUCCESS, COLOR_WARNING};
+use crate::shared::constants::ui::{SPACING_MD, TEXT_EDIT_DEFAULT_ROWS};
 use crate::shared::ui_utils::{
     edit_optional_multiline_string, edit_optional_string, required_label,
 };

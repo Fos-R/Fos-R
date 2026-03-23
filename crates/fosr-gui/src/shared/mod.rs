@@ -1,9 +1,7 @@
 //! Shared utilities: config model, file I/O, and reusable UI components.
 
 pub mod assets;
-pub mod colors;
 pub mod config;
+pub mod constants;
 pub mod file_io;
-pub mod network_constants;
-pub mod ui_constants;
 pub mod ui_utils;

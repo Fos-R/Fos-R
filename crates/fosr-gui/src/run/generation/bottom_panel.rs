@@ -9,16 +9,16 @@ use super::validation::first_invalid_param;
 #[cfg(not(target_arch = "wasm32"))]
 use super::wireshark::open_in_wireshark;
 use crate::run::state::RunTabState;
-use crate::shared::colors::{COLOR_ERROR, COLOR_STOP, COLOR_SUCCESS};
 use crate::shared::config::state::ConfigurationFileState;
+use crate::shared::constants::colors::{COLOR_ERROR, COLOR_STOP, COLOR_SUCCESS};
+use crate::shared::constants::ui::{
+    BOTTOM_BAR_INNER_MARGIN, BUTTON_HEIGHT, BUTTON_MIN_WIDTH_LG, BUTTON_MIN_WIDTH_SM,
+    DELAY_FRAMES_QUICK, OPTIONS_PANEL_INNER_MARGIN, TEXT_SIZE_MD,
+};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::save_file_desktop;
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::save_file_wasm;
-use crate::shared::ui_constants::{
-    BOTTOM_BAR_INNER_MARGIN, BUTTON_HEIGHT, BUTTON_MIN_WIDTH_LG, BUTTON_MIN_WIDTH_SM,
-    DELAY_FRAMES_QUICK, OPTIONS_PANEL_INNER_MARGIN, TEXT_SIZE_MD,
-};
 use eframe::egui;
 use std::sync::atomic::Ordering;
 

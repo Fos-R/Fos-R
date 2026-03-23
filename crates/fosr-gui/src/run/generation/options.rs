@@ -9,8 +9,8 @@ use super::ui_components::{show_field_error, timezone_picker};
 use super::validation::{
     first_invalid_param, validate_duration, validate_optional_u64, validate_timezone,
 };
-use crate::shared::colors::{COLOR_ERROR, COLOR_TEXT_MUTED};
-use crate::shared::ui_constants::{
+use crate::shared::constants::colors::{COLOR_ERROR, COLOR_TEXT_MUTED};
+use crate::shared::constants::ui::{
     DURATION_TEXT_WIDTH, GENERATION_COL1_MIN_WIDTH, GENERATION_COL2_MIN_WIDTH,
     GENERATION_OPTIONS_COLUMNS, SEED_INPUT_WIDTH, SPACING_LG,
 };

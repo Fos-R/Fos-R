@@ -28,8 +28,8 @@
 
 use super::state::GenerationState;
 use super::validation::FieldValidation;
-use crate::shared::colors::COLOR_ERROR;
-use crate::shared::ui_constants::{
+use crate::shared::constants::colors::COLOR_ERROR;
+use crate::shared::constants::ui::{
     SPACING_MD, TIMEZONE_LIST_MAX_HEIGHT, TIMEZONE_PICKER_WIDTH, TIMEZONE_POPUP_MAX_HEIGHT,
 };
 use chrono_tz::TZ_VARIANTS;

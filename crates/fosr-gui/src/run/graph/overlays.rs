@@ -2,12 +2,12 @@
 
 use super::state::VisualizationState;
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
-use crate::shared::colors::{
+use crate::shared::constants::colors::{
     COLOR_EDGE_INACTIVE, COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT, COLOR_PROTOCOL_DNS,
     COLOR_PROTOCOL_HTTP, COLOR_PROTOCOL_HTTPS, COLOR_PROTOCOL_OTHER, COLOR_PROTOCOL_SMTP,
     COLOR_PROTOCOL_SSH, COLOR_STOP,
 };
-use crate::shared::ui_constants::{
+use crate::shared::constants::ui::{
     LEGEND_ICON_SIZE, LEGEND_MARKER_RADIUS, OVERLAY_MARGIN, PLAYBACK_SPEED_EPSILON,
     PLAYBACK_SPEED_STEPS, SPACING_NEGATIVE_XS,
 };

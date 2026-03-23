@@ -7,10 +7,10 @@
 //! allowing multiple flows to be displayed in parallel.
 
 #[cfg(target_arch = "wasm32")]
-use crate::shared::network_constants::STREAM_MAX_PER_CYCLE_WASM;
+use crate::shared::constants::network::STREAM_MAX_PER_CYCLE_WASM;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::shared::network_constants::STREAM_RATE_LIMIT_MS;
-use crate::shared::network_constants::{STREAM_BUFFER_AHEAD_SECS, STREAM_CHECK_INTERVAL_MS};
+use crate::shared::constants::network::STREAM_RATE_LIMIT_MS;
+use crate::shared::constants::network::{STREAM_BUFFER_AHEAD_SECS, STREAM_CHECK_INTERVAL_MS};
 use chrono::{DateTime, Offset, TimeZone};
 use fosr_lib::{L7Proto, models, stage0, stage1::Stage1, stage1::bayesian_networks::BNGenerator};
 use std::collections::BinaryHeap;

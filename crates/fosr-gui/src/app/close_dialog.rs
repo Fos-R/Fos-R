@@ -1,6 +1,6 @@
 //! Close confirmation dialog for desktop when Wireshark sessions are active.
 
-use crate::shared::ui_constants::{MODAL_WIDTH_SM, SPACING_LG, SPACING_XL};
+use crate::shared::constants::ui::{MODAL_WIDTH_SM, SPACING_LG, SPACING_XL};
 use eframe::egui;
 
 /// Render the close confirmation dialog if needed.
