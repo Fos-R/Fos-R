@@ -69,7 +69,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                                 egui_material_icons::icons::ICON_PLAY_ARROW,
                                 play_text
                             )))
-                                .fill(accent);
+                            .fill(accent);
                             if ui.add(play_button).clicked() {
                                 state.user_has_started = true;
                                 // Pass the user config if loaded, otherwise None (uses default BN model)
@@ -103,7 +103,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                                 "{} Stop",
                                 egui_material_icons::icons::ICON_STOP
                             )))
-                                .fill(COLOR_STOP);
+                            .fill(COLOR_STOP);
                             if ui.add(stop_button).clicked() {
                                 state.stop_visualization();
                             }

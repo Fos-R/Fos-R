@@ -8,7 +8,7 @@ use super::process::start_generation;
 use super::validation::first_invalid_param;
 #[cfg(not(target_arch = "wasm32"))]
 use super::wireshark::open_in_wireshark;
-use crate::run::state::RunState;
+use crate::run::state::RunTabState;
 use crate::shared::colors::{COLOR_ERROR, COLOR_STOP, COLOR_SUCCESS};
 use crate::shared::configuration_file::ConfigurationFileState;
 #[cfg(not(target_arch = "wasm32"))]
@@ -29,7 +29,7 @@ use std::sync::atomic::Ordering;
 /// - Action bar (always visible): Generate/Stop/Save buttons, progress bar
 pub fn show_bottom_panel(
     ctx: &egui::Context,
-    state: &mut RunState,
+    state: &mut RunTabState,
     configuration_file_state: &ConfigurationFileState,
 ) {
     // Options panel (shown above action bar when expanded)

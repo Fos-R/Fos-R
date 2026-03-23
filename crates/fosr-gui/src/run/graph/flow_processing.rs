@@ -3,9 +3,7 @@
 //! This module handles the processing of flow events from the streamer,
 //! updating active links, and synchronizing graph edge states.
 
-use super::state::{
-    ActiveLink, EdgeState, INTERNET_IP, LinkDirection, VisualizationState,
-};
+use super::state::{ActiveLink, EdgeState, INTERNET_IP, LinkDirection, VisualizationState};
 use super::stream::FlowEvent;
 use crate::shared::ui_constants::ACTIVE_LINK_BASE_TIMEOUT_MS;
 

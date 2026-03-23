@@ -10,7 +10,7 @@ use super::overlays::{
 use super::screenshot::handle_screenshot_export;
 use super::shapes::{NetworkEdgeShape, NetworkNodeShape};
 use super::state::{EdgeData, ExportState, NodeData};
-use crate::run::state::RunState;
+use crate::run::state::RunTabState;
 use crate::shared::ui_constants::FIT_TO_SCREEN_PADDING;
 use eframe::egui;
 
@@ -22,7 +22,7 @@ use eframe::egui;
 /// 3. Disables force-directed layout (uses circle layout)
 /// 4. Handles screenshot export state machine
 /// 5. Renders UI overlays (buttons, stats, legends)
-pub fn render_graph_view(ui: &mut egui::Ui, state: &mut RunState) {
+pub fn render_graph_view(ui: &mut egui::Ui, state: &mut RunTabState) {
     let inner_response = egui::CentralPanel::default().show(ui.ctx(), |ui| {
         // Enable node clicking and dragging
         let interactions = egui_graphs::SettingsInteraction::new()

@@ -3,7 +3,7 @@
 //! This module provides the UI for configuring PCAP generation parameters:
 //! duration, start time, timezone, seed, and advanced options.
 
-use crate::run::state::RunState;
+use crate::run::state::RunTabState;
 
 use super::ui_components::{show_field_error, timezone_picker};
 use super::validation::{
@@ -32,7 +32,7 @@ use egui_extras::DatePickerButton;
 /// - Optional seed for deterministic generation
 /// - Taint packets option
 /// - Temporal ordering option
-pub fn show_generation_options(ui: &mut egui::Ui, state: &mut RunState) {
+pub fn show_generation_options(ui: &mut egui::Ui, state: &mut RunTabState) {
     ui.columns(GENERATION_OPTIONS_COLUMNS, |cols| {
         // --- Column 1: Duration & Time ---
         let col1 = &mut cols[0];

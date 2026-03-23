@@ -3,7 +3,7 @@
 //! This module handles starting generation threads and polling for updates.
 
 use super::core::generate;
-use crate::run::state::RunState;
+use crate::run::state::RunTabState;
 use crate::shared::configuration_file::ConfigurationFileState;
 use eframe::egui;
 use std::sync::Arc;
@@ -15,7 +15,7 @@ use std::sync::mpsc::channel;
 /// Creates channels for progress updates, PCAP data, and throughput metrics.
 /// The generation runs asynchronously (native thread or WASM future).
 pub fn start_generation(
-    state: &mut RunState,
+    state: &mut RunTabState,
     configuration_file_state: &ConfigurationFileState,
     ctx: &egui::Context,
 ) {
@@ -106,7 +106,7 @@ pub fn start_generation(
 /// Poll generation receivers for progress, PCAP data, and throughput.
 ///
 /// Should be called every frame to update the UI with generation status.
-pub fn poll_generation_receivers(ctx: &egui::Context, state: &mut RunState) {
+pub fn poll_generation_receivers(ctx: &egui::Context, state: &mut RunTabState) {
     // Poll progress receiver
     if let Some(receiver) = &state.generation.progress_receiver {
         // Request repaint to keep polling while generating

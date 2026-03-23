@@ -6,13 +6,13 @@ use super::graph::config_handling::handle_config_changes;
 use super::graph::flow_processing::{process_flow_events, update_active_links, update_graph_edges};
 use super::graph::node_modal::{process_graph_events, render_node_info_modal};
 use super::graph::view::render_graph_view;
-use super::state::RunState;
+use super::state::RunTabState;
 use crate::shared::configuration_file::{ConfigurationFileState, load_config_file_contents};
 use eframe::egui;
 
 pub fn show_run_tab_content(
     ui: &mut egui::Ui,
-    state: &mut RunState,
+    state: &mut RunTabState,
     configuration_file_state: &mut ConfigurationFileState,
 ) {
     // Load config file contents if a file is selected but content not yet loaded

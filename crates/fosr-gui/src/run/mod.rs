@@ -5,5 +5,5 @@ pub mod graph;
 mod state;
 mod tab;
 
-pub use state::RunState;
+pub use state::RunTabState;
 pub use tab::show_run_tab_content;
