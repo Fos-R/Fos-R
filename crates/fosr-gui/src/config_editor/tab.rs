@@ -1,6 +1,7 @@
 //! Configuration tab: toggles between visual mode and YAML editor.
 
-use crate::configuration::{host, host_validation, yaml_editor};
+use crate::config_editor::state::ConfigurationTabState;
+use crate::config_editor::{host, host_validation, yaml_editor};
 use crate::shared::colors::{COLOR_ERROR, COLOR_SUCCESS, COLOR_WARNING};
 use crate::shared::config_model::Configuration;
 use crate::shared::configuration_file::{
@@ -11,19 +12,6 @@ use crate::shared::ui_utils::{
     edit_optional_multiline_string, edit_optional_string, required_label,
 };
 use eframe::egui;
-
-/// Represents the state of the configuration tab.
-pub struct ConfigurationTabState {
-    pub is_code_mode: bool,
-}
-
-impl Default for ConfigurationTabState {
-    fn default() -> Self {
-        Self {
-            is_code_mode: false,
-        }
-    }
-}
 
 /// The main tab component
 pub fn show_configuration_tab_content(

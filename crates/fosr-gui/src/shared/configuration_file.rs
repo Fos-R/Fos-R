@@ -1,15 +1,15 @@
 //! Configuration file state management: loading, parsing, and dirty tracking.
 
+use crate::config_editor::state::ConfigurationTabState;
+use crate::config_templates::load_template_by_id;
 use crate::shared::colors::COLOR_WARNING;
+use crate::shared::config_model::Configuration;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::{read_file_desktop, save_file_desktop, show_file_picker_desktop};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::{read_file_wasm, save_file_wasm, show_file_picker_wasm};
 use crate::shared::ui_constants::SPACING_LG;
-use crate::{
-    config_templates::load_template_by_id, configuration::tab::ConfigurationTabState,
-    shared::config_model::Configuration, shared::ui_utils::labeled_toggle,
-};
+use crate::shared::ui_utils::labeled_toggle;
 use chrono::{DateTime, Local};
 use eframe::egui;
 use rfd::FileHandle;
