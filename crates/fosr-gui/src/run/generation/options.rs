@@ -5,17 +5,18 @@
 
 use crate::run::state::RunTabState;
 
-use super::ui_components::{show_field_error, timezone_picker};
 use super::validation::{
-    first_invalid_param, validate_duration, validate_optional_u64, validate_timezone,
+    first_invalid_param, show_field_error, validate_duration, validate_optional_u64,
+    validate_timezone,
 };
 use crate::shared::constants::colors::{COLOR_ERROR, COLOR_TEXT_MUTED};
 use crate::shared::constants::ui::{
     DURATION_TEXT_WIDTH, GENERATION_COL1_MIN_WIDTH, GENERATION_COL2_MIN_WIDTH,
     GENERATION_OPTIONS_COLUMNS, SEED_INPUT_WIDTH, SPACING_LG,
 };
-use crate::shared::ui_utils::info_icon;
-use crate::timepicker::TimePickerButton;
+use crate::shared::widgets::helpers::info_icon;
+use crate::shared::widgets::time_picker::TimePickerButton;
+use crate::shared::widgets::timezone_picker::timezone_picker;
 use chrono::{Datelike, Local, TimeZone};
 use chrono_tz::Tz;
 use eframe::egui::{self, Widget};
@@ -110,7 +111,7 @@ pub fn show_generation_options(ui: &mut egui::Ui, state: &mut RunTabState) {
                 info_icon(ui, "Timezone used for realistic work hours. Use an IANA time zone (like Europe/Paris) or an abbreviation (like CET). The offset is assumed constant during the generation time range.");
 
                 if !state.generation.use_local_timezone {
-                    timezone_picker(ui, &mut state.generation);
+                    timezone_picker(ui, &mut state.generation.timezone_input);
 
                     let result = validate_timezone(&state.generation.timezone_input);
                     if result.is_ok() {

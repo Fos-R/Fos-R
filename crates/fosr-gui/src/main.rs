@@ -7,7 +7,6 @@ mod config_editor;
 mod config_templates;
 mod run;
 mod shared;
-mod timepicker;
 
 // Desktop: native compilation
 #[cfg(not(target_arch = "wasm32"))]

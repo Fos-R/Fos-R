@@ -1,7 +1,10 @@
 //! Input validation helpers for duration, seed, and timezone fields.
 
 use super::state::{DURATION_MAX, DURATION_MIN, GenerationState};
+use crate::shared::constants::colors::COLOR_ERROR;
+use crate::shared::constants::ui::SPACING_MD;
 use chrono_tz::Tz;
+use eframe::egui;
 use std::time::Duration;
 
 /// Structure to handle inputs errors from the user
@@ -16,6 +19,14 @@ impl FieldValidation {
     }
     pub fn set_err(&mut self, msg: impl Into<String>) {
         self.error = Some(msg.into());
+    }
+}
+
+/// Display the error in red
+pub fn show_field_error(ui: &mut egui::Ui, validation: &FieldValidation) {
+    if let Some(msg) = &validation.error {
+        ui.add_space(SPACING_MD);
+        ui.colored_label(COLOR_ERROR, msg);
     }
 }
 

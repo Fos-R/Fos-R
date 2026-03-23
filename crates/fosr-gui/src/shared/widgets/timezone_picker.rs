@@ -1,4 +1,4 @@
-//! UI components for generation: timezone picker and field error display.
+//! Timezone picker widget with search functionality.
 
 // The `timezone_picker` function is inspired by egui's ComboBox (combo_box.rs).
 //
@@ -26,24 +26,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use super::state::GenerationState;
-use super::validation::FieldValidation;
-use crate::shared::constants::colors::COLOR_ERROR;
 use crate::shared::constants::ui::{
-    SPACING_MD, TIMEZONE_LIST_MAX_HEIGHT, TIMEZONE_PICKER_WIDTH, TIMEZONE_POPUP_MAX_HEIGHT,
+    TIMEZONE_LIST_MAX_HEIGHT, TIMEZONE_PICKER_WIDTH, TIMEZONE_POPUP_MAX_HEIGHT,
 };
 use chrono_tz::TZ_VARIANTS;
 use eframe::egui::{self, epaint};
 
-/// Display the error in red
-pub fn show_field_error(ui: &mut egui::Ui, validation: &FieldValidation) {
-    if let Some(msg) = &validation.error {
-        ui.add_space(SPACING_MD);
-        ui.colored_label(COLOR_ERROR, msg);
-    }
-}
-
-pub fn timezone_picker(ui: &mut egui::Ui, state: &mut GenerationState) {
+/// Timezone picker with search functionality.
+pub fn timezone_picker(ui: &mut egui::Ui, timezone_input: &mut String) {
     let popup_id = ui.make_persistent_id("tz_popup");
     let is_open = egui::Popup::is_id_open(ui.ctx(), popup_id);
 
@@ -88,7 +78,7 @@ pub fn timezone_picker(ui: &mut egui::Ui, state: &mut GenerationState) {
         // Selected text on the left
         let text_rect = inner.with_max_x(icon_rect.left() - icon_spacing);
         let galley = ui.painter().layout_no_wrap(
-            state.timezone_input.clone(),
+            timezone_input.clone(),
             egui::TextStyle::Button.resolve(ui.style()),
             visuals.text_color(),
         );
@@ -100,7 +90,7 @@ pub fn timezone_picker(ui: &mut egui::Ui, state: &mut GenerationState) {
             .galley(text_pos, galley, visuals.text_color());
     }
 
-    let response = response.on_hover_text(&state.timezone_input);
+    let response = response.on_hover_text(&*timezone_input);
 
     // --- Popup (inspired by combo_box_dyn) ---
     egui::Popup::menu(&response)
@@ -116,7 +106,7 @@ pub fn timezone_picker(ui: &mut egui::Ui, state: &mut GenerationState) {
             // Search input with auto-focus on open
             let edit_id = ui.make_persistent_id("tz_search");
             ui.add(
-                egui::TextEdit::singleline(&mut state.timezone_input)
+                egui::TextEdit::singleline(timezone_input)
                     .hint_text("Search...")
                     .id(edit_id),
             );
@@ -131,15 +121,15 @@ pub fn timezone_picker(ui: &mut egui::Ui, state: &mut GenerationState) {
                 .max_height(TIMEZONE_LIST_MAX_HEIGHT)
                 .show(ui, |ui| {
                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
-                    let filter = state.timezone_input.to_lowercase();
+                    let filter = timezone_input.to_lowercase();
                     for tz in TZ_VARIANTS {
                         let tz_str = tz.to_string();
                         if filter.is_empty() || tz_str.to_lowercase().contains(&filter) {
                             if ui
-                                .selectable_label(state.timezone_input == tz_str, &tz_str)
+                                .selectable_label(*timezone_input == tz_str, &tz_str)
                                 .clicked()
                             {
-                                state.timezone_input = tz_str;
+                                *timezone_input = tz_str;
                                 ui.close();
                             }
                         }

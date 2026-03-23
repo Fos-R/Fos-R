@@ -7,7 +7,7 @@ use crate::shared::constants::network::HOST_USAGE_DEFAULT;
 use crate::shared::constants::ui::{
     PANEL_MIN_WIDTH, POPUP_MAX_HEIGHT, POPUP_MIN_WIDTH, SPACING_MD, SPACING_SM,
 };
-use crate::shared::ui_utils::{edit_optional_string, info_icon};
+use crate::shared::widgets::helpers::{edit_optional_string, info_icon};
 use eframe::egui;
 use std::collections::HashMap;
 
