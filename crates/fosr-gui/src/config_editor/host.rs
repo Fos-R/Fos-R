@@ -1,6 +1,6 @@
 //! Host editing UI: hostname, OS, type, and client protocols.
 
-use crate::configuration::{host_interfaces, host_services, host_validation};
+use crate::config_editor::{host_interfaces, host_services, host_validation};
 use crate::shared::colors::COLOR_ERROR;
 use crate::shared::config_model::{Configuration, Host};
 use crate::shared::network_constants::HOST_USAGE_DEFAULT;

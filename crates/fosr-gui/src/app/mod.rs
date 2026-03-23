@@ -6,7 +6,8 @@ mod startup_modal;
 mod top_bar;
 
 use crate::about_tab::show_about_tab_content;
-use crate::configuration::tab::{ConfigurationTabState, show_configuration_tab_content};
+use crate::config_editor::state::ConfigurationTabState;
+use crate::config_editor::tab::show_configuration_tab_content;
 use crate::run::{RunTabState, show_run_tab_content};
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_LOGO, IMG_SERVER};
 use crate::shared::configuration_file::ConfigurationFileState;

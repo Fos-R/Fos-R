@@ -1,6 +1,6 @@
 //! Network interface editing UI: IP, MAC address, and associated services.
 
-use crate::configuration::host_services;
+use crate::config_editor::host_services;
 use crate::shared::colors::COLOR_ERROR;
 use crate::shared::config_model::{Host, Interface};
 use crate::shared::network_constants::{

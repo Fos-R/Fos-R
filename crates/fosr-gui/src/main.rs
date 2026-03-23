@@ -3,8 +3,8 @@
 
 mod about_tab;
 mod app;
+mod config_editor;
 mod config_templates;
-mod configuration;
 mod run;
 mod shared;
 mod timepicker;
