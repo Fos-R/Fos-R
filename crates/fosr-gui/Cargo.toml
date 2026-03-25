@@ -53,8 +53,8 @@ getrandom = { version = "0.4", features = ["wasm_js"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = { version = "0.11.8", default-features = false, features = [
-  "auto-color",
-  "humantime",
+    "auto-color",
+    "humantime",
 ] }
 tempfile = "3.26.0"
 open = "5.3.3"
