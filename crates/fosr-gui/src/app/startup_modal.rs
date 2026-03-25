@@ -1,6 +1,6 @@
 //! Startup modal for choosing configuration source (templates or import).
 
-use crate::config_templates::{all_templates, load_template_by_id};
+use crate::config_templates::{load_template, TEMPLATES};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::config::file_ops::poll_file_import;
 use crate::shared::config::file_ops::trigger_file_import;
@@ -13,39 +13,47 @@ use crate::shared::constants::ui::{
 };
 use eframe::egui;
 
-/// A clickable card with icon, title and description. Returns true if clicked.
-fn startup_card(ui: &mut egui::Ui, icon: &str, title: &str, description: &str) -> bool {
-    // Reserve the full width and detect hover/click on the whole area
-    let desired_size = egui::vec2(ui.available_width(), STARTUP_CARD_HEIGHT);
-    let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::click());
-
-    // Choose fill color based on hover
-    let fill = if response.hovered() {
+/// Builds the frame style for a startup card based on hover state.
+fn card_frame_for_hover(ui: &egui::Ui, is_hovered: bool) -> egui::Frame {
+    let fill = if is_hovered {
         ui.style().visuals.widgets.hovered.bg_fill
     } else {
         ui.style().visuals.widgets.inactive.bg_fill
     };
+    egui::Frame::group(ui.style()).fill(fill)
+}
 
-    let frame = egui::Frame::group(ui.style()).fill(fill);
+/// Renders the centered content inside a startup card (icon, title, description).
+fn render_card_content(ui: &mut egui::Ui, icon: &str, title: &str, description: &str) {
+    // Disable text selection so the whole card acts as a single clickable area
+    ui.style_mut().interaction.selectable_labels = false;
+    ui.set_width(ui.available_width());
+
+    ui.vertical_centered(|ui| {
+        ui.add_space(SPACING_LG);
+        ui.label(egui::RichText::new(icon).size(ICON_SIZE_LG));
+        ui.add_space(SPACING_SM);
+        ui.strong(egui::RichText::new(title).size(TEXT_SIZE_LG));
+        ui.add_space(SPACING_XS);
+        ui.label(
+            egui::RichText::new(description)
+                .size(TEXT_SIZE_SM)
+                .color(COLOR_TEXT_MUTED),
+        );
+        ui.add_space(SPACING_LG);
+    });
+}
+
+/// A clickable card with icon, title and description.
+/// Returns true if the card was clicked.
+fn startup_card(ui: &mut egui::Ui, icon: &str, title: &str, description: &str) -> bool {
+    let desired_size = egui::vec2(ui.available_width(), STARTUP_CARD_HEIGHT);
+    let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::click());
+
+    let frame = card_frame_for_hover(ui, response.hovered());
     ui.scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
         frame.show(ui, |ui| {
-            // Prevent child labels/icons from showing their own hover cursor and
-            // highlight, so the entire card acts as a single clickable area.
-            ui.style_mut().interaction.selectable_labels = false;
-            ui.set_width(ui.available_width());
-            ui.vertical_centered(|ui| {
-                ui.add_space(SPACING_LG);
-                ui.label(egui::RichText::new(icon).size(ICON_SIZE_LG));
-                ui.add_space(SPACING_SM);
-                ui.strong(egui::RichText::new(title).size(TEXT_SIZE_LG));
-                ui.add_space(SPACING_XS);
-                ui.label(
-                    egui::RichText::new(description)
-                        .size(TEXT_SIZE_SM)
-                        .color(COLOR_TEXT_MUTED),
-                );
-                ui.add_space(SPACING_LG);
-            });
+            render_card_content(ui, icon, title, description);
         });
     });
 
@@ -119,16 +127,15 @@ fn render_template_selection_modal(ctx: &egui::Context, state: &mut Configuratio
         ui.add_space(SPACING_XL);
 
         // Grid of template cards
-        let templates = all_templates();
         ui.columns(STARTUP_COLUMNS_TEMPLATES, |cols| {
-            for (i, template) in templates.iter().enumerate() {
+            for (i, template) in TEMPLATES.iter().enumerate() {
                 if startup_card(
                     &mut cols[i % STARTUP_COLUMNS_TEMPLATES],
                     template.icon,
                     template.title,
                     template.description,
                 ) {
-                    load_template_by_id(state, template.id);
+                    load_template(state, template);
                 }
             }
         });

@@ -1,10 +1,4 @@
 //! Network-related constants for configuration and visualization
-//!
-//! This module centralizes network-related constants including:
-//! - Port ranges and defaults
-//! - IP address ranges
-//! - Stream timing parameters
-//! - Generation progress stages
 
 // ============================================================================
 // PORTS

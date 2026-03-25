@@ -6,7 +6,7 @@ use std::io::Error;
 #[cfg(not(target_arch = "wasm32"))]
 pub fn show_file_picker_desktop() -> Option<FileHandle> {
     rfd::FileDialog::new()
-        .add_filter("Configuration files", &["json", "yaml", "yml"])
+        .add_filter("YAML Configuration files", &["yaml", "yml"])
         .set_directory(std::env::current_dir().unwrap_or(std::path::PathBuf::from("/")))
         .pick_file()
         .map(|path| FileHandle::from(path))
@@ -15,20 +15,21 @@ pub fn show_file_picker_desktop() -> Option<FileHandle> {
 #[cfg(target_arch = "wasm32")]
 pub async fn show_file_picker_wasm() -> Option<FileHandle> {
     rfd::AsyncFileDialog::new()
-        .add_filter("Configuration files", &["json", "yaml", "yml"])
+        .add_filter("YAML Configuration files", &["yaml", "yml"])
         .pick_file()
         .await
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn read_file_desktop(file_handle: &FileHandle) -> String {
-    std::fs::read_to_string(file_handle.path()).unwrap()
+pub fn read_file_desktop(file_handle: &FileHandle) -> Result<String, String> {
+    std::fs::read_to_string(file_handle.path())
+        .map_err(|e| format!("Failed to read file: {}", e))
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn read_file_wasm(file_handle: &FileHandle) -> String {
+pub async fn read_file_wasm(file_handle: &FileHandle) -> Result<String, String> {
     let content = file_handle.read().await;
-    String::from_utf8(content).expect("Invalid UTF-8")
+    String::from_utf8(content).map_err(|e| format!("Invalid UTF-8 in file: {}", e))
 }
 
 #[cfg(not(target_arch = "wasm32"))]

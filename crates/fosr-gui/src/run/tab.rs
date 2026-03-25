@@ -7,67 +7,70 @@ use super::graph::flow_processing::{process_flow_events, update_active_links, up
 use super::graph::node_modal::{process_graph_events, render_node_info_modal};
 use super::graph::view::render_graph_view;
 use super::state::RunTabState;
+use crate::run::graph::state::{ViewState, VisualizationState};
 use crate::shared::config::file_ops::load_config_file_contents;
 use crate::shared::config::state::ConfigurationFileState;
 use eframe::egui;
 
+/// Display the Run tab content.
+///
+/// Orchestrates visualization updates, event processing, and UI rendering.
 pub fn show_run_tab_content(
     ui: &mut egui::Ui,
     state: &mut RunTabState,
     configuration_file_state: &mut ConfigurationFileState,
 ) {
-    // Load config file contents if a file is selected but content not yet loaded
     load_config_file_contents(configuration_file_state);
-
-    // Handle config changes for visualization
     handle_config_changes(&mut state.visualization, configuration_file_state);
 
-    // Auto-start visualization with delay (allows UI to render first)
-    if let Some(countdown) = state.visualization.auto_start_countdown {
-        if countdown > 0 {
-            state.visualization.auto_start_countdown = Some(countdown - 1);
-        } else if !state.visualization.flow.running {
-            let config = state.visualization.config_content.clone();
-            let speed = state.visualization.flow.speed.clone();
-            if let Err(e) = state
-                .visualization
-                .start_visualization(config.as_deref(), speed, true)
-            {
-                log::error!("Failed to auto-start visualization: {}", e);
-            }
-            state.visualization.auto_start_countdown = None;
-        }
-    }
+    handle_auto_start_visualization(&mut state.visualization);
+    handle_delayed_fit_to_screen(&mut state.visualization.view);
 
-    // Handle delayed fit-to-screen (after panel toggle or on initial load)
-    if let Some(countdown) = state.visualization.view.delayed_fit_countdown {
-        if countdown > 0 {
-            state.visualization.view.delayed_fit_countdown = Some(countdown - 1);
-        } else {
-            state.visualization.view.reset_requested = true;
-            state.visualization.view.delayed_fit_countdown = None;
-        }
-    }
-
-    // Process incoming flow events
     process_flow_events(&mut state.visualization);
-
-    // Update active links (remove expired ones)
     update_active_links(&mut state.visualization);
-
-    // Update graph edges based on active links
     update_graph_edges(&mut state.visualization);
 
-    // Poll generation receivers (must be done before rendering UI)
     poll_generation_receivers(ui.ctx(), state);
 
-    // Bottom panel (action bar + expandable options)
     show_bottom_panel(ui.ctx(), state, configuration_file_state);
 
-    // Render the graph view
     render_graph_view(ui, state);
-
-    // Process node click events and render info modal
     process_graph_events(&mut state.visualization, configuration_file_state);
+    
     render_node_info_modal(ui.ctx(), &mut state.visualization, configuration_file_state);
+}
+
+/// Handle auto-start visualization with a frame delay.
+///
+/// Waits for the countdown to reach zero before starting the visualization.
+/// This allows the UI to render at least one frame before starting,
+/// preventing visual glitches on initial load.
+fn handle_auto_start_visualization(state: &mut VisualizationState) {
+    if let Some(countdown) = state.auto_start_countdown {
+        if countdown > 0 {
+            state.auto_start_countdown = Some(countdown - 1);
+        } else if !state.flow.running {
+            let config = state.config_content.clone();
+            let speed = state.flow.speed.clone();
+            if let Err(e) = state.start_visualization(config.as_deref(), speed, true) {
+                log::error!("Failed to auto-start visualization: {}", e);
+            }
+            state.auto_start_countdown = None;
+        }
+    }
+}
+
+/// Handle delayed fit-to-screen after view changes.
+///
+/// Waits for the countdown to reach zero before triggering a fit-to-screen.
+/// Used after panel toggles or on initial load to ensure proper layout.
+fn handle_delayed_fit_to_screen(view: &mut ViewState) {
+    if let Some(countdown) = view.delayed_fit_countdown {
+        if countdown > 0 {
+            view.delayed_fit_countdown = Some(countdown - 1);
+        } else {
+            view.reset_requested = true;
+            view.delayed_fit_countdown = None;
+        }
+    }
 }

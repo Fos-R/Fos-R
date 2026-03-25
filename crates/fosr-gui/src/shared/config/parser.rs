@@ -3,9 +3,12 @@
 use crate::shared::config::model::Configuration;
 use crate::shared::config::state::ConfigurationFileState;
 
+/// Parse the YAML content into a Configuration model.
+/// Updates the state with the parsed model or an error message.
+/// Handles change detection using a snapshot of the "clean" configuration.
 pub fn parse_config_yaml(configuration_file_state: &mut ConfigurationFileState) {
     configuration_file_state.config_model = None;
-    configuration_file_state.parse_error = None;
+    configuration_file_state.config_error = None;
 
     let Some(yaml) = configuration_file_state.config_file_content.as_deref() else {
         return;
@@ -14,11 +17,11 @@ pub fn parse_config_yaml(configuration_file_state: &mut ConfigurationFileState) 
     match serde_yaml::from_str::<Configuration>(yaml) {
         Ok(model) => {
             if configuration_file_state.clean_snapshot.is_none() {
-                configuration_file_state.clean_snapshot = Some(model.clone());
+                configuration_file_state.clean_snapshot = Some(yaml.to_string());
             }
             configuration_file_state.config_model = Some(model);
             configuration_file_state.is_dirty = true;
         }
-        Err(e) => configuration_file_state.parse_error = Some(e.to_string()),
+        Err(e) => configuration_file_state.config_error = Some(e.to_string()),
     }
 }

@@ -13,7 +13,7 @@ fn main() -> eframe::Result {
     use eframe::egui;
     use env_logger;
 
-    // Redirect log messages to the console
+    // Redirect log messages to the terminal
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let shared_viewport = egui::ViewportBuilder::default()

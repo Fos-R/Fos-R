@@ -278,6 +278,110 @@ pub struct VisualizationState {
     pub user_has_started: bool,
 }
 
+/// Result of building a graph from configuration.
+struct GraphBuildResult {
+    graph: VisualizationGraph,
+    known_ips: HashSet<Ipv4Addr>,
+    ip_to_node: HashMap<Ipv4Addr, NodeIndex>,
+    node_to_host: HashMap<NodeIndex, usize>,
+}
+
+/// Helper for constructing visualization graphs from configuration.
+///
+/// Groups mutable state during graph construction to avoid passing
+/// multiple `&mut` parameters. The construction order is fixed:
+/// 1. Create host nodes from config
+/// 2. Layout (circular distribution)
+/// 3. Add the Internet node (centered)
+/// 4. Create edges between hosts and Internet
+struct GraphConstructor {
+    graph: VisualizationGraph,
+    known_ips: HashSet<Ipv4Addr>,
+    ip_to_node: HashMap<Ipv4Addr, NodeIndex>,
+    node_to_host: HashMap<NodeIndex, usize>,
+}
+
+impl GraphConstructor {
+    /// Build the complete graph from configuration.
+    fn build(config: &config::Configuration) -> GraphBuildResult {
+        let mut constructor = Self {
+            graph: VisualizationGraph::new(petgraph::stable_graph::StableGraph::default()),
+            known_ips: HashSet::new(),
+            ip_to_node: HashMap::new(),
+            node_to_host: HashMap::new(),
+        };
+        constructor.add_host_nodes(config);
+        constructor.distribute_layout();
+        constructor.add_internet_node();
+        constructor.add_edges(config);
+        GraphBuildResult {
+            graph: constructor.graph,
+            known_ips: constructor.known_ips,
+            ip_to_node: constructor.ip_to_node,
+            node_to_host: constructor.node_to_host,
+        }
+    }
+
+    /// Add one node per host (with all its IPs).
+    fn add_host_nodes(&mut self, config: &config::Configuration) {
+        for (host_idx, host) in config.get_hosts().iter().enumerate() {
+            let all_ips: Vec<Ipv4Addr> = host.interfaces.iter().map(|i| i.ip_addr).collect();
+
+            let node_data = NodeData {
+                ip_addrs: all_ips.clone(),
+                hostname: host.hostname.clone(),
+                node_type: host.host_type.into(),
+                os: host.os,
+                flow_count: 0,
+                max_flow_count: 0,
+            };
+            let idx = self.graph.add_node_with_location(node_data, egui::pos2(0.0, 0.0));
+            self.node_to_host.insert(idx, host_idx);
+
+            // Map all IPs of this host to the same node
+            for ip in all_ips {
+                self.known_ips.insert(ip);
+                self.ip_to_node.insert(ip, idx);
+            }
+        }
+    }
+
+    /// Distribute nodes in a circle (before adding Internet, so it stays centered).
+    fn distribute_layout(&mut self) {
+        distribute_nodes_circle(&mut self.graph);
+    }
+
+    /// Add the Internet node at the center.
+    fn add_internet_node(&mut self) {
+        let internet_idx = self.graph.add_node_with_location(NodeData::internet(), egui::pos2(0.0, 0.0));
+        self.ip_to_node.insert(INTERNET_IP, internet_idx);
+    }
+
+    /// Add edges between users, servers, and Internet.
+    fn add_edges(&mut self, config: &config::Configuration) {
+        let internet_idx = self.ip_to_node[&INTERNET_IP];
+
+        // Add edges from users to servers and Internet
+        for &user_ip in &config.users {
+            if let Some(&user_idx) = self.ip_to_node.get(&user_ip) {
+                for &server_ip in &config.servers {
+                    if let Some(&server_idx) = self.ip_to_node.get(&server_ip) {
+                        self.graph.add_edge(user_idx, server_idx, EdgeData::default());
+                    }
+                }
+                self.graph.add_edge(user_idx, internet_idx, EdgeData::default());
+            }
+        }
+
+        // Add edges from servers to Internet
+        for &server_ip in &config.servers {
+            if let Some(&server_idx) = self.ip_to_node.get(&server_ip) {
+                self.graph.add_edge(server_idx, internet_idx, EdgeData::default());
+            }
+        }
+    }
+}
+
 impl Default for VisualizationState {
     fn default() -> Self {
         Self {
@@ -294,81 +398,15 @@ impl Default for VisualizationState {
 }
 
 impl VisualizationState {
-    /// Update state from a configuration (preserves some state)
-    /// Note: caller should stop visualization before calling this if running
+    /// Update state from a configuration (preserves some state).
+    /// Note: caller should stop visualization before calling this if running.
     pub fn update_from_config(&mut self, config: &config::Configuration) {
-        let (graph, known_ips, ip_to_node, node_to_host) = Self::build_graph_from_config(config);
-        self.network.graph = graph;
-        self.network.known_ips = known_ips;
-        self.network.ip_to_node = ip_to_node;
-        self.network.node_to_host = node_to_host;
+        let built = GraphConstructor::build(config);
+        self.network.graph = built.graph;
+        self.network.known_ips = built.known_ips;
+        self.network.ip_to_node = built.ip_to_node;
+        self.network.node_to_host = built.node_to_host;
         self.view.layout_initialized = false;
-    }
-
-    /// Build graph from configuration (shared logic)
-    fn build_graph_from_config(
-        config: &config::Configuration,
-    ) -> (
-        VisualizationGraph,
-        HashSet<Ipv4Addr>,
-        HashMap<Ipv4Addr, NodeIndex>,
-        HashMap<NodeIndex, usize>,
-    ) {
-        let mut graph = VisualizationGraph::new(petgraph::stable_graph::StableGraph::default());
-        let mut known_ips = HashSet::new();
-        let mut ip_to_node: HashMap<Ipv4Addr, NodeIndex> = HashMap::new();
-        let mut node_to_host: HashMap<NodeIndex, usize> = HashMap::new();
-
-        // Add one node per host (with all its IPs)
-        for (host_idx, host) in config.get_hosts().iter().enumerate() {
-            let all_ips: Vec<Ipv4Addr> = host.interfaces.iter().map(|i| i.ip_addr).collect();
-
-            let node_data = NodeData {
-                ip_addrs: all_ips.clone(),
-                hostname: host.hostname.clone(),
-                node_type: host.host_type.into(),
-                os: host.os,
-                flow_count: 0,
-                max_flow_count: 0,
-            };
-            let idx = graph.add_node_with_location(node_data, egui::pos2(0.0, 0.0));
-            node_to_host.insert(idx, host_idx);
-
-            // Map all IPs of this host to the same node
-            for ip in all_ips {
-                known_ips.insert(ip);
-                ip_to_node.insert(ip, idx);
-            }
-        }
-
-        // Distribute nodes before adding the Internet node, so that it stays in the center
-        distribute_nodes_circle(&mut graph);
-
-        // Add Internet node
-        let internet_idx = graph.add_node_with_location(NodeData::internet(), egui::pos2(0.0, 0.0));
-        ip_to_node.insert(INTERNET_IP, internet_idx);
-
-        // Add edges for all possible connections between users and servers
-        for &user_ip in &config.users {
-            if let Some(&user_idx) = ip_to_node.get(&user_ip) {
-                for &server_ip in &config.servers {
-                    if let Some(&server_idx) = ip_to_node.get(&server_ip) {
-                        graph.add_edge(user_idx, server_idx, EdgeData::default());
-                    }
-                }
-                // Add edge to Internet for each user
-                graph.add_edge(user_idx, internet_idx, EdgeData::default());
-            }
-        }
-
-        // Add edges from servers to Internet
-        for &server_ip in &config.servers {
-            if let Some(&server_idx) = ip_to_node.get(&server_ip) {
-                graph.add_edge(server_idx, internet_idx, EdgeData::default());
-            }
-        }
-
-        (graph, known_ips, ip_to_node, node_to_host)
     }
 
     /// Check if an IP is a known (configured) IP
@@ -395,10 +433,11 @@ impl VisualizationState {
         }
     }
 
-    /// Start visualization
-    /// If config_content is None, the FlowStreamer uses the default BN model (no config applied)
-    /// Speed controls how fast flows are emitted (1.0 = real-time, 2.0 = 2x faster) - can be updated at runtime via slider
-    /// If reset is true, flow counts are reset to zero before starting
+    /// Start visualization.
+    ///
+    /// If `config_content` is `None`, the FlowStreamer uses the default BN model (no config applied).
+    /// Speed controls how fast flows are emitted (1.0 = real-time, 2.0 = 2x faster) - can be updated at runtime.
+    /// If `reset` is `true`, flow counts are reset to zero before starting.
     pub fn start_visualization(
         &mut self,
         config_content: Option<&str>,

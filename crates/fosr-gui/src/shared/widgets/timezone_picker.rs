@@ -103,7 +103,7 @@ pub fn timezone_picker(ui: &mut egui::Ui, timezone_input: &mut String) {
             // (workaround for https://github.com/emilk/egui/issues/5225)
             ui.set_max_height(TIMEZONE_POPUP_MAX_HEIGHT);
 
-            // Search input with auto-focus on open
+            // Search input with autofocus on open
             let edit_id = ui.make_persistent_id("tz_search");
             ui.add(
                 egui::TextEdit::singleline(timezone_input)
@@ -125,11 +125,13 @@ pub fn timezone_picker(ui: &mut egui::Ui, timezone_input: &mut String) {
                     for tz in TZ_VARIANTS {
                         let tz_str = tz.to_string();
                         if filter.is_empty() || tz_str.to_lowercase().contains(&filter) {
+                            // Display the timezone as a clickable option that updates the input
                             if ui
                                 .selectable_label(*timezone_input == tz_str, &tz_str)
                                 .clicked()
                             {
                                 *timezone_input = tz_str;
+                                // Close the first closable parent, which is the popup
                                 ui.close();
                             }
                         }

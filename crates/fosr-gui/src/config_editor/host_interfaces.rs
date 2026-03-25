@@ -7,7 +7,7 @@ use crate::shared::constants::network::{
     IP_LOCAL_MAX, IP_LOCAL_MIN, MAC_ADDRESS_BYTES, MAC_LOCAL_BIT, MAC_LOCAL_MASK,
 };
 use crate::shared::constants::ui::{SPACING_MD, SPACING_SM};
-use crate::shared::widgets::helpers::{edit_optional_string, required_label};
+use crate::shared::widgets::helpers::{edit_optional_string_singleline, required_label};
 use eframe::egui;
 use std::collections::HashMap;
 
@@ -57,40 +57,15 @@ pub fn ui_interfaces_section(
     let mut iface_to_remove: Option<usize> = None;
 
     for (if_idx, iface) in host.interfaces.iter_mut().enumerate() {
-        let ip_label = iface.ip_addr.clone();
-        let id = ui.make_persistent_id(("iface", host_idx, if_idx));
-
-        egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, if_idx == 0)
-            .show_header(ui, |ui| {
-                ui.label(format!("Interface — {ip_label}"));
-
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui
-                        .button(egui_material_icons::icons::ICON_DELETE)
-                        .on_hover_text("Remove interface")
-                        .clicked()
-                    {
-                        iface_to_remove = Some(if_idx);
-                    }
-                });
-            })
-            .body(|ui| {
-                ui.add_space(SPACING_SM);
-                ui.horizontal(|ui| {
-                    required_label(ui, "IP");
-                    ui.text_edit_singleline(&mut iface.ip_addr);
-                    if ip_counts.get(&iface.ip_addr).copied().unwrap_or(0) > 1 {
-                        ui.colored_label(COLOR_ERROR, "IP already in used");
-                    }
-                });
-                edit_optional_string(ui, "MAC", &mut iface.mac_addr, "00:14:2A:3F:47:D8");
-                if let Some(mac) = &iface.mac_addr {
-                    if mac_counts.get(mac).copied().unwrap_or(0) > 1 {
-                        ui.colored_label(COLOR_ERROR, "MAC already in use");
-                    }
-                }
-                host_services::ui_services_section(ui, if_idx, host_idx, iface);
-            });
+        ui_single_interface(
+            ui,
+            host_idx,
+            if_idx,
+            iface,
+            ip_counts,
+            mac_counts,
+            &mut iface_to_remove,
+        );
         ui.add_space(SPACING_MD);
     }
 
@@ -99,7 +74,73 @@ pub fn ui_interfaces_section(
     }
 }
 
-/// Generate a random mac address
+/// Render a single interface as a collapsible card.
+///
+/// Shows IP address in header, with editable fields for IP, MAC, and services in the body.
+fn ui_single_interface(
+    ui: &mut egui::Ui,
+    host_idx: usize,
+    if_idx: usize,
+    iface: &mut Interface,
+    ip_counts: &HashMap<String, usize>,
+    mac_counts: &HashMap<String, usize>,
+    remove_request: &mut Option<usize>,
+) {
+    let ip_label = iface.ip_addr.clone();
+    let id = ui.make_persistent_id(("iface", host_idx, if_idx));
+
+    egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, if_idx == 0)
+        .show_header(ui, |ui| {
+            ui.label(format!("Interface — {ip_label}"));
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui
+                    .button(egui_material_icons::icons::ICON_DELETE)
+                    .on_hover_text("Remove interface")
+                    .clicked()
+                {
+                    *remove_request = Some(if_idx);
+                }
+            });
+        })
+        .body(|ui| {
+            render_interface_fields(ui, host_idx, if_idx, iface, ip_counts, mac_counts);
+        });
+}
+
+/// Render the editable fields for an interface: IP, MAC, and services.
+fn render_interface_fields(
+    ui: &mut egui::Ui,
+    host_idx: usize,
+    if_idx: usize,
+    iface: &mut Interface,
+    ip_counts: &HashMap<String, usize>,
+    mac_counts: &HashMap<String, usize>,
+) {
+    ui.add_space(SPACING_SM);
+
+    // IP address field with duplicate warning
+    ui.horizontal(|ui| {
+        required_label(ui, "IP");
+        ui.text_edit_singleline(&mut iface.ip_addr);
+        if ip_counts.get(&iface.ip_addr).copied().unwrap_or(0) > 1 {
+            ui.colored_label(COLOR_ERROR, "IP already in use");
+        }
+    });
+
+    // MAC address field with duplicate warning
+    edit_optional_string_singleline(ui, "MAC", &mut iface.mac_addr, "00:14:2A:3F:47:D8");
+    if let Some(mac) = &iface.mac_addr {
+        if mac_counts.get(mac).copied().unwrap_or(0) > 1 {
+            ui.colored_label(COLOR_ERROR, "MAC already in use");
+        }
+    }
+
+    // Services section
+    host_services::ui_services_section(ui, host_idx, if_idx, iface);
+}
+
+/// Generate a random MAC address with the locally administered bit set.
 fn random_mac() -> String {
     let mut bytes: [u8; MAC_ADDRESS_BYTES] = rand::random();
 

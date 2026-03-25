@@ -13,7 +13,7 @@ use crate::shared::constants::ui::{
 };
 use eframe::egui;
 
-/// Helper to render a single legend item inline (for edges)
+/// Render a legend item with a colored circle (for edge protocols).
 fn legend_item_inline(ui: &mut egui::Ui, label: &str, color: egui::Color32) {
     ui.horizontal(|ui| {
         let rect = ui
@@ -26,7 +26,7 @@ fn legend_item_inline(ui: &mut egui::Ui, label: &str, color: egui::Color32) {
     });
 }
 
-/// Helper to render a legend item with an image (for nodes)
+/// Render a legend item with an icon image (for node types).
 fn legend_item_with_image(ui: &mut egui::Ui, label: &str, image: egui::ImageSource) {
     ui.horizontal(|ui| {
         let tint = if ui.style().visuals.dark_mode {
@@ -44,7 +44,7 @@ fn legend_item_with_image(ui: &mut egui::Ui, label: &str, image: egui::ImageSour
     });
 }
 
-/// Render overlay buttons in the top-left corner of the graph
+/// Render overlay buttons in the top-left corner of the graph.
 pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState) {
     let local_rect = ui.max_rect();
 
@@ -56,116 +56,166 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                 .shadow(egui::epaint::Shadow::NONE)
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        if !state.flow.running {
-                            // Play / Continue: resume without resetting flow counts
-                            let play_text = if state.user_has_started {
-                                "Continue"
-                            } else {
-                                "Start"
-                            };
-                            let accent = ui.visuals().selection.bg_fill;
-                            let play_button = egui::Button::new(egui::RichText::new(format!(
-                                "{} {}",
-                                egui_material_icons::icons::ICON_PLAY_ARROW,
-                                play_text
-                            )))
-                                .fill(accent);
-                            if ui.add(play_button).clicked() {
-                                state.user_has_started = true;
-                                // Pass the user config if loaded, otherwise None (uses default BN model)
-                                let config = state.config_content.clone();
-                                let speed = state.flow.speed.clone();
-                                if let Err(e) =
-                                    state.start_visualization(config.as_deref(), speed, false)
-                                {
-                                    log::error!("Failed to start flow streamer: {}", e);
-                                }
-                            }
-                            // Restart: reset all flow counts and start fresh
-                            // Only visible after the user has started at least once
-                            if state.user_has_started {
-                                if ui
-                                    .button(egui_material_icons::icons::ICON_RESTART_ALT)
-                                    .on_hover_text("Restart")
-                                    .clicked()
-                                {
-                                    let config = state.config_content.clone();
-                                    let speed = state.flow.speed.clone();
-                                    if let Err(e) =
-                                        state.start_visualization(config.as_deref(), speed, true)
-                                    {
-                                        log::error!("Failed to start flow streamer: {}", e);
-                                    }
-                                }
-                            }
-                        } else {
-                            let stop_button = egui::Button::new(egui::RichText::new(format!(
-                                "{} Stop",
-                                egui_material_icons::icons::ICON_STOP
-                            )))
-                                .fill(COLOR_STOP);
-                            if ui.add(stop_button).clicked() {
-                                state.stop_visualization();
-                            }
-                        }
-                        if ui
-                            .button(egui_material_icons::icons::ICON_FIT_SCREEN)
-                            .on_hover_text("Fit to screen")
-                            .clicked()
-                        {
-                            state.view.reset_requested = true;
-                        }
-                        if ui
-                            .button(egui_material_icons::icons::ICON_IMAGE)
-                            .on_hover_text("Export as PNG")
-                            .clicked()
-                        {
-                            state.screenshot_export = ScreenshotStateMachine::HidingOverlays;
-                        }
-
+                        render_playback_controls(ui, state);
+                        render_view_controls(ui, state);
                         ui.separator();
-
-                        // Playback speed: −/+ buttons with discrete steps
-                        // Speed is an Arc, we cannot use it directly with the buttons,
-                        // we need to read and write its value manually.
-                        let mut speed_value = *state.flow.speed.read().unwrap();
-                        let current_idx = PLAYBACK_SPEED_STEPS
-                            .iter()
-                            .position(|&s| (s - speed_value).abs() < PLAYBACK_SPEED_EPSILON);
-
-                        if ui
-                            .button(egui_material_icons::icons::ICON_REMOVE)
-                            .on_hover_text("Slow down")
-                            .clicked()
-                        {
-                            if let Some(idx) = current_idx {
-                                if idx > 0 {
-                                    speed_value = PLAYBACK_SPEED_STEPS[idx - 1];
-                                    *state.flow.speed.write().unwrap() = speed_value;
-                                }
-                            }
-                        }
-                        ui.label(format!("{:.1}x", speed_value)).on_hover_text(
-                            "Playback speed — controls how fast network flows are simulated",
-                        );
-                        if ui
-                            .button(egui_material_icons::icons::ICON_ADD)
-                            .on_hover_text("Speed up")
-                            .clicked()
-                        {
-                            if let Some(idx) = current_idx {
-                                if idx < PLAYBACK_SPEED_STEPS.len() - 1 {
-                                    speed_value = PLAYBACK_SPEED_STEPS[idx + 1];
-                                    *state.flow.speed.write().unwrap() = speed_value;
-                                }
-                            }
-                        }
+                        render_speed_controls(ui, state);
                     });
                 });
         });
 }
 
-/// Render overlay stats in the bottom-left corner of the graph
+/// Render play/stop/restart buttons based on current state.
+fn render_playback_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
+    if !state.flow.running {
+        render_play_button(ui, state);
+        if state.user_has_started {
+            render_restart_button(ui, state);
+        }
+    } else {
+        render_stop_button(ui, state);
+    }
+}
+
+/// Render the Play/Continue button.
+///
+/// Resumes visualization without resetting flow counts. Uses "Start" label
+/// initially, then "Continue" after the user has started at least once.
+fn render_play_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
+    let play_text = if state.user_has_started {
+        "Continue"
+    } else {
+        "Start"
+    };
+    let accent = ui.visuals().selection.bg_fill;
+    let play_button = egui::Button::new(egui::RichText::new(format!(
+        "{} {}",
+        egui_material_icons::icons::ICON_PLAY_ARROW,
+        play_text
+    )))
+    .fill(accent);
+
+    if ui.add(play_button).clicked() {
+        state.user_has_started = true;
+        let config = state.config_content.clone();
+        let speed = state.flow.speed.clone();
+        if let Err(e) = state.start_visualization(config.as_deref(), speed, false) {
+            log::error!("Failed to start flow streamer: {}", e);
+        }
+    }
+}
+
+/// Render the Restart button.
+///
+/// Resets all flow counts and starts fresh. Only visible after the user
+/// has started at least once (otherwise the Play button shows "Start").
+fn render_restart_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
+    if ui
+        .button(egui_material_icons::icons::ICON_RESTART_ALT)
+        .on_hover_text("Restart")
+        .clicked()
+    {
+        let config = state.config_content.clone();
+        let speed = state.flow.speed.clone();
+        if let Err(e) = state.start_visualization(config.as_deref(), speed, true) {
+            log::error!("Failed to start flow streamer: {}", e);
+        }
+    }
+}
+
+/// Render the Stop button.
+fn render_stop_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
+    let stop_button = egui::Button::new(egui::RichText::new(format!(
+        "{} Stop",
+        egui_material_icons::icons::ICON_STOP
+    )))
+    .fill(COLOR_STOP);
+
+    if ui.add(stop_button).clicked() {
+        state.stop_visualization();
+    }
+}
+
+/// Render fit-to-screen and export buttons.
+fn render_view_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
+    if ui
+        .button(egui_material_icons::icons::ICON_FIT_SCREEN)
+        .on_hover_text("Fit to screen")
+        .clicked()
+    {
+        state.view.reset_requested = true;
+    }
+
+    if ui
+        .button(egui_material_icons::icons::ICON_IMAGE)
+        .on_hover_text("Export as PNG")
+        .clicked()
+    {
+        state.screenshot_export = ScreenshotStateMachine::HidingOverlays;
+    }
+}
+
+/// Render playback speed controls with −/+ buttons.
+///
+/// Speed is stored in an `Arc<RwLock>` for runtime updates,
+/// so we read/write it manually rather than binding directly.
+fn render_speed_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
+    // Use into_inner() on poison to recover the value anyway.
+    // Lock poisoning only happens if another thread panicked while holding the lock,
+    // and for a simple f32 speed value, there's no risk of data corruption.
+    let mut speed_value = *state
+        .flow
+        .speed
+        .read()
+        .unwrap_or_else(|e| e.into_inner());
+    let current_idx = find_speed_step_index(speed_value);
+
+    if ui
+        .button(egui_material_icons::icons::ICON_REMOVE)
+        .on_hover_text("Slow down")
+        .clicked()
+    {
+        if let Some(idx) = current_idx {
+            if idx > 0 {
+                speed_value = PLAYBACK_SPEED_STEPS[idx - 1];
+                *state
+                    .flow
+                    .speed
+                    .write()
+                    .unwrap_or_else(|e| e.into_inner()) = speed_value;
+            }
+        }
+    }
+
+    ui.label(format!("{:.1}x", speed_value))
+        .on_hover_text("Playback speed — controls how fast network flows are simulated");
+
+    if ui
+        .button(egui_material_icons::icons::ICON_ADD)
+        .on_hover_text("Speed up")
+        .clicked()
+    {
+        if let Some(idx) = current_idx {
+            if idx < PLAYBACK_SPEED_STEPS.len() - 1 {
+                speed_value = PLAYBACK_SPEED_STEPS[idx + 1];
+                *state
+                    .flow
+                    .speed
+                    .write()
+                    .unwrap_or_else(|e| e.into_inner()) = speed_value;
+            }
+        }
+    }
+}
+
+/// Find the index of the current speed in the predefined steps.
+fn find_speed_step_index(current_speed: f32) -> Option<usize> {
+    PLAYBACK_SPEED_STEPS
+        .iter()
+        .position(|&s| (s - current_speed).abs() < PLAYBACK_SPEED_EPSILON)
+}
+
+/// Render overlay stats in the bottom-left corner of the graph.
 pub fn render_overlay_stats(ui: &mut egui::Ui, state: &VisualizationState) {
     let local_rect = ui.max_rect();
 
@@ -192,7 +242,7 @@ pub fn render_overlay_stats(ui: &mut egui::Ui, state: &VisualizationState) {
         });
 }
 
-/// Render node legend in the top-right corner of the graph
+/// Render node legend in the top-right corner of the graph.
 pub fn render_overlay_node_legend(ui: &mut egui::Ui) {
     let local_rect = ui.max_rect();
 
@@ -213,7 +263,7 @@ pub fn render_overlay_node_legend(ui: &mut egui::Ui) {
         });
 }
 
-/// Render edge legend in the bottom-right corner of the graph
+/// Render edge legend in the bottom-right corner of the graph.
 pub fn render_overlay_edge_legend(ui: &mut egui::Ui) {
     let local_rect = ui.max_rect();
 

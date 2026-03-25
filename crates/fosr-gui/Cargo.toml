@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 description = "A GUI for Fos-R."
 
+# Bundle metadata for macOS app
 [package.metadata.bundle]
 name = "Fos-R"
 identifier = "com.inria.fosr"

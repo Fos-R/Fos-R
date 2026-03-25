@@ -9,7 +9,7 @@ use super::overlays::{
 };
 use super::screenshot::handle_screenshot_export;
 use super::shapes::{NetworkEdgeShape, NetworkNodeShape};
-use super::state::{EdgeData, NodeData, ScreenshotStateMachine};
+use super::state::{EdgeData, NodeData, ScreenshotStateMachine, ViewState};
 use crate::run::state::RunTabState;
 use crate::shared::constants::ui::FIT_TO_SCREEN_PADDING;
 use eframe::egui;
@@ -24,28 +24,9 @@ use eframe::egui;
 /// 5. Renders UI overlays (buttons, stats, legends)
 pub fn render_graph_view(ui: &mut egui::Ui, state: &mut RunTabState) {
     let inner_response = egui::CentralPanel::default().show(ui.ctx(), |ui| {
-        // Enable node clicking and dragging
-        let interactions = egui_graphs::SettingsInteraction::new()
-            .with_node_clicking_enabled(true)
-            .with_dragging_enabled(true);
+        handle_window_resize(ui, &mut state.visualization.view);
 
-        // Reset view on window resize
-        let screen_size = ui.ctx().content_rect().size();
-        match state.visualization.view.last_screen_size {
-            Some(last) if last != screen_size => {
-                state.visualization.view.last_screen_size = Some(screen_size);
-                state.visualization.view.reset_requested = true;
-            }
-            None => state.visualization.view.last_screen_size = Some(screen_size),
-            _ => {}
-        }
-
-        // When reset is requested, enable fit-to-screen for one frame
-        // so egui_graphs recalculates the proper zoom/pan to center the graph
-        let fit_to_screen = state.visualization.view.reset_requested;
-        if state.visualization.view.reset_requested {
-            state.visualization.view.reset_requested = false;
-        }
+        let fit_to_screen = consume_reset_request(&mut state.visualization.view);
 
         let mut graph_view = egui_graphs::GraphView::<
             NodeData,
@@ -57,49 +38,83 @@ pub fn render_graph_view(ui: &mut egui::Ui, state: &mut RunTabState) {
             egui_graphs::FruchtermanReingoldWithCenterGravityState,
             egui_graphs::LayoutForceDirected<egui_graphs::FruchtermanReingoldWithCenterGravity>,
         >::new(&mut state.visualization.network.graph)
-            .with_interactions(&interactions)
+            .with_interactions(&egui_graphs::SettingsInteraction::new()
+                .with_node_clicking_enabled(true)
+                .with_dragging_enabled(true))
             .with_event_sink(&state.visualization.modal.events_buffer)
             .with_styles(&egui_graphs::SettingsStyle::new().with_labels_always(true))
             .with_navigations(
                 &egui_graphs::SettingsNavigation::new()
                     .with_fit_to_screen_enabled(fit_to_screen)
-                    .with_fit_to_screen_padding(FIT_TO_SCREEN_PADDING) // padding to avoid cropping with labels and overlays
+                    // padding to avoid cropping with labels and overlays
+                    .with_fit_to_screen_padding(FIT_TO_SCREEN_PADDING)
                     .with_zoom_and_pan_enabled(true),
             );
 
-        // Disable force-directed layout to preserve circle layout
-        // TODO: handle this properly instead of just deactivating the auto-layout
-        if !state.visualization.view.layout_initialized {
-            let layout_state = egui_graphs::FruchtermanReingoldWithCenterGravityState {
-                base: egui_graphs::FruchtermanReingoldState {
-                    is_running: false,
-                    ..Default::default()
-                },
-                extras: Default::default(),
-            };
-            egui_graphs::set_layout_state(ui, layout_state, None);
-            state.visualization.view.layout_initialized = true;
-        }
+        // TODO: handle layout properly instead of just deactivating auto-layout
+        disable_force_directed_layout(ui, &mut state.visualization.view);
 
         ui.add(&mut graph_view);
 
-        // Handle screenshot export state machine
         handle_screenshot_export(ui, &mut state.visualization);
 
         // Hide overlays during export to get clean screenshot
-        if state.visualization.screenshot_export != ScreenshotStateMachine::Idle {
-            return;
+        if state.visualization.screenshot_export == ScreenshotStateMachine::Idle {
+            render_overlay_buttons(ui, &mut state.visualization);
+            render_overlay_stats(ui, &state.visualization);
+            render_overlay_node_legend(ui);
+            render_overlay_edge_legend(ui);
         }
-
-        // Render overlays
-        render_overlay_buttons(ui, &mut state.visualization);
-        render_overlay_stats(ui, &state.visualization);
-        render_overlay_node_legend(ui);
-        render_overlay_edge_legend(ui);
     });
 
     // Use panel rect directly - it's already in screen coordinates
     // and represents the full panel area (ui.max_rect() excludes internal padding)
-    let panel_rect = inner_response.response.rect;
-    state.visualization.view.graph_rect = Some(panel_rect);
+    state.visualization.view.graph_rect = Some(inner_response.response.rect);
+}
+
+/// Detect window resize and trigger fit-to-screen.
+///
+/// Compares current screen size with last known size.
+/// On change, requests a reset to recalculate zoom/pan.
+fn handle_window_resize(ui: &egui::Ui, view: &mut ViewState) {
+    let screen_size = ui.ctx().content_rect().size();
+    match view.last_screen_size {
+        Some(last) if last != screen_size => {
+            view.last_screen_size = Some(screen_size);
+            view.reset_requested = true;
+        }
+        None => view.last_screen_size = Some(screen_size),
+        _ => {}
+    }
+}
+
+/// Consume reset request and return whether fit-to-screen should run.
+///
+/// Returns true for one frame when reset is requested,
+/// then clears the flag so it doesn't repeat.
+fn consume_reset_request(view: &mut ViewState) -> bool {
+    let fit = view.reset_requested;
+    if fit {
+        view.reset_requested = false;
+    }
+    fit
+}
+
+/// Disable force-directed layout to preserve circle layout.
+///
+/// Must be called once after the graph is first rendered.
+/// The force-directed layout would override our circle layout.
+fn disable_force_directed_layout(ui: &mut egui::Ui, view: &mut ViewState) {
+    if view.layout_initialized {
+        return;
+    }
+    let layout_state = egui_graphs::FruchtermanReingoldWithCenterGravityState {
+        base: egui_graphs::FruchtermanReingoldState {
+            is_running: false,
+            ..Default::default()
+        },
+        extras: Default::default(),
+    };
+    egui_graphs::set_layout_state(ui, layout_state, None);
+    view.layout_initialized = true;
 }

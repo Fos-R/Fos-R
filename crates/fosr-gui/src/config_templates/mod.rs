@@ -5,6 +5,7 @@ use crate::shared::config::state::ConfigurationFileState;
 use egui_material_icons::icons;
 
 /// A predefined configuration template.
+#[derive(Clone, Copy)]
 pub struct Template {
     pub id: &'static str,
     pub title: &'static str,
@@ -38,35 +39,36 @@ pub static TEMPLATES: &[Template] = &[
     },
 ];
 
-/// Load a template by its ID into the configuration file state.
-pub fn load_template_by_id(state: &mut ConfigurationFileState, id: &str) {
-    if let Some(template) = TEMPLATES.iter().find(|t| t.id == id) {
-        load_template(state, template);
-    }
+/// Load a template into the configuration file state.
+///
+/// Parses the template YAML first, then applies state changes only on success.
+/// On parse failure, sets the error without modifying the existing model.
+pub fn load_template(state: &mut ConfigurationFileState, template: &Template) {
+    // Parse first, fail-fast if invalid
+    let model = match serde_yaml::from_str::<Configuration>(template.yaml) {
+        Ok(model) => model,
+        Err(e) => {
+            state.config_error = Some(e.to_string());
+            return;
+        }
+    };
+
+    // Apply state changes only after successful parse
+    apply_template_to_state(state, template, model);
 }
 
-/// Load a template into the configuration file state.
-fn load_template(state: &mut ConfigurationFileState, template: &Template) {
+/// Reset state and apply a successfully-parsed template.
+fn apply_template_to_state(
+    state: &mut ConfigurationFileState,
+    template: &Template,
+    model: Configuration,
+) {
     state.picked_config_file = None;
     state.config_file_content = Some(template.yaml.to_string());
-    state.config_model = None;
-    state.parse_error = None;
-
-    match serde_yaml::from_str::<Configuration>(template.yaml) {
-        Ok(model) => {
-            state.config_model = Some(model);
-            state.clean_snapshot = state.config_model.clone();
-            state.config_chosen = true;
-            state.is_dirty = false;
-            state.loaded_template_id = Some(template.id.to_string());
-        }
-        Err(e) => {
-            state.parse_error = Some(e.to_string());
-        }
-    }
-}
-
-/// Get all available templates.
-pub fn all_templates() -> &'static [Template] {
-    TEMPLATES
+    state.config_model = Some(model);
+    state.clean_snapshot = Some(template.yaml.to_string());
+    state.config_error = None;
+    state.config_chosen = true;
+    state.is_dirty = false;
+    state.loaded_template_id = Some(template.id.to_string());
 }

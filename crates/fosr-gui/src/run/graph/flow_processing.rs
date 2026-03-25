@@ -183,40 +183,48 @@ pub fn update_graph_edges(state: &mut VisualizationState) {
         .collect();
 
     for (edge, src_ips, dst_ips) in edges_data {
-        // Check all IP combinations for an active link
-        let mut new_state = EdgeState::Inactive;
-
-        'outer: for src_ip in &src_ips {
-            for dst_ip in &dst_ips {
-                let forward_key = (*src_ip, *dst_ip);
-                let reverse_key = (*dst_ip, *src_ip);
-
-                if let Some(link) = state.flow.active_links.get(&forward_key) {
-                    new_state = EdgeState::Active {
-                        protocol: link.protocol,
-                        start_time: link.start_time,
-                        direction: link.direction.clone(),
-                    };
-                    break 'outer;
-                } else if let Some(link) = state.flow.active_links.get(&reverse_key) {
-                    new_state = EdgeState::Active {
-                        protocol: link.protocol,
-                        start_time: link.start_time,
-                        // we are using the reverse key, so we need to reverse the direction
-                        direction: match link.direction {
-                            LinkDirection::Forward => LinkDirection::Backward,
-                            LinkDirection::Backward => LinkDirection::Forward,
-                            LinkDirection::Bidirectional => LinkDirection::Bidirectional,
-                        },
-                    };
-                    break 'outer;
-                }
-            }
-        }
+        let new_state = find_active_link_state(&state.flow.active_links, &src_ips, &dst_ips);
 
         // Update edge state (flow_count is preserved)
         if let Some(edge_mut) = graph.g_mut().edge_weight_mut(edge) {
             edge_mut.payload_mut().state = new_state;
         }
     }
+}
+
+/// Find the active link state for an edge by checking all IP combinations.
+///
+/// Searches for an active link between any source IP and any destination IP,
+/// handling both forward and reverse directions.
+fn find_active_link_state(
+    active_links: &std::collections::HashMap<(std::net::Ipv4Addr, std::net::Ipv4Addr), ActiveLink>,
+    src_ips: &[std::net::Ipv4Addr],
+    dst_ips: &[std::net::Ipv4Addr],
+) -> EdgeState {
+    for src_ip in src_ips {
+        for dst_ip in dst_ips {
+            let forward_key = (*src_ip, *dst_ip);
+            let reverse_key = (*dst_ip, *src_ip);
+
+            if let Some(link) = active_links.get(&forward_key) {
+                return EdgeState::Active {
+                    protocol: link.protocol,
+                    start_time: link.start_time,
+                    direction: link.direction.clone(),
+                };
+            } else if let Some(link) = active_links.get(&reverse_key) {
+                // Reverse key: flip the direction
+                return EdgeState::Active {
+                    protocol: link.protocol,
+                    start_time: link.start_time,
+                    direction: match link.direction {
+                        LinkDirection::Forward => LinkDirection::Backward,
+                        LinkDirection::Backward => LinkDirection::Forward,
+                        LinkDirection::Bidirectional => LinkDirection::Bidirectional,
+                    },
+                };
+            }
+        }
+    }
+    EdgeState::Inactive
 }

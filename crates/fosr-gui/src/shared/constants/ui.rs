@@ -9,41 +9,41 @@
 // SPACING
 // ============================================================================
 
-/// Extra small spacing (px) - minimal gaps
+/// Extra small spacing (px)
 pub const SPACING_XS: f32 = 2.0;
 
-/// Small spacing (px) - tight gaps between related items
+/// Small spacing (px)
 pub const SPACING_SM: f32 = 4.0;
 
-/// Medium spacing (px) - default gap between items
+/// Medium spacing (px)
 pub const SPACING_MD: f32 = 6.0;
 
-/// Large spacing (px) - gaps between sections
+/// Large spacing (px)
 pub const SPACING_LG: f32 = 8.0;
 
-/// Extra large spacing (px) - major section separators
+/// Extra large spacing (px)
 pub const SPACING_XL: f32 = 12.0;
 
-/// Extra extra large spacing (px) - large section gaps
+/// Extra extra large spacing (px)
 pub const SPACING_XXL: f32 = 15.0;
 
-/// Negative extra small spacing (px) - for pulling elements closer together
+/// Negative extra small spacing (px) for pulling elements closer together
 pub const SPACING_NEGATIVE_XS: f32 = -2.0;
 
 // ============================================================================
 // TYPOGRAPHY
 // ============================================================================
 
-/// Small text size (px) - captions, hints
+/// Small text size (px)
 pub const TEXT_SIZE_SM: f32 = 12.0;
 
-/// Medium text size (px) - button text
+/// Medium text size (px)
 pub const TEXT_SIZE_MD: f32 = 13.0;
 
-/// Default text size (px) - body text, tabs
+/// Default text size (px)
 pub const TEXT_SIZE_DEFAULT: f32 = 14.0;
 
-/// Large text size (px) - headings, emphasis
+/// Large text size (px)
 pub const TEXT_SIZE_LG: f32 = 16.0;
 
 /// Icon size for startup cards and major UI elements (px)
@@ -88,7 +88,7 @@ pub const POPUP_MAX_HEIGHT: f32 = 200.0;
 /// Node info modal width (px)
 pub const NODE_MODAL_WIDTH: f32 = 250.0;
 
-/// Panel inner margin (horizontal, vertical) for top panels
+/// Panel inner margin (horizontal, vertical) for top panel
 pub const PANEL_INNER_MARGIN: (i8, i8) = (4, 3);
 
 /// Bottom bar inner margin (horizontal, vertical)
@@ -98,7 +98,7 @@ pub const BOTTOM_BAR_INNER_MARGIN: (i8, i8) = (8, 4);
 pub const OPTIONS_PANEL_INNER_MARGIN: (i8, i8) = (8, 8);
 
 // ============================================================================
-// WINDOW DIMENSIONS
+// WINDOW DIMENSIONS (native builds)
 // ============================================================================
 
 /// Default window width (px)
@@ -122,10 +122,10 @@ pub const WINDOW_MIN_HEIGHT: f32 = 500.0;
 // ============================================================================
 
 /// Minimum zoom level (fraction)
-pub const ZOOM_MIN: f32 = 0.5;
+pub const ZOOM_MIN: f32 = 0.8;
 
 /// Maximum zoom level (fraction)
-pub const ZOOM_MAX: f32 = 3.0;
+pub const ZOOM_MAX: f32 = 2.0;
 
 /// Zoom step increment (fraction)
 pub const ZOOM_STEP: f32 = 0.1;
@@ -244,7 +244,8 @@ pub const GRAPH_LAYOUT_RADIUS_BASE: f32 = 100.0;
 /// Fit to screen padding (fraction of screen)
 pub const FIT_TO_SCREEN_PADDING: f32 = 0.15;
 
-/// Base timeout for active links display (ms), adjusted by speed
+/// Base timeout for active links display (ms), adjusted by speed.
+/// Controls how long links stay in active state.
 pub const ACTIVE_LINK_BASE_TIMEOUT_MS: f32 = 500.0;
 
 /// Overlay margin from screen edges (px)
@@ -276,7 +277,7 @@ pub const INFO_ICON_SPACING: f32 = -4.0;
 /// Info icon size
 pub const INFO_ICON_SIZE: f32 = 14.0;
 
-/// Info tooltip maximum width
+/// Info tooltip maximum width (px)
 pub const INFO_TOOLTIP_MAX_WIDTH: f32 = 300.0;
 
 // ============================================================================

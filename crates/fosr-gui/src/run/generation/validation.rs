@@ -7,22 +7,25 @@ use chrono_tz::Tz;
 use eframe::egui;
 use std::time::Duration;
 
-/// Structure to handle inputs errors from the user
+/// Holds validation state for a single input field.
 #[derive(Default, Clone)]
 pub struct FieldValidation {
     pub error: Option<String>,
 }
 
 impl FieldValidation {
+    /// Clears any existing error.
     pub fn set_ok(&mut self) {
         self.error = None;
     }
+
+    /// Sets an error message.
     pub fn set_err(&mut self, msg: impl Into<String>) {
         self.error = Some(msg.into());
     }
 }
 
-/// Display the error in red
+/// Display the error message in red below the field.
 pub fn show_field_error(ui: &mut egui::Ui, validation: &FieldValidation) {
     if let Some(msg) = &validation.error {
         ui.add_space(SPACING_MD);
@@ -30,27 +33,25 @@ pub fn show_field_error(ui: &mut egui::Ui, validation: &FieldValidation) {
     }
 }
 
-// Spec expected for each parameter
+// Expected format for each parameter (shown in error messages)
 const SPEC_DURATION: &str = "a duration between 1 min and 3 days (e.g. 30m, 1h, 2d)";
 const SPEC_SEED: &str = "an unsigned integer (u64) or empty for random";
 const SPEC_TIMEZONE: &str = "a valid timezone";
 
-// return the first invalid parameter
-pub fn first_invalid_param(
-    state: &GenerationState,
-) -> Option<(&'static str, &'static str, String)> {
-    if let Some(err) = &state.duration_validation.error {
-        return Some(("Duration", SPEC_DURATION, err.clone()));
-    }
-    if let Some(err) = &state.seed_validation.error {
-        return Some(("Seed", SPEC_SEED, err.clone()));
-    }
-    if let Some(err) = &state.timezone_validation.error {
-        return Some(("Timezone", SPEC_TIMEZONE, err.clone()));
-    }
-    None
+/// Returns the first invalid parameter (name, expected spec, error message).
+pub fn first_invalid_param(state: &GenerationState) -> Option<(&'static str, &'static str, &str)> {
+    [
+        ("Duration", SPEC_DURATION, &state.duration_validation),
+        ("Seed", SPEC_SEED, &state.seed_validation),
+        ("Timezone", SPEC_TIMEZONE, &state.timezone_validation),
+    ]
+    .into_iter()
+    .find_map(|(name, spec, validation)| {
+        validation.error.as_ref().map(|err| (name, spec, err.as_str()))
+    })
 }
 
+/// Validates a human-readable duration string and checks bounds.
 pub fn validate_duration(duration_str: &str) -> Result<Duration, String> {
     let d = humantime::parse_duration(duration_str).map_err(|_| "Invalid value".to_string())?;
 
@@ -64,6 +65,7 @@ pub fn validate_duration(duration_str: &str) -> Result<Duration, String> {
     Ok(d)
 }
 
+/// Validates an optional u64 input (empty is valid, means "use random").
 pub fn validate_optional_u64(input: &str) -> Result<Option<u64>, String> {
     let s = input.trim();
     if s.is_empty() {
@@ -74,10 +76,10 @@ pub fn validate_optional_u64(input: &str) -> Result<Option<u64>, String> {
         .map_err(|_| "Invalid value".to_string())
 }
 
+/// Validates an IANA timezone string.
 pub fn validate_timezone(input: &str) -> Result<(), String> {
-    let parsed = input.parse::<Tz>();
-    match parsed {
-        Ok(_) => Ok(()),
-        Err(_) => Err("Invalid value".to_string()),
-    }
+    input
+        .parse::<Tz>()
+        .map(|_| ())
+        .map_err(|_| "Invalid value".to_string())
 }
