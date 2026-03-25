@@ -1,7 +1,7 @@
 //! YAML editor with syntax highlighting and error line markers.
 
 use crate::shared::config::parser::parse_config_yaml;
-use crate::shared::config::state::ConfigurationFileState;
+use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::COLOR_ERROR;
 use crate::shared::constants::ui::{YAML_EDITOR_ROWS, YAML_GUTTER_PADDING, YAML_ICON_COL_WIDTH};
 use eframe::egui;
@@ -58,7 +58,7 @@ impl GutterMetrics {
 }
 
 /// Editable YAML Editor with syntax highlighting and error markers.
-pub fn ui_yaml_editor(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
+pub fn render_yaml_editor(ui: &mut egui::Ui, state: &mut ConfigFileState) {
     if state.config_file_content.is_none() {
         ui.label("No configuration file selected.");
         return;
@@ -145,7 +145,7 @@ pub fn ui_yaml_editor(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
 }
 
 /// Render error banner and return parsed error line numbers.
-fn render_error_banner(ui: &mut egui::Ui, state: &ConfigurationFileState) -> Vec<usize> {
+fn render_error_banner(ui: &mut egui::Ui, state: &ConfigFileState) -> Vec<usize> {
     if let Some(err) = &state.config_error {
         ui.colored_label(
             COLOR_ERROR,

@@ -2,7 +2,7 @@
 
 use super::shapes::{NetworkEdgeShape, NetworkNodeShape};
 use super::stream::{FlowEvent, FlowStreamer};
-use super::utils::distribute_nodes_circle;
+use super::graph_layout::arrange_nodes_in_circle;
 use crate::shared::config::model::Host;
 use crate::shared::constants::ui::DELAY_FRAMES_QUICK;
 use eframe::egui;
@@ -19,7 +19,7 @@ use std::sync::{Arc, RwLock};
 use web_time::Instant;
 
 /// Special IP address representing "The Internet" node
-pub const INTERNET_IP: Ipv4Addr = Ipv4Addr::new(0, 0, 0, 1);
+pub const INTERNET_NODE_IP: Ipv4Addr = Ipv4Addr::new(0, 0, 0, 1);
 
 /// Node type for visualization (extends HostType with Internet)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -40,7 +40,7 @@ impl From<HostType> for NodeType {
 
 /// Node data: host information
 #[derive(Clone, Debug)]
-pub struct NodeData {
+pub struct NetworkNode {
     pub ip_addrs: Vec<Ipv4Addr>,
     pub hostname: Option<String>,
     pub node_type: NodeType,
@@ -54,11 +54,11 @@ pub struct NodeData {
     pub max_flow_count: u32,
 }
 
-impl NodeData {
+impl NetworkNode {
     /// Create an Internet node
     pub fn internet() -> Self {
         Self {
-            ip_addrs: vec![INTERNET_IP],
+            ip_addrs: vec![INTERNET_NODE_IP],
             hostname: Some("Internet".to_string()),
             node_type: NodeType::Internet,
             os: OS::Linux, // Doesn't matter for Internet node
@@ -69,7 +69,7 @@ impl NodeData {
 }
 
 // Display the hostname plus all IP addresses
-impl fmt::Display for NodeData {
+impl fmt::Display for NetworkNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(ref hostname) = self.hostname {
             if self.node_type == NodeType::Internet {
@@ -99,7 +99,7 @@ impl fmt::Display for NodeData {
 
 /// Edge data: communication state with cumulative flow count for thickness
 #[derive(Clone, Debug)]
-pub struct EdgeData {
+pub struct NetworkEdge {
     /// Current visual state (active with protocol or inactive)
     pub state: EdgeState,
     /// Cumulative flow count - persists even when inactive, used for edge thickness
@@ -108,7 +108,7 @@ pub struct EdgeData {
     pub max_flow_count: u32,
 }
 
-impl Default for EdgeData {
+impl Default for NetworkEdge {
     fn default() -> Self {
         Self {
             state: EdgeState::Inactive,
@@ -131,7 +131,7 @@ pub enum EdgeState {
     },
 }
 
-impl fmt::Display for EdgeData {
+impl fmt::Display for NetworkEdge {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.state {
             EdgeState::Inactive => write!(f, ""),
@@ -140,6 +140,7 @@ impl fmt::Display for EdgeData {
     }
 }
 
+/// Direction of traffic flow on an edge.
 #[derive(Clone, Debug, PartialEq)]
 pub enum LinkDirection {
     Forward,
@@ -155,8 +156,8 @@ pub struct ActiveLink {
 }
 
 pub type VisualizationGraph = egui_graphs::Graph<
-    NodeData,
-    EdgeData,
+    NetworkNode,
+    NetworkEdge,
     petgraph::Undirected,
     petgraph::stable_graph::DefaultIx,
     NetworkNodeShape,
@@ -174,7 +175,9 @@ pub enum ScreenshotStateMachine {
     WaitingForScreenshot,
 }
 
-/// Network structure and IP/Node lookups
+/// Network structure with graph, IP/Node lookups, and construction methods.
+///
+/// Use [`NetworkData::from_config`] to build from a configuration.
 pub struct NetworkData {
     pub graph: VisualizationGraph,
     pub known_ips: HashSet<Ipv4Addr>,
@@ -193,133 +196,18 @@ impl Default for NetworkData {
     }
 }
 
-/// Flow processing and streaming state
-pub struct FlowState {
-    pub receiver: Option<Receiver<FlowEvent>>,
-    pub active_links: HashMap<(Ipv4Addr, Ipv4Addr), ActiveLink>,
-    pub streamer: Option<FlowStreamer>,
-    pub running: bool,
-    pub speed: Arc<RwLock<f32>>,
-    pub total_flows: u32,
-    pub visualization_start: Option<Instant>,
-}
-
-impl Default for FlowState {
-    fn default() -> Self {
-        Self {
-            receiver: None,
-            active_links: HashMap::new(),
-            streamer: None,
-            running: false,
-            speed: Arc::new(RwLock::new(1.0)),
-            total_flows: 0,
-            visualization_start: None,
-        }
-    }
-}
-
-/// Layout and rendering state
-pub struct ViewState {
-    pub layout_initialized: bool,
-    pub reset_requested: bool,
-    pub delayed_fit_countdown: Option<u8>,
-    pub last_screen_size: Option<egui::Vec2>,
-    pub graph_rect: Option<egui::Rect>,
-}
-
-impl Default for ViewState {
-    fn default() -> Self {
-        Self {
-            layout_initialized: false,
-            reset_requested: false,
-            delayed_fit_countdown: Some(DELAY_FRAMES_QUICK), // Delay initial fit for bottom panel
-            last_screen_size: None,
-            graph_rect: None,
-        }
-    }
-}
-
-/// Node info modal state
-pub struct ModalState {
-    pub events_buffer: Rc<RefCell<Vec<Event>>>,
-    pub clicked_node: Option<NodeIndex>,
-    pub open: bool,
-    pub edit_buffer: Option<Host>,
-}
-
-impl Default for ModalState {
-    fn default() -> Self {
-        Self {
-            events_buffer: Rc::new(RefCell::new(Vec::new())),
-            clicked_node: None,
-            open: false,
-            edit_buffer: None,
-        }
-    }
-}
-
-/// Represents the state of the visualization tab.
-pub struct VisualizationState {
-    /// Network structure and lookups
-    pub network: NetworkData,
-    /// Flow processing and streaming
-    pub flow: FlowState,
-    /// Layout and rendering
-    pub view: ViewState,
-    /// Node info modal
-    pub modal: ModalState,
-    /// Screenshot export state machine
-    pub screenshot_export: ScreenshotStateMachine,
-    /// Config content tracking (for detecting changes)
-    pub config_content: Option<String>,
-    /// Auto-start countdown frames
-    pub auto_start_countdown: Option<u8>,
-    /// Whether user has manually started visualization
-    pub user_has_started: bool,
-}
-
-/// Result of building a graph from configuration.
-struct GraphBuildResult {
-    graph: VisualizationGraph,
-    known_ips: HashSet<Ipv4Addr>,
-    ip_to_node: HashMap<Ipv4Addr, NodeIndex>,
-    node_to_host: HashMap<NodeIndex, usize>,
-}
-
-/// Helper for constructing visualization graphs from configuration.
-///
-/// Groups mutable state during graph construction to avoid passing
-/// multiple `&mut` parameters. The construction order is fixed:
-/// 1. Create host nodes from config
-/// 2. Layout (circular distribution)
-/// 3. Add the Internet node (centered)
-/// 4. Create edges between hosts and Internet
-struct GraphConstructor {
-    graph: VisualizationGraph,
-    known_ips: HashSet<Ipv4Addr>,
-    ip_to_node: HashMap<Ipv4Addr, NodeIndex>,
-    node_to_host: HashMap<NodeIndex, usize>,
-}
-
-impl GraphConstructor {
-    /// Build the complete graph from configuration.
-    fn build(config: &config::Configuration) -> GraphBuildResult {
-        let mut constructor = Self {
-            graph: VisualizationGraph::new(petgraph::stable_graph::StableGraph::default()),
-            known_ips: HashSet::new(),
-            ip_to_node: HashMap::new(),
-            node_to_host: HashMap::new(),
-        };
-        constructor.add_host_nodes(config);
-        constructor.distribute_layout();
-        constructor.add_internet_node();
-        constructor.add_edges(config);
-        GraphBuildResult {
-            graph: constructor.graph,
-            known_ips: constructor.known_ips,
-            ip_to_node: constructor.ip_to_node,
-            node_to_host: constructor.node_to_host,
-        }
+impl NetworkData {
+    /// Build network data from the configuration.
+    ///
+    /// Creates nodes for each host, lays them out in a circle,
+    /// adds the Internet node at center, and connects edges.
+    pub fn from_config(config: &config::Configuration) -> Self {
+        let mut data = Self::default();
+        data.add_host_nodes(config);
+        data.distribute_layout();
+        data.add_internet_node();
+        data.add_edges(config);
+        data
     }
 
     /// Add one node per host (with all its IPs).
@@ -327,7 +215,7 @@ impl GraphConstructor {
         for (host_idx, host) in config.get_hosts().iter().enumerate() {
             let all_ips: Vec<Ipv4Addr> = host.interfaces.iter().map(|i| i.ip_addr).collect();
 
-            let node_data = NodeData {
+            let node_data = NetworkNode {
                 ip_addrs: all_ips.clone(),
                 hostname: host.hostname.clone(),
                 node_type: host.host_type.into(),
@@ -348,47 +236,132 @@ impl GraphConstructor {
 
     /// Distribute nodes in a circle (before adding Internet, so it stays centered).
     fn distribute_layout(&mut self) {
-        distribute_nodes_circle(&mut self.graph);
+        arrange_nodes_in_circle(&mut self.graph);
     }
 
     /// Add the Internet node at the center.
     fn add_internet_node(&mut self) {
-        let internet_idx = self.graph.add_node_with_location(NodeData::internet(), egui::pos2(0.0, 0.0));
-        self.ip_to_node.insert(INTERNET_IP, internet_idx);
+        let internet_idx = self.graph.add_node_with_location(NetworkNode::internet(), egui::pos2(0.0, 0.0));
+        self.ip_to_node.insert(INTERNET_NODE_IP, internet_idx);
     }
 
     /// Add edges between users, servers, and Internet.
     fn add_edges(&mut self, config: &config::Configuration) {
-        let internet_idx = self.ip_to_node[&INTERNET_IP];
+        let internet_idx = self.ip_to_node[&INTERNET_NODE_IP];
 
         // Add edges from users to servers and Internet
         for &user_ip in &config.users {
             if let Some(&user_idx) = self.ip_to_node.get(&user_ip) {
                 for &server_ip in &config.servers {
                     if let Some(&server_idx) = self.ip_to_node.get(&server_ip) {
-                        self.graph.add_edge(user_idx, server_idx, EdgeData::default());
+                        self.graph.add_edge(user_idx, server_idx, NetworkEdge::default());
                     }
                 }
-                self.graph.add_edge(user_idx, internet_idx, EdgeData::default());
+                self.graph.add_edge(user_idx, internet_idx, NetworkEdge::default());
             }
         }
 
         // Add edges from servers to Internet
         for &server_ip in &config.servers {
             if let Some(&server_idx) = self.ip_to_node.get(&server_ip) {
-                self.graph.add_edge(server_idx, internet_idx, EdgeData::default());
+                self.graph.add_edge(server_idx, internet_idx, NetworkEdge::default());
             }
         }
     }
+}
+
+/// Flow processing and streaming state
+pub struct FlowVisualizationState {
+    pub receiver: Option<Receiver<FlowEvent>>,
+    pub active_links: HashMap<(Ipv4Addr, Ipv4Addr), ActiveLink>,
+    pub streamer: Option<FlowStreamer>,
+    pub running: bool,
+    pub speed: Arc<RwLock<f32>>,
+    pub total_flows: u32,
+    pub visualization_start: Option<Instant>,
+}
+
+impl Default for FlowVisualizationState {
+    fn default() -> Self {
+        Self {
+            receiver: None,
+            active_links: HashMap::new(),
+            streamer: None,
+            running: false,
+            speed: Arc::new(RwLock::new(1.0)),
+            total_flows: 0,
+            visualization_start: None,
+        }
+    }
+}
+
+/// Layout and rendering state
+pub struct GraphViewState {
+    pub layout_initialized: bool,
+    pub reset_requested: bool,
+    pub delayed_fit_countdown: Option<u8>,
+    pub last_screen_size: Option<egui::Vec2>,
+    pub graph_rect: Option<egui::Rect>,
+}
+
+impl Default for GraphViewState {
+    fn default() -> Self {
+        Self {
+            layout_initialized: false,
+            reset_requested: false,
+            delayed_fit_countdown: Some(DELAY_FRAMES_QUICK), // Delay initial fit for bottom panel
+            last_screen_size: None,
+            graph_rect: None,
+        }
+    }
+}
+
+/// Node info modal state
+pub struct NodeModalState {
+    pub events_buffer: Rc<RefCell<Vec<Event>>>,
+    pub clicked_node: Option<NodeIndex>,
+    pub open: bool,
+    pub edit_buffer: Option<Host>,
+}
+
+impl Default for NodeModalState {
+    fn default() -> Self {
+        Self {
+            events_buffer: Rc::new(RefCell::new(Vec::new())),
+            clicked_node: None,
+            open: false,
+            edit_buffer: None,
+        }
+    }
+}
+
+/// Represents the state of the visualization tab.
+pub struct VisualizationState {
+    /// Network structure and lookups
+    pub network: NetworkData,
+    /// Flow processing and streaming
+    pub flow: FlowVisualizationState,
+    /// Layout and rendering
+    pub view: GraphViewState,
+    /// Node info modal
+    pub modal: NodeModalState,
+    /// Screenshot export state machine
+    pub screenshot_export: ScreenshotStateMachine,
+    /// Config content tracking (for detecting changes)
+    pub config_content: Option<String>,
+    /// Auto-start countdown frames
+    pub auto_start_countdown: Option<u8>,
+    /// Whether user has manually started visualization
+    pub user_has_started: bool,
 }
 
 impl Default for VisualizationState {
     fn default() -> Self {
         Self {
             network: NetworkData::default(),
-            flow: FlowState::default(),
-            view: ViewState::default(),
-            modal: ModalState::default(),
+            flow: FlowVisualizationState::default(),
+            view: GraphViewState::default(),
+            modal: NodeModalState::default(),
             screenshot_export: ScreenshotStateMachine::default(),
             config_content: None,
             auto_start_countdown: None,
@@ -401,11 +374,7 @@ impl VisualizationState {
     /// Update state from a configuration (preserves some state).
     /// Note: caller should stop visualization before calling this if running.
     pub fn update_from_config(&mut self, config: &config::Configuration) {
-        let built = GraphConstructor::build(config);
-        self.network.graph = built.graph;
-        self.network.known_ips = built.known_ips;
-        self.network.ip_to_node = built.ip_to_node;
-        self.network.node_to_host = built.node_to_host;
+        self.network = NetworkData::from_config(config);
         self.view.layout_initialized = false;
     }
 

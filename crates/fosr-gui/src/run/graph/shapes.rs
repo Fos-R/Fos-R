@@ -6,7 +6,7 @@
 //! - `closest_boundary_point`: where edges connect to the node boundary
 //! - `is_inside`: hit-testing for clicking and dragging
 
-use super::state::{EdgeData, EdgeState, LinkDirection, NodeData, NodeType};
+use super::state::{NetworkEdge, EdgeState, LinkDirection, NetworkNode, NodeType};
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
 use crate::shared::constants::colors::{
     COLOR_EDGE_INACTIVE, COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT, COLOR_PROTOCOL_DNS,
@@ -81,7 +81,7 @@ pub struct NetworkNodeShape {
 
 impl NetworkNodeShape {
     /// Compute node style from payload data.
-    fn style_from_payload(payload: &NodeData) -> (f32, NodeType, Option<String>, Vec<String>) {
+    fn style_from_payload(payload: &NetworkNode) -> (f32, NodeType, Option<String>, Vec<String>) {
         let radius = calculate_node_radius(payload.flow_count, payload.max_flow_count);
         let ips: Vec<String> = payload.ip_addrs.iter().map(|ip| ip.to_string()).collect();
         (
@@ -175,8 +175,8 @@ impl NetworkNodeShape {
     }
 }
 
-impl From<NodeProps<NodeData>> for NetworkNodeShape {
-    fn from(props: NodeProps<NodeData>) -> Self {
+impl From<NodeProps<NetworkNode>> for NetworkNodeShape {
+    fn from(props: NodeProps<NetworkNode>) -> Self {
         let (radius, node_type, hostname, ips) = Self::style_from_payload(&props.payload);
         Self {
             radius,
@@ -188,8 +188,8 @@ impl From<NodeProps<NodeData>> for NetworkNodeShape {
     }
 }
 
-impl DisplayNode<NodeData, EdgeData, petgraph::Undirected, petgraph::stable_graph::DefaultIx>
-    for NetworkNodeShape
+impl DisplayNode<NetworkNode, NetworkEdge, petgraph::Undirected, petgraph::stable_graph::DefaultIx>
+for NetworkNodeShape
 {
     /// Determines where edges should connect to the node shape
     fn closest_boundary_point(&self, dir: Vec2) -> Pos2 {
@@ -213,7 +213,7 @@ impl DisplayNode<NodeData, EdgeData, petgraph::Undirected, petgraph::stable_grap
         shapes
     }
 
-    fn update(&mut self, state: &NodeProps<NodeData>) {
+    fn update(&mut self, state: &NodeProps<NetworkNode>) {
         let (radius, node_type, hostname, ips) = Self::style_from_payload(&state.payload);
         self.radius = radius;
         self.node_type = node_type;
@@ -229,7 +229,7 @@ impl DisplayNode<NodeData, EdgeData, petgraph::Undirected, petgraph::stable_grap
 }
 
 /// Get edge style based on protocol, direction, and flow count
-fn edge_style(edge_data: &EdgeData) -> (Color32, f32, bool, bool) {
+fn edge_style(edge_data: &NetworkEdge) -> (Color32, f32, bool, bool) {
     match &edge_data.state {
         EdgeState::Inactive => {
             let width = calculate_edge_width(edge_data.flow_count, edge_data.max_flow_count);
@@ -267,8 +267,8 @@ pub struct NetworkEdgeShape {
     arrow_end: bool,
 }
 
-impl From<egui_graphs::EdgeProps<EdgeData>> for NetworkEdgeShape {
-    fn from(props: egui_graphs::EdgeProps<EdgeData>) -> Self {
+impl From<egui_graphs::EdgeProps<NetworkEdge>> for NetworkEdgeShape {
+    fn from(props: egui_graphs::EdgeProps<NetworkEdge>) -> Self {
         let (color, width, arrow_start, arrow_end) = edge_style(&props.payload);
         Self {
             color,
@@ -288,26 +288,26 @@ fn arrow_head(from: Pos2, to: Pos2, size: f32, angle: f32, color: Color32) -> Sh
 }
 
 impl
-    DisplayEdge<
-        NodeData,
-        EdgeData,
-        petgraph::Undirected,
-        petgraph::stable_graph::DefaultIx,
-        NetworkNodeShape,
-    > for NetworkEdgeShape
+DisplayEdge<
+    NetworkNode,
+    NetworkEdge,
+    petgraph::Undirected,
+    petgraph::stable_graph::DefaultIx,
+    NetworkNodeShape,
+> for NetworkEdgeShape
 {
     fn shapes(
         &mut self,
         start: &Node<
-            NodeData,
-            EdgeData,
+            NetworkNode,
+            NetworkEdge,
             petgraph::Undirected,
             petgraph::stable_graph::DefaultIx,
             NetworkNodeShape,
         >,
         end: &Node<
-            NodeData,
-            EdgeData,
+            NetworkNode,
+            NetworkEdge,
             petgraph::Undirected,
             petgraph::stable_graph::DefaultIx,
             NetworkNodeShape,
@@ -360,7 +360,7 @@ impl
         shapes
     }
 
-    fn update(&mut self, state: &egui_graphs::EdgeProps<EdgeData>) {
+    fn update(&mut self, state: &egui_graphs::EdgeProps<NetworkEdge>) {
         let (color, width, arrow_start, arrow_end) = edge_style(&state.payload);
         self.color = color;
         self.width = width;
@@ -371,15 +371,15 @@ impl
     fn is_inside(
         &self,
         start: &Node<
-            NodeData,
-            EdgeData,
+            NetworkNode,
+            NetworkEdge,
             petgraph::Undirected,
             petgraph::stable_graph::DefaultIx,
             NetworkNodeShape,
         >,
         end: &Node<
-            NodeData,
-            EdgeData,
+            NetworkNode,
+            NetworkEdge,
             petgraph::Undirected,
             petgraph::stable_graph::DefaultIx,
             NetworkNodeShape,

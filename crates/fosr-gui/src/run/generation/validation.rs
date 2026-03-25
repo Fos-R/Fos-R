@@ -26,7 +26,7 @@ impl FieldValidation {
 }
 
 /// Display the error message in red below the field.
-pub fn show_field_error(ui: &mut egui::Ui, validation: &FieldValidation) {
+pub fn render_field_error(ui: &mut egui::Ui, validation: &FieldValidation) {
     if let Some(msg) = &validation.error {
         ui.add_space(SPACING_MD);
         ui.colored_label(COLOR_ERROR, msg);
@@ -45,10 +45,10 @@ pub fn first_invalid_param(state: &GenerationState) -> Option<(&'static str, &'s
         ("Seed", SPEC_SEED, &state.seed_validation),
         ("Timezone", SPEC_TIMEZONE, &state.timezone_validation),
     ]
-    .into_iter()
-    .find_map(|(name, spec, validation)| {
-        validation.error.as_ref().map(|err| (name, spec, err.as_str()))
-    })
+        .into_iter()
+        .find_map(|(name, spec, validation)| {
+            validation.error.as_ref().map(|err| (name, spec, err.as_str()))
+        })
 }
 
 /// Validates a human-readable duration string and checks bounds.

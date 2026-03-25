@@ -3,7 +3,7 @@
 use crate::config_editor::state::ConfigurationTabState;
 use crate::config_templates::{load_template, TEMPLATES};
 use crate::shared::config::file_ops::{enforce_metadata_defaults, trigger_file_import};
-use crate::shared::config::state::ConfigurationFileState;
+use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::COLOR_WARNING;
 use crate::shared::constants::ui::SPACING_LG;
 #[cfg(not(target_arch = "wasm32"))]
@@ -20,18 +20,18 @@ use crate::shared::config::file_ops::poll_file_import;
 ///
 /// Displays a file picker button, a template selection dropdown menu,
 /// the selected file name and a Visual/Code mode toggle.
-pub fn configuration_toolbar(
+pub fn render_configuration_toolbar(
     ui: &mut egui::Ui,
     tab_state: &mut ConfigurationTabState,
-    state: &mut ConfigurationFileState,
+    state: &mut ConfigFileState,
 ) {
     ui.horizontal(|ui| {
         ui.label("Configuration file:");
-        file_import_button(ui, state);
-        template_menu_button(ui, state);
-        file_save_button(ui, state);
-        filename_display(ui, state);
-        mode_toggle(ui, tab_state);
+        render_file_import_button(ui, state);
+        render_template_menu_button(ui, state);
+        render_file_save_button(ui, state);
+        render_filename(ui, state);
+        render_mode_toggle_button(ui, tab_state);
     });
 }
 
@@ -39,7 +39,7 @@ pub fn configuration_toolbar(
 ///
 /// Opens a file picker dialog to select a configuration file.
 /// On WASM, polls the async file picker result.
-fn file_import_button(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
+fn render_file_import_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
     if ui
         .button(egui_material_icons::icons::ICON_FOLDER_OPEN)
         .on_hover_text("Select a configuration file")
@@ -56,7 +56,7 @@ fn file_import_button(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
 ///
 /// Dropdown menu listing available configuration templates.
 /// Clicking a template loads it into the editor.
-fn template_menu_button(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
+fn render_template_menu_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
     let template_menu =
         ui.menu_button(egui_material_icons::icons::ICON_DESCRIPTION, |menu_ui| {
             for template in TEMPLATES {
@@ -77,7 +77,7 @@ fn template_menu_button(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
 /// Only visible when a configuration is loaded.
 /// Serializes the config to YAML and triggers a file save dialog.
 /// Updates metadata with current date before saving.
-fn file_save_button(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
+fn render_file_save_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
     if state.config_file_content.is_none() {
         return;
     }
@@ -131,7 +131,7 @@ fn file_save_button(ui: &mut egui::Ui, state: &mut ConfigurationFileState) {
 /// Shows the selected file name or template name.
 /// Displays a warning icon when there are unsaved changes.
 /// On desktop, shows the full path on hover.
-fn filename_display(ui: &mut egui::Ui, state: &ConfigurationFileState) {
+fn render_filename(ui: &mut egui::Ui, state: &ConfigFileState) {
     let filename = if let Some(file) = &state.picked_config_file {
         file.file_name()
     } else if let Some(template_id) = &state.loaded_template_id {
@@ -168,7 +168,7 @@ fn render_filename_with_status(ui: &mut egui::Ui, filename: &str, is_dirty: bool
 /// Mode toggle for switching between Visual and Code editing modes.
 ///
 /// Positioned on the right side of the toolbar using RTL layout.
-fn mode_toggle(ui: &mut egui::Ui, tab_state: &mut ConfigurationTabState) {
+fn render_mode_toggle_button(ui: &mut egui::Ui, tab_state: &mut ConfigurationTabState) {
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
         ui.add_space(SPACING_LG);
         // In RTL layout, rendering order is reversed,

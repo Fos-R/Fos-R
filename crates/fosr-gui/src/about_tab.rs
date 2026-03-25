@@ -4,7 +4,8 @@ use crate::shared::assets::IMG_LOGO;
 use crate::shared::constants::ui::{LOGO_MAX_WIDTH, SPACING_LG, SPACING_SM, SPACING_XXL};
 use eframe::egui;
 
-pub fn show_about_tab_content(ui: &mut egui::Ui) {
+/// Renders the About tab with application info, usage guide, and repository links.
+pub fn render_about_tab(ui: &mut egui::Ui) {
     ui.vertical_centered(|ui| {
         ui.add(egui::Image::new(IMG_LOGO).max_width(LOGO_MAX_WIDTH));
     });

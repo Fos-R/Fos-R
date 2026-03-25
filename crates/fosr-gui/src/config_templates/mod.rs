@@ -1,7 +1,7 @@
 //! Predefined configuration templates: Home, Enterprise, Datacenter.
 
 use crate::shared::config::model::Configuration;
-use crate::shared::config::state::ConfigurationFileState;
+use crate::shared::config::state::ConfigFileState;
 use egui_material_icons::icons;
 
 /// A predefined configuration template.
@@ -43,7 +43,7 @@ pub static TEMPLATES: &[Template] = &[
 ///
 /// Parses the template YAML first, then applies state changes only on success.
 /// On parse failure, sets the error without modifying the existing model.
-pub fn load_template(state: &mut ConfigurationFileState, template: &Template) {
+pub fn load_template(state: &mut ConfigFileState, template: &Template) {
     // Parse first, fail-fast if invalid
     let model = match serde_yaml::from_str::<Configuration>(template.yaml) {
         Ok(model) => model,
@@ -59,7 +59,7 @@ pub fn load_template(state: &mut ConfigurationFileState, template: &Template) {
 
 /// Reset state and apply a successfully-parsed template.
 fn apply_template_to_state(
-    state: &mut ConfigurationFileState,
+    state: &mut ConfigFileState,
     template: &Template,
     model: Configuration,
 ) {

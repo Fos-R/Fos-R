@@ -2,31 +2,31 @@
 
 use crate::config_editor::state::ConfigurationTabState;
 use crate::config_editor::{host, host_validation, yaml_editor};
-use crate::config_editor::toolbar::configuration_toolbar;
+use crate::config_editor::toolbar::render_configuration_toolbar;
 use crate::shared::config::file_ops::load_config_file_contents;
 use crate::shared::config::model::Configuration;
-use crate::shared::config::state::ConfigurationFileState;
+use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::{COLOR_ERROR, COLOR_SUCCESS, COLOR_WARNING};
 use crate::shared::constants::ui::{SPACING_MD, TEXT_EDIT_DEFAULT_ROWS};
 use crate::shared::widgets::helpers::{
-    edit_optional_string_multiline, edit_optional_string_singleline, required_label,
+    render_optional_text_area, render_optional_string_input, required_label,
 };
 use eframe::egui;
 
 /// The main tab component
-pub fn show_configuration_tab_content(
+pub fn render_configuration_tab(
     ui: &mut egui::Ui,
     tab_state: &mut ConfigurationTabState,
-    file_state: &mut ConfigurationFileState,
+    file_state: &mut ConfigFileState,
 ) {
     // Eagerly load config file contents when a file is selected
     load_config_file_contents(file_state);
 
     egui::ScrollArea::vertical().show(ui, |ui| {
         // File Selection
-        configuration_toolbar(ui, tab_state, file_state);
+        render_configuration_toolbar(ui, tab_state, file_state);
 
-        ui_parsing_status(ui, file_state);
+        render_parsing_status(ui, file_state);
 
         if file_state.config_chosen {
             ui.separator();
@@ -34,7 +34,7 @@ pub fn show_configuration_tab_content(
             if !tab_state.is_code_mode {
                 // Visual mode
                 if let Some(model) = file_state.config_model.as_mut() {
-                    host::ui_hosts_section(ui, model);
+                    host::render_hosts_section(ui, model);
                     ui.separator();
                     let meta_id = ui.make_persistent_id("metadata_section");
                     egui::collapsing_header::CollapsingState::load_with_default_open(
@@ -46,13 +46,13 @@ pub fn show_configuration_tab_content(
                             ui.heading("Metadata");
                         })
                         .body(|ui| {
-                            ui_metadata(ui, model);
+                            render_metadata_section(ui, model);
                         });
                 }
 
                 sync_model_to_yaml_state(file_state);
             } else {
-                yaml_editor::ui_yaml_editor(ui, file_state);
+                yaml_editor::render_yaml_editor(ui, file_state);
             }
 
             // Update error flag (parse errors + host validation errors)
@@ -69,7 +69,7 @@ pub fn show_configuration_tab_content(
 ///
 /// Serializes the current model to YAML string and compares against
 /// the clean snapshot to detect unsaved changes.
-fn sync_model_to_yaml_state(state: &mut ConfigurationFileState) {
+fn sync_model_to_yaml_state(state: &mut ConfigFileState) {
     let Some(model) = &state.config_model else {
         return;
     };
@@ -94,7 +94,7 @@ fn sync_model_to_yaml_state(state: &mut ConfigurationFileState) {
 }
 
 /// Status & Feedback
-fn ui_parsing_status(ui: &mut egui::Ui, state: &ConfigurationFileState) {
+fn render_parsing_status(ui: &mut egui::Ui, state: &ConfigFileState) {
     if state.picked_config_file.is_some() {
         if let Some(err) = &state.config_error {
             ui.colored_label(COLOR_ERROR, "YAML parsing failed:");
@@ -109,7 +109,7 @@ fn ui_parsing_status(ui: &mut egui::Ui, state: &ConfigurationFileState) {
 }
 
 /// Metadata rendering
-fn ui_metadata(ui: &mut egui::Ui, model: &mut Configuration) {
+fn render_metadata_section(ui: &mut egui::Ui, model: &mut Configuration) {
     ui.add_space(SPACING_MD);
 
     // Title
@@ -119,7 +119,7 @@ fn ui_metadata(ui: &mut egui::Ui, model: &mut Configuration) {
         ui.text_edit_singleline(title);
     });
 
-    edit_optional_string_multiline(
+    render_optional_text_area(
         ui,
         "Description",
         &mut model.metadata.desc,
@@ -127,7 +127,7 @@ fn ui_metadata(ui: &mut egui::Ui, model: &mut Configuration) {
         TEXT_EDIT_DEFAULT_ROWS,
     );
 
-    edit_optional_string_singleline(ui, "Author", &mut model.metadata.author, "Jane Doe");
+    render_optional_string_input(ui, "Author", &mut model.metadata.author, "Jane Doe");
 
-    edit_optional_string_singleline(ui, "Version", &mut model.metadata.version, "0.1.0");
+    render_optional_string_input(ui, "Version", &mut model.metadata.version, "0.1.0");
 }

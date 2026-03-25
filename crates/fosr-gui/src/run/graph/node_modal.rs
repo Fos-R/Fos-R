@@ -1,9 +1,9 @@
 //! Node click handling and info/edit modal for the visualization graph.
 
-use super::state::{NodeData, NodeType, VisualizationState};
+use super::state::{NetworkNode, NodeType, VisualizationState};
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
 use crate::shared::config::model::Host;
-use crate::shared::config::state::ConfigurationFileState;
+use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::{COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT};
 use crate::shared::constants::ui::{
     INDENT_STANDARD, LEGEND_ICON_SIZE, NODE_MODAL_WIDTH, SPACING_LG, SPACING_SM,
@@ -14,7 +14,7 @@ use egui_graphs::events::{Event, PayloadNodeClick};
 /// Process graph click events from the event buffer.
 pub fn process_graph_events(
     state: &mut VisualizationState,
-    configuration_file_state: &ConfigurationFileState,
+    configuration_file_state: &ConfigFileState,
 ) {
     let events: Vec<Event> = state.modal.events_buffer.borrow_mut().drain(..).collect();
 
@@ -40,7 +40,7 @@ pub fn process_graph_events(
 pub fn render_node_info_modal(
     ctx: &egui::Context,
     state: &mut VisualizationState,
-    config_file_state: &mut ConfigurationFileState,
+    config_file_state: &mut ConfigFileState,
 ) {
     if !state.modal.open {
         return;
@@ -91,7 +91,7 @@ pub fn render_node_info_modal(
 }
 
 /// Render modal header with title and node type icon.
-fn render_modal_header(ui: &mut egui::Ui, node_data: &NodeData, has_edit_buffer: bool) {
+fn render_modal_header(ui: &mut egui::Ui, node_data: &NetworkNode, has_edit_buffer: bool) {
     let title = if has_edit_buffer {
         "Edit Node Information"
     } else {
@@ -177,16 +177,16 @@ fn render_os_dropdown(ui: &mut egui::Ui, host: &mut Host) {
 /// Render editable IP address fields.
 fn render_ip_fields(ui: &mut egui::Ui, host: &mut Host) {
     ui.label("IP Addresses:");
-    for iface in &mut host.interfaces {
+    for interface in &mut host.interfaces {
         ui.horizontal(|ui| {
             ui.add_space(INDENT_STANDARD);
-            ui.add(egui::TextEdit::singleline(&mut iface.ip_addr).hint_text("0.0.0.0"));
+            ui.add(egui::TextEdit::singleline(&mut interface.ip_addr).hint_text("0.0.0.0"));
         });
     }
 }
 
 /// Render read-only fields (no config loaded or Internet node).
-fn render_readonly_fields(ui: &mut egui::Ui, node_data: &NodeData) {
+fn render_readonly_fields(ui: &mut egui::Ui, node_data: &NetworkNode) {
     if let Some(ref hostname) = node_data.hostname {
         ui.horizontal(|ui| {
             ui.label("Hostname:");
@@ -244,7 +244,7 @@ fn render_modal_footer(ui: &mut egui::Ui, has_edit_buffer: bool, save_clicked: &
 /// Apply changes from edit buffer back to the config model.
 fn apply_changes_to_config(
     state: &mut VisualizationState,
-    config_file_state: &mut ConfigurationFileState,
+    config_file_state: &mut ConfigFileState,
     host_idx: Option<usize>,
 ) {
     if let (Some(idx), Some(buffer)) = (host_idx, state.modal.edit_buffer.take()) {

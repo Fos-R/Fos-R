@@ -15,38 +15,42 @@ pub(crate) struct TimePickerButtonState {
     pub picker_visible: bool,
 }
 
+/// Button widget that opens a time picker popup on click.
 pub struct TimePickerButton<'a> {
     selection: &'a mut NaiveTime,
     id_salt: Option<&'a str>,
     show_icon: bool,
     format: String,
-    show_clockface: bool,
+    show_clock_face: bool,
     use_12_hour_clock: bool,
     show_seconds: bool,
-    use_dragvalue: bool,
+    use_drag_value: bool,
 }
 
 impl<'a> TimePickerButton<'a> {
+    /// Creates a new time picker button bound to the given time selection.
     pub fn new(selection: &'a mut NaiveTime) -> Self {
         Self {
             selection,
             id_salt: None,
             show_icon: true,
             format: "%H:%M".to_string(),
-            show_clockface: true,
+            show_clock_face: true,
             use_12_hour_clock: false,
             show_seconds: false,
-            use_dragvalue: false,
+            use_drag_value: false,
         }
     }
 
+    /// Sets whether to show seconds in the time picker.
     pub fn show_seconds(mut self, show_seconds: bool) -> Self {
         self.show_seconds = show_seconds;
         self
     }
 
-    pub fn use_dragvalue(mut self, use_dragvalue: bool) -> Self {
-        self.use_dragvalue = use_dragvalue;
+    /// Sets whether to use drag value input style for time selection.
+    pub fn use_drag_value(mut self, use_drag_value: bool) -> Self {
+        self.use_drag_value = use_drag_value;
         self
     }
 }
@@ -111,12 +115,12 @@ impl Widget for TimePickerButton<'_> {
                             TimePickerPopup {
                                 selection: self.selection,
                                 button_id: id,
-                                show_clockface: self.show_clockface,
+                                show_clock_face: self.show_clock_face,
                                 show_seconds: self.show_seconds,
                                 use_12_hour_clock: self.use_12_hour_clock,
-                                use_dragvalue: self.use_dragvalue,
+                                use_drag_value: self.use_drag_value,
                             }
-                            .draw(ui)
+                                .draw(ui)
                         })
                         .inner
                 });

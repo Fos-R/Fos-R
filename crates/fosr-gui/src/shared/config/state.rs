@@ -7,13 +7,14 @@ use std::sync::mpsc::Receiver;
 
 /// State for the startup modal flow.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
-pub enum StartupModalState {
+pub enum StartupModalStep {
     #[default]
     Initial,
     TemplateSelection,
 }
 
-pub struct ConfigurationFileState {
+/// State for configuration file management including content, model, and UI state.
+pub struct ConfigFileState {
     pub picked_config_file: Option<FileHandle>,
     #[cfg(target_arch = "wasm32")]
     pub config_file_receiver: Option<Receiver<Option<FileHandle>>>,
@@ -32,12 +33,12 @@ pub struct ConfigurationFileState {
     /// Updated by the configuration tab rendering each frame.
     pub has_errors: bool,
     /// Current state of the startup modal.
-    pub modal_state: StartupModalState,
+    pub modal_state: StartupModalStep,
     /// The ID of the currently loaded template, if any.
     pub loaded_template_id: Option<String>,
 }
 
-impl Default for ConfigurationFileState {
+impl Default for ConfigFileState {
     fn default() -> Self {
         Self {
             picked_config_file: None,
@@ -52,7 +53,7 @@ impl Default for ConfigurationFileState {
             is_dirty: false,
             clean_snapshot: None,
             has_errors: false,
-            modal_state: StartupModalState::Initial,
+            modal_state: StartupModalStep::Initial,
             loaded_template_id: None,
         }
     }

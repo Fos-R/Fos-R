@@ -3,13 +3,13 @@
 //! Contains the action bar with Generate/Stop/Save buttons and
 //! the expandable generation options panel.
 
-use super::options::show_generation_options;
+use super::options::render_generation_options;
 use super::process::start_generation;
 use super::validation::first_invalid_param;
 #[cfg(not(target_arch = "wasm32"))]
 use super::wireshark::open_in_wireshark;
 use crate::run::state::RunTabState;
-use crate::shared::config::state::ConfigurationFileState;
+use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::{COLOR_ERROR, COLOR_STOP, COLOR_SUCCESS};
 use crate::shared::constants::ui::{
     BOTTOM_BAR_INNER_MARGIN, BUTTON_HEIGHT, BUTTON_MIN_WIDTH_LG, BUTTON_MIN_WIDTH_SM,
@@ -27,19 +27,19 @@ use std::sync::atomic::Ordering;
 /// The panel consists of:
 /// - Options panel (shown when expanded): generation parameters
 /// - Action bar (always visible): Generate/Stop/Save buttons, progress bar
-pub fn show_bottom_panel(
+pub fn render_bottom_panel(
     ctx: &egui::Context,
     state: &mut RunTabState,
-    configuration_file_state: &ConfigurationFileState,
+    configuration_file_state: &ConfigFileState,
 ) {
     if state.panel_open {
-        show_options_panel(ctx, state);
+        render_options_panel(ctx, state);
     }
-    show_action_bar(ctx, state, configuration_file_state);
+    render_action_bar(ctx, state, configuration_file_state);
 }
 
 /// Options panel shown above the action bar when expanded.
-fn show_options_panel(ctx: &egui::Context, state: &mut RunTabState) {
+fn render_options_panel(ctx: &egui::Context, state: &mut RunTabState) {
     egui::TopBottomPanel::bottom("run_options_panel")
         .frame(
             egui::Frame::side_top_panel(&ctx.style())
@@ -51,15 +51,15 @@ fn show_options_panel(ctx: &egui::Context, state: &mut RunTabState) {
         )
         .resizable(false)
         .show(ctx, |ui| {
-            show_generation_options(ui, state);
+            render_generation_options(ui, state);
         });
 }
 
 /// Action bar with Generate/Stop/Save buttons and progress indicators.
-fn show_action_bar(
+fn render_action_bar(
     ctx: &egui::Context,
     state: &mut RunTabState,
-    configuration_file_state: &ConfigurationFileState,
+    configuration_file_state: &ConfigFileState,
 ) {
     egui::TopBottomPanel::bottom("run_bottom_bar")
         .frame(
@@ -76,13 +76,13 @@ fn show_action_bar(
             ui.horizontal(|ui| {
                 // Left side: action buttons
                 if !is_generating {
-                    show_generate_button(ui, state, configuration_file_state, ctx, can_generate);
+                    render_generate_button(ui, state, configuration_file_state, ctx, can_generate);
                 }
                 if is_generating {
-                    show_stop_button(ui, state);
+                    render_stop_button(ui, state);
                 }
                 if is_complete {
-                    show_completion_buttons(ui, state);
+                    render_completion_buttons(ui, state);
                 }
                 if let Some(error) = &state.generation.error {
                     ui.colored_label(COLOR_ERROR, error);
@@ -90,12 +90,12 @@ fn show_action_bar(
 
                 // Right side: options toggle, throughput, progress
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    show_options_toggle(ui, state);
+                    render_options_toggle(ui, state);
                     if is_complete {
-                        show_throughput(ui, state);
+                        render_throughput(ui, state);
                     }
                     if is_generating {
-                        show_progress_bar(ui, state);
+                        render_progress_bar(ui, state);
                     }
                 });
             });
@@ -103,10 +103,10 @@ fn show_action_bar(
 }
 
 /// Generate button with accent color.
-fn show_generate_button(
+fn render_generate_button(
     ui: &mut egui::Ui,
     state: &mut RunTabState,
-    configuration_file_state: &ConfigurationFileState,
+    configuration_file_state: &ConfigFileState,
     ctx: &egui::Context,
     can_generate: bool,
 ) {
@@ -117,10 +117,10 @@ fn show_generate_button(
                 "{} Generate",
                 egui_material_icons::icons::ICON_PLAY_ARROW
             ))
-            .size(TEXT_SIZE_MD),
+                .size(TEXT_SIZE_MD),
         )
-        .fill(accent)
-        .min_size(egui::vec2(BUTTON_MIN_WIDTH_LG, BUTTON_HEIGHT));
+            .fill(accent)
+            .min_size(egui::vec2(BUTTON_MIN_WIDTH_LG, BUTTON_HEIGHT));
 
         if ui.add(button).on_hover_text("Generate PCAP from configuration").clicked() {
             start_generation(state, configuration_file_state, ctx);
@@ -129,13 +129,13 @@ fn show_generate_button(
 }
 
 /// Stop button to cancel ongoing generation.
-fn show_stop_button(ui: &mut egui::Ui, state: &mut RunTabState) {
+fn render_stop_button(ui: &mut egui::Ui, state: &mut RunTabState) {
     let button = egui::Button::new(
         egui::RichText::new(format!("{} Stop", egui_material_icons::icons::ICON_STOP))
             .size(TEXT_SIZE_MD),
     )
-    .fill(COLOR_STOP)
-    .min_size(egui::vec2(BUTTON_MIN_WIDTH_SM, BUTTON_HEIGHT));
+        .fill(COLOR_STOP)
+        .min_size(egui::vec2(BUTTON_MIN_WIDTH_SM, BUTTON_HEIGHT));
 
     if ui.add(button).on_hover_text("Cancel generation").clicked() {
         state.generation.cancelled.store(true, Ordering::Relaxed);
@@ -147,14 +147,14 @@ fn show_stop_button(ui: &mut egui::Ui, state: &mut RunTabState) {
 }
 
 /// Save and Wireshark buttons shown when generation is complete.
-fn show_completion_buttons(ui: &mut egui::Ui, state: &mut RunTabState) {
-    show_save_button(ui, state);
+fn render_completion_buttons(ui: &mut egui::Ui, state: &mut RunTabState) {
+    render_save_button(ui, state);
     #[cfg(not(target_arch = "wasm32"))]
-    show_wireshark_button(ui, state);
+    render_wireshark_button(ui, state);
 }
 
 /// Save/Download button for the generated PCAP.
-fn show_save_button(ui: &mut egui::Ui, state: &mut RunTabState) {
+fn render_save_button(ui: &mut egui::Ui, state: &mut RunTabState) {
     #[cfg(not(target_arch = "wasm32"))]
     let save_text = format!("{} Save", egui_material_icons::icons::ICON_SAVE);
     #[cfg(target_arch = "wasm32")]
@@ -210,12 +210,12 @@ fn save_pcap_wasm(pcap_bytes: Option<Vec<u8>>, file_name: &str) {
 
 /// Wireshark button (native only) to open PCAP in external tool.
 #[cfg(not(target_arch = "wasm32"))]
-fn show_wireshark_button(ui: &mut egui::Ui, state: &mut RunTabState) {
+fn render_wireshark_button(ui: &mut egui::Ui, state: &mut RunTabState) {
     let button = egui::Button::new(
         egui::RichText::new(format!("{} Open", egui_material_icons::icons::ICON_LAN))
             .size(TEXT_SIZE_MD),
     )
-    .min_size(egui::vec2(BUTTON_MIN_WIDTH_SM, BUTTON_HEIGHT));
+        .min_size(egui::vec2(BUTTON_MIN_WIDTH_SM, BUTTON_HEIGHT));
 
     let response = ui.add_enabled(state.generation.wireshark_available, button);
     let response = if state.generation.wireshark_available {
@@ -238,7 +238,7 @@ fn show_wireshark_button(ui: &mut egui::Ui, state: &mut RunTabState) {
 }
 
 /// Options toggle button to show/hide the options panel.
-fn show_options_toggle(ui: &mut egui::Ui, state: &mut RunTabState) {
+fn render_options_toggle(ui: &mut egui::Ui, state: &mut RunTabState) {
     let icon = if state.panel_open {
         egui_material_icons::icons::ICON_KEYBOARD_ARROW_DOWN
     } else {
@@ -253,14 +253,14 @@ fn show_options_toggle(ui: &mut egui::Ui, state: &mut RunTabState) {
 }
 
 /// Throughput display shown when generation is complete.
-fn show_throughput(ui: &mut egui::Ui, state: &RunTabState) {
+fn render_throughput(ui: &mut egui::Ui, state: &RunTabState) {
     if let Some(throughput) = &state.generation.throughput {
         ui.label(format!("Throughput: {throughput}"));
     }
 }
 
 /// Progress bar shown during generation.
-fn show_progress_bar(ui: &mut egui::Ui, state: &RunTabState) {
+fn render_progress_bar(ui: &mut egui::Ui, state: &RunTabState) {
     let progress = egui::ProgressBar::new(state.generation.progress)
         .text("")
         .fill(COLOR_SUCCESS);
