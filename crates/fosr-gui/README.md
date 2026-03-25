@@ -5,7 +5,7 @@
 ### Module Overview
 
 | Module              | Purpose                                                       |
-| ------------------- | ------------------------------------------------------------- |
+|---------------------|---------------------------------------------------------------|
 | `app/`              | Core application: tab navigation, startup modal, close dialog |
 | `config_editor/`    | Visual and YAML configuration editor                          |
 | `run/`              | PCAP generation + live network visualization                  |
@@ -68,7 +68,7 @@ rustup target add wasm32-unknown-unknown
 cargo install wasm-bindgen-cli
 ```
 
-Note: the version of the `wasm-bindgen` CLI must match the version of the crate declared in `Cargo.toml`.
+Note: the version of the `wasm-bindgen` CLI must match the version of the `wasm-bindgen` crate declared in `Cargo.toml`.
 
 #### Step 1: Compile to WASM
 
@@ -89,30 +89,34 @@ Generates in `Fos-R/public/`:
 - `fosr_gui.js` - JavaScript glue code
 - `fosr_gui_bg.wasm` - WASM binary
 
-### Step 3: Embedding in the HTML file
+#### Step 3: Embedding in the HTML file
 
-#### HTML Structure
+##### HTML Structure
 
 ```html
+
 <div>
-  <canvas id="fosr_gui_canvas"></canvas>
+    <canvas id="fosr_gui_canvas"></canvas>
 </div>
 ```
 
-#### JavaScript
+##### JavaScript
 
 ```html
+
 <script type="module">
-  import init, { start } from "./fosr_gui.js";
-  async function run() {
-    await init();
-    await start("fosr_gui_canvas");
-  }
-  run();
+    import init, {start} from "./fosr_gui.js";
+
+    async function run() {
+        await init();
+        await start("fosr_gui_canvas");
+    }
+
+    run();
 </script>
 ```
 
-### Step 4: Serve with an HTTP server
+#### Step 4: Serve with an HTTP server
 
 Here is an example using `http-server`:
 
@@ -123,3 +127,22 @@ npm install -g http-server
 # Serve from project root
 http-server ./public -p 8080
 ```
+
+#### Shell script
+
+Use the `build-web.sh` script to automate the build and serve process (requires `http-server` and a pre-built
+`public/index.html`).
+
+#### Generating `index.html`
+
+The `public/index.html` file is not versioned and must be generated from markdown sources using pandoc:
+
+```shell
+# Install pandoc (if not already installed)
+
+# Generate index.html
+./public/generate-index-html.sh
+```
+
+Note: This script generates a simplified version without the dynamic help output from the `fosr` binary.
+For the full version, see the `pages` job in `.gitlab-ci.yml`.
