@@ -11,7 +11,7 @@ use crate::shared::constants::network::HOST_USAGE_DEFAULT;
 use crate::shared::constants::ui::{
     PANEL_MIN_WIDTH, POPUP_MAX_HEIGHT, POPUP_MIN_WIDTH, SPACING_MD, SPACING_SM,
 };
-use crate::shared::widgets::helpers::{edit_optional_string_singleline, info_icon_with_tooltip};
+use crate::shared::widgets::helpers::{render_optional_string_input, info_icon_with_tooltip};
 use eframe::egui;
 use std::collections::HashMap;
 
@@ -19,7 +19,7 @@ use std::collections::HashMap;
 ///
 /// Each host shows validation errors in the header if present.
 /// Supports adding new hosts (inserted at top) and removing hosts.
-pub fn ui_hosts_section(ui: &mut egui::Ui, model: &mut Configuration) {
+pub fn render_hosts_section(ui: &mut egui::Ui, model: &mut Configuration) {
     ui.horizontal(|ui| {
         ui.heading("Hosts");
         if ui
@@ -44,7 +44,7 @@ pub fn ui_hosts_section(ui: &mut egui::Ui, model: &mut Configuration) {
     let mut host_to_remove: Option<usize> = None;
 
     for (idx, host) in model.hosts.iter_mut().enumerate() {
-        ui_single_host(ui, idx, host, &ip_counts, &mac_counts, &mut host_to_remove);
+        render_host_card(ui, idx, host, &ip_counts, &mac_counts, &mut host_to_remove);
         ui.add_space(SPACING_MD);
     }
 
@@ -58,7 +58,7 @@ pub fn ui_hosts_section(ui: &mut egui::Ui, model: &mut Configuration) {
 ///
 /// The header shows the host name and any validation errors.
 /// The body contains all editable fields organized in sections.
-fn ui_single_host(
+fn render_host_card(
     ui: &mut egui::Ui,
     index: usize,
     host: &mut Host,
@@ -79,7 +79,7 @@ fn ui_single_host(
         .body(|ui| {
             render_host_basic_fields(ui, index, host);
             ui.separator();
-            host_interfaces::ui_interfaces_section(ui, index, host, ip_counts, mac_counts);
+            host_interfaces::render_interfaces_section(ui, index, host, ip_counts, mac_counts);
         });
 }
 
@@ -93,7 +93,7 @@ fn render_host_header(
     ui.horizontal(|ui| {
         if errors.is_empty() {
             ui.label(display_name).on_hover_ui(|ui| {
-                ui_host_summary_tooltip(ui, host);
+                render_host_tooltip(ui, host);
             });
         } else {
             let warning_icon = egui_material_icons::icons::ICON_WARNING;
@@ -102,7 +102,7 @@ fn render_host_header(
 
             ui.colored_label(COLOR_ERROR, label_text)
                 .on_hover_ui(|ui| {
-                    ui_host_summary_tooltip(ui, host);
+                    render_host_tooltip(ui, host);
                 });
         }
     });
@@ -126,7 +126,7 @@ fn render_host_delete_button(
 }
 
 /// Render the host summary tooltip showing type, protocols, and interfaces.
-fn ui_host_summary_tooltip(ui: &mut egui::Ui, host: &Host) {
+fn render_host_tooltip(ui: &mut egui::Ui, host: &Host) {
     let host_type = host.r#type.as_deref().unwrap_or("<auto>");
     ui.horizontal(|ui| {
         ui.label("Type :");
@@ -146,28 +146,28 @@ fn ui_host_summary_tooltip(ui: &mut egui::Ui, host: &Host) {
     if host.interfaces.is_empty() {
         ui.label("  No interfaces configured.");
     } else {
-        for iface in &host.interfaces {
-            let services_str = if iface.services.is_empty() {
+        for interface in &host.interfaces {
+            let services_str = if interface.services.is_empty() {
                 "no services".to_string()
             } else {
-                iface.services.join(", ")
+                interface.services.join(", ")
             };
-            ui.label(format!("  • {} ({})", iface.ip_addr, services_str));
+            ui.label(format!("  • {} ({})", interface.ip_addr, services_str));
         }
     }
 }
 
 /// Render the basic host fields: OS, hostname, usage, type, and client protocols.
 fn render_host_basic_fields(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
-    ui_host_os_selector(ui, host_idx, &mut host.os);
-    edit_optional_string_singleline(ui, "Hostname", &mut host.hostname, "host1");
-    ui_host_usage_field(ui, host);
-    ui_host_type_selector(ui, host_idx, host);
-    ui_host_client_protocols(ui, host_idx, host);
+    render_os_dropdown(ui, host_idx, &mut host.os);
+    render_optional_string_input(ui, "Hostname", &mut host.hostname, "host1");
+    render_usage_field(ui, host);
+    render_type_dropdown(ui, host_idx, host);
+    render_client_protocols(ui, host_idx, host);
 }
 
 /// Dropdown selector for the Operating System (Linux/Windows/none).
-fn ui_host_os_selector(ui: &mut egui::Ui, host_idx: usize, host_os: &mut Option<String>) {
+fn render_os_dropdown(ui: &mut egui::Ui, host_idx: usize, host_os: &mut Option<String>) {
     ui.horizontal(|ui| {
         ui.label("OS");
 
@@ -211,7 +211,7 @@ fn ui_host_os_selector(ui: &mut egui::Ui, host_idx: usize, host_os: &mut Option<
 ///
 /// Usage affects how much network traffic this host generates.
 /// Default is 1.0 (baseline), lower means less traffic, higher means more.
-fn ui_host_usage_field(ui: &mut egui::Ui, host: &mut Host) {
+fn render_usage_field(ui: &mut egui::Ui, host: &mut Host) {
     ui.horizontal(|ui| {
         ui.label("Usage");
         info_icon_with_tooltip(
@@ -252,7 +252,7 @@ fn ui_host_usage_field(ui: &mut egui::Ui, host: &mut Host) {
 /// - server: provides services to other hosts
 /// - user: consumes services from servers
 /// - auto: determined based on whether services are defined
-fn ui_host_type_selector(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
+fn render_type_dropdown(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
     ui.horizontal(|ui| {
         ui.label("Type");
         info_icon_with_tooltip(
@@ -301,7 +301,7 @@ fn ui_host_type_selector(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
 ///
 /// Shows a popup with all available protocols from KNOWN_SERVICES,
 /// filtered by search text. Selected protocols appear as removable chips.
-fn ui_host_client_protocols(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
+fn render_client_protocols(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
     ui.horizontal(|ui| {
         ui.label("Client protocols");
         info_icon_with_tooltip(ui, "Specify what services the host is a client of.");
@@ -329,7 +329,7 @@ fn render_protocol_popup(
             ui.set_min_width(POPUP_MIN_WIDTH);
 
             // Search field with auto-focus
-            let search_id = ui.make_persistent_id(("proto_search", host_idx));
+            let search_id = ui.make_persistent_id(("protocol_search", host_idx));
             let mut search_text = ui.data_mut(|d| d.get_temp::<String>(search_id).unwrap_or_default());
 
             let search_resp =
@@ -381,20 +381,20 @@ fn render_protocol_popup(
 
 /// Render selected protocols as removable chips.
 fn render_protocol_chips(ui: &mut egui::Ui, host: &mut Host) {
-    let mut proto_to_remove: Option<usize> = None;
+    let mut protocol_to_remove: Option<usize> = None;
 
-    for (p_idx, proto) in host.client.iter().enumerate() {
-        let btn_text = format!("{} {}", proto, egui_material_icons::icons::ICON_CLEAR);
+    for (protocol_idx, protocol) in host.client.iter().enumerate() {
+        let button_text = format!("{} {}", protocol, egui_material_icons::icons::ICON_CLEAR);
         if ui
-            .button(btn_text)
+            .button(button_text)
             .on_hover_text("Remove protocol")
             .clicked()
         {
-            proto_to_remove = Some(p_idx);
+            protocol_to_remove = Some(protocol_idx);
         }
     }
 
-    if let Some(idx) = proto_to_remove {
+    if let Some(idx) = protocol_to_remove {
         host.client.remove(idx);
     }
 }
@@ -411,9 +411,9 @@ fn host_display_name(host: &Host) -> String {
     }
 
     // Fall back to first interface IP
-    if let Some(iface) = host.interfaces.first() {
-        if !iface.ip_addr.trim().is_empty() {
-            return iface.ip_addr.clone();
+    if let Some(interface) = host.interfaces.first() {
+        if !interface.ip_addr.trim().is_empty() {
+            return interface.ip_addr.clone();
         }
     }
 

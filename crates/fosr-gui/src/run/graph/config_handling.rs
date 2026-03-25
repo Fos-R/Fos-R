@@ -4,7 +4,7 @@
 //! visualization updates when the configuration changes.
 
 use super::state::VisualizationState;
-use crate::shared::config::state::ConfigurationFileState;
+use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::ui::DELAY_FRAMES_NORMAL;
 
 /// Handle configuration file changes and update visualization state.
@@ -17,7 +17,7 @@ use crate::shared::constants::ui::DELAY_FRAMES_NORMAL;
 /// - If parsing fails: logs error and resets to default state
 pub fn handle_config_changes(
     state: &mut VisualizationState,
-    configuration_file_state: &ConfigurationFileState,
+    configuration_file_state: &ConfigFileState,
 ) {
     // Check if config was removed or is empty
     let config_is_empty = configuration_file_state

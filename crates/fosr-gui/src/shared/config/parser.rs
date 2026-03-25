@@ -1,12 +1,12 @@
 //! Configuration YAML parsing.
 
 use crate::shared::config::model::Configuration;
-use crate::shared::config::state::ConfigurationFileState;
+use crate::shared::config::state::ConfigFileState;
 
 /// Parse the YAML content into a Configuration model.
 /// Updates the state with the parsed model or an error message.
 /// Handles change detection using a snapshot of the "clean" configuration.
-pub fn parse_config_yaml(configuration_file_state: &mut ConfigurationFileState) {
+pub fn parse_config_yaml(configuration_file_state: &mut ConfigFileState) {
     configuration_file_state.config_model = None;
     configuration_file_state.config_error = None;
 

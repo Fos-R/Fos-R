@@ -40,7 +40,7 @@ pub struct GenerationState {
     pub use_current_time: bool,
     pub use_local_timezone: bool,
     pub start_date: NaiveDate,
-    pub start_hour: NaiveTime,
+    pub start_time: NaiveTime,
     pub output_file_name: String,
     /// Holds temporary PCAP files opened in Wireshark along with their background thread handles.
     ///
@@ -98,7 +98,7 @@ impl Default for GenerationState {
             use_current_time: true,
             use_local_timezone: true,
             start_date: Local::now().date_naive(),
-            start_hour: Local::now().time(),
+            start_time: Local::now().time(),
             output_file_name: "output.pcap".to_string(),
             #[cfg(not(target_arch = "wasm32"))]
             temp_pcap_files: Vec::new(),

@@ -9,17 +9,19 @@ use crate::shared::constants::ui::{
 use eframe::egui;
 use eframe::egui::global_theme_preference_switch;
 
+/// Available tabs in the Fos-R application.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
-pub enum CurrentTab {
+pub enum AppTab {
     #[default]
     Run,
     Configuration,
     About,
 }
 
+/// State passed between the top bar and the main app for rendering.
 #[derive(Clone)]
 pub struct TopBarState {
-    pub current_tab: CurrentTab,
+    pub current_tab: AppTab,
     pub zoom_factor: f32,
     pub has_errors: bool,
 }
@@ -32,12 +34,12 @@ fn render_tab_button(
     ui: &mut egui::Ui,
     text_size: f32,
     label: &str,
-    tab: CurrentTab,
+    tab: AppTab,
     is_selected: bool,
     is_enabled: bool,
     tooltip: &str,
     disabled_tooltip: &str,
-) -> Option<CurrentTab> {
+) -> Option<AppTab> {
     let button = egui::Button::new(egui::RichText::new(label).size(text_size)).selected(is_selected);
     let response = ui.add_enabled(is_enabled, button);
 
@@ -60,7 +62,7 @@ fn render_config_tab_button(
     text_size: f32,
     has_errors: bool,
     is_selected: bool,
-) -> Option<CurrentTab> {
+) -> Option<AppTab> {
     let label = if has_errors {
         egui::RichText::new("⚠ Configuration")
             .color(COLOR_ERROR)
@@ -76,7 +78,7 @@ fn render_config_tab_button(
         .on_hover_text("Edit the network configuration: hosts, interfaces, and services.")
         .clicked()
     {
-        Some(CurrentTab::Configuration)
+        Some(AppTab::Configuration)
     } else {
         None
     }
@@ -86,7 +88,7 @@ fn render_config_tab_button(
 fn render_tab_buttons(
     ui: &mut egui::Ui,
     state: &TopBarState,
-) -> Option<CurrentTab> {
+) -> Option<AppTab> {
     let text_size = TEXT_SIZE_DEFAULT;
     let has_errors = state.has_errors;
 
@@ -95,8 +97,8 @@ fn render_tab_buttons(
         ui,
         text_size,
         "Run",
-        CurrentTab::Run,
-        state.current_tab == CurrentTab::Run,
+        AppTab::Run,
+        state.current_tab == AppTab::Run,
         !has_errors,
         "Live preview and PCAP generation from the current configuration.",
         "Configuration is invalid. Fix errors in the Configuration tab to enable Run.",
@@ -105,7 +107,7 @@ fn render_tab_buttons(
     }
 
     // Configuration tab (always enabled, shows warning icon on errors)
-    if let Some(tab) = render_config_tab_button(ui, text_size, has_errors, state.current_tab == CurrentTab::Configuration) {
+    if let Some(tab) = render_config_tab_button(ui, text_size, has_errors, state.current_tab == AppTab::Configuration) {
         return Some(tab);
     }
 
@@ -114,8 +116,8 @@ fn render_tab_buttons(
         ui,
         text_size,
         "About",
-        CurrentTab::About,
-        state.current_tab == CurrentTab::About,
+        AppTab::About,
+        state.current_tab == AppTab::About,
         true,
         "About Fos-R and its authors.",
         "",
@@ -157,6 +159,7 @@ fn render_zoom_controls(ui: &mut egui::Ui, ctx: &egui::Context) -> f32 {
     new_zoom
 }
 
+/// Returns true if the browser is currently in fullscreen mode.
 #[cfg(target_arch = "wasm32")]
 fn is_fullscreen() -> bool {
     web_sys::window()
@@ -165,6 +168,7 @@ fn is_fullscreen() -> bool {
         .is_some()
 }
 
+/// Toggles browser fullscreen mode on or off.
 #[cfg(target_arch = "wasm32")]
 fn toggle_fullscreen(is_fullscreen: bool) {
     let Some(window) = web_sys::window() else { return };
@@ -177,6 +181,7 @@ fn toggle_fullscreen(is_fullscreen: bool) {
     }
 }
 
+/// Renders the fullscreen toggle button for web builds.
 #[cfg(target_arch = "wasm32")]
 fn render_fullscreen_toggle(ui: &mut egui::Ui) {
     let fullscreen = is_fullscreen();
@@ -202,10 +207,6 @@ fn render_utility_buttons(ui: &mut egui::Ui, ctx: &egui::Context, state: &mut To
     global_theme_preference_switch(ui);
     state.zoom_factor = render_zoom_controls(ui, ctx);
 }
-
-// -----------------------------------------------------------------------------
-// Public API
-// -----------------------------------------------------------------------------
 
 /// Render the top bar with tabs and utility buttons.
 /// Returns the updated TopBarState.

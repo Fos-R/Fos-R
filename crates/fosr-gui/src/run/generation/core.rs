@@ -45,13 +45,13 @@ pub fn generate(
     // Load the models
     let model = load_models(&profile)?;
     let automata_library = Arc::new(model.automata);
-    let bn = Arc::new(model.bn);
+    let bayesian_network = Arc::new(model.bn);
 
     // Handle the parameters: either there is a packet count target or a duration
-    let d = humantime::parse_duration(&duration)
+    let parsed_duration = humantime::parse_duration(&duration)
         .map_err(|e| format!("Invalid duration '{}': {}", duration, e))?;
-    log::info!("Generating a pcap of {d:?}");
-    let _target = Target::GenerationDuration(d);
+    log::info!("Generating a pcap of {parsed_duration:?}");
+    let _target = Target::GenerationDuration(parsed_duration);
 
     if let Some(s) = seed {
         log::info!("Generating with seed {s}");
@@ -65,14 +65,14 @@ pub fn generate(
         None,
         model.time_bins,
         initial_ts,
-        Some(d),
+        Some(parsed_duration),
         tz_offset,
     );
-    let s1 = stage1::bayesian_networks::BNGenerator::new(bn, false);
+    let s1 = stage1::bayesian_networks::BNGenerator::new(bayesian_network, false);
     let s2 = TadamGenerator::new(automata_library);
     let s3 = stage3::Stage3::new(taint);
     log::info!("Run single thread");
-    run_single_thread(
+    execute_generation_pipeline(
         order_pcap,
         s0,
         s1,
@@ -156,7 +156,7 @@ fn resolve_timezone_offset(
 }
 
 /// Executes the 4-stage pipeline sequentially with cancellation support.
-fn run_single_thread(
+fn execute_generation_pipeline(
     order_pcap: bool,
     s0: impl stage0::Stage0,
     s1: impl stage1::Stage1,
@@ -172,7 +172,7 @@ fn run_single_thread(
     let start = Instant::now();
 
     log::info!("Stage 0 generation");
-    let vec = stage0::run_vec(s0);
+    let stage0_output = stage0::run_vec(s0);
     if is_cancelled() {
         log::info!("Generation cancelled after stage 0");
         return Ok(());
@@ -180,7 +180,7 @@ fn run_single_thread(
     send_progress(0.2);
 
     log::info!("Stage 1 generation");
-    let vec = stage1::run_vec(s1, vec).map_err(|e| format!("Stage 1 failed: {}", e))?;
+    let stage1_output = stage1::run_vec(s1, stage0_output).map_err(|e| format!("Stage 1 failed: {}", e))?;
     if is_cancelled() {
         log::info!("Generation cancelled after stage 1");
         return Ok(());
@@ -188,7 +188,7 @@ fn run_single_thread(
     send_progress(0.4);
 
     log::info!("Stage 2 generation");
-    let vec = stage2::run_vec(s2, vec);
+    let stage2_output = stage2::run_vec(s2, stage1_output);
     if is_cancelled() {
         log::info!("Generation cancelled after stage 2");
         return Ok(());
@@ -196,8 +196,8 @@ fn run_single_thread(
     send_progress(0.6);
 
     log::info!("Stage 3 generation");
-    let all_packets = generate_stage3_packets(&s3, vec, &is_cancelled);
-    let mut all_packets = match all_packets {
+    let stage3_packets = generate_stage3_packets(&s3, stage2_output, &is_cancelled);
+    let mut all_packets = match stage3_packets {
         Some(p) => p,
         None => return Ok(()), // Cancelled
     };

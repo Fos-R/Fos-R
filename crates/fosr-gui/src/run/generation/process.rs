@@ -4,7 +4,7 @@
 
 use super::core::generate;
 use crate::run::state::RunTabState;
-use crate::shared::config::state::ConfigurationFileState;
+use crate::shared::config::state::ConfigFileState;
 use eframe::egui;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -16,7 +16,7 @@ use std::sync::mpsc::channel;
 /// The generation runs asynchronously (native thread or WASM future).
 pub fn start_generation(
     state: &mut RunTabState,
-    configuration_file_state: &ConfigurationFileState,
+    configuration_file_state: &ConfigFileState,
     ctx: &egui::Context,
 ) {
     // Reset state
@@ -37,7 +37,7 @@ pub fn start_generation(
     let (error_sender, error_receiver) = channel();
     state.generation.error_receiver = Some(error_receiver);
 
-    let params = GenerationParams::from_state(state, configuration_file_state);
+    let params = PcapGenerationParams::from_state(state, configuration_file_state);
     let cancelled = state.generation.cancelled.clone();
     let ctx = ctx.clone();
 
@@ -53,7 +53,7 @@ pub fn start_generation(
 }
 
 /// Generation parameters extracted from UI state.
-struct GenerationParams {
+struct PcapGenerationParams {
     seed: Option<u64>,
     order_pcap: bool,
     start_time: Option<String>,
@@ -63,9 +63,9 @@ struct GenerationParams {
     config_content: Option<String>,
 }
 
-impl GenerationParams {
+impl PcapGenerationParams {
     /// Extracts parameters from the UI state and config file.
-    fn from_state(state: &RunTabState, config_state: &ConfigurationFileState) -> Self {
+    fn from_state(state: &RunTabState, config_state: &ConfigFileState) -> Self {
         let seed = if state.generation.use_seed {
             state.generation.seed_input.parse::<u64>().ok()
         } else {
@@ -77,7 +77,7 @@ impl GenerationParams {
             Some(format!(
                 "{}T{}Z",
                 state.generation.start_date.format("%Y-%m-%d"),
-                state.generation.start_hour.format("%H:%M:%S")
+                state.generation.start_time.format("%H:%M:%S")
             ))
         };
         let timezone = if state.generation.timezone_input.is_empty() {
@@ -103,7 +103,7 @@ impl GenerationParams {
 
 /// Spawns the generation task on the appropriate platform (WASM future or native thread).
 fn spawn_generation_task(
-    params: GenerationParams,
+    params: PcapGenerationParams,
     progress_sender: std::sync::mpsc::Sender<f32>,
     pcap_sender: std::sync::mpsc::Sender<Vec<u8>>,
     throughput_sender: std::sync::mpsc::Sender<String>,

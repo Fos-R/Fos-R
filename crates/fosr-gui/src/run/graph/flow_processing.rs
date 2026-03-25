@@ -3,7 +3,7 @@
 //! This module handles the processing of flow events from the streamer,
 //! updating active links, and synchronizing graph edge states.
 
-use super::state::{ActiveLink, EdgeState, INTERNET_IP, LinkDirection, VisualizationState};
+use super::state::{ActiveLink, EdgeState, INTERNET_NODE_IP, LinkDirection, VisualizationState};
 use super::stream::FlowEvent;
 use crate::shared::constants::ui::ACTIVE_LINK_BASE_TIMEOUT_MS;
 
@@ -49,9 +49,9 @@ pub fn process_flow_events(state: &mut VisualizationState) {
         // Increment total flows counter
         state.flow.total_flows += 1;
 
-        // Map IPs to display IPs (unknown -> INTERNET_IP)
-        let display_src = if src_known { event.src_ip } else { INTERNET_IP };
-        let display_dst = if dst_known { event.dst_ip } else { INTERNET_IP };
+        // Map unknown IPs to the Internet node for display
+        let display_src = if src_known { event.src_ip } else { INTERNET_NODE_IP };
+        let display_dst = if dst_known { event.dst_ip } else { INTERNET_NODE_IP };
 
         log::debug!(
             "  -> Displayed as: {} -> {} ({:?})",

@@ -51,10 +51,10 @@ pub(crate) struct TimePickerPopupState {
 pub(crate) struct TimePickerPopup<'a> {
     pub selection: &'a mut NaiveTime,
     pub button_id: Id,
-    pub show_clockface: bool,
+    pub show_clock_face: bool,
     pub use_12_hour_clock: bool,
     pub show_seconds: bool,
-    pub use_dragvalue: bool,
+    pub use_drag_value: bool,
 }
 
 impl TimePickerPopup<'_> {
@@ -78,7 +78,7 @@ impl TimePickerPopup<'_> {
             let mut minute_rect = None;
             let mut second_rect = None;
 
-            if self.use_dragvalue {
+            if self.use_drag_value {
                 let range = if self.use_12_hour_clock {
                     0..=11
                 } else {
@@ -99,7 +99,7 @@ impl TimePickerPopup<'_> {
 
             ui.label(RichText::new("h :").monospace());
 
-            if self.use_dragvalue {
+            if self.use_drag_value {
                 let r = ui.add(DragValue::new(&mut popup_state.minute).range(0..=59));
                 minute_rect = Some(r.rect);
                 if r.clicked() || r.changed() {
@@ -115,7 +115,7 @@ impl TimePickerPopup<'_> {
             if self.show_seconds {
                 ui.label(RichText::new("m :").monospace());
 
-                if self.use_dragvalue {
+                if self.use_drag_value {
                     let r = ui.add(DragValue::new(&mut popup_state.second).range(0..=59));
                     second_rect = Some(r.rect);
                     if r.clicked() || r.changed() {
@@ -176,7 +176,7 @@ impl TimePickerPopup<'_> {
             TimeFrame::Second => &mut popup_state.second,
         };
 
-        if self.show_clockface {
+        if self.show_clock_face {
             draw_timepicker(
                 r_outer,
                 r_inner,

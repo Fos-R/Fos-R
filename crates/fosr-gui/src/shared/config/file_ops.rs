@@ -2,7 +2,7 @@
 
 use crate::shared::config::model::Configuration;
 use crate::shared::config::parser::parse_config_yaml;
-use crate::shared::config::state::ConfigurationFileState;
+use crate::shared::config::state::ConfigFileState;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::file_io::{read_file_desktop, show_file_picker_desktop};
 #[cfg(target_arch = "wasm32")]
@@ -17,7 +17,7 @@ use std::sync::mpsc::channel;
 /// On desktop: synchronous file picker via native dialog.
 /// On WASM: async file picker, result arrives via `config_file_receiver`.
 /// Clears any previously loaded config state before picking a new file.
-pub fn trigger_file_import(state: &mut ConfigurationFileState, ctx: &egui::Context) {
+pub fn trigger_file_import(state: &mut ConfigFileState, ctx: &egui::Context) {
     state.config_file_content = None;
     #[cfg(target_arch = "wasm32")]
     {
@@ -53,7 +53,7 @@ pub fn trigger_file_import(state: &mut ConfigurationFileState, ctx: &egui::Conte
 /// Should be called every frame in the UI to check for completed file picks.
 /// When a file is picked, clears the loaded config and sets up for content loading.
 #[cfg(target_arch = "wasm32")]
-pub fn poll_file_import(state: &mut ConfigurationFileState) {
+pub fn poll_file_import(state: &mut ConfigFileState) {
     if let Some(receiver) = &state.config_file_receiver {
         if let Ok(file) = receiver.try_recv() {
             if file.is_some() {
@@ -72,7 +72,7 @@ pub fn poll_file_import(state: &mut ConfigurationFileState) {
 /// On WASM: spawns async read, parses YAML when content arrives via channel.
 ///
 /// Skips if content is already loaded to avoid re-reading every frame.
-pub fn load_config_file_contents(configuration_file_state: &mut ConfigurationFileState) {
+pub fn load_config_file_contents(configuration_file_state: &mut ConfigFileState) {
     // Already loaded — don't re-read from disk every frame
     if configuration_file_state.config_file_content.is_some() {
         return;
@@ -125,7 +125,7 @@ pub fn load_config_file_contents(configuration_file_state: &mut ConfigurationFil
 }
 
 /// Clear all loaded config state to allow loading a new file.
-fn clear_loaded_config(configuration_file_state: &mut ConfigurationFileState) {
+fn clear_loaded_config(configuration_file_state: &mut ConfigFileState) {
     configuration_file_state.config_file_content = None;
     configuration_file_state.config_model = None;
     configuration_file_state.config_error = None;

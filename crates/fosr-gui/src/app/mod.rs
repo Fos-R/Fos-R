@@ -8,27 +8,28 @@ mod close_dialog;
 mod startup_modal;
 mod top_bar;
 
-use crate::about_tab::show_about_tab_content;
+use crate::about_tab::render_about_tab;
 use crate::config_editor::state::ConfigurationTabState;
-use crate::config_editor::tab::show_configuration_tab_content;
+use crate::config_editor::tab::render_configuration_tab;
 use crate::run::state::RunTabState;
-use crate::run::tab::show_run_tab_content;
+use crate::run::tab::render_run_tab;
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_LOGO, IMG_SERVER};
-use crate::shared::config::state::ConfigurationFileState;
+use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::ui::{TOOLTIP_DELAY, ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN};
 #[cfg(not(target_arch = "wasm32"))]
 use close_dialog::render_close_confirmation_dialog;
 use eframe::egui;
 use startup_modal::render_startup_modal;
-use top_bar::{CurrentTab, TopBarState, render_top_bar};
+use top_bar::{AppTab, TopBarState, render_top_bar};
 
+/// Main application state managing tabs, configuration, and PCAP generation.
 #[derive(Default)]
 pub struct FosrApp {
-    current_tab: CurrentTab,
+    current_tab: AppTab,
     style_initialized: bool,
     images_preloaded: bool,
     zoom_factor: f32,
-    configuration_file_state: ConfigurationFileState,
+    config_file_state: ConfigFileState,
     configuration_tab_state: ConfigurationTabState,
     run_tab_state: RunTabState,
     /// Whether to show the close confirmation dialog
@@ -109,7 +110,7 @@ impl FosrApp {
         let top_bar_state = TopBarState {
             current_tab: self.current_tab,
             zoom_factor: self.zoom_factor,
-            has_errors: self.configuration_file_state.has_errors,
+            has_errors: self.config_file_state.has_errors,
         };
         let updated_state = render_top_bar(ctx, top_bar_state);
         self.current_tab = updated_state.current_tab;
@@ -123,27 +124,27 @@ impl FosrApp {
             // Display the tab content depending on the currently select tab
             // Note: Run tab doesn't use ScrollArea as it has its own layout
             match self.current_tab {
-                CurrentTab::Run => {
-                    show_run_tab_content(
+                AppTab::Run => {
+                    render_run_tab(
                         ui,
                         &mut self.run_tab_state,
-                        &mut self.configuration_file_state,
+                        &mut self.config_file_state,
                     );
                 }
-                CurrentTab::Configuration => {
+                AppTab::Configuration => {
                     // Wrap in ScrollArea for vertical scrolling
                     egui::ScrollArea::vertical().show(ui, |ui| {
-                        show_configuration_tab_content(
+                        render_configuration_tab(
                             ui,
                             &mut self.configuration_tab_state,
-                            &mut self.configuration_file_state,
+                            &mut self.config_file_state,
                         );
                     });
                 }
-                CurrentTab::About => {
+                AppTab::About => {
                     // Wrap in ScrollArea for vertical scrolling
                     egui::ScrollArea::vertical().show(ui, |ui| {
-                        show_about_tab_content(ui);
+                        render_about_tab(ui);
                     });
                 }
             }
@@ -168,10 +169,10 @@ impl eframe::App for FosrApp {
         self.handle_close_confirmation(ctx);
 
         // Startup modal: choose configuration source
-        if !self.configuration_file_state.config_chosen {
+        if !self.config_file_state.config_chosen {
             // Render empty CentralPanel for background, then modal on top
             egui::CentralPanel::default().show(ctx, |_ui| {});
-            render_startup_modal(ctx, &mut self.configuration_file_state);
+            render_startup_modal(ctx, &mut self.config_file_state);
             return;
         }
 

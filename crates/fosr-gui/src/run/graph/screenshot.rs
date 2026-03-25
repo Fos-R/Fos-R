@@ -24,7 +24,7 @@ pub fn handle_screenshot_export(ui: &mut egui::Ui, state: &mut VisualizationStat
                 if state.screenshot_export == ScreenshotStateMachine::WaitingForScreenshot {
                     if let Some(graph_rect) = state.view.graph_rect {
                         let graph_image = image.region(&graph_rect, Some(i.pixels_per_point()));
-                        save_graph_png(&graph_image);
+                        save_screenshot_as_png(&graph_image);
                     } else {
                         log::error!("No graph rect stored for screenshot export");
                     }
@@ -36,7 +36,7 @@ pub fn handle_screenshot_export(ui: &mut egui::Ui, state: &mut VisualizationStat
 }
 
 /// Save the graph screenshot as a PNG file.
-fn save_graph_png(image: &egui::ColorImage) {
+fn save_screenshot_as_png(image: &egui::ColorImage) {
     let width = image.width() as u32;
     let height = image.height() as u32;
     let pixels = image.as_raw();

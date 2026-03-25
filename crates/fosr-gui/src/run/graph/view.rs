@@ -9,7 +9,7 @@ use super::overlays::{
 };
 use super::screenshot::handle_screenshot_export;
 use super::shapes::{NetworkEdgeShape, NetworkNodeShape};
-use super::state::{EdgeData, NodeData, ScreenshotStateMachine, ViewState};
+use super::state::{NetworkEdge, NetworkNode, ScreenshotStateMachine, GraphViewState};
 use crate::run::state::RunTabState;
 use crate::shared::constants::ui::FIT_TO_SCREEN_PADDING;
 use eframe::egui;
@@ -26,11 +26,11 @@ pub fn render_graph_view(ui: &mut egui::Ui, state: &mut RunTabState) {
     let inner_response = egui::CentralPanel::default().show(ui.ctx(), |ui| {
         handle_window_resize(ui, &mut state.visualization.view);
 
-        let fit_to_screen = consume_reset_request(&mut state.visualization.view);
+        let fit_to_screen = take_reset_request(&mut state.visualization.view);
 
         let mut graph_view = egui_graphs::GraphView::<
-            NodeData,
-            EdgeData,
+            NetworkNode,
+            NetworkEdge,
             petgraph::Undirected,
             petgraph::stable_graph::DefaultIx,
             NetworkNodeShape,
@@ -76,7 +76,7 @@ pub fn render_graph_view(ui: &mut egui::Ui, state: &mut RunTabState) {
 ///
 /// Compares current screen size with last known size.
 /// On change, requests a reset to recalculate zoom/pan.
-fn handle_window_resize(ui: &egui::Ui, view: &mut ViewState) {
+fn handle_window_resize(ui: &egui::Ui, view: &mut GraphViewState) {
     let screen_size = ui.ctx().content_rect().size();
     match view.last_screen_size {
         Some(last) if last != screen_size => {
@@ -92,7 +92,7 @@ fn handle_window_resize(ui: &egui::Ui, view: &mut ViewState) {
 ///
 /// Returns true for one frame when reset is requested,
 /// then clears the flag so it doesn't repeat.
-fn consume_reset_request(view: &mut ViewState) -> bool {
+fn take_reset_request(view: &mut GraphViewState) -> bool {
     let fit = view.reset_requested;
     if fit {
         view.reset_requested = false;
@@ -104,7 +104,7 @@ fn consume_reset_request(view: &mut ViewState) -> bool {
 ///
 /// Must be called once after the graph is first rendered.
 /// The force-directed layout would override our circle layout.
-fn disable_force_directed_layout(ui: &mut egui::Ui, view: &mut ViewState) {
+fn disable_force_directed_layout(ui: &mut egui::Ui, view: &mut GraphViewState) {
     if view.layout_initialized {
         return;
     }

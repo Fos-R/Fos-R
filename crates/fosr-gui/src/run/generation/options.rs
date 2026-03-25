@@ -6,7 +6,7 @@
 use crate::run::state::RunTabState;
 
 use super::validation::{
-    first_invalid_param, show_field_error, validate_duration, validate_optional_u64,
+    first_invalid_param, render_field_error, validate_duration, validate_optional_u64,
     validate_timezone,
 };
 use crate::shared::constants::colors::{COLOR_ERROR, COLOR_TEXT_MUTED};
@@ -33,26 +33,26 @@ use egui_extras::DatePickerButton;
 /// - Optional seed for deterministic generation
 /// - Taint packets option
 /// - Temporal ordering option
-pub fn show_generation_options(ui: &mut egui::Ui, state: &mut RunTabState) {
+pub fn render_generation_options(ui: &mut egui::Ui, state: &mut RunTabState) {
     ui.columns(GENERATION_OPTIONS_COLUMNS, |cols| {
-        show_duration_column(&mut cols[0], state);
-        show_seed_column(&mut cols[1], state);
+        render_duration_column(&mut cols[0], state);
+        render_seed_column(&mut cols[1], state);
     });
 }
 
 /// Column 1: Duration input, start time picker, and timezone selection.
-fn show_duration_column(col: &mut egui::Ui, state: &mut RunTabState) {
+fn render_duration_column(col: &mut egui::Ui, state: &mut RunTabState) {
     col.set_min_width(GENERATION_COL1_MIN_WIDTH);
 
-    show_duration_input(col, state);
+    render_duration_input(col, state);
     col.add_space(SPACING_LG);
 
-    show_start_time_options(col, state);
-    show_utc_preview(col, state);
+    render_start_time_options(col, state);
+    render_utc_preview(col, state);
 }
 
 /// Duration input with preset buttons and validation.
-fn show_duration_input(ui: &mut egui::Ui, state: &mut RunTabState) {
+fn render_duration_input(ui: &mut egui::Ui, state: &mut RunTabState) {
     ui.horizontal(|ui| {
         ui.label("Duration");
         info_icon_with_tooltip(ui, "Minimum pcap traffic duration described in human-friendly time, such as \"30m\", \"1h\", \"2d\" or \"2days 30min 5s\".");
@@ -77,12 +77,12 @@ fn show_duration_input(ui: &mut egui::Ui, state: &mut RunTabState) {
             }
         }
 
-        show_field_error(ui, &state.generation.duration_validation);
+        render_field_error(ui, &state.generation.duration_validation);
     });
 }
 
 /// Start time toggle and custom time picker with timezone selection.
-fn show_start_time_options(ui: &mut egui::Ui, state: &mut RunTabState) {
+fn render_start_time_options(ui: &mut egui::Ui, state: &mut RunTabState) {
     ui.horizontal(|ui| {
         ui.checkbox(&mut state.generation.use_current_time, "Use current time for start time");
         info_icon_with_tooltip(ui, "Beginning time of the pcap. By default, use the current time. For deterministic generation, you must specify this along with duration, timezone and seed.");
@@ -102,19 +102,19 @@ fn show_start_time_options(ui: &mut egui::Ui, state: &mut RunTabState) {
                 .start_end_years((current_year - 5)..=(current_year + 30)),
         );
         ui.add(
-            TimePickerButton::new(&mut state.generation.start_hour)
+            TimePickerButton::new(&mut state.generation.start_time)
                 .show_seconds(true)
-                .use_dragvalue(true),
+                .use_drag_value(true),
         );
     });
 
     ui.add_space(SPACING_LG);
 
-    show_timezone_picker(ui, state);
+    render_timezone_picker(ui, state);
 }
 
 /// Timezone picker with local/custom toggle.
-fn show_timezone_picker(ui: &mut egui::Ui, state: &mut RunTabState) {
+fn render_timezone_picker(ui: &mut egui::Ui, state: &mut RunTabState) {
     ui.horizontal(|ui| {
         if ui
             .checkbox(&mut state.generation.use_local_timezone, "Use local timezone")
@@ -141,7 +141,7 @@ fn show_timezone_picker(ui: &mut egui::Ui, state: &mut RunTabState) {
 }
 
 /// Displays the UTC equivalent of the selected start time.
-fn show_utc_preview(ui: &mut egui::Ui, state: &mut RunTabState) {
+fn render_utc_preview(ui: &mut egui::Ui, state: &mut RunTabState) {
     let utc_text = compute_utc_text(state);
 
     if let Some(text) = utc_text {
@@ -159,7 +159,7 @@ fn compute_utc_text(state: &RunTabState) -> Option<String> {
         return Some(chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string());
     }
 
-    let local_dt = state.generation.start_date.and_time(state.generation.start_hour);
+    let local_dt = state.generation.start_date.and_time(state.generation.start_time);
 
     let utc = if state.generation.use_local_timezone {
         Local::now()
@@ -186,20 +186,20 @@ fn compute_utc_text(state: &RunTabState) -> Option<String> {
 }
 
 /// Column 2: Seed input and advanced options (taint, temporal ordering).
-fn show_seed_column(col: &mut egui::Ui, state: &mut RunTabState) {
+fn render_seed_column(col: &mut egui::Ui, state: &mut RunTabState) {
     col.set_min_width(GENERATION_COL2_MIN_WIDTH);
 
-    show_seed_input(col, state);
+    render_seed_input(col, state);
     col.add_space(SPACING_LG);
 
-    show_advanced_options(col, state);
+    render_advanced_options(col, state);
     col.add_space(SPACING_LG);
 
-    show_validation_errors(col, state);
+    render_validation_errors(col, state);
 }
 
 /// Seed input with validation.
-fn show_seed_input(ui: &mut egui::Ui, state: &mut RunTabState) {
+fn render_seed_input(ui: &mut egui::Ui, state: &mut RunTabState) {
     ui.horizontal(|ui| {
         ui.checkbox(&mut state.generation.use_seed, "Seed");
         info_icon_with_tooltip(ui, "Seed for random number generation. For deterministic generation, you must also specify duration, start time, and timezone.");
@@ -218,7 +218,7 @@ fn show_seed_input(ui: &mut egui::Ui, state: &mut RunTabState) {
                 }
             }
 
-            show_field_error(ui, &state.generation.seed_validation);
+            render_field_error(ui, &state.generation.seed_validation);
         } else {
             state.generation.seed_validation.set_ok();
         }
@@ -226,7 +226,7 @@ fn show_seed_input(ui: &mut egui::Ui, state: &mut RunTabState) {
 }
 
 /// Advanced options: taint packets and temporal ordering.
-fn show_advanced_options(ui: &mut egui::Ui, state: &mut RunTabState) {
+fn render_advanced_options(ui: &mut egui::Ui, state: &mut RunTabState) {
     ui.horizontal(|ui| {
         ui.checkbox(&mut state.generation.taint, "Taint the packets");
         info_icon_with_tooltip(ui, "Taint the packets with special markers for identification.");
@@ -238,7 +238,7 @@ fn show_advanced_options(ui: &mut egui::Ui, state: &mut RunTabState) {
 }
 
 /// Shows the first validation error if any parameter is invalid.
-fn show_validation_errors(ui: &mut egui::Ui, state: &RunTabState) {
+fn render_validation_errors(ui: &mut egui::Ui, state: &RunTabState) {
     if let Some((name, spec, err)) = first_invalid_param(&state.generation) {
         ui.colored_label(
             COLOR_ERROR,

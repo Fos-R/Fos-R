@@ -15,9 +15,9 @@ pub fn count_addresses(config: &Configuration) -> AddressCounts {
     let mut mac_counts: HashMap<String, usize> = HashMap::new();
 
     for host in &config.hosts {
-        for iface in &host.interfaces {
-            *ip_counts.entry(iface.ip_addr.clone()).or_insert(0) += 1;
-            if let Some(mac) = &iface.mac_addr {
+        for interface in &host.interfaces {
+            *ip_counts.entry(interface.ip_addr.clone()).or_insert(0) += 1;
+            if let Some(mac) = &interface.mac_addr {
                 *mac_counts.entry(mac.clone()).or_insert(0) += 1;
             }
         }
@@ -38,15 +38,15 @@ pub fn validate_host(
         errors.push("Missing interface".to_string());
     }
 
-    for iface in &host.interfaces {
-        if iface.ip_addr.parse::<std::net::IpAddr>().is_err() {
+    for interface in &host.interfaces {
+        if interface.ip_addr.parse::<std::net::IpAddr>().is_err() {
             errors.push("Invalid IP format".to_string());
-        } else if ip_counts.get(&iface.ip_addr).copied().unwrap_or(0) > 1 {
+        } else if ip_counts.get(&interface.ip_addr).copied().unwrap_or(0) > 1 {
             errors.push("IP conflict".to_string());
         }
 
-        if let Some(mac) = &iface.mac_addr {
-            if !is_valid_mac(mac) {
+        if let Some(mac) = &interface.mac_addr {
+            if !validate_mac_format(mac) {
                 errors.push("Invalid MAC format".to_string());
             } else if mac_counts.get(mac).copied().unwrap_or(0) > 1 {
                 errors.push("MAC conflict".to_string());
@@ -85,7 +85,7 @@ pub fn has_model_errors(model: &Configuration) -> bool {
 }
 
 /// Check MAC format (ex: 00:14:2A:3F:47:D8)
-fn is_valid_mac(mac: &str) -> bool {
+fn validate_mac_format(mac: &str) -> bool {
     let parts: Vec<&str> = mac.split(':').collect();
     if parts.len() != MAC_ADDRESS_PARTS {
         return false;

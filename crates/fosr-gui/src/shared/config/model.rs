@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Root configuration structure containing metadata and host definitions.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Configuration {
     #[serde(default)]
@@ -11,6 +12,7 @@ pub struct Configuration {
     pub hosts: Vec<Host>,
 }
 
+/// Metadata describing the configuration file.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Metadata {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -27,6 +29,7 @@ pub struct Metadata {
     pub format: Option<u32>,
 }
 
+/// Represents a host machine in the network configuration.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Host {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -45,6 +48,7 @@ pub struct Host {
     pub interfaces: Vec<Interface>,
 }
 
+/// Network interface configuration for a host.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Interface {
     #[serde(skip_serializing_if = "Option::is_none")]

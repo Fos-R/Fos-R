@@ -143,7 +143,7 @@ impl ScheduledFlow {
 /// Uses a binary heap to store flows in timestamp order, ensuring they are
 /// emitted in the correct sequence. Flows are generated ahead of time (buffer)
 /// to avoid overloading the CPU by continuously generating them.
-struct StreamingState {
+struct FlowStreamingState {
     virtual_time: VirtualTime,
     /// Pending flows ordered by scheduled time (max-heap, so we reverse the order).
     pending_flows: BinaryHeap<ScheduledFlow>,
@@ -155,7 +155,7 @@ struct StreamingState {
     buffer_ahead: Duration,
 }
 
-impl StreamingState {
+impl FlowStreamingState {
     fn new() -> Self {
         Self {
             virtual_time: VirtualTime::new(),
@@ -204,7 +204,7 @@ impl StreamingState {
 /// Returns false if no more timestamps are available from Stage 0.
 #[cfg(not(target_arch = "wasm32"))]
 fn generate_flows_to_buffer(
-    state: &mut StreamingState,
+    state: &mut FlowStreamingState,
     s0: &mut stage0::BinBasedGenerator,
     s1: &BNGenerator,
     initial_timestamp: Duration,
@@ -232,7 +232,7 @@ fn generate_flows_to_buffer(
 /// Generate flows for WASM (with per-cycle limit).
 #[cfg(target_arch = "wasm32")]
 fn generate_flows_to_buffer_wasm(
-    state: &mut StreamingState,
+    state: &mut FlowStreamingState,
     s0: &mut stage0::BinBasedGenerator,
     s1: &BNGenerator,
     initial_timestamp: Duration,
@@ -258,7 +258,7 @@ fn generate_flows_to_buffer_wasm(
 /// Emit flows whose scheduled time has passed (in virtual time).
 #[cfg(not(target_arch = "wasm32"))]
 fn emit_scheduled_flows(
-    state: &mut StreamingState,
+    state: &mut FlowStreamingState,
     sender: &Sender<FlowEvent>,
 ) {
     let virtual_elapsed = state.virtual_elapsed();
@@ -288,7 +288,7 @@ fn emit_scheduled_flows(
 /// Emit flows for WASM (simplified, no debug logging).
 #[cfg(target_arch = "wasm32")]
 fn emit_scheduled_flows_wasm(
-    state: &mut StreamingState,
+    state: &mut FlowStreamingState,
     sender: &Sender<FlowEvent>,
 ) {
     let virtual_elapsed = state.virtual_elapsed();
@@ -421,7 +421,7 @@ impl FlowStreamer {
         initial_timestamp: Duration,
         speed: Arc<RwLock<f32>>,
     ) {
-        let mut state = StreamingState::new();
+        let mut state = FlowStreamingState::new();
         let check_interval = Duration::from_millis(STREAM_CHECK_INTERVAL_MS);
 
         log::info!(
@@ -463,7 +463,7 @@ impl FlowStreamer {
         initial_timestamp: Duration,
         speed: Arc<RwLock<f32>>,
     ) {
-        let mut state = StreamingState::new();
+        let mut state = FlowStreamingState::new();
         let check_interval = Duration::from_millis(STREAM_CHECK_INTERVAL_MS);
 
         while running.load(Ordering::SeqCst) {

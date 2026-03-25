@@ -1,7 +1,7 @@
 //! Entry point for the Fos-R GUI application.
 //! Compiles natively for desktop; delegates to lib.rs for WASM builds.
 
-include!("modules.rs");
+include!("app_modules.rs");
 
 // Desktop: native compilation
 #[cfg(not(target_arch = "wasm32"))]

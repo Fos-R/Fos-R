@@ -1,24 +1,24 @@
 //! Run tab: live network visualization combined with PCAP generation controls.
 
-use super::generation::bottom_panel::show_bottom_panel;
+use super::generation::bottom_panel::render_bottom_panel;
 use super::generation::process::poll_generation_receivers;
 use super::graph::config_handling::handle_config_changes;
 use super::graph::flow_processing::{process_flow_events, update_active_links, update_graph_edges};
 use super::graph::node_modal::{process_graph_events, render_node_info_modal};
 use super::graph::view::render_graph_view;
 use super::state::RunTabState;
-use crate::run::graph::state::{ViewState, VisualizationState};
+use crate::run::graph::state::{GraphViewState, VisualizationState};
 use crate::shared::config::file_ops::load_config_file_contents;
-use crate::shared::config::state::ConfigurationFileState;
+use crate::shared::config::state::ConfigFileState;
 use eframe::egui;
 
 /// Display the Run tab content.
 ///
 /// Orchestrates visualization updates, event processing, and UI rendering.
-pub fn show_run_tab_content(
+pub fn render_run_tab(
     ui: &mut egui::Ui,
     state: &mut RunTabState,
-    configuration_file_state: &mut ConfigurationFileState,
+    configuration_file_state: &mut ConfigFileState,
 ) {
     load_config_file_contents(configuration_file_state);
     handle_config_changes(&mut state.visualization, configuration_file_state);
@@ -32,11 +32,11 @@ pub fn show_run_tab_content(
 
     poll_generation_receivers(ui.ctx(), state);
 
-    show_bottom_panel(ui.ctx(), state, configuration_file_state);
+    render_bottom_panel(ui.ctx(), state, configuration_file_state);
 
     render_graph_view(ui, state);
     process_graph_events(&mut state.visualization, configuration_file_state);
-    
+
     render_node_info_modal(ui.ctx(), &mut state.visualization, configuration_file_state);
 }
 
@@ -64,7 +64,7 @@ fn handle_auto_start_visualization(state: &mut VisualizationState) {
 ///
 /// Waits for the countdown to reach zero before triggering a fit-to-screen.
 /// Used after panel toggles or on initial load to ensure proper layout.
-fn handle_delayed_fit_to_screen(view: &mut ViewState) {
+fn handle_delayed_fit_to_screen(view: &mut GraphViewState) {
     if let Some(countdown) = view.delayed_fit_countdown {
         if countdown > 0 {
             view.delayed_fit_countdown = Some(countdown - 1);

@@ -4,7 +4,7 @@ use crate::config_templates::{load_template, TEMPLATES};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::config::file_ops::poll_file_import;
 use crate::shared::config::file_ops::trigger_file_import;
-use crate::shared::config::state::{ConfigurationFileState, StartupModalState};
+use crate::shared::config::state::{ConfigFileState, StartupModalStep};
 use crate::shared::constants::colors::COLOR_TEXT_MUTED;
 use crate::shared::constants::ui::{
     ICON_SIZE_LG, MODAL_WIDTH_MD, SPACING_LG, SPACING_SM, SPACING_XL, SPACING_XS,
@@ -64,14 +64,16 @@ fn startup_card(ui: &mut egui::Ui, icon: &str, title: &str, description: &str) -
     response.clicked()
 }
 
-pub fn render_startup_modal(ctx: &egui::Context, state: &mut ConfigurationFileState) {
+/// Renders the startup modal for choosing a configuration source.
+pub fn render_startup_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
     match state.modal_state {
-        StartupModalState::Initial => render_initial_modal(ctx, state),
-        StartupModalState::TemplateSelection => render_template_selection_modal(ctx, state),
+        StartupModalStep::Initial => render_initial_modal(ctx, state),
+        StartupModalStep::TemplateSelection => render_template_selection_modal(ctx, state),
     }
 }
 
-fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigurationFileState) {
+/// Renders the initial modal with options to use templates or import a file.
+fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
     // Use the same modal ID as template selection to avoid flicker when transitioning
     egui::Modal::new(egui::Id::new("startup_modal")).show(ctx, |ui| {
         ui.set_width(MODAL_WIDTH_MD);
@@ -88,7 +90,7 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigurationFileState)
                 "Default configuration",
                 "Choose from preset templates\nfor different network types",
             ) {
-                state.modal_state = StartupModalState::TemplateSelection;
+                state.modal_state = StartupModalStep::TemplateSelection;
             }
 
             // Right: import file
@@ -107,7 +109,8 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigurationFileState)
     });
 }
 
-fn render_template_selection_modal(ctx: &egui::Context, state: &mut ConfigurationFileState) {
+/// Renders the template selection modal with preset network configurations.
+fn render_template_selection_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
     // Use the same modal ID as initial modal to avoid flicker when transitioning
     egui::Modal::new(egui::Id::new("startup_modal")).show(ctx, |ui| {
         ui.set_width(MODAL_WIDTH_MD);
@@ -119,7 +122,7 @@ fn render_template_selection_modal(ctx: &egui::Context, state: &mut Configuratio
                 .on_hover_text("Back")
                 .clicked()
             {
-                state.modal_state = StartupModalState::Initial;
+                state.modal_state = StartupModalStep::Initial;
             }
             ui.heading("Choose a template");
         });

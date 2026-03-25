@@ -7,12 +7,12 @@ use crate::shared::constants::network::{
     IP_LOCAL_MAX, IP_LOCAL_MIN, MAC_ADDRESS_BYTES, MAC_LOCAL_BIT, MAC_LOCAL_MASK,
 };
 use crate::shared::constants::ui::{SPACING_MD, SPACING_SM};
-use crate::shared::widgets::helpers::{edit_optional_string_singleline, required_label};
+use crate::shared::widgets::helpers::{render_optional_string_input, required_label};
 use eframe::egui;
 use std::collections::HashMap;
 
 /// Scans all interfaces to find the next available IP in 192.168.0.x
-fn next_free_ip(ip_counts: &HashMap<String, usize>) -> Option<String> {
+fn find_available_ip(ip_counts: &HashMap<String, usize>) -> Option<String> {
     for x in IP_LOCAL_MIN..=IP_LOCAL_MAX {
         let candidate = format!("192.168.0.{x}");
         if !ip_counts.contains_key(&candidate) {
@@ -23,7 +23,7 @@ fn next_free_ip(ip_counts: &HashMap<String, usize>) -> Option<String> {
 }
 
 /// Interface section rendering
-pub fn ui_interfaces_section(
+pub fn render_interfaces_section(
     ui: &mut egui::Ui,
     host_idx: usize,
     host: &mut Host,
@@ -37,7 +37,7 @@ pub fn ui_interfaces_section(
             .on_hover_text("Add interface")
             .clicked()
         {
-            if let Some(ip) = next_free_ip(ip_counts) {
+            if let Some(ip) = find_available_ip(ip_counts) {
                 host.interfaces.push(Interface {
                     ip_addr: ip,
                     mac_addr: Some(generate_mac_until_unique(mac_counts)),
@@ -54,22 +54,22 @@ pub fn ui_interfaces_section(
         return;
     }
 
-    let mut iface_to_remove: Option<usize> = None;
+    let mut interface_to_remove: Option<usize> = None;
 
-    for (if_idx, iface) in host.interfaces.iter_mut().enumerate() {
-        ui_single_interface(
+    for (interface_idx, interface) in host.interfaces.iter_mut().enumerate() {
+        render_interface_card(
             ui,
             host_idx,
-            if_idx,
-            iface,
+            interface_idx,
+            interface,
             ip_counts,
             mac_counts,
-            &mut iface_to_remove,
+            &mut interface_to_remove,
         );
         ui.add_space(SPACING_MD);
     }
 
-    if let Some(idx) = iface_to_remove {
+    if let Some(idx) = interface_to_remove {
         host.interfaces.remove(idx);
     }
 }
@@ -77,19 +77,19 @@ pub fn ui_interfaces_section(
 /// Render a single interface as a collapsible card.
 ///
 /// Shows IP address in header, with editable fields for IP, MAC, and services in the body.
-fn ui_single_interface(
+fn render_interface_card(
     ui: &mut egui::Ui,
     host_idx: usize,
-    if_idx: usize,
-    iface: &mut Interface,
+    interface_idx: usize,
+    interface: &mut Interface,
     ip_counts: &HashMap<String, usize>,
     mac_counts: &HashMap<String, usize>,
     remove_request: &mut Option<usize>,
 ) {
-    let ip_label = iface.ip_addr.clone();
-    let id = ui.make_persistent_id(("iface", host_idx, if_idx));
+    let ip_label = interface.ip_addr.clone();
+    let id = ui.make_persistent_id(("interface", host_idx, interface_idx));
 
-    egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, if_idx == 0)
+    egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, interface_idx == 0)
         .show_header(ui, |ui| {
             ui.label(format!("Interface — {ip_label}"));
 
@@ -99,12 +99,12 @@ fn ui_single_interface(
                     .on_hover_text("Remove interface")
                     .clicked()
                 {
-                    *remove_request = Some(if_idx);
+                    *remove_request = Some(interface_idx);
                 }
             });
         })
         .body(|ui| {
-            render_interface_fields(ui, host_idx, if_idx, iface, ip_counts, mac_counts);
+            render_interface_fields(ui, host_idx, interface_idx, interface, ip_counts, mac_counts);
         });
 }
 
@@ -112,8 +112,8 @@ fn ui_single_interface(
 fn render_interface_fields(
     ui: &mut egui::Ui,
     host_idx: usize,
-    if_idx: usize,
-    iface: &mut Interface,
+    interface_idx: usize,
+    interface: &mut Interface,
     ip_counts: &HashMap<String, usize>,
     mac_counts: &HashMap<String, usize>,
 ) {
@@ -122,26 +122,26 @@ fn render_interface_fields(
     // IP address field with duplicate warning
     ui.horizontal(|ui| {
         required_label(ui, "IP");
-        ui.text_edit_singleline(&mut iface.ip_addr);
-        if ip_counts.get(&iface.ip_addr).copied().unwrap_or(0) > 1 {
+        ui.text_edit_singleline(&mut interface.ip_addr);
+        if ip_counts.get(&interface.ip_addr).copied().unwrap_or(0) > 1 {
             ui.colored_label(COLOR_ERROR, "IP already in use");
         }
     });
 
     // MAC address field with duplicate warning
-    edit_optional_string_singleline(ui, "MAC", &mut iface.mac_addr, "00:14:2A:3F:47:D8");
-    if let Some(mac) = &iface.mac_addr {
+    render_optional_string_input(ui, "MAC", &mut interface.mac_addr, "00:14:2A:3F:47:D8");
+    if let Some(mac) = &interface.mac_addr {
         if mac_counts.get(mac).copied().unwrap_or(0) > 1 {
             ui.colored_label(COLOR_ERROR, "MAC already in use");
         }
     }
 
     // Services section
-    host_services::ui_services_section(ui, host_idx, if_idx, iface);
+    host_services::render_services_section(ui, host_idx, interface_idx, interface);
 }
 
 /// Generate a random MAC address with the locally administered bit set.
-fn random_mac() -> String {
+fn generate_local_mac() -> String {
     let mut bytes: [u8; MAC_ADDRESS_BYTES] = rand::random();
 
     // Forcing local MAC
@@ -153,9 +153,10 @@ fn random_mac() -> String {
     )
 }
 
+/// Generate a unique random MAC address, retrying until one not in use is found.
 fn generate_mac_until_unique(mac_counts: &HashMap<String, usize>) -> String {
     loop {
-        let mac = random_mac();
+        let mac = generate_local_mac();
 
         if !mac_counts.contains_key(&mac) {
             return mac;

@@ -30,7 +30,7 @@ pub fn info_icon_with_tooltip(ui: &mut egui::Ui, tooltip: &str) {
 ///   the field is set back to `None`.
 ///
 /// This prevents exporting empty strings in YAML.
-pub fn edit_optional_string_singleline(
+pub fn render_optional_string_input(
     ui: &mut egui::Ui,
     label: &str,
     value: &mut Option<String>,
@@ -111,7 +111,7 @@ pub fn labeled_toggle(
 /// - If the user clears the text (or clicks "Clear"), it becomes `None`.
 ///
 /// This prevents exporting empty strings as `''` in YAML.
-pub fn edit_optional_string_multiline(
+pub fn render_optional_text_area(
     ui: &mut egui::Ui,
     label: &str,
     value: &mut Option<String>,

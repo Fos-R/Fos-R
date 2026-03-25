@@ -11,7 +11,7 @@ pub const PORT_MIN: u16 = 1;
 pub const PORT_MAX: u16 = 65535;
 
 /// Default port when service is unknown
-pub const PORT_DEFAULT_UNKNOWN: u16 = 0;
+pub const PORT_UNSPECIFIED: u16 = 0;
 
 // ============================================================================
 // IP ADDRESS RANGES

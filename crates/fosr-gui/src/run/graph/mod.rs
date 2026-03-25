@@ -8,5 +8,5 @@ pub mod screenshot;
 pub mod shapes;
 pub mod state;
 pub mod stream;
-pub mod utils;
+pub mod graph_layout;
 pub mod view;
