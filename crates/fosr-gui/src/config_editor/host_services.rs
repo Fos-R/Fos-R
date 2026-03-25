@@ -5,7 +5,7 @@ use crate::shared::constants::network::{PORT_DEFAULT_UNKNOWN, PORT_MAX, PORT_MIN
 use crate::shared::constants::ui::{
     PANEL_MIN_WIDTH, POPUP_MAX_HEIGHT, POPUP_MIN_WIDTH, SPACING_SM, SPACING_XS,
 };
-use crate::shared::widgets::helpers::info_icon;
+use crate::shared::widgets::helpers::info_icon_with_tooltip;
 use eframe::egui;
 
 pub const KNOWN_SERVICES: &[(&str, Option<u16>)] = &[
@@ -35,6 +35,17 @@ fn format_service(name: &str, port: Option<u16>) -> String {
     }
 }
 
+/// Look up the default port for a known service name.
+///
+/// Returns `PORT_DEFAULT_UNKNOWN` (0) if the service is not in KNOWN_SERVICES.
+fn default_port_for_service(name: &str) -> u16 {
+    KNOWN_SERVICES
+        .iter()
+        .find(|(n, _)| *n == name)
+        .and_then(|(_, p)| *p)
+        .unwrap_or(PORT_DEFAULT_UNKNOWN)
+}
+
 /// Service section rendering
 pub fn ui_services_section(
     ui: &mut egui::Ui,
@@ -48,7 +59,7 @@ pub fn ui_services_section(
     egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, false)
         .show_header(ui, |ui| {
             ui.label(format!("Services ({svc_count})"));
-            info_icon(ui, "The list of available services provided by the host.");
+            info_icon_with_tooltip(ui, "The list of available services provided by the host.");
         })
         .body(|ui| {
             let popup_id = ui.make_persistent_id(("svc_popup", host_idx, iface_idx));
@@ -134,7 +145,7 @@ pub fn ui_services_section(
         });
 }
 
-/// Single service rendering
+/// Render a single service row with name, remove button, and optional custom port.
 fn ui_single_service(
     ui: &mut egui::Ui,
     host_idx: usize,
@@ -144,19 +155,16 @@ fn ui_single_service(
     remove_request: &mut Option<usize>,
 ) {
     let (svc_name, mut svc_port) = parse_service(svc_raw);
+    let default_port = default_port_for_service(&svc_name);
 
-    let default_port = KNOWN_SERVICES
-        .iter()
-        .find(|(n, _)| *n == svc_name)
-        .and_then(|(_, p)| *p)
-        .unwrap_or(PORT_DEFAULT_UNKNOWN);
-
+    // Track whether custom port mode is enabled (persists across frames)
     let custom_port_id = ui.make_persistent_id(("custom_port", host_idx, iface_idx, svc_idx));
     let is_custom_by_default = svc_port.map_or(false, |p| p != default_port);
     let mut custom_port_enabled: bool =
         ui.data_mut(|d| d.get_temp(custom_port_id).unwrap_or(is_custom_by_default));
 
     ui.horizontal(|ui| {
+        // Remove button with service name
         let btn_text = format!("{} {}", svc_name, egui_material_icons::icons::ICON_CLEAR);
         if ui
             .button(btn_text)
@@ -166,45 +174,72 @@ fn ui_single_service(
             *remove_request = Some(svc_idx);
         }
 
+        // Custom port toggle
         if ui
             .checkbox(&mut custom_port_enabled, "Custom port")
             .changed()
         {
-            if !custom_port_enabled {
-                svc_port = if default_port == 0 {
-                    None
-                } else {
-                    Some(default_port)
-                };
-            }
+            svc_port = resolve_port_after_toggle(custom_port_enabled, default_port);
         }
 
-        if custom_port_enabled {
-            let mut port_val = svc_port.unwrap_or(default_port);
-            if ui
-                .add(
-                    egui::DragValue::new(&mut port_val)
-                        .speed(1)
-                        .range(PORT_MIN..=PORT_MAX),
-                )
-                .changed()
-            {
-                svc_port = Some(port_val);
-            }
-        } else {
-            ui.add_enabled(
-                false,
-                egui::Label::new(egui::RichText::new(format!("(default: {default_port})")).weak()),
-            );
-            svc_port = if default_port == 0 {
-                None
-            } else {
-                Some(default_port)
-            };
-        }
+        // Port value editor or default display
+        svc_port = render_port_editor(ui, custom_port_enabled, svc_port, default_port);
     });
 
+    // Persist custom port state
     ui.data_mut(|d| d.insert_temp(custom_port_id, custom_port_enabled));
 
+    // Update the service string
     *svc_raw = format_service(&svc_name, svc_port);
+}
+
+/// Resolve port value after toggling custom port checkbox.
+///
+/// When disabling custom port, returns the default (or None if default is 0).
+/// When enabling, returns None to be filled by the editor.
+fn resolve_port_after_toggle(custom_enabled: bool, default_port: u16) -> Option<u16> {
+    if custom_enabled {
+        None // Will be set by the DragValue
+    } else if default_port == PORT_DEFAULT_UNKNOWN {
+        None
+    } else {
+        Some(default_port)
+    }
+}
+
+/// Render the port editor: either a DragValue or a read-only default label.
+///
+/// Returns the selected port value (if any).
+fn render_port_editor(
+    ui: &mut egui::Ui,
+    custom_enabled: bool,
+    current_port: Option<u16>,
+    default_port: u16,
+) -> Option<u16> {
+    if custom_enabled {
+        let mut port_val = current_port.unwrap_or(default_port);
+        if ui
+            .add(
+                egui::DragValue::new(&mut port_val)
+                    .speed(1)
+                    .range(PORT_MIN..=PORT_MAX),
+            )
+            .changed()
+        {
+            Some(port_val)
+        } else {
+            Some(port_val) // Return current value even if unchanged
+        }
+    } else {
+        // Show default port as read-only label
+        ui.add_enabled(
+            false,
+            egui::Label::new(egui::RichText::new(format!("(default: {default_port})")).weak()),
+        );
+        if default_port == PORT_DEFAULT_UNKNOWN {
+            None
+        } else {
+            Some(default_port)
+        }
+    }
 }

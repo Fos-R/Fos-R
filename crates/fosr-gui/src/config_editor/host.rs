@@ -11,38 +11,9 @@ use crate::shared::constants::network::HOST_USAGE_DEFAULT;
 use crate::shared::constants::ui::{
     PANEL_MIN_WIDTH, POPUP_MAX_HEIGHT, POPUP_MIN_WIDTH, SPACING_MD, SPACING_SM,
 };
-use crate::shared::widgets::helpers::{edit_optional_string, info_icon};
+use crate::shared::widgets::helpers::{edit_optional_string_singleline, info_icon_with_tooltip};
 use eframe::egui;
 use std::collections::HashMap;
-
-/// Counts of IP and MAC address occurrences across all hosts.
-/// Used to detect duplicates for validation warnings.
-struct AddressCounts {
-    ip: HashMap<String, usize>,
-    mac: HashMap<String, usize>,
-}
-
-impl AddressCounts {
-    /// Count IP and MAC addresses across all hosts in the configuration.
-    fn from_configuration(config: &Configuration) -> Self {
-        let mut ip_counts: HashMap<String, usize> = HashMap::new();
-        let mut mac_counts: HashMap<String, usize> = HashMap::new();
-
-        for host in &config.hosts {
-            for iface in &host.interfaces {
-                *ip_counts.entry(iface.ip_addr.clone()).or_insert(0) += 1;
-                if let Some(mac) = &iface.mac_addr {
-                    *mac_counts.entry(mac.clone()).or_insert(0) += 1;
-                }
-            }
-        }
-
-        Self {
-            ip: ip_counts,
-            mac: mac_counts,
-        }
-    }
-}
 
 /// Render the hosts section with add button and collapsible host cards.
 ///
@@ -67,13 +38,13 @@ pub fn ui_hosts_section(ui: &mut egui::Ui, model: &mut Configuration) {
     }
 
     // Pre-compute address counts for duplicate detection
-    let addr_counts = AddressCounts::from_configuration(model);
+    let (ip_counts, mac_counts) = host_validation::count_addresses(model);
 
     // Track removal request (can't remove during iteration)
     let mut host_to_remove: Option<usize> = None;
 
     for (idx, host) in model.hosts.iter_mut().enumerate() {
-        ui_single_host(ui, idx, host, &addr_counts, &mut host_to_remove);
+        ui_single_host(ui, idx, host, &ip_counts, &mac_counts, &mut host_to_remove);
         ui.add_space(SPACING_MD);
     }
 
@@ -91,12 +62,12 @@ fn ui_single_host(
     ui: &mut egui::Ui,
     index: usize,
     host: &mut Host,
-    addr_counts: &AddressCounts,
+    ip_counts: &HashMap<String, usize>,
+    mac_counts: &HashMap<String, usize>,
     remove_request: &mut Option<usize>,
 ) {
     let display_name = host_display_name(host);
-    let errors =
-        host_validation::validate_host(host, &addr_counts.ip, &addr_counts.mac);
+    let errors = host_validation::validate_host(host, ip_counts, mac_counts);
 
     // First host is expanded by default
     let id = ui.make_persistent_id(("host", index));
@@ -108,7 +79,7 @@ fn ui_single_host(
         .body(|ui| {
             render_host_basic_fields(ui, index, host);
             ui.separator();
-            host_interfaces::ui_interfaces_section(ui, index, host, &addr_counts.ip, &addr_counts.mac);
+            host_interfaces::ui_interfaces_section(ui, index, host, ip_counts, mac_counts);
         });
 }
 
@@ -189,7 +160,7 @@ fn ui_host_summary_tooltip(ui: &mut egui::Ui, host: &Host) {
 /// Render the basic host fields: OS, hostname, usage, type, and client protocols.
 fn render_host_basic_fields(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
     ui_host_os_selector(ui, host_idx, &mut host.os);
-    edit_optional_string(ui, "Hostname", &mut host.hostname, "host1");
+    edit_optional_string_singleline(ui, "Hostname", &mut host.hostname, "host1");
     ui_host_usage_field(ui, host);
     ui_host_type_selector(ui, host_idx, host);
     ui_host_client_protocols(ui, host_idx, host);
@@ -227,9 +198,9 @@ fn ui_host_os_selector(ui: &mut egui::Ui, host_idx: usize, host_os: &mut Option<
 
         if host_os.is_some()
             && ui
-                .button(egui_material_icons::icons::ICON_CLEAR)
-                .on_hover_text("Clear OS")
-                .clicked()
+            .button(egui_material_icons::icons::ICON_CLEAR)
+            .on_hover_text("Clear OS")
+            .clicked()
         {
             *host_os = None;
         }
@@ -243,7 +214,7 @@ fn ui_host_os_selector(ui: &mut egui::Ui, host_idx: usize, host_os: &mut Option<
 fn ui_host_usage_field(ui: &mut egui::Ui, host: &mut Host) {
     ui.horizontal(|ui| {
         ui.label("Usage");
-        info_icon(
+        info_icon_with_tooltip(
             ui,
             &format!(
                 "Optional (default value: {0}). The usage intensity of the host. \
@@ -284,7 +255,7 @@ fn ui_host_usage_field(ui: &mut egui::Ui, host: &mut Host) {
 fn ui_host_type_selector(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
     ui.horizontal(|ui| {
         ui.label("Type");
-        info_icon(
+        info_icon_with_tooltip(
             ui,
             "Defines the role of the host. A server provides services, while a user (client) \
              consumes services. If the host is a server, it must define services. If it is a user, \
@@ -333,7 +304,7 @@ fn ui_host_type_selector(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
 fn ui_host_client_protocols(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
     ui.horizontal(|ui| {
         ui.label("Client protocols");
-        info_icon(ui, "Specify what services the host is a client of.");
+        info_icon_with_tooltip(ui, "Specify what services the host is a client of.");
 
         let popup_id = ui.make_persistent_id(("client_proto_popup", host_idx));
         let add_btn_resp = ui

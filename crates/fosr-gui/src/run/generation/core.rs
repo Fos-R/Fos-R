@@ -12,6 +12,9 @@ use std::sync::mpsc::Sender;
 use std::time::UNIX_EPOCH as STD_UNIX_EPOCH;
 use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+/// Entry point for PCAP generation. Runs the 4-stage pipeline and sends results via channels.
+///
+/// Returns `Ok(())` on success, or `Err(message)` if generation fails.
 pub fn generate(
     seed: Option<u64>,
     profile: Option<String>,
@@ -24,7 +27,7 @@ pub fn generate(
     pcap_sender: Option<Sender<Vec<u8>>>,
     throughput_sender: Option<Sender<String>>,
     cancelled: Arc<AtomicBool>,
-) {
+) -> Result<(), String> {
     // Create a closure to send progress updates
     let send_progress = |progress: f32| {
         if let Some(sender) = &progress_sender {
@@ -40,62 +43,21 @@ pub fn generate(
     };
 
     // Load the models
-    let source = models::ModelsSource::Legacy;
-    let mut model = models::Models::from_source(source).unwrap();
-    if let Some(config) = profile {
-        model = model.with_string_config(&config).unwrap();
-    }
-
+    let model = load_models(&profile)?;
     let automata_library = Arc::new(model.automata);
     let bn = Arc::new(model.bn);
 
     // Handle the parameters: either there is a packet count target or a duration
-    let d = humantime::parse_duration(&duration).expect("Duration could not be parsed.");
+    let d = humantime::parse_duration(&duration)
+        .map_err(|e| format!("Invalid duration '{}': {}", duration, e))?;
     log::info!("Generating a pcap of {d:?}");
     let _target = Target::GenerationDuration(d);
-    let duration = Some(d);
 
     if let Some(s) = seed {
         log::info!("Generating with seed {s}");
     }
-    let initial_ts: Duration = if let Some(start_time) = start_time {
-        // try to parse a date
-        if let Ok(d) = humantime::parse_rfc3339_weak(&start_time) {
-            d.duration_since(STD_UNIX_EPOCH).unwrap()
-        } else if let Ok(n) = start_time.parse::<u64>() {
-            Duration::from_secs(n)
-        } else {
-            panic!("Could not parse start time");
-        }
-    } else {
-        SystemTime::now().duration_since(UNIX_EPOCH).unwrap()
-    };
-
-    let tz_offset = match timezone {
-        Some(tz_str) => {
-            let tz = tz_str.parse::<Tz>().expect("Could not parse the timezone");
-            let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
-                .unwrap()
-                .naive_utc();
-            let tz = tz.offset_from_utc_datetime(&date).fix();
-            log::info!("Using {tz_str} timezone (UTC{tz})");
-            tz
-        }
-        None => {
-            // Detect the local timezone
-            let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
-                .unwrap()
-                .naive_utc();
-            let tz = chrono::Local::now()
-                .timezone()
-                .offset_from_local_datetime(&date)
-                .single()
-                .expect("Ambiguous local date from timestamp")
-                .fix();
-            log::info!("Using local timezone (UTC{tz})");
-            tz
-        }
-    };
+    let initial_ts = parse_start_time(start_time)?;
+    let tz_offset = resolve_timezone_offset(timezone, initial_ts)?;
 
     let s0 = stage0::BinBasedGenerator::new(
         seed,
@@ -103,7 +65,7 @@ pub fn generate(
         None,
         model.time_bins,
         initial_ts,
-        duration,
+        Some(d),
         tz_offset,
     );
     let s1 = stage1::bayesian_networks::BNGenerator::new(bn, false);
@@ -120,9 +82,80 @@ pub fn generate(
         send_pcap,
         throughput_sender,
         cancelled,
-    );
+    )
 }
 
+/// Loads ML models from bundled assets, optionally applying a config profile.
+fn load_models(profile: &Option<String>) -> Result<models::Models, String> {
+    let source = models::ModelsSource::Legacy;
+    let mut model = models::Models::from_source(source)
+        .map_err(|e| format!("Failed to load ML models: {}", e))?;
+    if let Some(config) = profile {
+        model = model
+            .with_string_config(config)
+            .map_err(|e| format!("Failed to apply config: {}", e))?;
+    }
+    Ok(model)
+}
+
+/// Parses start time from RFC3339 string, Unix timestamp, or returns current time if None.
+fn parse_start_time(start_time: Option<String>) -> Result<Duration, String> {
+    match start_time {
+        Some(start_time) => {
+            // try to parse a date
+            if let Ok(d) = humantime::parse_rfc3339_weak(&start_time) {
+                d.duration_since(STD_UNIX_EPOCH)
+                    .map_err(|e| format!("Invalid start time: {}", e))
+            } else if let Ok(n) = start_time.parse::<u64>() {
+                Ok(Duration::from_secs(n))
+            } else {
+                Err(format!(
+                    "Could not parse start time '{}' (expected RFC3339 date or Unix timestamp)",
+                    start_time
+                ))
+            }
+        }
+        None => SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|e| format!("Failed to get current time: {}", e)),
+    }
+}
+
+/// Resolves timezone offset from IANA string, or detects local timezone if None.
+fn resolve_timezone_offset(
+    timezone: Option<String>,
+    initial_ts: Duration,
+) -> Result<chrono::FixedOffset, String> {
+    let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
+        .ok_or_else(|| "Invalid timestamp: value out of range".to_string())?
+        .naive_utc();
+
+    match timezone {
+        Some(tz_str) => {
+            let tz = tz_str
+                .parse::<Tz>()
+                .map_err(|e| format!("Invalid timezone '{}': {}", tz_str, e))?;
+            let offset = tz.offset_from_utc_datetime(&date).fix();
+            log::info!("Using {tz_str} timezone (UTC{offset})");
+            Ok(offset)
+        }
+        None => {
+            // Detect the local timezone
+            let offset = chrono::Local::now()
+                .timezone()
+                .offset_from_local_datetime(&date)
+                .single()
+                .ok_or_else(|| {
+                    "Could not determine local timezone (ambiguous or invalid date)".to_string()
+                })?
+                .fix();
+            log::info!("Using local timezone (UTC{offset})");
+            Ok(offset)
+        }
+    }
+}
+
+/// Executes the 4-stage pipeline sequentially with cancellation support.
 fn run_single_thread(
     order_pcap: bool,
     s0: impl stage0::Stage0,
@@ -133,7 +166,7 @@ fn run_single_thread(
     send_pcap: impl Fn(Vec<u8>),
     throughput_sender: Option<Sender<String>>,
     cancelled: Arc<AtomicBool>,
-) {
+) -> Result<(), String> {
     let is_cancelled = || cancelled.load(Ordering::Relaxed);
 
     let start = Instant::now();
@@ -142,15 +175,15 @@ fn run_single_thread(
     let vec = stage0::run_vec(s0);
     if is_cancelled() {
         log::info!("Generation cancelled after stage 0");
-        return;
+        return Ok(());
     }
     send_progress(0.2);
 
     log::info!("Stage 1 generation");
-    let vec = stage1::run_vec(s1, vec).unwrap();
+    let vec = stage1::run_vec(s1, vec).map_err(|e| format!("Stage 1 failed: {}", e))?;
     if is_cancelled() {
         log::info!("Generation cancelled after stage 1");
-        return;
+        return Ok(());
     }
     send_progress(0.4);
 
@@ -158,36 +191,16 @@ fn run_single_thread(
     let vec = stage2::run_vec(s2, vec);
     if is_cancelled() {
         log::info!("Generation cancelled after stage 2");
-        return;
+        return Ok(());
     }
     send_progress(0.6);
 
-    let mut all_packets = vec![];
     log::info!("Stage 3 generation");
-    all_packets.append(&mut stage3::run_vec(
-        |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
-        vec.udp,
-    ));
-    if is_cancelled() {
-        log::info!("Generation cancelled during stage 3");
-        return;
-    }
-    all_packets.append(&mut stage3::run_vec(
-        |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
-        vec.tcp,
-    ));
-    if is_cancelled() {
-        log::info!("Generation cancelled during stage 3");
-        return;
-    }
-    all_packets.append(&mut stage3::run_vec(
-        |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
-        vec.icmp,
-    ));
-    if is_cancelled() {
-        log::info!("Generation cancelled during stage 3");
-        return;
-    }
+    let all_packets = generate_stage3_packets(&s3, vec, &is_cancelled);
+    let mut all_packets = match all_packets {
+        Some(p) => p,
+        None => return Ok(()), // Cancelled
+    };
     send_progress(0.8);
 
     let gen_duration = start.elapsed().as_secs_f64();
@@ -203,7 +216,7 @@ fn run_single_thread(
 
     if is_cancelled() {
         log::info!("Generation cancelled");
-        return;
+        return Ok(());
     }
 
     if order_pcap {
@@ -213,10 +226,50 @@ fn run_single_thread(
 
     if is_cancelled() {
         log::info!("Generation cancelled");
-        return;
+        return Ok(());
     }
 
-    let pcap_bytes = stage3::to_pcap_vec(&all_packets).expect("Error converting to pcap");
+    let pcap_bytes =
+        stage3::to_pcap_vec(&all_packets).map_err(|e| format!("Failed to create PCAP: {}", e))?;
     send_pcap(pcap_bytes);
     send_progress(1.0);
+    Ok(())
+}
+
+/// Generates UDP, TCP, and ICMP packets. Returns None if cancelled.
+fn generate_stage3_packets(
+    s3: &stage3::Stage3,
+    vec: stage2::S2Vector,
+    is_cancelled: &impl Fn() -> bool,
+) -> Option<Vec<fosr_lib::Packet>> {
+    let mut all_packets = vec![];
+
+    all_packets.extend(stage3::run_vec(
+        |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
+        vec.udp,
+    ));
+    if is_cancelled() {
+        log::info!("Generation cancelled during stage 3");
+        return None;
+    }
+
+    all_packets.extend(stage3::run_vec(
+        |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
+        vec.tcp,
+    ));
+    if is_cancelled() {
+        log::info!("Generation cancelled during stage 3");
+        return None;
+    }
+
+    all_packets.extend(stage3::run_vec(
+        |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
+        vec.icmp,
+    ));
+    if is_cancelled() {
+        log::info!("Generation cancelled during stage 3");
+        return None;
+    }
+
+    Some(all_packets)
 }

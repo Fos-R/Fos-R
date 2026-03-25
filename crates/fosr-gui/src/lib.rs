@@ -8,9 +8,11 @@ use app::FosrApp;
 use eframe::wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
 
+/// Function that can be called from JavaScript to start the Fos-R GUI app.
+/// The `canvas_id` argument is the ID of the HTML canvas element where the app will be rendered.
 #[wasm_bindgen]
 pub async fn start(canvas_id: &str) -> Result<(), JsValue> {
-    // Redirect `log` message to `console.log`:
+    // Redirect logs to the browser console
     if let Err(e) = eframe::WebLogger::init(log::LevelFilter::Info) {
         log::warn!("WebLogger initialization failed: {:?}", e);
     }
@@ -22,7 +24,7 @@ pub async fn start(canvas_id: &str) -> Result<(), JsValue> {
         .document()
         .expect("No document");
 
-    // The canvas_id is passed as an argument from the HTML file
+    // The `canvas_id` is passed as an argument from the HTML file
     // and identifies the canvas element on which the app will be rendered
     let canvas = document
         .get_element_by_id(canvas_id)

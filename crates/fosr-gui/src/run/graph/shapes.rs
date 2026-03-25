@@ -21,10 +21,6 @@ use eframe::egui::{self, Color32, Pos2, Rect, Shape, TextureOptions, Vec2, load:
 use egui_graphs::{DisplayEdge, DisplayNode, DrawContext, Node, NodeProps};
 use fosr_lib::L7Proto;
 
-// ============================================================================
-// HYBRID SCALING FUNCTIONS
-// ============================================================================
-
 /// Calculate node radius using hybrid linear/proportional scaling.
 ///
 /// The scaling works in two phases:
@@ -96,7 +92,7 @@ impl NetworkNodeShape {
         )
     }
 
-    /// Get the image source for this node type
+    /// Get the image source for this node type.
     fn image_for_node_type(node_type: &NodeType) -> egui::ImageSource<'static> {
         match node_type {
             NodeType::Internet => IMG_INTERNET,
@@ -104,41 +100,10 @@ impl NetworkNodeShape {
             NodeType::User => IMG_COMPUTER,
         }
     }
-}
 
-impl From<NodeProps<NodeData>> for NetworkNodeShape {
-    fn from(props: NodeProps<NodeData>) -> Self {
-        let (radius, node_type, hostname, ips) = Self::style_from_payload(&props.payload);
-        Self {
-            radius,
-            hostname,
-            ips,
-            location: props.location(),
-            node_type,
-        }
-    }
-}
-
-impl DisplayNode<NodeData, EdgeData, petgraph::Undirected, petgraph::stable_graph::DefaultIx>
-    for NetworkNodeShape
-{
-    /// Determines where edges should connect to the node shape
-    fn closest_boundary_point(&self, dir: Vec2) -> Pos2 {
-        if dir.length() == 0.0 {
-            self.location
-        } else {
-            self.location + dir.normalized() * self.radius
-        }
-    }
-
-    /// Set how a node is drawn in the graph
-    /// A node can be composed of several shapes
-    fn shapes(&mut self, ctx: &DrawContext) -> Vec<Shape> {
+    /// Render the node icon at the given position and radius.
+    fn render_icon(&self, ctx: &DrawContext, pos: Pos2, radius: f32) -> Vec<Shape> {
         let mut shapes = Vec::new();
-        let pos = ctx.meta.canvas_to_screen_pos(self.location);
-        let radius = ctx.meta.canvas_to_screen_size(self.radius);
-
-        // Load and draw node icon
         let image_source = Self::image_for_node_type(&self.node_type);
         let size = radius * 2.0;
         let rect = Rect::from_center_size(pos, Vec2::splat(size));
@@ -155,7 +120,12 @@ impl DisplayNode<NodeData, EdgeData, petgraph::Undirected, petgraph::stable_grap
             shapes.push(Shape::image(texture.id, rect, uv, tint));
         }
 
-        // Draw text label: hostname (italic) and IPs (normal)
+        shapes
+    }
+
+    /// Render the node labels (hostname + IPs) below the icon.
+    fn render_labels(&self, ctx: &DrawContext, pos: Pos2, radius: f32) -> Vec<Shape> {
+        let mut shapes = Vec::new();
         let font_size = TEXT_SIZE_DEFAULT;
         let font_id = egui::FontId::proportional(font_size);
         let mut current_y = pos.y + radius + SPACING_XS;
@@ -200,6 +170,45 @@ impl DisplayNode<NodeData, EdgeData, petgraph::Undirected, petgraph::stable_grap
                 }
             }
         });
+
+        shapes
+    }
+}
+
+impl From<NodeProps<NodeData>> for NetworkNodeShape {
+    fn from(props: NodeProps<NodeData>) -> Self {
+        let (radius, node_type, hostname, ips) = Self::style_from_payload(&props.payload);
+        Self {
+            radius,
+            hostname,
+            ips,
+            location: props.location(),
+            node_type,
+        }
+    }
+}
+
+impl DisplayNode<NodeData, EdgeData, petgraph::Undirected, petgraph::stable_graph::DefaultIx>
+    for NetworkNodeShape
+{
+    /// Determines where edges should connect to the node shape
+    fn closest_boundary_point(&self, dir: Vec2) -> Pos2 {
+        if dir.length() == 0.0 {
+            self.location
+        } else {
+            self.location + dir.normalized() * self.radius
+        }
+    }
+
+    /// Set how a node is drawn in the graph.
+    /// A node can be composed of several shapes (icon + labels).
+    fn shapes(&mut self, ctx: &DrawContext) -> Vec<Shape> {
+        let mut shapes = Vec::new();
+        let pos = ctx.meta.canvas_to_screen_pos(self.location);
+        let radius = ctx.meta.canvas_to_screen_size(self.radius);
+
+        shapes.extend(self.render_icon(ctx, pos, radius));
+        shapes.extend(self.render_labels(ctx, pos, radius));
 
         shapes
     }

@@ -8,44 +8,29 @@ use crate::shared::constants::ui::{
 use eframe::egui::{self, TextFormat, text::LayoutJob};
 
 /// Display a small info icon with a tooltip.
-pub fn info_icon(ui: &mut egui::Ui, tooltip: &str) {
+pub fn info_icon_with_tooltip(ui: &mut egui::Ui, tooltip: &str) {
     ui.add_space(INFO_ICON_SPACING);
     ui.label(
         egui::RichText::new("ℹ")
             .color(COLOR_TEXT_MUTED)
             .size(INFO_ICON_SIZE),
     )
-    .on_hover_cursor(egui::CursorIcon::Help)
-    .on_hover_ui(|ui| {
-        ui.set_max_width(INFO_TOOLTIP_MAX_WIDTH);
-        ui.label(tooltip);
-    });
+        .on_hover_cursor(egui::CursorIcon::Help)
+        .on_hover_ui(|ui| {
+            ui.set_max_width(INFO_TOOLTIP_MAX_WIDTH);
+            ui.label(tooltip);
+        });
 }
 
-/// Displays an editor for an `Option<String>` field in an egui UI.
+/// Displays a single-line editor for an `Option<String>`.
 ///
-/// This helper is designed for configuration fields that are **optional**:
 /// - If the field is `None`, the text input starts empty.
 /// - If the user types a non-empty value, the field becomes `Some(String)`.
 /// - If the user clears the input (or clicks the "Clear" button),
 ///   the field is set back to `None`.
 ///
-/// # Parameters
-/// - `ui`: The egui UI context.
-/// - `label`: The label displayed next to the input field.
-/// - `value`: The optional string being edited.
-/// - `hint`: Placeholder text shown when the field is empty.
-///
-/// # Typical usage
-/// ```ignore
-/// edit_optional_string(
-///     ui,
-///     "Author (optional):",
-///     &mut model.metadata.author,
-///     "Jane Doe",
-/// );
-/// ```
-pub fn edit_optional_string(
+/// This prevents exporting empty strings in YAML.
+pub fn edit_optional_string_singleline(
     ui: &mut egui::Ui,
     label: &str,
     value: &mut Option<String>,
@@ -99,6 +84,7 @@ pub fn labeled_toggle(
         .show(ui, |ui| {
             // Remove the hover stroke on selectable labels inside this toggle
             ui.style_mut().visuals.widgets.hovered.bg_stroke = egui::Stroke::NONE;
+
             ui.spacing_mut().item_spacing = egui::vec2(TOGGLE_ITEM_SPACING, 0.0);
             ui.horizontal(|ui| {
                 let first = ui.selectable_label(*is_first_selected, first_label);
@@ -114,6 +100,7 @@ pub fn labeled_toggle(
                 second.on_hover_text(tooltip_second);
             });
         });
+    // Avoid returning the response, as it's not used
     let _ = resp;
 }
 
@@ -124,7 +111,7 @@ pub fn labeled_toggle(
 /// - If the user clears the text (or clicks "Clear"), it becomes `None`.
 ///
 /// This prevents exporting empty strings as `''` in YAML.
-pub fn edit_optional_multiline_string(
+pub fn edit_optional_string_multiline(
     ui: &mut egui::Ui,
     label: &str,
     value: &mut Option<String>,
@@ -160,6 +147,7 @@ pub fn edit_optional_multiline_string(
 
 // Helper for required label with red *
 pub fn required_label(ui: &mut egui::Ui, text: &str) {
+    // A layout job is a way to build complex text with different formatting
     let mut job = LayoutJob::default();
 
     job.append(

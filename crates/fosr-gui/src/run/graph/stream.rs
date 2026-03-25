@@ -12,7 +12,12 @@ use crate::shared::constants::network::STREAM_MAX_PER_CYCLE_WASM;
 use crate::shared::constants::network::STREAM_RATE_LIMIT_MS;
 use crate::shared::constants::network::{STREAM_BUFFER_AHEAD_SECS, STREAM_CHECK_INTERVAL_MS};
 use chrono::{DateTime, Offset, TimeZone};
-use fosr_lib::{L7Proto, models, stage0, stage1::Stage1, stage1::bayesian_networks::BNGenerator};
+use fosr_lib::{
+    L7Proto, models,
+    stage0,
+    stage1::Stage1,
+    stage1::bayesian_networks::BNGenerator,
+};
 use std::collections::BinaryHeap;
 use std::net::Ipv4Addr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -109,34 +114,220 @@ impl Ord for ScheduledFlow {
     }
 }
 
+impl ScheduledFlow {
+    /// Create a scheduled flow from flow data, relative to the initial timestamp.
+    fn from_flow_data(
+        flow_data: &fosr_lib::FlowData,
+        initial_timestamp: Duration,
+    ) -> Self {
+        let scheduled_time = if flow_data.timestamp >= initial_timestamp {
+            flow_data.timestamp - initial_timestamp
+        } else {
+            Duration::ZERO
+        };
+
+        Self {
+            event: FlowEvent {
+                src_ip: flow_data.src_ip,
+                dst_ip: flow_data.dst_ip,
+                protocol: flow_data.l7_proto,
+                timestamp: flow_data.timestamp,
+            },
+            scheduled_time,
+        }
+    }
+}
+
+/// Mutable state for the streaming loop.
+///
+/// Uses a binary heap to store flows in timestamp order, ensuring they are
+/// emitted in the correct sequence. Flows are generated ahead of time (buffer)
+/// to avoid overloading the CPU by continuously generating them.
+struct StreamingState {
+    virtual_time: VirtualTime,
+    /// Pending flows ordered by scheduled time (max-heap, so we reverse the order).
+    pending_flows: BinaryHeap<ScheduledFlow>,
+    #[cfg(not(target_arch = "wasm32"))]
+    flow_count: usize,
+    #[cfg(not(target_arch = "wasm32"))]
+    last_generation: Instant,
+    /// How far ahead to generate flows (avoids CPU spinning).
+    buffer_ahead: Duration,
+}
+
+impl StreamingState {
+    fn new() -> Self {
+        Self {
+            virtual_time: VirtualTime::new(),
+            pending_flows: BinaryHeap::new(),
+            #[cfg(not(target_arch = "wasm32"))]
+            flow_count: 0,
+            #[cfg(not(target_arch = "wasm32"))]
+            last_generation: Instant::now(),
+            buffer_ahead: Duration::from_secs(STREAM_BUFFER_AHEAD_SECS),
+        }
+    }
+
+    /// Advance virtual time by the current speed.
+    fn tick(&mut self, speed: f32) {
+        self.virtual_time.tick(speed);
+    }
+
+    /// Get the current virtual elapsed time.
+    fn virtual_elapsed(&self) -> Duration {
+        self.virtual_time.elapsed()
+    }
+
+    /// Check if we need to generate more flows (buffer running low).
+    ///
+    /// If the heap is empty, `.peek()` returns `None`, and `.map_or()` returns `true`
+    /// (we need flows). Otherwise, check if the farthest scheduled flow is within
+    /// the buffer window.
+    fn needs_more_flows(&self) -> bool {
+        self.pending_flows
+            .peek()
+            .map_or(true, |f| f.scheduled_time < self.virtual_elapsed() + self.buffer_ahead)
+    }
+
+    /// Check if rate limiting allows generation (desktop only).
+    ///
+    /// Limits generation rate to avoid CPU spinning when the buffer is already full.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn can_generate(&self) -> bool {
+        self.pending_flows.is_empty()
+            || self.last_generation.elapsed() >= Duration::from_millis(STREAM_RATE_LIMIT_MS)
+    }
+}
+
+/// Generate flows and add them to the pending queue.
+///
+/// Returns false if no more timestamps are available from Stage 0.
+#[cfg(not(target_arch = "wasm32"))]
+fn generate_flows_to_buffer(
+    state: &mut StreamingState,
+    s0: &mut stage0::BinBasedGenerator,
+    s1: &BNGenerator,
+    initial_timestamp: Duration,
+) -> bool {
+    if !state.can_generate() {
+        return true; // Rate limited, but Stage 0 may still have more
+    }
+
+    if let Some(timestamp) = s0.next() {
+        if let Ok(flows) = s1.generate_flows(timestamp) {
+            for seeded_flow in flows {
+                let flow_data = seeded_flow.data.get_data();
+                let scheduled = ScheduledFlow::from_flow_data(&flow_data, initial_timestamp);
+                state.pending_flows.push(scheduled);
+                state.flow_count += 1;
+            }
+        }
+        state.last_generation = Instant::now();
+        true
+    } else {
+        false // No more timestamps
+    }
+}
+
+/// Generate flows for WASM (with per-cycle limit).
+#[cfg(target_arch = "wasm32")]
+fn generate_flows_to_buffer_wasm(
+    state: &mut StreamingState,
+    s0: &mut stage0::BinBasedGenerator,
+    s1: &BNGenerator,
+    initial_timestamp: Duration,
+) {
+    let mut generated_this_cycle = 0;
+
+    while state.needs_more_flows() && generated_this_cycle < STREAM_MAX_PER_CYCLE_WASM {
+        if let Some(timestamp) = s0.next() {
+            if let Ok(flows) = s1.generate_flows(timestamp) {
+                for seeded_flow in flows {
+                    let flow_data = seeded_flow.data.get_data();
+                    let scheduled = ScheduledFlow::from_flow_data(&flow_data, initial_timestamp);
+                    state.pending_flows.push(scheduled);
+                }
+            }
+            generated_this_cycle += 1;
+        } else {
+            break;
+        }
+    }
+}
+
+/// Emit flows whose scheduled time has passed (in virtual time).
+#[cfg(not(target_arch = "wasm32"))]
+fn emit_scheduled_flows(
+    state: &mut StreamingState,
+    sender: &Sender<FlowEvent>,
+) {
+    let virtual_elapsed = state.virtual_elapsed();
+
+    while let Some(scheduled) = state.pending_flows.peek() {
+        if scheduled.scheduled_time <= virtual_elapsed {
+            let scheduled = state.pending_flows.pop().unwrap();
+            log::debug!(
+                "Emitting flow #{}: {} -> {} ({:?}) at virtual {:?}",
+                state.flow_count,
+                scheduled.event.src_ip,
+                scheduled.event.dst_ip,
+                scheduled.event.protocol,
+                virtual_elapsed
+            );
+
+            if let Err(e) = sender.send(scheduled.event) {
+                log::error!("Failed to send flow event: {}", e);
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+}
+
+/// Emit flows for WASM (simplified, no debug logging).
+#[cfg(target_arch = "wasm32")]
+fn emit_scheduled_flows_wasm(
+    state: &mut StreamingState,
+    sender: &Sender<FlowEvent>,
+) {
+    let virtual_elapsed = state.virtual_elapsed();
+
+    while let Some(scheduled) = state.pending_flows.peek() {
+        if scheduled.scheduled_time <= virtual_elapsed {
+            let scheduled = state.pending_flows.pop().unwrap();
+            let _ = sender.send(scheduled.event);
+        } else {
+            break;
+        }
+    }
+}
+
 /// Flow streamer that continuously generates flow events
 pub struct FlowStreamer {
     s0: stage0::BinBasedGenerator,
     s1: BNGenerator,
     sender: Sender<FlowEvent>,
     running: Arc<AtomicBool>,
-    /// The initial timestamp from Stage 0 (for calculating relative times)
     initial_timestamp: Duration,
-    /// Speed multiplier (1.0 = real-time) - shared for runtime updates
     speed: Arc<RwLock<f32>>,
 }
 
 impl FlowStreamer {
-    /// Create a new flow streamer
-    /// If config_content is None, uses the default BN model without any config applied
-    /// If config_content is Some, applies the config to remap IPs
-    /// Speed controls how fast flows are emitted (1.0 = real-time) - can be updated at runtime
+    /// Create a new flow streamer.
+    ///
+    /// If `config_content` is `None`, uses the default BN model without any config applied.
+    /// If `config_content` is `Some`, applies the config to remap IPs.
+    /// Speed controls how fast flows are emitted (1.0 = real-time) - can be updated at runtime.
     pub fn new(
         config_content: Option<&str>,
         speed: Arc<RwLock<f32>>,
         sender: Sender<FlowEvent>,
     ) -> Result<Self, String> {
-        // Load models
         let source = models::ModelsSource::Legacy;
         let mut model = models::Models::from_source(source)
             .map_err(|e| format!("Failed to load models: {}", e))?;
 
-        // Only apply config if provided
         if let Some(config) = config_content {
             model = model
                 .with_string_config(config)
@@ -149,29 +340,12 @@ impl FlowStreamer {
         let _automata_library = Arc::new(model.automata);
         let bn = Arc::new(model.bn);
 
-        // Get initial timestamp (current time)
         let initial_ts = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| format!("Failed to get time: {}", e))?;
 
-        // Get local timezone
-        // TODO: use the value from the generation tab?
-        // TODO: extract the logic in utils to share it with generation_core
-        let tz_offset = {
-            let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
-                .unwrap()
-                .naive_utc();
-            let tz = chrono::Local::now()
-                .timezone()
-                .offset_from_local_datetime(&date)
-                .single()
-                .expect("Ambiguous local date from timestamp")
-                .fix();
-            log::info!("Using local timezone (UTC{tz})");
-            tz
-        };
+        let tz_offset = Self::get_local_timezone_offset(initial_ts);
 
-        // Create Stage 0 generator
         let s0 = stage0::BinBasedGenerator::new(
             None, // Random seed
             false,
@@ -182,7 +356,6 @@ impl FlowStreamer {
             tz_offset,
         );
 
-        // Create Stage 1 generator
         let s1 = BNGenerator::new(bn, false);
 
         Ok(Self {
@@ -195,7 +368,25 @@ impl FlowStreamer {
         })
     }
 
-    /// Start streaming flows in the background
+    /// Get the local timezone offset for the given timestamp.
+    ///
+    /// TODO: Use the value from the generation tab?
+    /// TODO: Extract this logic to share with generation_core.
+    fn get_local_timezone_offset(timestamp: Duration) -> chrono::FixedOffset {
+        let date = DateTime::from_timestamp(timestamp.as_secs() as i64, 0)
+            .unwrap()
+            .naive_utc();
+        let tz = chrono::Local::now()
+            .timezone()
+            .offset_from_local_datetime(&date)
+            .single()
+            .expect("Ambiguous local date from timestamp")
+            .fix();
+        log::info!("Using local timezone (UTC{tz})");
+        tz
+    }
+
+    /// Start streaming flows in the background.
     pub fn start(&self) {
         self.running.store(true, Ordering::SeqCst);
         let sender = self.sender.clone();
@@ -216,7 +407,7 @@ impl FlowStreamer {
         });
     }
 
-    /// Stop streaming flows
+    /// Stop streaming flows.
     pub fn stop(&self) {
         self.running.store(false, Ordering::SeqCst);
     }
@@ -230,19 +421,8 @@ impl FlowStreamer {
         initial_timestamp: Duration,
         speed: Arc<RwLock<f32>>,
     ) {
-        // Use a binary heap to generate flows (timestamp ordered) in the correct order
-        let mut pending_flows: BinaryHeap<ScheduledFlow> = BinaryHeap::new();
-        let mut flow_count = 0;
-        let mut last_generation = Instant::now();
-
-        // Buffer size: generate flows up to this much ahead of current time
-        // This avoids overloading the CPU by continuously generating flows
-        let buffer_ahead = Duration::from_secs(STREAM_BUFFER_AHEAD_SECS);
-        // How often to check for flows to emit
+        let mut state = StreamingState::new();
         let check_interval = Duration::from_millis(STREAM_CHECK_INTERVAL_MS);
-
-        // Track virtual time (see VirtualTime struct for explanation)
-        let mut virtual_time = VirtualTime::new();
 
         log::info!(
             "Flow streaming loop started (timestamp-based, speed: {}x)",
@@ -252,95 +432,25 @@ impl FlowStreamer {
         while running.load(Ordering::SeqCst) {
             // Advance virtual time
             let current_speed = *speed.read().unwrap();
-            virtual_time.tick(current_speed);
-            let virtual_elapsed = virtual_time.elapsed();
+            state.tick(current_speed);
 
-            // Generate more flows if buffer is running low
-            let buffer_target = virtual_elapsed + buffer_ahead;
-            while pending_flows
-                // since we use a binary heap, we get the flow with the biggest timestamp
-                .peek()
-                // if the heap is empty, `.peek()` returns None, and `.map_or()` returns true
-                .map_or(true, |f| f.scheduled_time < buffer_target)
-            {
-                // Limit generation rate to avoid CPU spinning
-                if last_generation.elapsed() < Duration::from_millis(STREAM_RATE_LIMIT_MS)
-                    && !pending_flows.is_empty()
-                {
-                    break;
-                }
-
-                if let Some(timestamp) = s0.next() {
-                    if let Ok(flows) = s1.generate_flows(timestamp) {
-                        for seeded_flow in flows {
-                            let flow_data = seeded_flow.data.get_data();
-
-                            // Calculate scheduled time relative to start
-                            let flow_timestamp = flow_data.timestamp;
-                            let scheduled_time = if flow_timestamp >= initial_timestamp {
-                                flow_timestamp - initial_timestamp
-                            } else {
-                                Duration::ZERO
-                            };
-
-                            let event = FlowEvent {
-                                src_ip: flow_data.src_ip,
-                                dst_ip: flow_data.dst_ip,
-                                protocol: flow_data.l7_proto,
-                                timestamp: flow_timestamp,
-                            };
-
-                            pending_flows.push(ScheduledFlow {
-                                event,
-                                scheduled_time,
-                            });
-
-                            flow_count += 1;
-                        }
-                    }
-                } else {
-                    // No more timestamps available
-                    break;
-                }
-
-                last_generation = Instant::now();
-
-                // Check if we should stop
-                if !running.load(Ordering::SeqCst) {
-                    break;
+            // Generate flows until buffer is full or Stage 0 exhausted
+            while state.needs_more_flows() && running.load(Ordering::SeqCst) {
+                if !generate_flows_to_buffer(&mut state, &mut s0, &s1, initial_timestamp) {
+                    break; // Stage 0 exhausted
                 }
             }
 
-            // Emit flows whose scheduled time has passed (in virtual time)
-            while let Some(scheduled) = pending_flows.peek() {
-                if scheduled.scheduled_time <= virtual_elapsed {
-                    let scheduled = pending_flows.pop().unwrap();
-                    log::debug!(
-                        "Emitting flow #{}: {} -> {} ({:?}) at virtual {:?}",
-                        flow_count,
-                        scheduled.event.src_ip,
-                        scheduled.event.dst_ip,
-                        scheduled.event.protocol,
-                        virtual_elapsed
-                    );
+            // Emit flows that are due
+            emit_scheduled_flows(&mut state, &sender);
 
-                    if let Err(e) = sender.send(scheduled.event) {
-                        log::error!("Failed to send flow event: {}", e);
-                        break;
-                    }
-                } else {
-                    break;
-                }
-            }
-
-            // Sleep until next check
             std::thread::sleep(check_interval);
         }
 
         log::info!(
             "Flow streaming loop stopped ({} flows generated, {} pending)",
-            flow_count,
-            pending_flows.len()
+            state.flow_count,
+            state.pending_flows.len()
         );
     }
 
@@ -353,68 +463,19 @@ impl FlowStreamer {
         initial_timestamp: Duration,
         speed: Arc<RwLock<f32>>,
     ) {
-        let mut pending_flows: BinaryHeap<ScheduledFlow> = BinaryHeap::new();
-        let buffer_ahead = Duration::from_secs(STREAM_BUFFER_AHEAD_SECS);
+        let mut state = StreamingState::new();
         let check_interval = Duration::from_millis(STREAM_CHECK_INTERVAL_MS);
-
-        // Track virtual time (see VirtualTime struct for explanation)
-        let mut virtual_time = VirtualTime::new();
 
         while running.load(Ordering::SeqCst) {
             // Advance virtual time
             let current_speed = *speed.read().unwrap();
-            virtual_time.tick(current_speed);
-            let virtual_elapsed = virtual_time.elapsed();
+            state.tick(current_speed);
 
-            // Generate more flows if buffer is running low
-            let buffer_target = virtual_elapsed + buffer_ahead;
-            let mut generated_this_cycle = 0;
+            // Generate flows (WASM has per-cycle limit)
+            generate_flows_to_buffer_wasm(&mut state, &mut s0, &s1, initial_timestamp);
 
-            while pending_flows
-                .peek()
-                .map_or(true, |f| f.scheduled_time < buffer_target)
-                && generated_this_cycle < STREAM_MAX_PER_CYCLE_WASM
-            {
-                if let Some(timestamp) = s0.next() {
-                    if let Ok(flows) = s1.generate_flows(timestamp) {
-                        for seeded_flow in flows {
-                            let flow_data = seeded_flow.data.get_data();
-
-                            let flow_timestamp = flow_data.timestamp;
-                            let scheduled_time = if flow_timestamp >= initial_timestamp {
-                                flow_timestamp - initial_timestamp
-                            } else {
-                                Duration::ZERO
-                            };
-
-                            let event = FlowEvent {
-                                src_ip: flow_data.src_ip,
-                                dst_ip: flow_data.dst_ip,
-                                protocol: flow_data.l7_proto,
-                                timestamp: flow_timestamp,
-                            };
-
-                            pending_flows.push(ScheduledFlow {
-                                event,
-                                scheduled_time,
-                            });
-                        }
-                    }
-                    generated_this_cycle += 1;
-                } else {
-                    break;
-                }
-            }
-
-            // Emit flows whose scheduled time has passed
-            while let Some(scheduled) = pending_flows.peek() {
-                if scheduled.scheduled_time <= virtual_elapsed {
-                    let scheduled = pending_flows.pop().unwrap();
-                    let _ = sender.send(scheduled.event);
-                } else {
-                    break;
-                }
-            }
+            // Emit flows that are due
+            emit_scheduled_flows_wasm(&mut state, &sender);
 
             gloo_timers::future::TimeoutFuture::new(check_interval.as_millis() as u32).await;
         }

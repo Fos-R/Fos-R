@@ -6,7 +6,6 @@
 // Licensed under the MIT License (see mod.rs for full text).
 
 use std::fmt::Display;
-
 use chrono::{NaiveTime, Timelike};
 use eframe::egui::{
     self, Align2, Color32, DragValue, FontId, Id, Layout, Painter, Pos2, Response, RichText, Sense,

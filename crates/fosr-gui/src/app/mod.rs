@@ -79,21 +79,24 @@ impl FosrApp {
         }
     }
 
-    /// Handle close confirmation when there are active Wireshark sessions.
+    /// Check if any Wireshark sessions with temporary PCAP files are still running.
     #[cfg(not(target_arch = "wasm32"))]
-    fn handle_close_confirmation(&mut self, ctx: &egui::Context) {
-        // Handle close confirmation if there are active Wireshark sessions
-        let has_active_sessions = self
-            .run_tab_state
+    fn has_active_wireshark_sessions(&self) -> bool {
+        self.run_tab_state
             .generation
             .temp_pcap_files
             .iter()
-            .any(|(handle, _)| !handle.is_finished());
+            .any(|(handle, _)| !handle.is_finished())
+    }
 
+    /// Handle close confirmation when there are active Wireshark sessions.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn handle_close_confirmation(&mut self, ctx: &egui::Context) {
         if ctx.input(|i| i.viewport().close_requested()) {
             if self.allowed_to_close {
-                // Do nothing, let the app close
-            } else if has_active_sessions {
+                // User confirmed: allow the app to close
+            } else if self.has_active_wireshark_sessions() {
+                // Active sessions: cancel close and show confirmation dialog
                 ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
                 self.show_close_confirmation = true;
             }

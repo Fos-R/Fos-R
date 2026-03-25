@@ -4,7 +4,29 @@ use crate::shared::config::model::{Configuration, Host};
 use crate::shared::constants::network::{MAC_ADDRESS_PARTS, MAC_PART_LENGTH};
 use std::collections::HashMap;
 
-/// Function to validate if a host is correct
+/// Counts of IP and MAC address occurrences across all hosts.
+pub type AddressCounts = (HashMap<String, usize>, HashMap<String, usize>);
+
+/// Count IP and MAC addresses across all hosts in the configuration.
+///
+/// Returns a tuple of (ip_counts, mac_counts) used for duplicate detection.
+pub fn count_addresses(config: &Configuration) -> AddressCounts {
+    let mut ip_counts: HashMap<String, usize> = HashMap::new();
+    let mut mac_counts: HashMap<String, usize> = HashMap::new();
+
+    for host in &config.hosts {
+        for iface in &host.interfaces {
+            *ip_counts.entry(iface.ip_addr.clone()).or_insert(0) += 1;
+            if let Some(mac) = &iface.mac_addr {
+                *mac_counts.entry(mac.clone()).or_insert(0) += 1;
+            }
+        }
+    }
+
+    (ip_counts, mac_counts)
+}
+
+/// Validate a host configuration for correctness.
 pub fn validate_host(
     host: &Host,
     ip_counts: &HashMap<String, usize>,
@@ -55,16 +77,7 @@ pub fn validate_host(
 
 /// Returns true if any host in the model has validation errors.
 pub fn has_model_errors(model: &Configuration) -> bool {
-    let mut ip_counts: HashMap<String, usize> = HashMap::new();
-    let mut mac_counts: HashMap<String, usize> = HashMap::new();
-    for h in &model.hosts {
-        for iface in &h.interfaces {
-            *ip_counts.entry(iface.ip_addr.clone()).or_insert(0) += 1;
-            if let Some(mac) = &iface.mac_addr {
-                *mac_counts.entry(mac.clone()).or_insert(0) += 1;
-            }
-        }
-    }
+    let (ip_counts, mac_counts) = count_addresses(model);
     model
         .hosts
         .iter()

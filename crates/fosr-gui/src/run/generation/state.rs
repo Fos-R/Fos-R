@@ -22,6 +22,7 @@ pub struct GenerationState {
     pub pcap_receiver: Option<Receiver<Vec<u8>>>,
     pub throughput_receiver: Option<Receiver<String>>,
     pub throughput: Option<String>,
+    pub error_receiver: Option<Receiver<String>>,
     pub cancelled: Arc<AtomicBool>,
     /// Error message to display, if any
     pub error: Option<String>,
@@ -80,6 +81,7 @@ impl Default for GenerationState {
             pcap_receiver: None,
             throughput_receiver: None,
             throughput: None,
+            error_receiver: None,
             cancelled: Arc::new(AtomicBool::new(false)),
             error: None,
             // Validation states
