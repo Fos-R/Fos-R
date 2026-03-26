@@ -19,69 +19,42 @@ import random
 
 pd.options.mode.copy_on_write = True
 
-def add_payload_type(payload_type, row):
-    # if row['protocol'] == "ICMP":
-    #     return row["time_sequence"] # no payload to analyze
+class PayloadTypeInference:
 
-    iat = row['iat'].split(",")
-    directions = row["forward_list"].split(",")
-    directions = list(map(lambda s: True if s == "T" else False, directions))
-    payloads = row["payloads"].split(",")
-    payloads = list(map(lambda s: "" if s == "(empty)" else base64.standard_b64decode(s).hex(), payloads))
+    def __init__(self, payload_types):
+        self.payload_types = payload_types
 
-    if 'flags' in row: # TCP only
-        headers = row['flags'].split(",")
-        headers = list(map(lambda s: s+"/", headers))
-    else:
-        headers = [""]*len(payloads)
+    def add_payload_type(self, row):
+        iat = row['iat'].split(",")
+        directions = row["forward_list"].split(",")
+        directions = list(map(lambda s: True if s == "T" else False, directions))
+        payloads = row["payloads"].split(",")
+        payloads = list(map(lambda s: "" if s == "(empty)" else base64.standard_b64decode(s).hex(), payloads))
 
-    nb_binary = 0
-    nb_random = 0
-    nb_text = 0
-    for i,p in enumerate(payloads):
-        if directions[i]:
-            headers[i]+=">"
+        if 'flags' in row: # TCP only
+            headers = row['flags'].split(",")
+            headers = list(map(lambda s: s+"/", headers))
         else:
-            headers[i]+="<"
-        headers[i]+="/"+iat[i]
-        headers[i]+="/"+str(int(len(p)/2)) # 2 hex digits per byte
+            headers = [""]*len(payloads)
 
-        hnibbles = [int(v,16)%4 for v in list(p)]+[int(v,16)//4 for v in list(p)]
-        if len(hnibbles)==0: # only P:, i.e., empty payload
-            headers[i]+="/Empty"
-        else:
-            random = False
-            if len(hnibbles) >= 20: # expected number of observations should be at least 5. There are 4 categories, so that’s at least 20 examples. Since each byte is split into 4 half-nibbles, it means that we need at least 5 bytes.
-                obs = [0]*4
-                for j in range(4):
-                    obs[j] += hnibbles.count(j)
-                random = (chisquare(obs).pvalue >= 0.05)
-            if random or payload_type == "encrypted":
-                headers[i]+="/Random"
-                nb_random += 1
-                # print("Detected as random")
+        for i,p in enumerate(payloads):
+            if directions[i]:
+                headers[i]+=">"
             else:
-                binary = True
-                try:
-                    s = bytes.fromhex(p).decode('utf-8')
-                    s = s.translate({10: " ", 13: " "}) # replace CR and LF by whitespace
-                    if s.isprintable() or payload_type == "text":
-                        if len(s.split()[0]) <= 10: # check if we detect a keyword at the beginning
-                            headers[i]+="/Text:"+s.split()[0].replace("$","-") # To avoid detecting the end-of-sequence symbol
-                        else:
-                            headers[i]+="/Text"
-                        # print(s, s.split()[0])
-                        binary = False
-                        # print("Detected as text")
-                        nb_text += 1
-                except: # cannot decode: not text
-                    pass
-                if binary:
-                    headers[i]+="/Binary"
-                    # print("Detected as binary")
-                    nb_binary += 1
-    # print("Type inference. binary:",nb_replay,"Random:",nb_random,"Text:",nb_text)
-    return " ".join(headers)
+                headers[i]+="<"
+            headers[i]+="/"+iat[i]
+            headers[i]+="/"+str(int(len(p)/2)) # 2 hex digits per byte
+
+            if len(p)==0:
+                headers[i]+="/Empty"
+            else:
+                row = self.payload_types[self.payload_types.payload == p[:50]].head(1)
+                if row.empty:
+                    headers[i]+="/UnknownPayload"
+                else:
+                    headers[i]+="/"+row["type"].iloc[0]
+        return " ".join(headers)
+
 # remove ill-formed connection, notably TCP streams not starting with SYN
 def keep_connection(row):
     if 'flags' in row and row['flags'].split(",")[0] != "S":
@@ -222,23 +195,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     args.output = args.output or "."
 
-
-    # if args.automaton_name:
-    #     if args.output is None:
-    #         args.output = args.automaton_name+".json"
-    #     if args.output_dot is None:
-    #         args.output_dot = args.automaton_name+".dot"
-    # else:
-    #     args.automaton_name = args.service or "all-services"
-
-    #     service = args.service or "all"
-    #     if args.output is None:
-    #         args.output = service+".json"
-    #     if args.output_dot is None:
-    #         args.output_dot = service+".dot"
-
-    # output_name = args.output
-
     try:
         print("Loading files")
         csv.field_size_limit(sys.maxsize) # payload is too long
@@ -246,7 +202,7 @@ if __name__ == '__main__':
         flow = pd.read_csv(conn_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
 
         file_input = os.path.join(args.input, "fosr_tcp.log")
-        df = pd.read_csv(file_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service", "flags", "conn_state"])
+        df = pd.read_csv(file_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service", "flags", "conn_state"])
         # print("Services in the TCP file:\n",df["service"].value_counts())
         df = df.join(flow.set_index("uid"), on="uid", rsuffix="_conn")
         prev_len = len(df)
@@ -256,7 +212,7 @@ if __name__ == '__main__':
         df_tcp = df
 
         file_input = os.path.join(args.input, "fosr_udp.log")
-        df = pd.read_csv(file_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "service"])
+        df = pd.read_csv(file_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service"])
         # print("Services in the UDP file:\n",df[["service"]].value_counts())
         df = df.join(flow.set_index("uid"), on="uid", rsuffix="_conn")
         prev_len = len(df)
@@ -265,12 +221,34 @@ if __name__ == '__main__':
             print((prev_len-len(df)),"UDP flows have been ignored because they are too long.")
         df_udp = df
 
+        def process_payload_types(payload_types):
+            payload_types = payload_types.fillna("")
+            cols = list(payload_types.columns)
+            cols.remove("payload")
+            for c in cols:
+                payload_types[c] = payload_types[c].apply(lambda s: c+"="+str(s) if s != "" else "")
+            payload_types['type'] = payload_types[cols].apply(lambda row: '_and_'.join(filter(None,row.values.astype(str))), axis=1)
+            payload_types = payload_types[payload_types['type'] != ""]
+            return payload_types[['payload', 'type']].drop_duplicates()
+
+        # TCP payload types
+        types_input = os.path.join(args.input, "payload_tcp.csv")
+        payload_types = pd.read_csv(types_input, low_memory=False).rename(columns={"tcp.payload": "payload"})
+        payload_types_tcp = process_payload_types(payload_types)
+
+        # UDP payload types
+        types_input = os.path.join(args.input, "payload_udp.csv")
+        payload_types = pd.read_csv(types_input, low_memory=False).rename(columns={"udp.payload": "payload"})
+        payload_types_udp = process_payload_types(payload_types)
+
         with open(args.flows) as f:
             flows = json.load(f)
 
-    except Exception as e:
-        print("Input file cannot be opened:",e)
-        exit(1)
+    finally:
+        pass
+    # except Exception as e:
+    #     print("Input file cannot be opened:",e)
+    #     exit(1)
 
     for d in flows:
         random.seed(0)
@@ -318,7 +296,13 @@ if __name__ == '__main__':
         if args.subsample and len(df) > args.subsample:
             df = df.sample(n=args.subsample, random_state=0)
 
-        df["time_sequence"] = df.apply(partial(add_payload_type,None), axis=1)
+        if protocol == "tcp":
+            inferer = PayloadTypeInference(payload_types_tcp)
+        elif protocol == "udp":
+            inferer = PayloadTypeInference(payload_types_udp)
+
+        df["time_sequence"] = df.apply(inferer.add_payload_type, axis=1)
+
         df = df.reset_index(drop=True)
 
         print("Learning from",len(df),"examples")
