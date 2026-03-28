@@ -4,4 +4,3 @@ data/cupid/cupid-eval/data.pcap filter=lfs diff=lfs merge=lfs -text
 data/cupid/cupid-reference/data.pcap filter=lfs diff=lfs merge=lfs -text
 data/dedale/dedale-eval/data.pcap filter=lfs diff=lfs merge=lfs -text
 data/dedale/dedale-reference/data.pcap filter=lfs diff=lfs merge=lfs -text
-data/dedale/dedale-train/data.pcap filter=lfs diff=lfs merge=lfs -text
