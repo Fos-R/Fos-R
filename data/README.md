@@ -1,9 +1,9 @@
 # Data directory
 
 There is a folder per dataset. Each folder contains a short description of the dataset and how the pcap files were obtained and processed.
-For each dataset D, such folder contains three more folders:
+For each dataset `D`, such folder contains three more folders:
 
-- `D-train` contains the data available for training
+- `D-train` contains the data available for training. It is not included in the repository for storage reasons but can be obtained upon request.
 - `D-eval` contains the data to compare to
 - `D-reference` contains real data and serves as a baseline during evaluation
 
