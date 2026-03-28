@@ -11,7 +11,7 @@ You can find the stable and experimental binaries on the [Fos-R website](https:/
 In this mode, Fos-R outputs a pcap file generated with the ML models.
 
 ```
-Usage: fosr create-pcap [OPTIONS] <--duration <DURATION>|--packets-count <PACKETS_COUNT>>
+Usage: fosr-cli create-pcap [OPTIONS] <--duration <DURATION>|--packets-count <PACKETS_COUNT>>
 
 Options:
   -o, --outfile <OUTFILE>              Output pcap file for synthetic network packets [default: output.pcap]
@@ -34,7 +34,7 @@ In this mode, Fos-R generates and play network traffic between different compute
 Fos-R needs to be executed on each computer and provided a configuration file.
 
 ```
-Usage: fosr inject [OPTIONS] --net-enabler <NET_ENABLER>
+Usage: fosr-cli inject [OPTIONS] --net-enabler <NET_ENABLER>
 
 Options:
   -o, --outfile <OUTFILE>
@@ -61,26 +61,12 @@ Options:
 
 # Utilities
 
-## pcap2flow
-
-Extract flow statistics from a pcap file to a csv file
-
-```
-Usage: fosr pcap2flow [OPTIONS] --input-pcap <INPUT_PCAP> --output-csv <OUTPUT_CSV>
-
-Options:
-  -i, --input-pcap <INPUT_PCAP>  Pcap file to extract flows from
-  -o, --output-csv <OUTPUT_CSV>  Csv file to export flow into
-  -p, --include-payloads         Include the payloads into the csv file
-  -h, --help                     Print help
-```
-
 ## Untaint pcap file
 
 Remove the Fos-R taint from a pcap file
 
 ```
-Usage: fosr untaint --input <INPUT> --output <OUTPUT>
+Usage: fosr-cli untaint --input <INPUT> --output <OUTPUT>
 
 Options:
   -i, --input <INPUT>    Pcap file to untaint
