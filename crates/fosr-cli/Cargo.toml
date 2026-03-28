@@ -1,5 +1,5 @@
 [package]
-name = "fosr"
+name = "fosr-cli"
 version = "1.0.0-dev"
 authors = ["Pierre-François Gimenez <pierre-francois.gimenez@inria.fr>"]
 edition = "2024"
