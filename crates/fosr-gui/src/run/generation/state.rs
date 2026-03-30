@@ -28,7 +28,6 @@ pub struct GenerationState {
     pub error: Option<String>,
     // Validation states
     pub duration_validation: FieldValidation,
-    pub seed_validation: FieldValidation,
     pub timezone_validation: FieldValidation,
     // Parameters
     pub order_pcap: bool,
@@ -86,7 +85,6 @@ impl Default for GenerationState {
             error: None,
             // Validation states
             duration_validation: FieldValidation::default(),
-            seed_validation: FieldValidation::default(),
             timezone_validation: FieldValidation::default(),
             // Parameters
             order_pcap: true,

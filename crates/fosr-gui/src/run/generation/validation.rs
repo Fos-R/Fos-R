@@ -35,14 +35,12 @@ pub fn render_field_error(ui: &mut egui::Ui, validation: &FieldValidation) {
 
 // Expected format for each parameter (shown in error messages)
 const SPEC_DURATION: &str = "a duration between 1 min and 3 days (e.g. 30m, 1h, 2d)";
-const SPEC_SEED: &str = "an unsigned integer (u64) or empty for random";
 const SPEC_TIMEZONE: &str = "a valid timezone";
 
 /// Returns the first invalid parameter (name, expected spec, error message).
 pub fn first_invalid_param(state: &GenerationState) -> Option<(&'static str, &'static str, &str)> {
     [
         ("Duration", SPEC_DURATION, &state.duration_validation),
-        ("Seed", SPEC_SEED, &state.seed_validation),
         ("Timezone", SPEC_TIMEZONE, &state.timezone_validation),
     ]
         .into_iter()
@@ -63,17 +61,6 @@ pub fn validate_duration(duration_str: &str) -> Result<Duration, String> {
         ));
     }
     Ok(d)
-}
-
-/// Validates an optional u64 input (empty is valid, means "use random").
-pub fn validate_optional_u64(input: &str) -> Result<Option<u64>, String> {
-    let s = input.trim();
-    if s.is_empty() {
-        return Ok(None);
-    }
-    s.parse::<u64>()
-        .map(Some)
-        .map_err(|_| "Invalid value".to_string())
 }
 
 /// Validates an IANA timezone string.

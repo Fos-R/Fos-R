@@ -6,6 +6,7 @@ use super::core::generate;
 use crate::run::state::RunTabState;
 use crate::shared::config::state::ConfigFileState;
 use eframe::egui;
+use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::channel;
@@ -67,7 +68,7 @@ impl PcapGenerationParams {
     /// Extracts parameters from the UI state and config file.
     fn from_state(state: &RunTabState, config_state: &ConfigFileState) -> Self {
         let seed = if state.generation.use_seed {
-            state.generation.seed_input.parse::<u64>().ok()
+            parse_seed(&state.generation.seed_input)
         } else {
             None
         };
@@ -99,6 +100,25 @@ impl PcapGenerationParams {
             config_content,
         }
     }
+}
+
+/// Parses a seed input string into an optional u64.
+///
+/// - Empty input returns `None` (random seed).
+/// - A valid u64 literal is used directly.
+/// - Any other text is hashed using SHA-256 to produce a deterministic u64.
+fn parse_seed(input: &str) -> Option<u64> {
+    let s = input.trim();
+    if s.is_empty() {
+        return None;
+    }
+    if let Ok(n) = s.parse::<u64>() {
+        return Some(n);
+    }
+    let hash = Sha256::digest(s.as_bytes());
+    let mut bytes = [0u8; 8];
+    bytes.copy_from_slice(&hash[0..8]);
+    Some(u64::from_be_bytes(bytes))
 }
 
 /// Spawns the generation task on the appropriate platform (WASM future or native thread).
