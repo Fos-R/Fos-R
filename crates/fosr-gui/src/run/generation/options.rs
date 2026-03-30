@@ -6,7 +6,7 @@
 use crate::run::state::RunTabState;
 
 use super::validation::{
-    first_invalid_param, render_field_error, validate_duration, validate_optional_u64,
+    first_invalid_param, render_field_error, validate_duration,
     validate_timezone,
 };
 use crate::shared::constants::colors::{COLOR_ERROR, COLOR_TEXT_MUTED};
@@ -198,29 +198,18 @@ fn render_seed_column(col: &mut egui::Ui, state: &mut RunTabState) {
     render_validation_errors(col, state);
 }
 
-/// Seed input with validation.
+/// Seed input (accepts any text, hashed to u64 for generation).
 fn render_seed_input(ui: &mut egui::Ui, state: &mut RunTabState) {
     ui.horizontal(|ui| {
         ui.checkbox(&mut state.generation.use_seed, "Seed");
-        info_icon_with_tooltip(ui, "Seed for random number generation. For deterministic generation, you must also specify duration, start time, and timezone.");
+        info_icon_with_tooltip(ui, "Seed for random number generation. Any text is accepted: integers are used as-is, other values are converted to an integer by hashing. For deterministic generation, you must also specify duration, start time, and timezone.");
 
         if state.generation.use_seed {
-            let response = ui.add(
+            ui.add(
                 egui::TextEdit::singleline(&mut state.generation.seed_input)
                     .hint_text("enter a seed value")
                     .desired_width(SEED_INPUT_WIDTH),
             );
-
-            if response.changed() {
-                match validate_optional_u64(&state.generation.seed_input) {
-                    Ok(_) => state.generation.seed_validation.set_ok(),
-                    Err(msg) => state.generation.seed_validation.set_err(msg),
-                }
-            }
-
-            render_field_error(ui, &state.generation.seed_validation);
-        } else {
-            state.generation.seed_validation.set_ok();
         }
     });
 }
