@@ -26,7 +26,6 @@ pub fn render_configuration_toolbar(
     state: &mut ConfigFileState,
 ) {
     ui.horizontal(|ui| {
-        ui.label("Configuration file:");
         render_file_import_button(ui, state);
         render_template_menu_button(ui, state);
         render_file_save_button(ui, state);
@@ -40,9 +39,15 @@ pub fn render_configuration_toolbar(
 /// Opens a file picker dialog to select a configuration file.
 /// On WASM, polls the async file picker result.
 fn render_file_import_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
+    let (label, tooltip) = if cfg!(target_arch = "wasm32") {
+        ("Load", "Load a configuration file from your device")
+    } else {
+        ("Open", "Open a configuration file from disk")
+    };
+    let button_text = format!("{} {label}", egui_material_icons::icons::ICON_FOLDER_OPEN);
     if ui
-        .button(egui_material_icons::icons::ICON_FOLDER_OPEN)
-        .on_hover_text("Select a configuration file")
+        .button(&button_text)
+        .on_hover_text(tooltip)
         .clicked()
     {
         trigger_file_import(state, ui.ctx());
@@ -57,8 +62,9 @@ fn render_file_import_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
 /// Dropdown menu listing available configuration templates.
 /// Clicking a template loads it into the editor.
 fn render_template_menu_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
+    let label = format!("{} Template", egui_material_icons::icons::ICON_DESCRIPTION);
     let template_menu =
-        ui.menu_button(egui_material_icons::icons::ICON_DESCRIPTION, |menu_ui| {
+        ui.menu_button(&label, |menu_ui| {
             for template in TEMPLATES {
                 if menu_ui
                     .button(format!("{} {}", template.icon, template.title))
@@ -69,7 +75,7 @@ fn render_template_menu_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
                 }
             }
         });
-    template_menu.response.on_hover_text("Open template");
+    template_menu.response.on_hover_text("Choose a template configuration to open");
 }
 
 /// Save button with "Save as" functionality.
@@ -82,9 +88,15 @@ fn render_file_save_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
         return;
     }
 
+    let (label, tooltip) = if cfg!(target_arch = "wasm32") {
+        ("Download", "Download the current configuration as a file")
+    } else {
+        ("Save as", "Save the current configuration as a file")
+    };
+    let button_text = format!("{} {label}", egui_material_icons::icons::ICON_SAVE_AS);
     if ui
-        .button(egui_material_icons::icons::ICON_SAVE_AS)
-        .on_hover_text("Save as")
+        .button(&button_text)
+        .on_hover_text(tooltip)
         .clicked()
     {
         if let Some(model) = state.config_model.as_mut() {
