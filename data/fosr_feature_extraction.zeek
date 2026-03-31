@@ -19,7 +19,7 @@ export {
         orig_l2_addr:
             string &log;
         resp_l2_addr:
-            string &log &optional;
+            string &log;
         orig_ttl:
             int &log;
         resp_ttl:
