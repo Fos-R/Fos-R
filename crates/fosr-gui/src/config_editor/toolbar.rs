@@ -106,8 +106,6 @@ fn render_file_save_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
             Some(model) => serde_yaml::to_string(model).unwrap_or_default(),
             None => state.config_file_content.clone().unwrap_or_default(),
         };
-        state.is_dirty = false;
-        state.clean_snapshot = Some(content.clone());
         let default_name = state
             .picked_config_file
             .as_ref()
@@ -119,6 +117,12 @@ fn render_file_save_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
             match save_file_desktop(content.as_bytes(), &default_name) {
                 Ok(handle) => {
                     log::info!("Config saved to {}", handle.path().display());
+                    // File was saved, so the config is not dirty anymore
+                    state.is_dirty = false;
+                    state.clean_snapshot = Some(content);
+                    // Point state to the saved file so the toolbar shows its name/path
+                    state.picked_config_file = Some(handle);
+                    state.loaded_template_id = None;
                 }
                 Err(e) => {
                     log::error!("Failed to save config: {}", e);
@@ -128,12 +132,17 @@ fn render_file_save_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
 
         #[cfg(target_arch = "wasm32")]
         {
+            let content_clone = content.clone();
             wasm_bindgen_futures::spawn_local(async move {
-                match save_file_wasm(content.as_bytes(), &default_name).await {
+                match save_file_wasm(content_clone.as_bytes(), &default_name).await {
                     Ok(_) => log::info!("Config saved"),
                     Err(e) => log::error!("Failed to save config: {}", e),
                 }
             });
+            // Difficult to retrieve the success status out of the thread.
+            // Since this is just a download, we can assume it succeeded.
+            state.is_dirty = false;
+            state.clean_snapshot = Some(content);
         }
     }
 }

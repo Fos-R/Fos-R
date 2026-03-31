@@ -6,7 +6,7 @@ use crate::config_editor::toolbar::render_configuration_toolbar;
 use crate::shared::config::file_ops::load_config_file_contents;
 use crate::shared::config::model::Configuration;
 use crate::shared::config::state::ConfigFileState;
-use crate::shared::constants::colors::{COLOR_ERROR, COLOR_SUCCESS, COLOR_WARNING};
+use crate::shared::constants::colors::COLOR_ERROR;
 use crate::shared::constants::ui::{SPACING_MD, TEXT_EDIT_DEFAULT_ROWS};
 use crate::shared::widgets::helpers::{
     render_optional_text_area, render_optional_string_input, required_label,
@@ -26,7 +26,7 @@ pub fn render_configuration_tab(
         // File Selection
         render_configuration_toolbar(ui, tab_state, file_state);
 
-        render_parsing_status(ui, file_state);
+        render_parse_error_banner(ui, file_state);
 
         if file_state.config_chosen {
             ui.separator();
@@ -93,18 +93,18 @@ fn sync_model_to_yaml_state(state: &mut ConfigFileState) {
     }
 }
 
-/// Status & Feedback
-fn render_parsing_status(ui: &mut egui::Ui, state: &ConfigFileState) {
-    if state.picked_config_file.is_some() {
-        if let Some(err) = &state.config_error {
-            ui.colored_label(COLOR_ERROR, "YAML parsing failed:");
-            ui.label(err);
-        } else if state.config_model.is_some() {
-            ui.colored_label(COLOR_SUCCESS, "YAML parsed successfully");
-        } else if state.config_file_content.is_some() {
-            ui.colored_label(COLOR_WARNING, "YAML loaded, but not parsed yet.");
-        }
+/// Displays a YAML parse error banner below the toolbar, if any.
+fn render_parse_error_banner(ui: &mut egui::Ui, state: &ConfigFileState) {
+    if let Some(err) = &state.config_error {
         ui.separator();
+        ui.colored_label(
+            COLOR_ERROR,
+            format!(
+                "{} YAML parsing failed",
+                egui_material_icons::icons::ICON_WARNING
+            ),
+        );
+        ui.colored_label(COLOR_ERROR, err);
     }
 }
 
