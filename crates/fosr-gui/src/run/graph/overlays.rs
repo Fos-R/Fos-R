@@ -82,10 +82,10 @@ fn render_playback_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
 /// Resumes visualization without resetting flow counts. Uses "Start" label
 /// initially, then "Continue" after the user has started at least once.
 fn render_play_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
-    let play_text = if state.user_has_started {
-        "Continue"
+    let (play_text, play_tooltip) = if state.user_has_started {
+        ("Continue", "Generate new flows, keeping statistics and edge history")
     } else {
-        "Start"
+        ("Start", "Start the network simulation")
     };
     let accent = ui.visuals().selection.bg_fill;
     let play_button = egui::Button::new(egui::RichText::new(format!(
@@ -93,9 +93,9 @@ fn render_play_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
         egui_material_icons::icons::ICON_PLAY_ARROW,
         play_text
     )))
-    .fill(accent);
+        .fill(accent);
 
-    if ui.add(play_button).clicked() {
+    if ui.add(play_button).on_hover_text(play_tooltip).clicked() {
         state.user_has_started = true;
         let config = state.config_content.clone();
         let speed = state.flow.speed.clone();
@@ -112,7 +112,7 @@ fn render_play_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
 fn render_restart_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
     if ui
         .button(egui_material_icons::icons::ICON_RESTART_ALT)
-        .on_hover_text("Restart")
+        .on_hover_text("Restart - reset all statistics and edges")
         .clicked()
     {
         let config = state.config_content.clone();
@@ -129,7 +129,7 @@ fn render_stop_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
         "{} Stop",
         egui_material_icons::icons::ICON_STOP
     )))
-    .fill(COLOR_STOP);
+        .fill(COLOR_STOP);
 
     if ui.add(stop_button).clicked() {
         state.stop_visualization();
@@ -188,7 +188,7 @@ fn render_speed_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
     }
 
     ui.label(format!("{:.1}x", speed_value))
-        .on_hover_text("Playback speed — controls how fast network flows are simulated");
+        .on_hover_text("Playback speed - controls how fast network flows are simulated");
 
     if ui
         .button(egui_material_icons::icons::ICON_ADD)

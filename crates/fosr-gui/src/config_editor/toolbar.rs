@@ -178,7 +178,7 @@ fn render_filename(ui: &mut egui::Ui, state: &ConfigFileState) {
 fn render_filename_with_status(ui: &mut egui::Ui, filename: &str, is_dirty: bool, hover_text: &str) {
     if is_dirty {
         ui.colored_label(COLOR_WARNING, egui_material_icons::icons::ICON_WARNING)
-            .on_hover_text("Unsaved changes detected — download the file to avoid losing them.");
+            .on_hover_text("Unsaved changes detected - download the file to avoid losing them.");
         let label = ui.colored_label(COLOR_WARNING, filename);
         if !hover_text.is_empty() {
             label.on_hover_text(hover_text);
