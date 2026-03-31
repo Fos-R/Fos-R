@@ -188,6 +188,7 @@ generate:
       - DATASET:
         - cupid
         - cicids17
+        #- dedale
   artifacts:
     expire_in: 3 days
     when: always
@@ -242,6 +243,7 @@ analyze-dataset:
       - DATASET:
         - cupid
         - cicids17
+        #- dedale
   artifacts:
     expire_in: 3 days
     paths: # do not export the pcap files
@@ -288,13 +290,14 @@ evaluate-dataset:
     - ls *.dot | while read file; do dot -Tpng $file -o ../../../../../public/$DATASET/$file.png -Gdip=150; echo -e "## ${file/%'.dot'}\n\n<center><img style='max-width:100%; width:auto' src='$DATASET/$file.png'></center>\n" >> ../../../../../public/$DATASET.md; done
     - cd ../../../../..
     # copy the BN
-    - cp crates/fosr-lib/default_models/$DATASET/bn/bn_common.png public/$DATASET/bn.png
+    - cp crates/fosr-lib/default_models/$DATASET/bn/bn.png public/$DATASET/bn.png
     - echo -e "# Bayesian network\n\n<center><img style='max-width:100%; width:auto' src='$DATASET/bn.png'></center>\n" >> public/$DATASET.md
   parallel:
     matrix:
       - DATASET:
         - cupid
         - cicids17
+        #- dedale
   artifacts:
     expire_in: 3 days
     paths:
@@ -340,6 +343,7 @@ pages:
     - pandoc changelog.md -o changelog.html --template template.html --include-after-body footer.html --standalone --toc
     - pandoc cupid.md -o cupid.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
     - pandoc cicids17.md -o cicids17.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
+    # - pandoc dedale.md -o dedale.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
     - rm *.md
   artifacts:
     expire_in: 3 days
