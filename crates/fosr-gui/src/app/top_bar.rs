@@ -4,7 +4,8 @@ use crate::shared::constants::colors::COLOR_ERROR;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::constants::ui::SPACING_SM;
 use crate::shared::constants::ui::{
-    BUTTON_PADDING, PANEL_INNER_MARGIN, TEXT_SIZE_DEFAULT, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP,
+    BUTTON_PADDING, PANEL_INNER_MARGIN, TEXT_SIZE_DEFAULT, ZOOM_MAX, ZOOM_MIN, ZOOM_OFFSET,
+    ZOOM_STEP,
 };
 use eframe::egui;
 use eframe::egui::global_theme_preference_switch;
@@ -144,7 +145,7 @@ fn render_zoom_controls(ui: &mut egui::Ui, ctx: &egui::Context) -> f32 {
             ctx.set_zoom_factor(new_zoom);
         }
 
-        ui.label(format!("{:.0}%", new_zoom * 100.0));
+        ui.label(format!("{:.0}%", (new_zoom - ZOOM_OFFSET) * 100.0));
 
         if ui
             .button(egui_material_icons::icons::ICON_REMOVE)
