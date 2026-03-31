@@ -19,7 +19,7 @@ build-linux-x86-64:
   script:
     - git checkout $CI_COMMIT_REF_NAME
     # version without network injection
-    - cargo build -p fosr
+    - cargo build -p fosr-cli
     # version without ebpf and with iptables
     # - cargo build --features iptables -p fosr
     # version with ebpf
@@ -28,7 +28,7 @@ build-linux-x86-64:
     - cargo install cargo-deb
     # - cargo build --features ebpf # version with ebpf only
     # - cargo build --features "iptables,ebpf" --release # version with ebpf + iptables
-    - cargo deb -p fosr
+    - cargo deb -p fosr-cli
     - mkdir target/x86_64-unknown-linux-gnu
     - mv target/release target/x86_64-unknown-linux-gnu
     - cargo doc
@@ -36,7 +36,7 @@ build-linux-x86-64:
   artifacts:
     expire_in: 3 days
     paths:
-      - target/*/release/fosr
+      - target/*/release/fosr-cli
       - target/debian/*.deb
       - doc
 
@@ -57,8 +57,8 @@ build-linux-crosscompile:
     - apt update
     - apt install -y $DEPENDENCIES
     - rustup target add $TARGET
-    - cargo build --target=$TARGET --config target.$TARGET.linker=\"$GCC\" -p fosr -r
-    - cargo deb --target=$TARGET -p fosr -- --config target.$TARGET.linker=\"$GCC\"
+    - cargo build --target=$TARGET --config target.$TARGET.linker=\"$GCC\" -p fosr-cli -r
+    - cargo deb --target=$TARGET -p fosr-cli -- --config target.$TARGET.linker=\"$GCC\"
     - if [ $TARGET = "arm-unknown-linux-musleabihf" ]; then cd target/debian; debname=$(ls *.deb); mv $debname rpi_$debname; fi
   parallel:
     matrix:
@@ -79,7 +79,7 @@ build-linux-crosscompile:
   artifacts:
     expire_in: 3 days
     paths:
-      - target/*/release/fosr
+      - target/*/release/fosr-cli
       - target/debian/*.deb
 
 build-win-x86:
@@ -96,7 +96,7 @@ build-win-x86:
     - apt update
     - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
     - rustup target add $TARGET
-    - cargo build --target=$TARGET -p fosr -r
+    - cargo build --target=$TARGET -p fosr-cli -r
   parallel:
     matrix:
       - TARGET:
@@ -107,7 +107,7 @@ build-win-x86:
   artifacts:
     expire_in: 3 days
     paths:
-      - target/*/release/fosr.exe
+      - target/*/release/fosr-cli.exe
 
 build-wasm32:
   tags:
@@ -205,12 +205,12 @@ tests:
     GIT_CHECKOUT: "false"
   script:
     - git checkout $CI_COMMIT_REF_NAME
-    - cargo test -p fosr -- --nocapture
+    - cargo test -p fosr-cli -- --nocapture
   artifacts:
     expire_in: 3 days
     when: always
     paths:
-      - crates/fosr/deterministic-test.pcap # in case of an error
+      - crates/fosr-cli/deterministic-test.pcap # in case of an error
   allow_failure: true
 
 ### ANALYZE
@@ -326,16 +326,16 @@ pages:
     - cd public
     # update the build number
     - echo -e "\nBuild version $CI_COMMIT_SHORT_SHA, compiled on $(date -I) ([changelog](changelog.html)).\n" >> intro.md
-    - chmod +x ./bin/x86_64-unknown-linux-gnu/release/fosr
+    - chmod +x ./bin/x86_64-unknown-linux-gnu/release/fosr-cli
     # add the --help output
-    - ./bin/x86_64-unknown-linux-gnu/release/fosr augment-dataset --help >> howto-pcap.md
+    - ./bin/x86_64-unknown-linux-gnu/release/fosr-cli augment-dataset --help >> howto-pcap.md
     - echo "\`\`\`" >> howto-pcap.md
     # - ./bin/x86_64-unknown-linux-gnu/release/fosr inject --help >> howto-inject.md
     # - echo "\`\`\`" >> howto-inject.md
-    - ./bin/x86_64-unknown-linux-gnu/release/fosr untaint --help >> howto-untaint.md
+    - ./bin/x86_64-unknown-linux-gnu/release/fosr-cli untaint --help >> howto-untaint.md
     - echo "\`\`\`" >> howto-untaint.md
     # update the deb file paths
-    - sed -i -e "s/FOSR_VERSION/$(./bin/x86_64-unknown-linux-gnu/release/fosr -V | cut -d" " -f 2)/g" compile.md
+    - sed -i -e "s/FOSR_VERSION/$(./bin/x86_64-unknown-linux-gnu/release/fosr-cli -V | cut -d" " -f 2)/g" compile.md
     - pandoc intro.md compile.md howto-pcap.md howto-inject.md howto-untaint.md config_doc.md other_software.md schema.md lib.md roadmap.md usecases.md analysis.md limitations.md refs.md footer.md -o index.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
     - pandoc changelog.md -o changelog.html --template template.html --include-after-body footer.html --standalone --toc
     - pandoc cupid.md -o cupid.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
