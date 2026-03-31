@@ -91,7 +91,7 @@ fn render_interface_card(
 
     egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, interface_idx == 0)
         .show_header(ui, |ui| {
-            ui.label(format!("Interface — {ip_label}"));
+            ui.label(format!("Interface - {ip_label}"));
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui

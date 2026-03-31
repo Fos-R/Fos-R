@@ -73,7 +73,7 @@ pub fn poll_file_import(state: &mut ConfigFileState) {
 ///
 /// Skips if content is already loaded to avoid re-reading every frame.
 pub fn load_config_file_contents(configuration_file_state: &mut ConfigFileState) {
-    // Already loaded — don't re-read from disk every frame
+    // Already loaded - don't re-read from disk every frame
     if configuration_file_state.config_file_content.is_some() {
         return;
     }
