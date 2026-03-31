@@ -4,26 +4,8 @@ use crate::shared::config::parser::parse_config_yaml;
 use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::COLOR_ERROR;
 use crate::shared::constants::ui::{YAML_EDITOR_ROWS, YAML_GUTTER_PADDING, YAML_ICON_COL_WIDTH};
+use crate::shared::widgets::helpers::parse_error_lines;
 use eframe::egui;
-
-/// Extract line numbers from YAML parse error messages.
-///
-/// Parses "line N" patterns from error strings to highlight problematic lines.
-fn parse_error_lines(err: &str) -> Vec<usize> {
-    let mut found = Vec::new();
-    let mut search = err;
-    while let Some(pos) = search.find("line ") {
-        let rest = &search[pos + 5..];
-        let num: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
-        if let Ok(n) = num.parse::<usize>() {
-            if !found.contains(&n) {
-                found.push(n);
-            }
-        }
-        search = &search[pos + 5..];
-    }
-    found
-}
 
 /// Metrics for rendering the line number gutter.
 struct GutterMetrics {
@@ -64,8 +46,11 @@ pub fn render_yaml_editor(ui: &mut egui::Ui, state: &mut ConfigFileState) {
         return;
     }
 
-    // Display error banner if parsing failed
-    let error_lines = render_error_banner(ui, state);
+    // Compute error line markers for the gutter
+    let error_lines = match &state.config_error {
+        Some(err) => parse_error_lines(err),
+        None => Vec::new(),
+    };
 
     let mut content = state.config_file_content.clone().unwrap();
     let line_count = content.lines().count().max(1);
@@ -141,24 +126,6 @@ pub fn render_yaml_editor(ui: &mut egui::Ui, state: &mut ConfigFileState) {
     if editor_changed {
         state.config_file_content = Some(content);
         parse_config_yaml(state);
-    }
-}
-
-/// Render error banner and return parsed error line numbers.
-fn render_error_banner(ui: &mut egui::Ui, state: &ConfigFileState) -> Vec<usize> {
-    if let Some(err) = &state.config_error {
-        ui.colored_label(
-            COLOR_ERROR,
-            format!(
-                "{} YAML parsing failed",
-                egui_material_icons::icons::ICON_WARNING
-            ),
-        );
-        ui.colored_label(COLOR_ERROR, err);
-        ui.separator();
-        parse_error_lines(err)
-    } else {
-        Vec::new()
     }
 }
 

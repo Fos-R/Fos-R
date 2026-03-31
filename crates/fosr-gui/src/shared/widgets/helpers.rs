@@ -169,3 +169,29 @@ pub fn required_label(ui: &mut egui::Ui, text: &str) {
     );
     ui.label(job).on_hover_text("Mandatory");
 }
+
+/// Extract line numbers from a YAML parse error message.
+///
+/// Scans for all `"line N"` patterns (e.g. "at line 4 column 3") and returns
+/// deduplicated 1-based line numbers. Used to highlight error lines in the gutter.
+///
+/// Example: `"error at line 4 column 3, while scanning a key at line 3 column 3"`
+/// → returns `[4, 3]`
+pub fn parse_error_lines(err: &str) -> Vec<usize> {
+    let mut found = Vec::new();
+    let mut search = err;
+    while let Some(pos) = search.find("line ") {
+        // Skip past "line " to the digit portion
+        let rest = &search[pos + 5..];
+        // Read consecutive digits as the line number (stops at " column", end of word, etc.)
+        let num: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+        if let Ok(n) = num.parse::<usize>() {
+            if !found.contains(&n) {
+                found.push(n);
+            }
+        }
+        // Advance past this match to continue scanning
+        search = &search[pos + 5..];
+    }
+    found
+}
