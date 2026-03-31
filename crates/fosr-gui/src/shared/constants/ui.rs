@@ -130,13 +130,16 @@ pub const ZOOM_MAX: f32 = 2.0;
 /// Zoom step increment (fraction)
 pub const ZOOM_STEP: f32 = 0.1;
 
-/// Default zoom for native builds (fraction)
+/// Default zoom offset from 1.0 for native builds
 #[cfg(not(target_arch = "wasm32"))]
-pub const ZOOM_DEFAULT: f32 = 1.4;
+pub const ZOOM_OFFSET: f32 = 0.4;
 
-/// Default zoom for WASM builds (fraction)
+/// Default zoom offset from 1.0 for WASM builds
 #[cfg(target_arch = "wasm32")]
-pub const ZOOM_DEFAULT: f32 = 1.2;
+pub const ZOOM_OFFSET: f32 = 0.2;
+
+/// Default zoom factor (1.0 + offset)
+pub const ZOOM_DEFAULT: f32 = 1.0 + ZOOM_OFFSET;
 
 /// Tooltip delay in seconds
 pub const TOOLTIP_DELAY: f32 = 0.1;
