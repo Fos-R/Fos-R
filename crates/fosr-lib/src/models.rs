@@ -35,20 +35,20 @@ impl Models {
         })
     }
 
-    pub fn with_network(mut self, path: &str) -> Result<Self, String> {
-        let network = network::import_network(
-            &fs::read_to_string(Path::new(path))
-                .map_err(|e| format!("Cannot open the network file: {e}"))?,
-        );
-        self.bn.apply_network(&network)?;
-        Ok(self)
-    }
+    // pub fn with_network(mut self, path: &str) -> Result<Self, String> {
+    //     let network = network::import_network(
+    //         &fs::read_to_string(Path::new(path))
+    //             .map_err(|e| format!("Cannot open the network file: {e}"))?,
+    //     );
+    //     self.bn.apply_network(&network)?;
+    //     Ok(self)
+    // }
 
-    pub fn with_string_network(mut self, network: &str) -> Result<Self, String> {
-        let network = network::import_network(network);
-        self.bn.apply_network(&network)?;
-        Ok(self)
-    }
+    // pub fn with_string_network(mut self, network: &str) -> Result<Self, String> {
+    //     let network = network::import_network(network);
+    //     self.bn.apply_network(&network)?;
+    //     Ok(self)
+    // }
 }
 
 impl ModelsSource {
@@ -583,22 +583,10 @@ impl ModelsSource {
                 {
                     vec![
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/bn/bn_common.bifxml",
+                            "default_models/cicids17/bn/bn.bifxml",
                             1
                         ))
                         .unwrap(),
-                        String::new(),
-                        String::new(),
-                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        //     "default_models/cicids17/bn/bn_tcp.bifxml",
-                        //     1
-                        // ))
-                        // .unwrap(),
-                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        //     "default_models/cicids17/bn/bn_udp.bifxml",
-                        //     1
-                        // ))
-                        // .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/bn/bn_additional_data.json",
                             1
@@ -610,22 +598,10 @@ impl ModelsSource {
                 {
                     vec![
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/bn/bn_common.bifxml",
+                            "default_models/cicids17/bn/bn.bifxml",
                             22
                         ))
                         .unwrap(),
-                        String::new(),
-                        String::new(),
-                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        //     "default_models/cicids17/bn/bn_tcp.bifxml",
-                        //     22
-                        // ))
-                        // .unwrap(),
-                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        //     "default_models/cicids17/bn/bn_udp.bifxml",
-                        //     22
-                        // ))
-                        // .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cicids17/bn/bn_additional_data.json",
                             22
@@ -640,22 +616,10 @@ impl ModelsSource {
                 {
                     vec![
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/bn/bn_common.bifxml",
+                            "default_models/cupid/bn/bn.bifxml",
                             1
                         ))
                         .unwrap(),
-                        String::new(),
-                        String::new(),
-                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        //     "default_models/cupid/bn/bn_tcp.bifxml",
-                        //     1
-                        // ))
-                        // .unwrap(),
-                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        //     "default_models/cupid/bn/bn_udp.bifxml",
-                        //     1
-                        // ))
-                        // .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cupid/bn/bn_additional_data.json",
                             1
@@ -667,22 +631,10 @@ impl ModelsSource {
                 {
                     vec![
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/bn/bn_common.bifxml",
+                            "default_models/cupid/bn/bn.bifxml",
                             22
                         ))
                         .unwrap(),
-                        String::new(),
-                        String::new(),
-                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        //     "default_models/cupid/bn/bn_tcp.bifxml",
-                        //     22
-                        // ))
-                        // .unwrap(),
-                        // String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        //     "default_models/cupid/bn/bn_udp.bifxml",
-                        //     22
-                        // ))
-                        // .unwrap(),
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                             "default_models/cupid/bn/bn_additional_data.json",
                             22
@@ -695,11 +647,7 @@ impl ModelsSource {
             ModelsSource::UserDefined(path) => {
                 let p = Path::new(path);
                 Ok(vec![
-                    fs::read_to_string(p.join("bn/bn_common.bifxml").to_str().unwrap())?,
-                    String::new(),
-                    String::new(),
-                    // fs::read_to_string(p.join("bn/bn_tcp.bifxml").to_str().unwrap())?,
-                    // fs::read_to_string(p.join("bn/bn_udp.bifxml").to_str().unwrap())?,
+                    fs::read_to_string(p.join("bn/bn.bifxml").to_str().unwrap())?,
                     fs::read_to_string(p.join("bn/bn_additional_data.json").to_str().unwrap())?,
                 ])
             }

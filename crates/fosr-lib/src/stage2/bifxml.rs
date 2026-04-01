@@ -1,5 +1,3 @@
-use crate::stage2::*;
-
 use serde::Deserialize;
 
 // BIFXML format
@@ -28,37 +26,6 @@ pub fn from_str(string: &str) -> Result<Network, String> {
         .network)
 }
 
-impl Network {
-    /// Apply a suffix to the variables of "other" and merge the two networks
-    #[allow(unused)]
-    pub fn merge(&mut self, mut other: Network, proto: L4Proto) {
-        let outer_variable: Vec<String> = self.variable.iter().map(|v| v.name.clone()).collect();
-        let suffix = " ".to_string() + &proto.to_string();
-        for v in other.variable.iter_mut() {
-            // log::info!("Suffix to {}", &v.name);
-            v.name = v.name.clone() + &suffix;
-            v.proto_specific = Some(proto);
-        }
-        for d in other.definition.iter_mut() {
-            d.variable = d.variable.clone() + &suffix;
-            // if the parent is exist in the "self" network, keep it as is
-            // otherwise, apply the suffix
-            if let Some(given) = &mut d.given {
-                for v in given.iter_mut() {
-                    if !outer_variable.contains(v) {
-                        *v = v.clone() + &suffix;
-                    }
-                }
-            }
-        }
-
-        self.variable.append(&mut other.variable);
-        self.definition.append(&mut other.definition);
-        // log::info!("{:?}", self.variable);
-        // log::info!("{:?}", self.definition.iter().map(|d| d.given.clone()));
-    }
-}
-
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct Variable {
@@ -66,7 +33,7 @@ pub struct Variable {
     #[allow(unused)]
     property: Vec<String>,
     pub outcome: Vec<String>,
-    pub proto_specific: Option<L4Proto>, // not present in the format but convenient
+    // pub proto_specific: Option<L4Proto>, // not present in the format but convenient
 }
 
 #[derive(Deserialize, Debug, Clone)]
