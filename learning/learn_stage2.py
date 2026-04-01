@@ -110,7 +110,7 @@ def complete_proto(l, port):
     return pd.NA
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Learn a time profile for Fos-R.')
+    parser = argparse.ArgumentParser(description='Learn a Bayesian network for Fos-R.')
     parser.add_argument('--input', required=True, help="Select the input folder.")
     parser.add_argument('--output', help="Select the output directory.")
     args = parser.parse_args()
