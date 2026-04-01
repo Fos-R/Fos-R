@@ -10,7 +10,7 @@ from tadam.mdl import NoiseModel
 from tadam.options import Options, GuardsFormat, Init, Search
 import pandas as pd
 import datetime
-from scipy.stats import chisquare
+from scipy.stats import gamma
 import numpy as np
 import sys
 import csv
@@ -70,7 +70,7 @@ def parse_TCP(input_string):
     regex_format2 = r'([A-Za-z]+)/([><])/(-?\d+\.?\d*)/(\d+)/(.+)'
     match = re.match(regex_format2, input_string)
     if match:
-        return match.group(1) + "_" + match.group(2) + "_" + match.group(5), [int(10*math.log10(max(1,float(match.group(3).replace(',', '.')) * 1e6))), int(math.log10(max(1,int(match.group(4)))))]
+        return match.group(1) + "_" + match.group(2) + "_" + match.group(5), [round(10*math.log10(max(1,float(match.group(3).replace(',', '.')) * 1e6))), round(math.log10(max(1,int(match.group(4)))))]
     else:
         assert False, "Parsing error on "+input_string
 
@@ -81,7 +81,7 @@ def parse_UDP(input_string):
     if "$" in input_string: return "$", [0,0]
     match = re.match(r'([><])/(-?\d+\.?\d*)/(\d+)/(.+)', input_string)
     if match:
-        return match.group(1) + "_" + match.group(4), [int(10*math.log10(max(1,float(match.group(2).replace(',', '.')) * 1e6))), int(math.log10(max(1,int(match.group(3)))))]
+        return match.group(1) + "_" + match.group(4), [round(10*math.log10(max(1,float(match.group(2).replace(',', '.')) * 1e6))), round(math.log10(max(1,int(match.group(3)))))]
     assert False, "Parsing error on "+input_string
 
 def parse_ICMP(input_string):
@@ -91,7 +91,7 @@ def parse_ICMP(input_string):
     if "$" in input_string: return "$", [0]
     match = re.match(r'([><])/(-?\d+.\d+)', input_string)
     if match:
-        return match.group(1), [int(10*math.log10(max(1,float(match.group(2).replace(',', '.')) * 1e6)))]
+        return match.group(1), [round(10*math.log10(max(1,float(match.group(2).replace(',', '.')) * 1e6)))]
     assert False, "Parsing error on "+input_string
 
 class Exporter:
@@ -114,7 +114,7 @@ class Exporter:
                 for ts, t in e.tss.items():
                     tss = tss + [self.payloads[ts][a] for (a,_) in t]
                 values, counts = np.unique(tss, return_counts=True)
-                d["payloads"] = { "type": "Base64", "content": [str(s) for s in values] }
+                d["payloads"] = { "content": [str(s) for s in values] }
                 # save the weights only if it’s not equiprobable
                 if any(c != counts[0] for c in counts):
                     d["payloads"]["weights"] = [int(i) for i in counts]
@@ -124,8 +124,14 @@ class Exporter:
             d["src"] = ta.states.index(e.source)
             d["dst"] = ta.states.index(e.destination)
             d["symbol"] = e.symbol
-            d["mu"] = e.mu.tolist()
-            d["cov"] = e.cov.tolist()
+            # only learn the gamma distribution on the IAT
+            guards = [ math.pow(10,l[0]/10) for l in e.guard + e.rec_guard ] # go back to actual values
+            assert len(guards) > 0
+            if len(set(guards)) == 1:
+                d["distrib"] = { "law": "constant", "value": guards[0] }
+            else:
+                g = gamma.fit(guards)
+                d["distrib"] = { "law": "gamma", "shape": g[0], "loc": g[1], "scale": g[2] }
             tmp.append(d)
 
         noise = {}
