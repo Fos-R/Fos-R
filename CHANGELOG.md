@@ -27,6 +27,7 @@
 - Evaluation pipeline
 - Added a Zeek script for feature extraction
 - TADAM: noise includes substitution
+- TADAM: include payload types from tshark
 - Reworked learning algorithms
 
 ### Changed

@@ -16,6 +16,7 @@ import sys
 import csv
 import time
 import random
+import math
 
 pd.options.mode.copy_on_write = True
 
@@ -69,7 +70,7 @@ def parse_TCP(input_string):
     regex_format2 = r'([A-Za-z]+)/([><])/(-?\d+\.?\d*)/(\d+)/(.+)'
     match = re.match(regex_format2, input_string)
     if match:
-        return match.group(1) + "_" + match.group(2) + "_" + match.group(5), [int(float(match.group(3).replace(',', '.')) * 1e3), int(match.group(4))]
+        return match.group(1) + "_" + match.group(2) + "_" + match.group(5), [int(10*math.log10(max(1,float(match.group(3).replace(',', '.')) * 1e6))), int(math.log10(max(1,int(match.group(4)))))]
     else:
         assert False, "Parsing error on "+input_string
 
@@ -80,7 +81,7 @@ def parse_UDP(input_string):
     if "$" in input_string: return "$", [0,0]
     match = re.match(r'([><])/(-?\d+\.?\d*)/(\d+)/(.+)', input_string)
     if match:
-        return match.group(1) + "_" + match.group(4), [int(float(match.group(2).replace(',', '.')) * 1e6), int(match.group(3))]
+        return match.group(1) + "_" + match.group(4), [int(10*math.log10(max(1,float(match.group(2).replace(',', '.')) * 1e6))), int(math.log10(max(1,int(match.group(3)))))]
     assert False, "Parsing error on "+input_string
 
 def parse_ICMP(input_string):
@@ -90,7 +91,7 @@ def parse_ICMP(input_string):
     if "$" in input_string: return "$", [0]
     match = re.match(r'([><])/(-?\d+.\d+)', input_string)
     if match:
-        return match.group(1), [int(float(match.group(2).replace(',', '.')) * 1e6)]
+        return match.group(1), [int(10*math.log10(max(1,float(match.group(2).replace(',', '.')) * 1e6)))]
     assert False, "Parsing error on "+input_string
 
 class Exporter:
@@ -106,25 +107,9 @@ class Exporter:
         tmp = []
         for e in ta.edges:
             d = {}
-            if "Text" in e.symbol:
-                tss = []
-                for ts, t in e.tss.items():
-                    tss = tss + [self.payloads[ts][a] for (a,_) in t]
-                values, counts = np.unique(tss, return_counts=True)
-                content = []
-                for i,s in enumerate(values):
-                    try:
-                        # It can happen with substitution
-                        content.append(base64.standard_b64decode(s).decode('utf-8'))
-                    except Exception as e2:
-                        print("UTF-8 decoding error: skipping", e2)
-                        content.append("")
-                        counts[i] = 0
-                d["payloads"] = { "type": "Text", "content": content }
-                # save the weights only if it’s not equiprobable
-                if any(c != counts[0] for c in counts):
-                    d["payloads"]["weights"] = [int(i) for i in counts]
-            elif "Binary" in e.symbol:
+            if "/Empty" in e.symbol:
+                d["payloads"] = { "type": "NoPayload" }
+            elif e.symbol != "$":
                 tss = []
                 for ts, t in e.tss.items():
                     tss = tss + [self.payloads[ts][a] for (a,_) in t]
@@ -133,18 +118,7 @@ class Exporter:
                 # save the weights only if it’s not equiprobable
                 if any(c != counts[0] for c in counts):
                     d["payloads"]["weights"] = [int(i) for i in counts]
-            elif "Random" in e.symbol:
-                lengths = []
-                for ts, t in e.tss.items():
-                    lengths = lengths + [len(base64.standard_b64decode(self.payloads[ts][a])) for (a,_) in t]
-                values, counts = np.unique(lengths, return_counts=True)
-                d["payloads"] = { "type": "Lengths", "lengths": [int(v) for v in values] }
-                # save the weights only if it’s not equiprobable
-                if any(c != counts[0] for c in counts):
-                    d["payloads"]["weights"] = [int(i) for i in counts]
-            else:
-                d["payloads"] = { "type": "NoPayload" }
-            # if empty: keep tss empty
+
             d["p"] = e.proba
             d["count"] = len(e.tss)
             d["src"] = ta.states.index(e.source)
@@ -227,7 +201,7 @@ if __name__ == '__main__':
             cols.remove("payload")
             for c in cols:
                 payload_types[c] = payload_types[c].apply(lambda s: c+"="+str(s) if s != "" else "")
-            payload_types['type'] = payload_types[cols].apply(lambda row: '_and_'.join(filter(None,row.values.astype(str))), axis=1)
+            payload_types['type'] = payload_types[cols].apply(lambda row: '-and-'.join(filter(None,row.values.astype(str))), axis=1)
             payload_types = payload_types[payload_types['type'] != ""]
             return payload_types[['payload', 'type']].drop_duplicates()
 
@@ -300,6 +274,8 @@ if __name__ == '__main__':
             inferer = PayloadTypeInference(payload_types_tcp)
         elif protocol == "udp":
             inferer = PayloadTypeInference(payload_types_udp)
+        else:
+            assert False
 
         df["time_sequence"] = df.apply(inferer.add_payload_type, axis=1)
 
@@ -330,39 +306,40 @@ if __name__ == '__main__':
         start = time.time()
         try:
             l = exhaustive_search(options, tss_list=df["time_sequence"], verbose=args.verbose, noise_model=noise_model, on_iter=exporter.export_automata)
-        except Exception as e:
-            print("Fatal error during TADAM learning: skipping",e)
-        print("Learning time:", time.time() - start)
+            print("Learning time:", time.time() - start)
 
-        ta = l.ta
-        print("Automaton successfully learned")
+            ta = l.ta
+            print("Automaton successfully learned")
 
-        distrib = l.ta._generate_exhaustively(10)
-        sum_proba = sum([pow(2, v) for v in distrib.values()])
-        distrib_output = {}
-        for k,v in distrib.items():
-            p = pow(2, v)/sum_proba
-            if p >= 1e-5:
-                distrib_output[k] = p
+            distrib = l.ta._generate_exhaustively(10)
+            sum_proba = sum([pow(2, v) for v in distrib.values()])
+            distrib_output = {}
+            for k,v in distrib.items():
+                p = pow(2, v)/sum_proba
+                if p >= 1e-5:
+                    distrib_output[k] = p
 
-        if conn_state is None:
-            output_name = os.path.join(args.output, service+"-language.json")
-        else:
-            output_name = os.path.join(args.output, service+"-"+conn_state+"-language.json")
-
-        out_file = open(output_name, "w")
-        json.dump(distrib_output, out_file, indent=1)
-
-        try:
             if conn_state is None:
-                output_name_dot = os.path.join(args.output, service+".dot")
+                output_name = os.path.join(args.output, service+"-language.json")
             else:
-                output_name_dot = os.path.join(args.output, service+"-"+conn_state+".dot")
+                output_name = os.path.join(args.output, service+"-"+conn_state+"-language.json")
 
-            l.ta.export_ta(output_name_dot, guard_as_distrib=True)
-            print("Dot file successfully created:",output_name_dot)
-        except Exception as e:
-            print("Error during dot save:",e)
+            out_file = open(output_name, "w")
+            json.dump(distrib_output, out_file, indent=1)
 
+            try:
+                if conn_state is None:
+                    output_name_dot = os.path.join(args.output, service+".dot")
+                else:
+                    output_name_dot = os.path.join(args.output, service+"-"+conn_state+".dot")
+
+                l.ta.export_ta(output_name_dot, guard_as_distrib=True)
+                print("Dot file successfully created:",output_name_dot)
+            except Exception as e:
+                print("Error during dot save:",e)
+        # except Exception as e:
+            # print(f"Fatal error ({e}) during TADAM learning: skipping")
+        finally:
+            pass
 
 
