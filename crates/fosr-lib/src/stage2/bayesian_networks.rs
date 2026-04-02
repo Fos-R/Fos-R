@@ -3,8 +3,8 @@ use crate::stage2::*;
 
 use chrono::Timelike;
 use pnet::util::MacAddr;
-use rand_distr::weighted::WeightedIndex;
 use rand_distr::Distribution;
+use rand_distr::weighted::WeightedIndex;
 use rand_pcg::Pcg32;
 use std::cmp::min;
 use std::collections::HashMap;
@@ -160,11 +160,7 @@ type CPT = Vec<Option<WeightedIndex<f64>>>; // some combination may be impossibl
 
 impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
-    fn sample_index(
-        &self,
-        rng: &mut impl Rng,
-        current: &[Option<usize>],
-    ) -> Result<Option<usize>, String> {
+    fn sample_index(&self, rng: &mut impl Rng, current: &[usize]) -> Result<Option<usize>, String> {
         let mut parents_index = 0;
         // println!("Sample index of {:?}", self.feature);
         // println!("Sample index");
@@ -175,7 +171,7 @@ impl BayesianNetworkNode {
             //     current[*index],
             //     self.cpt.as_ref().unwrap().len()
             // );
-            parents_index = parents_index * card + current[*index].unwrap()
+            parents_index = parents_index * card + current[*index]
         }
         // println!("CPT: {:?}", self.cpt);
         match &self.cpt {
@@ -229,7 +225,7 @@ impl BayesianNetwork {
     fn sample(
         &self,
         rng: &mut impl Rng,
-        discrete_vector: &mut Vec<Option<usize>>,
+        discrete_vector: &mut Vec<usize>,
     ) -> Result<IntermediateVector, String> {
         // println!("{self:?}");
         let mut try_again = true;
@@ -248,7 +244,7 @@ impl BayesianNetwork {
                     if let Some(i) = index {
                         assert!(i < v.feature.get_cardinality());
                         // println!("Sampled value for {:?}: {}", v.feature, i);
-                        new_discrete_vector.push(Some(i));
+                        new_discrete_vector.push(i);
                         match &v.feature {
                             Feature::SrcIpRole(v) => domain_vector.src_ip_role = Some(v[i].clone()),
                             Feature::DstIpRole(v) => domain_vector.dst_ip_role = Some(v[i].clone()),
@@ -961,17 +957,17 @@ impl Stage2 for BNGenerator {
     ) -> Result<impl Iterator<Item = SeededData<Flow>>, String> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
         let mut domain_vector: IntermediateVector = IntermediateVector::default();
-        let mut discrete_vector: Vec<Option<usize>> = vec![];
+        let mut discrete_vector: Vec<usize> = vec![];
 
         let mut restart = true;
         while restart {
             restart = false;
             discrete_vector.clear();
-            discrete_vector.push(Some(min(
+            discrete_vector.push(min(
                 self.model.bin_count - 1,
                 (ts.data.date_time.num_seconds_from_midnight() as usize) / (3600 * 24)
                     * self.model.bin_count,
-            )));
+            ));
             domain_vector = self.model.bn.sample(&mut rng, &mut discrete_vector)?;
 
             if domain_vector.src_ip == domain_vector.dst_ip {
