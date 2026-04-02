@@ -5,6 +5,7 @@ use crate::stage3::*;
 use rand_core::*;
 use rand_pcg::Pcg32;
 use serde::Deserialize;
+use statrs::distribution::MultivariateNormal;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -27,11 +28,11 @@ impl AutomataLibrary {
             .get_automata()
             .map_err(|e| format!("Cannot open the automata files: {e}"))?;
 
-        let clusters: String = models
+        let clusters_string: String = models
             .get_pkt_count_clusters()
             .map_err(|e| format!("Cannot find the clusters: {e}"))?;
         let clusters: Vec<PacketDistr> =
-            serde_json::from_str(&clusters).expect("Cannot parse the clusters");
+            serde_json::from_str(&clusters_string).expect("Cannot parse the clusters");
 
         let mut nb = 0;
         let mut lib = AutomataLibrary {
@@ -109,9 +110,59 @@ impl AutomataLibrary {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(from = "PacketDistrJson")]
+enum PacketDistr {
+    TCP {
+        conn_state: TCPConnState,
+        service: String,
+        distr: Vec<MultivariateNormal<nalgebra::Dyn>>,
+    },
+    UDP {
+        service: String,
+        distr: Vec<MultivariateNormal<nalgebra::Dyn>>,
+    },
+}
+
+// Create the multivariate normal distribution on deserialization
+impl From<PacketDistrJson> for PacketDistr {
+    fn from(d: PacketDistrJson) -> Self {
+        match d {
+            PacketDistrJson::TCP {
+                conn_state,
+                service,
+                mu,
+                cov,
+            } => PacketDistr::TCP {
+                conn_state,
+                service,
+                distr: mu
+                    .into_iter()
+                    .zip(cov.into_iter())
+                    .map(|(m, c)| {
+                        MultivariateNormal::new(m, c.into_iter().flatten().collect())
+                            .expect("Could not create the multivariate normal of the cluster")
+                    })
+                    .collect(),
+            },
+            PacketDistrJson::UDP { service, mu, cov } => PacketDistr::UDP {
+                service,
+                distr: mu
+                    .into_iter()
+                    .zip(cov.into_iter())
+                    .map(|(m, c)| {
+                        MultivariateNormal::new(m, c.into_iter().flatten().collect())
+                            .expect("Could not create the multivariate normal of the cluster")
+                    })
+                    .collect(),
+            },
+        }
+    }
+}
+
+#[derive(Deserialize, Debug)]
 #[serde(tag = "proto")]
 #[allow(clippy::upper_case_acronyms)]
-enum PacketDistr {
+enum PacketDistrJson {
     TCP {
         conn_state: TCPConnState,
         service: String,
