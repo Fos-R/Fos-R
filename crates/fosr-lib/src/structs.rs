@@ -1,5 +1,6 @@
 use chrono::{DateTime, FixedOffset};
 use pcap_file::pcap;
+use rand_distr::Uniform;
 use rand_distr::weighted::WeightedIndex;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -7,7 +8,6 @@ use std::fmt::{Debug, Display};
 use std::net::Ipv4Addr;
 use std::time::Duration;
 use thingbuf::Recycle;
-use rand_distr::Uniform;
 
 /// A general wrapper to pass a seed along with actual data
 #[derive(Debug, Clone)]

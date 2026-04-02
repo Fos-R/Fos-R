@@ -180,7 +180,13 @@ pub fn show_progression(stats: Arc<Stats>) {
                         let bc = stats2.bytes_counter.load(Ordering::Relaxed);
                         let pc = stats2.packets_counter.load(Ordering::Relaxed);
                         let throughput = (bc as f64) / state.elapsed().as_secs_f64();
-                        write!(w, "{}/s, {:.2} MPPS", HumanBytes(throughput as u64), ((pc as f64) / (1_000_000f64 * state.elapsed().as_secs_f64()))).unwrap();
+                        write!(
+                            w,
+                            "{}/s, {:.2} MPPS",
+                            HumanBytes(throughput as u64),
+                            ((pc as f64) / (1_000_000f64 * state.elapsed().as_secs_f64()))
+                        )
+                        .unwrap();
                     }
                 },
             ),

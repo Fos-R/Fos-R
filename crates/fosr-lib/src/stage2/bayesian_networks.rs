@@ -1,13 +1,11 @@
 use crate::models;
-use crate::network;
 use crate::stage2::*;
 
 use chrono::Timelike;
 use pnet::util::MacAddr;
 use rand_distr::weighted::WeightedIndex;
-use rand_distr::{Distribution, Normal};
+use rand_distr::Distribution;
 use rand_pcg::Pcg32;
-use serde::Deserialize;
 use std::cmp::min;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -114,7 +112,7 @@ enum Feature {
     SrcIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
     DstIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
     DstPt(Vec<DstPt>), // the port comes from the network file (must be chosen after the dest IP)
-    PktCount(usize), // cardinality only
+    PktCount(usize),   // cardinality only
     SrcTTL(Vec<u8>),
     DstTTL(Vec<u8>),
     SrcMac(Vec<MacAddr>),
@@ -169,6 +167,7 @@ impl BayesianNetworkNode {
     ) -> Result<Option<usize>, String> {
         let mut parents_index = 0;
         // println!("Sample index of {:?}", self.feature);
+        // println!("Sample index");
         for (index, card) in self.parents.iter().zip(self.parents_cardinality.iter()) {
             // println!(
             //     "Parent {}. Value: {:?}. Cpt len: {}.",
@@ -243,6 +242,7 @@ impl BayesianNetwork {
             domain_vector = IntermediateVector::default();
             for v in self.nodes.iter() {
                 // log::info!("Sampling {:?} (index: {index})", v.feature);
+                // println!("Discrete vector: {:?}", new_discrete_vector);
                 if !matches!(v.feature, Feature::TimeBin(_)) {
                     let index = v.sample_index(rng, &new_discrete_vector)?;
                     if let Some(i) = index {
@@ -250,24 +250,12 @@ impl BayesianNetwork {
                         // println!("Sampled value for {:?}: {}", v.feature, i);
                         new_discrete_vector.push(Some(i));
                         match &v.feature {
-                            Feature::SrcIpRole(v) => {
-                                domain_vector.src_ip_role = Some(v[i].clone())
-                            }
-                            Feature::DstIpRole(v) => {
-                                domain_vector.dst_ip_role = Some(v[i].clone())
-                            }
-                            Feature::SrcTTL(v) => {
-                                domain_vector.ttl_client = Some(v[i].clone())
-                            }
-                            Feature::DstTTL(v) => {
-                                domain_vector.ttl_server = Some(v[i].clone())
-                            }
-                            Feature::SrcMac(v) => {
-                                domain_vector.src_mac = Some(v[i].clone())
-                            }
-                            Feature::DstMac(v) => {
-                                domain_vector.dst_mac = Some(v[i].clone())
-                            }
+                            Feature::SrcIpRole(v) => domain_vector.src_ip_role = Some(v[i].clone()),
+                            Feature::DstIpRole(v) => domain_vector.dst_ip_role = Some(v[i].clone()),
+                            Feature::SrcTTL(v) => domain_vector.ttl_client = Some(v[i]),
+                            Feature::DstTTL(v) => domain_vector.ttl_server = Some(v[i]),
+                            Feature::SrcMac(v) => domain_vector.src_mac = Some(v[i]),
+                            Feature::DstMac(v) => domain_vector.dst_mac = Some(v[i]),
                             Feature::L7Proto(v) => domain_vector.l7_proto = Some(v[i]),
                             Feature::SrcIp(v) => match v[i] {
                                 AnonymizedIpv4Addr::Local(p) => domain_vector.src_ip = Some(p),
@@ -285,14 +273,13 @@ impl BayesianNetwork {
                                 DstPt::Random => domain_vector.dst_port = None,
                                 DstPt::Fixed(p) => domain_vector.dst_port = Some(p),
                             },
-                            Feature::PktCount(_) => {
-                                domain_vector.packets_count_cluster = Some(i)
-                            }
+                            Feature::PktCount(_) => domain_vector.packets_count_cluster = Some(i),
                             Feature::L4Proto(v) => domain_vector.proto = Some(v[i]),
                             Feature::EndFlags(v) => domain_vector.tcp_flags = Some(v[i]),
                             Feature::TimeBin(_) => unreachable!(),
                         }
                     } else {
+                        // log::error!("Rejected");
                         rejected += 1;
                         if rejected > 10000 {
                             return Err("Too many rejections during sampling. Maybe the network file is not compatible with the model learned.".to_string());
@@ -303,8 +290,6 @@ impl BayesianNetwork {
                         try_again = true;
                         break;
                     }
-                } else {
-                    new_discrete_vector.push(None);
                 }
             } // if it’s "Time", do not push any value (it was already done previously)
         }
@@ -319,8 +304,9 @@ impl BayesianNetwork {
 /// The model with all the data
 pub struct BayesianModel {
     bn: BayesianNetwork,
-    bn_additional_data: AdditionalData,
-    open_ports: HashMap<(Ipv4Addr, &'static str), u16>,
+    bin_count: usize,
+    // bn_additional_data: AdditionalData,
+    // open_ports: HashMap<(Ipv4Addr, &'static str), u16>,
 }
 
 /// Stage 1: generates flow descriptions
@@ -329,31 +315,6 @@ pub struct BayesianModel {
 pub struct BNGenerator {
     model: Arc<BayesianModel>,
     online: bool, // used to generate the TTL, either initial or at the capture point
-}
-
-// TODO: sortir de bayesian network, et passer "bin_count" en paramètre au stage 2 et "pkt" en
-// paramètre du stage 3
-#[derive(Deserialize, Debug)]
-struct AdditionalData {
-    bin_count: usize,
-    pkt: Vec<PacketDistr>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(tag = "proto")]
-enum PacketDistr {
-    TCP {
-        conn_state: TCPConnState,
-        service: String,
-        // TODO: transformer en Vec<Normal<f64>> directement
-        mu: Vec<Vec<f64>>,
-        cov: Vec<Vec<Vec<f64>>>,
-    },
-    UDP {
-        service: String,
-        mu: Vec<Vec<f64>>,
-        cov: Vec<Vec<Vec<f64>>>,
-    },
 }
 
 // remove a value from variable by setting its probability to zero
@@ -379,30 +340,30 @@ fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), Stri
 
 impl BayesianModel {
     pub fn from_source(m: &models::ModelsSource) -> Result<Self, String> {
-        let bn_strings: Vec<String> = m
+        let bn_string: String = m
             .get_bn()
             .map_err(|e| format!("Cannot find the Bayesian networks: {e}"))?;
-        let bn_additional_data: AdditionalData = serde_json::from_str(&bn_strings[1])
-            .map_err(|e| format!("Cannot parse the additional_data file: {e}"))?;
 
         log::info!("Loading Bayesian network");
-        let bif_common = bifxml::from_str(&bn_strings[0])?;
+        let bif_common = bifxml::from_str(&bn_string)?;
 
-        let bn = bn_from_bif(bif_common, &bn_additional_data)?;
+        let (bn, bin_count) = bn_from_bif(bif_common)?;
 
-        log::info!("Bayesian networks have been loaded");
+        log::info!("Bayesian network has been loaded");
 
         // log::info!("{bn_common}");
         let mut model = BayesianModel {
             bn,
-            bn_additional_data,
-            open_ports: HashMap::new(),
+            bin_count,
+            // bn_additional_data,
+            // open_ports: HashMap::new(),
         };
 
         model.remove_impossible_values()?;
         Ok(model)
     }
 
+    // Used to remove impossible values
     fn condition_cpt(&self, node: usize, index_parent: usize, parent_val: usize) -> CPT {
         let mut output: Vec<Option<WeightedIndex<f64>>> = vec![];
         assert!(
@@ -705,8 +666,8 @@ impl BayesianModel {
 
 fn bn_from_bif(
     network: bifxml::Network,
-    bn_additional_data: &AdditionalData,
-) -> Result<BayesianNetwork, String> {
+    // bn_additional_data: &AdditionalData,
+) -> Result<(BayesianNetwork, usize), String> {
     // Used only for computing the topological order
     struct TopologicalNode {
         parents: HashSet<String>,
@@ -799,6 +760,8 @@ fn bn_from_bif(
 
     let mut var_names: Vec<String> = vec![];
 
+    let mut bin_count: Option<usize> = None;
+
     for (v, def) in variable.iter().zip(definition) {
         assert_eq!(v.name, def.variable); // we assume the order is the same between
         // <variable> and <definition>
@@ -832,8 +795,13 @@ fn bn_from_bif(
             .collect();
 
         // println!("{}", def.variable);
+        // println!("{:?}", v.outcome);
         let feature: Option<Feature> = match v.name.as_str() {
-            "Time" => Some(Feature::TimeBin(bn_additional_data.bin_count)),
+            "Time" => {
+                bin_count = Some(v.outcome.len());
+                Some(Feature::TimeBin(v.outcome.len()))
+            }
+            "Cat Packet" => Some(Feature::PktCount(v.outcome.len())),
             "Src IP Role" => Some(Feature::SrcIpRole(
                 v.outcome
                     .clone()
@@ -873,6 +841,34 @@ fn bn_from_bif(
             )),
             "Proto" => Some(Feature::L4Proto(
                 v.outcome.clone().into_iter().map(|s| s.into()).collect(),
+            )),
+            "Src TTL" => Some(Feature::SrcTTL(
+                v.outcome
+                    .clone()
+                    .into_iter()
+                    .map(|s| s[4..].parse::<u8>().expect("Not a valid TTL"))
+                    .collect(),
+            )),
+            "Dst TTL" => Some(Feature::DstTTL(
+                v.outcome
+                    .clone()
+                    .into_iter()
+                    .map(|s| s[4..].parse::<u8>().expect("Not a valid TTL"))
+                    .collect(),
+            )),
+            "Src MAC" => Some(Feature::SrcMac(
+                v.outcome
+                    .clone()
+                    .into_iter()
+                    .map(|s| MacAddr::from_str(&s).expect("Not a valid MAC address"))
+                    .collect(),
+            )),
+            "Dst MAC" => Some(Feature::DstMac(
+                v.outcome
+                    .clone()
+                    .into_iter()
+                    .map(|s| MacAddr::from_str(&s).expect("Not a valid MAC address"))
+                    .collect(),
             )),
             "Dst Pt" => Some(Feature::DstPt(
                 v.outcome
@@ -947,7 +943,7 @@ fn bn_from_bif(
         // }
     }
 
-    Ok(processed_bn)
+    Ok((processed_bn, bin_count.expect("Time feature not found!")))
 }
 
 impl BNGenerator {
@@ -972,9 +968,9 @@ impl Stage2 for BNGenerator {
             restart = false;
             discrete_vector.clear();
             discrete_vector.push(Some(min(
-                self.model.bn_additional_data.bin_count - 1,
+                self.model.bin_count - 1,
                 (ts.data.date_time.num_seconds_from_midnight() as usize) / (3600 * 24)
-                    * self.model.bn_additional_data.bin_count,
+                    * self.model.bin_count,
             )));
             domain_vector = self.model.bn.sample(&mut rng, &mut discrete_vector)?;
 
@@ -985,10 +981,10 @@ impl Stage2 for BNGenerator {
 
             domain_vector.timestamp = Some(ts.data.unix_time);
             let uniform = OS::Windows.get_ephemeral_port_distr(); // TODO: use the actual OS
-            domain_vector.src_port = Some(uniform.sample(&mut rng) as u16);
+            domain_vector.src_port = Some(uniform.sample(&mut rng));
             if domain_vector.dst_port.is_none() {
                 // Some protocol have random destination port, like FTP-data
-                domain_vector.dst_port = Some(uniform.sample(&mut rng) as u16);
+                domain_vector.dst_port = Some(uniform.sample(&mut rng));
             }
             // TODO: allow that again
             // if let Some(port) = self.model.open_ports.get(&(

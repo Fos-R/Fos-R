@@ -148,7 +148,9 @@ impl Stage4 {
                 }
 
                 // Increment forward ACK and backward SEQ
-                if packet_info.payload.get_payload_size() == 0 && (packet_info.s_flag || packet_info.f_flag) {
+                if packet_info.payload.get_payload_size() == 0
+                    && (packet_info.s_flag || packet_info.f_flag)
+                {
                     tcp_data.forward += 1;
                 } else {
                     tcp_data.forward += packet_info.payload.get_payload_size() as u32;
@@ -168,7 +170,9 @@ impl Stage4 {
                 }
 
                 // Increment forward ACK and backward SEQ
-                if packet_info.payload.get_payload_size() == 0 && (packet_info.s_flag || packet_info.f_flag) {
+                if packet_info.payload.get_payload_size() == 0
+                    && (packet_info.s_flag || packet_info.f_flag)
+                {
                     tcp_data.backward += 1;
                 } else {
                     tcp_data.backward += packet_info.payload.get_payload_size() as u32;

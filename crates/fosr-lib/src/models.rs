@@ -1,4 +1,3 @@
-use crate::network;
 use crate::{stage1, stage2, stage3};
 use std::ffi::OsStr;
 use std::fs;
@@ -575,82 +574,104 @@ impl ModelsSource {
         }
     }
 
-    pub(crate) fn get_bn(&self) -> std::io::Result<Vec<String>> {
+    pub(crate) fn get_bn(&self) -> std::io::Result<String> {
         match &self {
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
                 #[cfg(debug_assertions)]
                 {
-                    vec![
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/bn/bn.bifxml",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/bn/bn_additional_data.json",
-                            1
-                        ))
-                        .unwrap(),
-                    ]
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/cicids17/bn/bn.bifxml",
+                        1
+                    ))
+                    .unwrap()
                 },
                 #[cfg(not(debug_assertions))]
                 {
-                    vec![
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/bn/bn.bifxml",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/bn/bn_additional_data.json",
-                            22
-                        ))
-                        .unwrap(),
-                    ]
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/cicids17/bn/bn.bifxml",
+                        22
+                    ))
+                    .unwrap()
                 },
             ),
             #[cfg(feature = "models_cupid")]
             ModelsSource::CUPID => Ok(
                 #[cfg(debug_assertions)]
                 {
-                    vec![
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/bn/bn.bifxml",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/bn/bn_additional_data.json",
-                            1
-                        ))
-                        .unwrap(),
-                    ]
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/cupid/bn/bn.bifxml",
+                        1
+                    ))
+                    .unwrap()
                 },
                 #[cfg(not(debug_assertions))]
                 {
-                    vec![
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/bn/bn.bifxml",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/bn/bn_additional_data.json",
-                            22
-                        ))
-                        .unwrap(),
-                    ]
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/cupid/bn/bn.bifxml",
+                        22
+                    ))
+                    .unwrap()
                 },
             ),
 
             ModelsSource::UserDefined(path) => {
                 let p = Path::new(path);
-                Ok(vec![
-                    fs::read_to_string(p.join("bn/bn.bifxml").to_str().unwrap())?,
-                    fs::read_to_string(p.join("bn/bn_additional_data.json").to_str().unwrap())?,
-                ])
+                Ok(fs::read_to_string(
+                    p.join("bn/bn.bifxml").to_str().unwrap(),
+                )?)
             }
+        }
+    }
+
+    pub(crate) fn get_pkt_count_clusters(&self) -> Result<String, String> {
+        match &self {
+            #[cfg(feature = "models_cicids17")]
+            ModelsSource::CICIDS17 => Ok(
+                #[cfg(debug_assertions)]
+                {
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/cicids17/pkt_count_clusters.json",
+                        1
+                    ))
+                    .unwrap()
+                },
+                #[cfg(not(debug_assertions))]
+                {
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/cicids17/pkt_count_clusters.json",
+                        22
+                    ))
+                    .unwrap()
+                },
+            ),
+            #[cfg(feature = "models_cupid")]
+            ModelsSource::CUPID => Ok(
+                #[cfg(debug_assertions)]
+                {
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/cupid/pkt_count_clusters.json",
+                        1
+                    ))
+                    .unwrap()
+                },
+                #[cfg(not(debug_assertions))]
+                {
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/cupid/pkt_count_clusters.json",
+                        22
+                    ))
+                    .unwrap()
+                },
+            ),
+
+            ModelsSource::UserDefined(path) => Ok(fs::read_to_string(
+                Path::new(path)
+                    .join("pkt_count_clusters.json")
+                    .to_str()
+                    .unwrap(),
+            )
+            .map_err(|e| format!("Cannot open the packet count clusters file: {e}"))?),
         }
     }
 
