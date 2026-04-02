@@ -2,27 +2,29 @@
 
 Feel free to contact us if you would like some help integrating Fos-R in your tool!
 
-## Zeek analysis
+## Direct pcap analysis
 
-If you would like to avoid generating a large pcap file on your machine but would prefer the analysis of Zeek, you can use named fifo to redirect the output of Fos-R to the input of Zeek.
+If you would like to avoid generating a large pcap file on your machine but would prefer the analysis of Zeek, tshark, or another tool, you can use a fifo to redirect the output of Fos-R to the input of any software.
 
-Create a named fifo (this step is only needed once)
-
-```console
-mkfifo fifo-fosr
-```
-
-Then, it two terminals, launch
+Create a fifo:
 
 ```console
-zeek -C -r fifo-fosr
+mkfifo /tmp/fifo-fosr
 ```
 
-and
+Then, in two terminals, launch:
 
 ```console
-fosr augment-dataset [your parameters] -o fifo-fosr
+zeek -C -r /tmp/fifo-fosr
 ```
+
+and:
+
+```console
+fosr augment-dataset [your parameters] -o /tmp/fifo-fosr
+```
+
+This method does _not_ work with tshark with the `-2` parameter that requires to seek backwards on the input.
 
 ## Wireshark
 
