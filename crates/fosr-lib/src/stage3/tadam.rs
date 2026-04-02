@@ -10,16 +10,13 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct AutomataLibrary {
-    // cons_tcp_automata:
-    //     HashMap<(&'static str, TCPConnState), automaton::CrossProductTimedAutomaton<TCPEdgeTuple>>,
-    // cons_udp_automata: HashMap<&'static str, automaton::CrossProductTimedAutomaton<UDPEdgeTuple>>,
+    cons_tcp_automata:
+        HashMap<(&'static str, TCPConnState), automaton::CrossProductTimedAutomaton<TCPEdgeTuple>>,
+    cons_udp_automata: HashMap<&'static str, automaton::CrossProductTimedAutomaton<UDPEdgeTuple>>,
     // cons_icmp_automata: HashMap<&'static str, automaton::CrossProductTimedAutomaton<ICMPEdgeTuple>>,
-
-    // TODO: pourquoi les garder ?
-    tcp_automata: HashMap<(&'static str, TCPConnState), automaton::TimedAutomaton<TCPEdgeTuple>>,
-    udp_automata: HashMap<&'static str, automaton::TimedAutomaton<UDPEdgeTuple>>,
-    icmp_automata: HashMap<&'static str, automaton::TimedAutomaton<ICMPEdgeTuple>>,
-    clusters: Vec<PacketDistr>,
+    // tcp_automata: HashMap<(&'static str, TCPConnState), automaton::TimedAutomaton<TCPEdgeTuple>>,
+    // udp_automata: HashMap<&'static str, automaton::TimedAutomaton<UDPEdgeTuple>>,
+    // icmp_automata: HashMap<&'static str, automaton::TimedAutomaton<ICMPEdgeTuple>>,
 }
 
 impl AutomataLibrary {
@@ -36,13 +33,12 @@ impl AutomataLibrary {
 
         let mut nb = 0;
         let mut lib = AutomataLibrary {
-            // cons_tcp_automata: HashMap::new(),
-            // cons_udp_automata: HashMap::new(),
+            cons_tcp_automata: HashMap::new(),
+            cons_udp_automata: HashMap::new(),
             // cons_icmp_automata: HashMap::new(),
-            tcp_automata: HashMap::new(),
-            udp_automata: HashMap::new(),
-            icmp_automata: HashMap::new(),
-            clusters,
+            // tcp_automata: HashMap::new(),
+            // udp_automata: HashMap::new(),
+            // icmp_automata: HashMap::new(),
         };
 
         // let paths = fs::read_dir(directory_name).expect("Cannot read directory");
@@ -54,7 +50,7 @@ impl AutomataLibrary {
         //     .unwrap(),
         // );
         for s in strings {
-            match lib.import_from_str(&s) {
+            match lib.import_from_str(&s, &clusters) {
                 Ok(()) => nb += 1,
                 Err(s) => log::error!("Could not load automaton ({})", s),
             }
@@ -64,7 +60,11 @@ impl AutomataLibrary {
         Ok(lib)
     }
 
-    pub fn import_from_str(&mut self, string: &str) -> Result<(), String> {
+    pub fn import_from_str(
+        &mut self,
+        string: &str,
+        clusters: &Vec<PacketDistr>,
+    ) -> Result<(), String> {
         let string = string.to_string();
         let a: automaton::JsonAutomaton =
             serde_json::from_str::<automaton::JsonAutomaton>(string.leak())
@@ -73,37 +73,76 @@ impl AutomataLibrary {
         let conn_state = a.metadata.conn_state;
         match a.protocol {
             L4Proto::TCP => {
+                assert!(conn_state.is_some());
+                let automata_clusters = clusters
+                    .iter()
+                    .filter_map(|p| {
+                        if let PacketDistr::TCP {
+                            conn_state,
+                            service,
+                            distr,
+                        } = p
+                            && service == l7proto
+                            && *conn_state == a.metadata.conn_state.unwrap()
+                        {
+                            Some(distr)
+                        } else {
+                            None
+                        }
+                    })
+                    .next()
+                    .expect("No cluster found for {l7proto} and {conn_state:?}");
                 let a = automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(
                     a,
-                    automaton::IatPrecision::Milli,
+                    automata_clusters.clone(),
+                    // automaton::IatPrecision::Milli,
                     parse_tcp_symbol,
                 )?;
                 log::debug!("Import TCP {a}");
-                self.tcp_automata
-                    .insert((l7proto, conn_state.unwrap()), a.clone());
-                // self.cons_tcp_automata
-                // .insert((l7proto, conn_state.unwrap()), a.into());
+                // self.tcp_automata
+                //     .insert((l7proto, conn_state.unwrap()), a.clone());
+                self.cons_tcp_automata
+                    .insert((l7proto, conn_state.unwrap()), a.into());
             }
             L4Proto::UDP => {
+                let automata_clusters = clusters
+                    .iter()
+                    .filter_map(|p| {
+                        if let PacketDistr::UDP {
+                            service,
+                            distr,
+                        } = p
+                            && service == l7proto
+                        {
+                            Some(distr)
+                        } else {
+                            None
+                        }
+                    })
+                    .next()
+                    .expect("No cluster found for {l7proto}");
+
                 let a = automaton::TimedAutomaton::<UDPEdgeTuple>::import_timed_automaton(
                     a,
-                    automaton::IatPrecision::Micro,
+                    automata_clusters.clone(),
+                    // automaton::IatPrecision::Micro,
                     parse_udp_symbol,
                 )?;
                 log::debug!("Import UDP {a}");
-                self.udp_automata.insert(l7proto, a.clone());
-                // self.cons_udp_automata.insert(l7proto, a.into());
+                // self.udp_automata.insert(l7proto, a.clone());
+                self.cons_udp_automata.insert(l7proto, a.into());
             }
-            L4Proto::ICMP => {
-                let a = automaton::TimedAutomaton::<ICMPEdgeTuple>::import_timed_automaton(
-                    a,
-                    automaton::IatPrecision::Micro,
-                    parse_icmp_symbol,
-                )?;
-                log::debug!("Import ICMP {a}");
-                self.icmp_automata.insert(l7proto, a.clone());
-                // self.cons_icmp_automata.insert(l7proto, a.into());
-            }
+            L4Proto::ICMP => todo!() 
+            // {
+            //     let a = automaton::TimedAutomaton::<ICMPEdgeTuple>::import_timed_automaton(
+            //         a,
+            //         // automaton::IatPrecision::Micro,
+            //         parse_icmp_symbol,
+            //     )?;
+            //     log::debug!("Import ICMP {a}");
+            //     // self.icmp_automata.insert(l7proto, a.clone());
+            //     self.cons_icmp_automata.insert(l7proto, a.into());
+            // }
         }
         Ok(())
     }
@@ -111,7 +150,7 @@ impl AutomataLibrary {
 
 #[derive(Deserialize, Debug)]
 #[serde(from = "PacketDistrJson")]
-enum PacketDistr {
+pub enum PacketDistr {
     TCP {
         conn_state: TCPConnState,
         service: String,
@@ -142,7 +181,7 @@ impl From<PacketDistrJson> for PacketDistr {
                         // Sometimes the covariance from sklearn’s GaussianMixture is not
                         // symmetric!
                         let mut c: Vec<f64> = c.into_iter().flatten().collect();
-                        let mean = (c[1]+c[2])/2.;
+                        let mean = (c[1] + c[2]) / 2.;
                         c[1] = mean;
                         c[2] = mean;
                         MultivariateNormal::new(m, c)
@@ -172,7 +211,6 @@ enum PacketDistrJson {
     TCP {
         conn_state: TCPConnState,
         service: String,
-        // TODO: transformer en Vec<Normal<f64>> directement
         mu: Vec<Vec<f64>>,
         cov: Vec<Vec<Vec<f64>>>,
     },
@@ -212,15 +250,21 @@ impl Stage3 for TadamGenerator {
         mut conn_state: TCPConnState,
     ) -> Option<SeededData<PacketsIR<TCPPacketInfo>>> {
         let mut rng = Pcg32::seed_from_u64(flow.seed);
-        // let mut a = self.lib.cons_tcp_automata.get(&(flow.data.l7_proto, conn_state));
-        let mut a = self.lib.tcp_automata.get(&(flow.data.l7_proto, conn_state));
+        let mut a = self
+            .lib
+            .cons_tcp_automata
+            .get(&(flow.data.l7_proto, conn_state));
+        // let mut a = self.lib.tcp_automata.get(&(flow.data.l7_proto, conn_state));
 
         if a.is_none() {
-            // a = self.lib.cons_tcp_automata.get(&(flow.data.l7_proto, TCPConnState::SF));
             a = self
                 .lib
-                .tcp_automata
+                .cons_tcp_automata
                 .get(&(flow.data.l7_proto, TCPConnState::SF));
+            // a = self
+            //     .lib
+            //     .tcp_automata
+            //     .get(&(flow.data.l7_proto, TCPConnState::SF));
             if a.is_some() {
                 conn_state = TCPConnState::SF;
             }
@@ -254,8 +298,8 @@ impl Stage3 for TadamGenerator {
         mut flow: SeededData<FlowData>,
     ) -> Option<SeededData<PacketsIR<UDPPacketInfo>>> {
         let mut rng = Pcg32::seed_from_u64(flow.seed);
-        // let a = self.lib.cons_udp_automata.get(&flow.data.l7_proto);
-        let a = self.lib.udp_automata.get(&flow.data.l7_proto);
+        let a = self.lib.cons_udp_automata.get(&flow.data.l7_proto);
+        // let a = self.lib.udp_automata.get(&flow.data.l7_proto);
 
         // automata is found
         if let Some(a) = a {

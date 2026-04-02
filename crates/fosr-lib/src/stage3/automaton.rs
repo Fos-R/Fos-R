@@ -5,6 +5,7 @@ use rand_core::*;
 use rand_distr::weighted::WeightedIndex;
 use rand_distr::{Distribution, Normal, Poisson};
 use serde::Deserialize;
+use statrs::distribution::MultivariateNormal;
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -67,25 +68,25 @@ impl EdgeDistribution {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
-pub(crate) enum IatPrecision {
-    Milli,
-    Micro,
-}
+// #[derive(Debug, Copy, Clone)]
+// pub(crate) enum IatPrecision {
+//     Milli,
+//     Micro,
+// }
 
-impl IatPrecision {
-    fn iat_to_duration(&self, iat: f32) -> Duration {
-        match self {
-            IatPrecision::Milli => Duration::from_nanos((iat * 1e6) as u64),
-            IatPrecision::Micro => Duration::from_nanos((iat * 1e3) as u64),
-        }
-    }
-}
+// impl IatPrecision {
+//     fn iat_to_duration(&self, iat: f32) -> Duration {
+//         match self {
+//             IatPrecision::Milli => Duration::from_nanos((iat * 1e6) as u64),
+//             IatPrecision::Micro => Duration::from_nanos((iat * 1e3) as u64),
+//         }
+//     }
+// }
 
 #[derive(Debug)]
 #[allow(unused)]
 pub struct CrossProductTimedAutomaton<T: EdgeType> {
-    precision: IatPrecision,
+    // precision: IatPrecision,
     graph: Vec<CrossProductTimedNode<T>>,
     initial_state: usize,
     accepting_states: KdTree<([i64; 2], usize)>, // to quickly find the closest possible accepting
@@ -133,6 +134,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
         let mut seen: Vec<bool> = Vec::with_capacity(max_state_count);
         seen.resize(max_state_count, false);
         let mut current_node_index = 0;
+        // A simple search
         while let Some(node) = openset.pop() {
             let index = node.get_index();
             if seen[index] {
@@ -178,6 +180,8 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
         // transform it into a CrossProductTimedAutomaton
         let mut graph: Vec<CrossProductTimedNode<T>> = Vec::new();
         let mut accepting_states = Vec::new();
+        let mut marginal_weights = Vec::new();
+
         for (i, node) in closeset.into_iter().enumerate() {
             if node.state == automaton.accepting_state {
                 accepting_states.push(([node.fwd as i64, node.bwd as i64], i));
@@ -186,11 +190,17 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
             let dist = in_edges
                 .as_ref()
                 .map(|v| WeightedIndex::new(v.iter().map(|e| e.count)).unwrap());
+            marginal_weights.push(
+                in_edges
+                    .as_ref()
+                    .map(|v| v.iter().map(|e| e.count).sum())
+                    .unwrap_or(0),
+            ); // TODO: une liste par cluster plutôt + vérifier si l’état est bien acceptant
             let in_edges = in_edges.unwrap_or_default();
             graph.push(CrossProductTimedNode { in_edges, dist });
         }
         CrossProductTimedAutomaton {
-            precision: automaton.precision,
+            // precision: automaton.precision,
             graph,
             initial_state: 0,
             accepting_states: KdTree::build(accepting_states),
@@ -213,7 +223,7 @@ pub trait Automaton<T: EdgeType> {
 
 impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
     fn iat_to_duration(&self, iat: f32) -> Duration {
-        self.precision.iat_to_duration(iat)
+        Duration::from_nanos((iat * 1e3) as u64)
     }
 
     fn is_final(&self, n: usize) -> bool {
@@ -249,7 +259,7 @@ impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
 
 impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
     fn iat_to_duration(&self, iat: f32) -> Duration {
-        self.precision.iat_to_duration(iat)
+        Duration::from_nanos((iat * 1e3) as u64)
     }
 
     fn is_final(&self, n: usize) -> bool {
@@ -288,7 +298,6 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
     // Vec::with_capacity(fd.fwd_packets_count.unwrap() + fd.bwd_packets_count.unwrap() + 20); // approximate final size + some margin
     let mut current_state = automaton.get_initial_state(fd.fwd_packets_count, fd.bwd_packets_count);
 
-    // TODO: sample with noise
     while !automaton.is_final(current_state) {
         let e = automaton.get_next_edge(rng, current_state);
         if let Some(data) = &e.data {
@@ -327,11 +336,10 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
 
 #[derive(Debug, Clone)]
 pub struct TimedAutomaton<T: EdgeType> {
-    precision: IatPrecision,
+    // precision: IatPrecision,
     graph: Vec<TimedNode<T>>,
     metadata: AutomatonMetaData,
-    #[allow(unused)]
-    noise: Noise,
+    clusters: Vec<MultivariateNormal<nalgebra::Dyn>>,
     initial_state: usize,
     accepting_state: usize,
 }
@@ -410,6 +418,7 @@ struct Noise {
 #[derive(Deserialize, Debug)]
 pub struct JsonAutomaton {
     edges: Vec<JsonEdge>,
+    #[allow(unused)]
     noise: Noise,
     initial_state: usize,
     accepting_state: usize,
@@ -535,7 +544,8 @@ impl TryFrom<JsonPayload> for PayloadType {
 impl<T: EdgeType> TimedAutomaton<T> {
     pub fn import_timed_automaton(
         a: JsonAutomaton,
-        precision: IatPrecision,
+        clusters: Vec<MultivariateNormal<nalgebra::Dyn>>,
+        // precision: IatPrecision,
         symbol_parser: impl Fn(String, PayloadType) -> T,
     ) -> Result<Self, String> {
         let mut nodes_nb = 0;
@@ -547,8 +557,6 @@ impl<T: EdgeType> TimedAutomaton<T> {
                 dist: None,
             });
         }
-        // TODO: transition proba devrait être stocké dans une structure temporaire pour ne pas
-        // prendre inutilement de la place dans le modèle
         for e in a.edges {
             let data = if e.symbol.eq("$") {
                 None
@@ -578,10 +586,10 @@ impl<T: EdgeType> TimedAutomaton<T> {
         graph.truncate(nodes_nb);
         // dbg!(&graph);
         Ok(TimedAutomaton::<T> {
-            precision,
+            // precision,
+            clusters,
             graph,
             metadata: a.metadata,
-            noise: a.noise,
             initial_state: a.initial_state,
             accepting_state: a.accepting_state,
         })
