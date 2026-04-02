@@ -139,7 +139,13 @@ impl From<PacketDistrJson> for PacketDistr {
                     .into_iter()
                     .zip(cov.into_iter())
                     .map(|(m, c)| {
-                        MultivariateNormal::new(m, c.into_iter().flatten().collect())
+                        // Sometimes the covariance from sklearn’s GaussianMixture is not
+                        // symmetric!
+                        let mut c: Vec<f64> = c.into_iter().flatten().collect();
+                        let mean = (c[1]+c[2])/2.;
+                        c[1] = mean;
+                        c[2] = mean;
+                        MultivariateNormal::new(m, c)
                             .expect("Could not create the multivariate normal of the cluster")
                     })
                     .collect(),
