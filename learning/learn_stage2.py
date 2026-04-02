@@ -52,6 +52,7 @@ rare_ports = None
 def ttl_to_string(n):
     if n == "":
         return ""
+    n = int(n)
     return "ttl-"+f'{n:03}'
 
 def port_to_string(n):
@@ -123,9 +124,6 @@ if __name__ == '__main__':
     random.seed(0)
     gum.initRandom(seed=42)
 
-    output = {}
-    output["bin_count"] = bin_count
-
     print("Loading files")
 
     csv.field_size_limit(sys.maxsize) # payload is too long
@@ -173,7 +171,8 @@ if __name__ == '__main__':
         for v in ["service_udp_fosr", "orig_l2_addr_udp_fosr", "resp_l2_addr_udp_fosr"]:
             flow[v] = flow[v].fillna("")
         for v in ["orig_ttl_udp_fosr", "resp_ttl_udp_fosr"]:
-            flow[v] = flow[v].replace("-", "999")
+            # TODO: autocomplete: when there is no TTL, fill automatically based on other examples of this IP
+            flow[v] = flow[v].replace("-", "64") # default TTL value
             flow[v] = flow[v].fillna("")
 
     # one or the other will be empty
@@ -181,7 +180,7 @@ if __name__ == '__main__':
     flow['Src MAC'] = flow["orig_l2_addr"] + flow["orig_l2_addr_udp_fosr"]
     flow['Dst MAC'] = (flow["resp_l2_addr"] + flow["resp_l2_addr_udp_fosr"])
     flow['Src TTL'] = flow["orig_ttl"].apply(ttl_to_string) + flow["orig_ttl_udp_fosr"].apply(ttl_to_string)
-    flow['Dst TTL'] = (flow["resp_ttl"].apply(ttl_to_string) + flow["resp_ttl_udp_fosr"].apply(ttl_to_string)) # TODO: autocomplete: when there is no TTL, fill automatically based on other examples of this IP
+    flow['Dst TTL'] = (flow["resp_ttl"].apply(ttl_to_string) + flow["resp_ttl_udp_fosr"].apply(ttl_to_string))
 
     # remove flows with unknown service
     flow = flow[flow["Applicative Proto"] != ""]
@@ -215,7 +214,7 @@ if __name__ == '__main__':
             d = { "service": s, "flows": flows, "proto": "udp" }
             automata.append(d)
 
-    out_file = open(os.path.join(args.output, "automata-flows.json"), "w")
+    out_file = open(os.path.join(args.output, "bn/automata-flows.json"), "w")
     json.dump(automata, out_file, indent=1)
 
     # anonymise public IP
@@ -283,7 +282,7 @@ if __name__ == '__main__':
         return best_model.means_.tolist(), best_model.covariances_.tolist(), best_labels
 
     start = time.time()
-    output["pkt"] = []
+    output = []
 
     for s in flow["Applicative Proto"].unique():
         for conn_state in flow[flow["Applicative Proto"] == s]["Connection State"].unique():
@@ -295,7 +294,7 @@ if __name__ == '__main__':
                     in_pkt_count = np.array(local_flows["resp_pkts"]).reshape(-1,1)
                     means, covar, labels = categorize(out_pkt_count, in_pkt_count)
                     flow.loc[(flow['Applicative Proto'] == s) & (flow["Connection State"] == conn_state) & (flow["Proto"] == "TCP"), ["Cat Packet"]] = labels
-                    output["pkt"].append({ "service": s, "conn_state": conn_state, "proto": "TCP", "mu": means, "cov": covar })
+                    output.append({ "service": s, "conn_state": conn_state, "proto": "TCP", "mu": means, "cov": covar })
         local_flows = flow[(flow["Applicative Proto"] == s) & (flow["Proto"] == "UDP")]
         flows = list(local_flows["uid"])
         if len(flows) >= m:
@@ -303,7 +302,7 @@ if __name__ == '__main__':
             in_pkt_count = np.array(local_flows["resp_pkts"]).reshape(-1,1)
             means, covar, labels = categorize(out_pkt_count, in_pkt_count)
             flow.loc[(flow['Applicative Proto'] == s) & (flow["Proto"] == "UDP"), ["Cat Packet"]] = labels
-            output["pkt"].append({ "service": s, "proto": "UDP", "mu": means, "cov": covar })
+            output.append({ "service": s, "proto": "UDP", "mu": means, "cov": covar })
 
     # flows with less than m examples will be removed that way
     flow = flow.dropna(subset=["Cat Packet"])
@@ -317,7 +316,7 @@ if __name__ == '__main__':
     for c in all_vars:
         full_domains[c] = [str(s) for s in pd.unique(flow[c])]
         full_domains[c].sort()
-
+    full_domains["Time"] = ["bin-"+f'{n:03}' for n in range(bin_count)] # use all theoretical values
 
     common_data = flow[all_vars]
     for c in all_vars:
@@ -348,11 +347,10 @@ if __name__ == '__main__':
     learner.useScoreBIC()
     learner.useSmoothingPrior()
 
-    print("Learning common")
     bn = learner.learnBN()
 
     # we recreate the bayesian network with the same structure but the full domain
-    bn_full = gum.BayesNet('Common model')
+    bn_full = gum.BayesNet('Fos-R model')
     for i in bn.nodes():
         var = bn.variable(i).name()
         bn_full.add(gum.LabelizedVariable(var, var, full_domains[var]))
@@ -371,11 +369,11 @@ if __name__ == '__main__':
     args.output = args.output or "."
     if not os.path.exists(args.output):
         os.makedirs(args.output)
-    gumimage.export(bn, os.path.join(args.output, "bn.png"))
-    bn.saveBIFXML(os.path.join(args.output, "bn.bifxml"))
+    gumimage.export(bn, os.path.join(args.output, "bn/bn.png"))
+    bn.saveBIFXML(os.path.join(args.output, "bn/bn.bifxml"))
 
     try:
-        out_file = open(os.path.join(args.output, "bn_additional_data.json"), "w")
+        out_file = open(os.path.join(args.output, "pkt_count_clusters.json"), "w")
         json.dump(output, out_file, indent=1)
         print("JSON file successfully created")
     except Exception as e:

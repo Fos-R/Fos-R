@@ -4,6 +4,7 @@ use crate::stage3::*;
 // use indicatif::{ProgressBar, ProgressStyle};
 use rand_core::*;
 use rand_pcg::Pcg32;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -17,6 +18,7 @@ pub struct AutomataLibrary {
     tcp_automata: HashMap<(&'static str, TCPConnState), automaton::TimedAutomaton<TCPEdgeTuple>>,
     udp_automata: HashMap<&'static str, automaton::TimedAutomaton<UDPEdgeTuple>>,
     icmp_automata: HashMap<&'static str, automaton::TimedAutomaton<ICMPEdgeTuple>>,
+    clusters: Vec<PacketDistr>,
 }
 
 impl AutomataLibrary {
@@ -24,6 +26,13 @@ impl AutomataLibrary {
         let strings = models
             .get_automata()
             .map_err(|e| format!("Cannot open the automata files: {e}"))?;
+
+        let clusters: String = models
+            .get_pkt_count_clusters()
+            .map_err(|e| format!("Cannot find the clusters: {e}"))?;
+        let clusters: Vec<PacketDistr> =
+            serde_json::from_str(&clusters).expect("Cannot parse the clusters");
+
         let mut nb = 0;
         let mut lib = AutomataLibrary {
             // cons_tcp_automata: HashMap::new(),
@@ -32,6 +41,7 @@ impl AutomataLibrary {
             tcp_automata: HashMap::new(),
             udp_automata: HashMap::new(),
             icmp_automata: HashMap::new(),
+            clusters,
         };
 
         // let paths = fs::read_dir(directory_name).expect("Cannot read directory");
@@ -96,6 +106,24 @@ impl AutomataLibrary {
         }
         Ok(())
     }
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(tag = "proto")]
+#[allow(clippy::upper_case_acronyms)]
+enum PacketDistr {
+    TCP {
+        conn_state: TCPConnState,
+        service: String,
+        // TODO: transformer en Vec<Normal<f64>> directement
+        mu: Vec<Vec<f64>>,
+        cov: Vec<Vec<Vec<f64>>>,
+    },
+    UDP {
+        service: String,
+        mu: Vec<Vec<f64>>,
+        cov: Vec<Vec<Vec<f64>>>,
+    },
 }
 
 #[derive(Clone)]
