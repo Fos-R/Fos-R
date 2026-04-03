@@ -42,14 +42,6 @@ impl AutomataLibrary {
             // icmp_automata: HashMap::new(),
         };
 
-        // let paths = fs::read_dir(directory_name).expect("Cannot read directory");
-        // let pb = ProgressBar::new(paths.count() as u64);
-        // pb.set_style(
-        //     ProgressStyle::with_template(
-        //         "{spinner:.green} Automata initialization: {pos}/{len} {wide_bar}",
-        //     )
-        //     .unwrap(),
-        // );
         for s in strings {
             match lib.import_from_str(&s, &clusters) {
                 Ok(()) => nb += 1,
@@ -92,7 +84,7 @@ impl AutomataLibrary {
                         }
                     })
                     .next()
-                    .expect("No cluster found for {l7proto} and {conn_state:?}");
+                    .expect(&format!("No cluster found for {l7proto} and {:?}", conn_state.unwrap()));
                 assert!(!automata_clusters.is_empty());
                 let a = automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(
                     a,
