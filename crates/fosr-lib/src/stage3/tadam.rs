@@ -2,6 +2,7 @@ use crate::models;
 use crate::stage3::*;
 
 // use indicatif::{ProgressBar, ProgressStyle};
+use nalgebra::{matrix, vector};
 use rand_core::*;
 use rand_pcg::Pcg32;
 use serde::Deserialize;
@@ -14,8 +15,8 @@ pub struct AutomataLibrary {
         HashMap<(&'static str, TCPConnState), automaton::CrossProductTimedAutomaton<TCPEdgeTuple>>,
     cons_udp_automata: HashMap<&'static str, automaton::CrossProductTimedAutomaton<UDPEdgeTuple>>,
     // cons_icmp_automata: HashMap<&'static str, automaton::CrossProductTimedAutomaton<ICMPEdgeTuple>>,
-    // tcp_automata: HashMap<(&'static str, TCPConnState), automaton::TimedAutomaton<TCPEdgeTuple>>,
-    // udp_automata: HashMap<&'static str, automaton::TimedAutomaton<UDPEdgeTuple>>,
+    tcp_automata: HashMap<(&'static str, TCPConnState), automaton::TimedAutomaton<TCPEdgeTuple>>,
+    udp_automata: HashMap<&'static str, automaton::TimedAutomaton<UDPEdgeTuple>>,
     // icmp_automata: HashMap<&'static str, automaton::TimedAutomaton<ICMPEdgeTuple>>,
 }
 
@@ -36,8 +37,8 @@ impl AutomataLibrary {
             cons_tcp_automata: HashMap::new(),
             cons_udp_automata: HashMap::new(),
             // cons_icmp_automata: HashMap::new(),
-            // tcp_automata: HashMap::new(),
-            // udp_automata: HashMap::new(),
+            tcp_automata: HashMap::new(),
+            udp_automata: HashMap::new(),
             // icmp_automata: HashMap::new(),
         };
 
@@ -63,7 +64,7 @@ impl AutomataLibrary {
     pub fn import_from_str(
         &mut self,
         string: &str,
-        clusters: &Vec<PacketDistr>,
+        clusters: &[PacketDistr],
     ) -> Result<(), String> {
         let string = string.to_string();
         let a: automaton::JsonAutomaton =
@@ -92,6 +93,7 @@ impl AutomataLibrary {
                     })
                     .next()
                     .expect("No cluster found for {l7proto} and {conn_state:?}");
+                assert!(!automata_clusters.is_empty());
                 let a = automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(
                     a,
                     automata_clusters.clone(),
@@ -99,8 +101,8 @@ impl AutomataLibrary {
                     parse_tcp_symbol,
                 )?;
                 log::debug!("Import TCP {a}");
-                // self.tcp_automata
-                //     .insert((l7proto, conn_state.unwrap()), a.clone());
+                self.tcp_automata
+                    .insert((l7proto, conn_state.unwrap()), a.clone());
                 self.cons_tcp_automata
                     .insert((l7proto, conn_state.unwrap()), a.into());
             }
@@ -108,10 +110,7 @@ impl AutomataLibrary {
                 let automata_clusters = clusters
                     .iter()
                     .filter_map(|p| {
-                        if let PacketDistr::UDP {
-                            service,
-                            distr,
-                        } = p
+                        if let PacketDistr::UDP { service, distr } = p
                             && service == l7proto
                         {
                             Some(distr)
@@ -122,6 +121,7 @@ impl AutomataLibrary {
                     .next()
                     .expect("No cluster found for {l7proto}");
 
+                assert!(!automata_clusters.is_empty());
                 let a = automaton::TimedAutomaton::<UDPEdgeTuple>::import_timed_automaton(
                     a,
                     automata_clusters.clone(),
@@ -129,20 +129,19 @@ impl AutomataLibrary {
                     parse_udp_symbol,
                 )?;
                 log::debug!("Import UDP {a}");
-                // self.udp_automata.insert(l7proto, a.clone());
+                self.udp_automata.insert(l7proto, a.clone());
                 self.cons_udp_automata.insert(l7proto, a.into());
             }
-            L4Proto::ICMP => todo!() 
-            // {
-            //     let a = automaton::TimedAutomaton::<ICMPEdgeTuple>::import_timed_automaton(
-            //         a,
-            //         // automaton::IatPrecision::Micro,
-            //         parse_icmp_symbol,
-            //     )?;
-            //     log::debug!("Import ICMP {a}");
-            //     // self.icmp_automata.insert(l7proto, a.clone());
-            //     self.cons_icmp_automata.insert(l7proto, a.into());
-            // }
+            L4Proto::ICMP => todo!(), // {
+                                      //     let a = automaton::TimedAutomaton::<ICMPEdgeTuple>::import_timed_automaton(
+                                      //         a,
+                                      //         // automaton::IatPrecision::Micro,
+                                      //         parse_icmp_symbol,
+                                      //     )?;
+                                      //     log::debug!("Import ICMP {a}");
+                                      //     // self.icmp_automata.insert(l7proto, a.clone());
+                                      //     self.cons_icmp_automata.insert(l7proto, a.into());
+                                      // }
         }
         Ok(())
     }
@@ -154,11 +153,11 @@ pub enum PacketDistr {
     TCP {
         conn_state: TCPConnState,
         service: String,
-        distr: Vec<MultivariateNormal<nalgebra::Dyn>>,
+        distr: Vec<MultivariateNormal<nalgebra::Const<2>>>,
     },
     UDP {
         service: String,
-        distr: Vec<MultivariateNormal<nalgebra::Dyn>>,
+        distr: Vec<MultivariateNormal<nalgebra::Const<2>>>,
     },
 }
 
@@ -176,16 +175,17 @@ impl From<PacketDistrJson> for PacketDistr {
                 service,
                 distr: mu
                     .into_iter()
-                    .zip(cov.into_iter())
+                    .zip(cov)
                     .map(|(m, c)| {
                         // Sometimes the covariance from sklearn’s GaussianMixture is not
                         // symmetric!
-                        let mut c: Vec<f64> = c.into_iter().flatten().collect();
+                        let c: Vec<f64> = c.into_iter().flatten().collect();
                         let mean = (c[1] + c[2]) / 2.;
-                        c[1] = mean;
-                        c[2] = mean;
-                        MultivariateNormal::new(m, c)
-                            .expect("Could not create the multivariate normal of the cluster")
+                        MultivariateNormal::new_from_nalgebra(
+                            vector![m[0], m[1]],
+                            matrix![c[0],mean;mean,c[3]],
+                        )
+                        .expect("Could not create the multivariate normal of the cluster")
                     })
                     .collect(),
             },
@@ -193,10 +193,15 @@ impl From<PacketDistrJson> for PacketDistr {
                 service,
                 distr: mu
                     .into_iter()
-                    .zip(cov.into_iter())
+                    .zip(cov)
                     .map(|(m, c)| {
-                        MultivariateNormal::new(m, c.into_iter().flatten().collect())
-                            .expect("Could not create the multivariate normal of the cluster")
+                        let c: Vec<f64> = c.into_iter().flatten().collect();
+                        let mean = (c[1] + c[2]) / 2.;
+                        MultivariateNormal::new_from_nalgebra(
+                            vector![m[0], m[1]],
+                            matrix![c[0],mean;mean,c[3]],
+                        )
+                        .expect("Could not create the multivariate normal of the cluster")
                     })
                     .collect(),
             },
