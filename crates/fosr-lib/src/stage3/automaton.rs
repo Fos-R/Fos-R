@@ -7,6 +7,8 @@ use rand_distr::{Distribution, Normal, Poisson};
 use serde::Deserialize;
 use statrs::distribution::Continuous;
 use statrs::distribution::MultivariateNormal;
+use statrs::statistics::{MeanN, VarianceN};
+use std::cmp::max;
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -69,39 +71,30 @@ impl EdgeDistribution {
     }
 }
 
-// #[derive(Debug, Copy, Clone)]
-// pub(crate) enum IatPrecision {
-//     Milli,
-//     Micro,
-// }
-
-// impl IatPrecision {
-//     fn iat_to_duration(&self, iat: f32) -> Duration {
-//         match self {
-//             IatPrecision::Milli => Duration::from_nanos((iat * 1e6) as u64),
-//             IatPrecision::Micro => Duration::from_nanos((iat * 1e3) as u64),
-//         }
-//     }
-// }
-
 #[derive(Debug)]
 #[allow(unused)]
 pub struct CrossProductTimedAutomaton<T: EdgeType> {
-    // precision: IatPrecision,
     graph: Vec<CrossProductTimedNode<T>>,
     initial_state: usize,
     accepting_states_per_cluster: Vec<Vec<usize>>,
     accepting_states_distr_per_cluster: Vec<WeightedIndex<u32>>,
-    // accepting_states: KdTree<([i64; 2], usize)>, // to quickly find the closest possible accepting
-    // state
     #[allow(unused)]
     metadata: AutomatonMetaData,
 }
 
 impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
     fn from(automaton: TimedAutomaton<T>) -> Self {
-        const MAX_FLOW_COUNT: usize = 100;
-        const MAX_FWD_BWD_INDEX: usize = MAX_FLOW_COUNT * (MAX_FLOW_COUNT + 1) / 2 + MAX_FLOW_COUNT;
+        let mut max_flow_count: usize = 2;
+        for c in automaton.clusters.iter() {
+            let fwd = (c.mean().unwrap()[0] + 3f64 * c.variance().unwrap()[0].sqrt()) as usize;
+            // dbg!(&c.mean().unwrap());
+            // dbg!(&c.variance().unwrap());
+            let bwd = (c.mean().unwrap()[1] + 3f64 * c.variance().unwrap()[3].sqrt()) as usize;
+            // println!("{fwd} et {bwd}");
+            max_flow_count = max(max_flow_count, fwd + bwd);
+        }
+
+        let max_fwd_bwd_index: usize = max_flow_count * (max_flow_count + 1) / 2 + max_flow_count;
 
         #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
         struct CrossProductNode {
@@ -111,10 +104,9 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
         }
 
         impl CrossProductNode {
-            #[allow(unused)]
-            fn get_index(&self) -> usize {
+            fn get_index(&self, max_fwd_bwd_index: usize) -> usize {
                 // Cantor pairing function: https://en.wikipedia.org/wiki/Pairing_function
-                self.state * (MAX_FWD_BWD_INDEX + 1)
+                self.state * (max_fwd_bwd_index + 1)
                     + (self.fwd + self.bwd) * (self.fwd + self.bwd + 1) / 2
                     + self.bwd
             }
@@ -124,7 +116,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
             "Computing cross-product automata for {}",
             automaton.metadata.service
         );
-        let max_state_count = (MAX_FWD_BWD_INDEX + 1) * automaton.graph.len();
+        let max_state_count = (max_fwd_bwd_index + 1) * automaton.graph.len();
         let mut openset = Vec::with_capacity(max_state_count);
         openset.push(CrossProductNode {
             state: automaton.initial_state,
@@ -139,7 +131,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
         let mut current_node_index = 0;
         // A simple search
         while let Some(node) = openset.pop() {
-            let index = node.get_index();
+            let index = node.get_index(max_fwd_bwd_index);
             if seen[index] {
                 continue;
             }
@@ -163,7 +155,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                         bwd: node.bwd + 1,
                     },
                 };
-                if successor_node.fwd + successor_node.bwd <= MAX_FLOW_COUNT {
+                if successor_node.fwd + successor_node.bwd <= max_flow_count {
                     openset.push(successor_node);
                     let mut new_edge = e.clone();
                     new_edge.dst_node = current_node_index;
@@ -204,16 +196,18 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                 let mut max_value: Option<f64> = None;
                 for (j, cluster) in automaton.clusters.iter().enumerate() {
                     let p = cluster.ln_pdf(&Vector2::new(node.fwd as f64, node.bwd as f64));
-                    if let Some(val) = max_value
-                        && val < p
+                    if let Some(val) = max_value 
                     {
-                        max_value = Some(p);
-                        max = Some(j);
+                        if val < p {
+                            max_value = Some(p);
+                            max = Some(j);
+                        }
                     } else {
                         max_value = Some(p);
                         max = Some(j);
                     }
                 }
+                // println!("Most probable cluster for {} and {}: {}", node.fwd, node.bwd, max.unwrap());
 
                 accepting_states_per_cluster[max.unwrap()].push(i);
                 marginal_weights_per_cluster[max.unwrap()].push(
@@ -233,10 +227,8 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                 .into_iter()
                 .map(|v| WeightedIndex::new(v).expect("No accepting state for a cluster!"))
                 .collect(),
-            // precision: automaton.precision,
             graph,
             initial_state: 0,
-            // accepting_states: KdTree::build(accepting_states),
             metadata: automaton.metadata,
         }
     }
@@ -325,7 +317,6 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
     header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
 ) -> Vec<U> {
     let mut output = Vec::new();
-    // Vec::with_capacity(fd.fwd_packets_count.unwrap() + fd.bwd_packets_count.unwrap() + 20); // approximate final size + some margin
     let mut current_state = automaton.get_initial_state(rng, fd.packets_count_cluster);
 
     while !automaton.is_final(current_state) {
@@ -366,7 +357,6 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
 
 #[derive(Debug, Clone)]
 pub struct TimedAutomaton<T: EdgeType> {
-    // precision: IatPrecision,
     graph: Vec<TimedNode<T>>,
     metadata: AutomatonMetaData,
     clusters: Vec<MultivariateNormal<nalgebra::Const<2>>>,
@@ -575,7 +565,6 @@ impl<T: EdgeType> TimedAutomaton<T> {
     pub fn import_timed_automaton(
         a: JsonAutomaton,
         clusters: Vec<MultivariateNormal<nalgebra::Const<2>>>,
-        // precision: IatPrecision,
         symbol_parser: impl Fn(String, PayloadType) -> T,
     ) -> Result<Self, String> {
         let mut nodes_nb = 0;
@@ -616,7 +605,6 @@ impl<T: EdgeType> TimedAutomaton<T> {
         graph.truncate(nodes_nb);
         // dbg!(&graph);
         Ok(TimedAutomaton::<T> {
-            // precision,
             clusters,
             graph,
             metadata: a.metadata,
