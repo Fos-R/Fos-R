@@ -84,7 +84,10 @@ impl AutomataLibrary {
                         }
                     })
                     .next()
-                    .expect(&format!("No cluster found for {l7proto} and {:?}", conn_state.unwrap()));
+                    .expect(&format!(
+                        "No cluster found for {l7proto} and {:?}",
+                        conn_state.unwrap()
+                    ));
                 assert!(!automata_clusters.is_empty());
                 let a = automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(
                     a,

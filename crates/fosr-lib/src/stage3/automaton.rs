@@ -3,7 +3,7 @@ use base64::Engine;
 use nalgebra::Vector2;
 use rand_core::*;
 use rand_distr::weighted::WeightedIndex;
-use rand_distr::{Distribution, Normal, Poisson};
+use rand_distr::{Distribution, Gamma};
 use serde::Deserialize;
 use statrs::distribution::Continuous;
 use statrs::distribution::MultivariateNormal;
@@ -30,12 +30,39 @@ struct TimedNode<T: EdgeType> {
     dist: Option<WeightedIndex<f32>>,
 }
 
-#[derive(Debug, Clone)]
-#[allow(unused)]
+#[derive(Deserialize, Debug)]
+#[serde(tag = "law")]
+enum JsonEdgeDistribution {
+    Constant { value: f32 },
+    Gamma { shape: f32, loc: f32, scale: f32 },
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(from = "JsonEdgeDistribution")]
 enum EdgeDistribution {
-    Normal, // TODO: add cond_var to compute it only once
-    Poisson,
-    Gamma, // TODO
+    Constant(f32),
+    Gamma { p: Gamma<f32>, loc: f32 },
+}
+
+impl EdgeDistribution {
+    fn sample_iat(&self, rng: &mut impl Rng) -> f32 {
+        match self {
+            EdgeDistribution::Constant(val) => *val,
+            EdgeDistribution::Gamma { p, loc } => p.sample(rng) + loc,
+        }
+    }
+}
+
+impl From<JsonEdgeDistribution> for EdgeDistribution {
+    fn from(d: JsonEdgeDistribution) -> Self {
+        match d {
+            JsonEdgeDistribution::Constant { value } => EdgeDistribution::Constant(value),
+            JsonEdgeDistribution::Gamma { shape, loc, scale } => EdgeDistribution::Gamma {
+                p: Gamma::new(shape, scale).expect("Cannot create Gamma distribution"),
+                loc,
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -48,28 +75,29 @@ pub struct TimedEdge<T: EdgeType> {
     transition_proba: f32, // not used
     #[allow(unused)]
     count: u32,
-    mu: [f32; 2],
-    cov: [[f32; 2]; 2], // TODO: créer directement loi normale / poisson
-    p: EdgeDistribution,
+    iat_distr: EdgeDistribution,
+    // mu: [f32; 2],
+    // cov: [[f32; 2]; 2], // TODO: créer directement loi normale / poisson
+    // p: EdgeDistribution,
 }
 
-impl EdgeDistribution {
-    // https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Conditional_distributions
+// impl EdgeDistribution {
+//     // https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Conditional_distributions
 
-    fn sample(&self, rng: &mut impl Rng, cond_mu: f32, cond_var: f32) -> f32 {
-        match &self {
-            EdgeDistribution::Normal => {
-                let normal = Normal::new(cond_mu, cond_var.sqrt()).unwrap();
-                normal.sample(rng).max(0.001)
-            }
-            EdgeDistribution::Poisson => {
-                let poisson = Poisson::new((cond_mu + cond_var) / 2.0).unwrap();
-                poisson.sample(rng).max(0.001)
-            }
-            EdgeDistribution::Gamma => todo!(),
-        }
-    }
-}
+//     fn sample(&self, rng: &mut impl Rng, cond_mu: f32, cond_var: f32) -> f32 {
+//         match &self {
+//             EdgeDistribution::Normal => {
+//                 let normal = Normal::new(cond_mu, cond_var.sqrt()).unwrap();
+//                 normal.sample(rng).max(0.001)
+//             }
+//             EdgeDistribution::Poisson => {
+//                 let poisson = Poisson::new((cond_mu + cond_var) / 2.0).unwrap();
+//                 poisson.sample(rng).max(0.001)
+//             }
+//             EdgeDistribution::Gamma => todo!(),
+//         }
+//     }
+// }
 
 #[derive(Debug)]
 #[allow(unused)]
@@ -196,8 +224,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                 let mut max_value: Option<f64> = None;
                 for (j, cluster) in automaton.clusters.iter().enumerate() {
                     let p = cluster.ln_pdf(&Vector2::new(node.fwd as f64, node.bwd as f64));
-                    if let Some(val) = max_value 
-                    {
+                    if let Some(val) = max_value {
                         if val < p {
                             max_value = Some(p);
                             max = Some(j);
@@ -323,7 +350,7 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
         let e = automaton.get_next_edge(rng, current_state);
         if let Some(data) = &e.data {
             // if $-transition, don’t create a header
-            let (payload, payload_size) = match data.get_payload_type() {
+            let (payload, _) = match data.get_payload_type() {
                 PayloadType::Empty => (Payload::Empty, 0),
                 PayloadType::Random(sizes, distrib) => {
                     let size = sizes[distrib.sample(rng)];
@@ -338,9 +365,10 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
                     (Payload::Binary(ts), ts.len())
                 }
             };
-            let cond_mu = e.mu[0] + e.cov[0][1] / e.cov[1][1] * (payload_size as f32 - e.mu[1]);
-            let cond_var = (0.001_f32).max(e.cov[0][0] - e.cov[0][1] * e.cov[0][1] / e.cov[1][1]);
-            let iat = e.p.sample(rng, cond_mu, cond_var);
+            let iat = e.iat_distr.sample_iat(rng);
+            // let cond_mu = e.mu[0] + e.cov[0][1] / e.cov[1][1] * (payload_size as f32 - e.mu[1]);
+            // let cond_var = (0.001_f32).max(e.cov[0][0] - e.cov[0][1] * e.cov[0][1] / e.cov[1][1]);
+            // let iat = e.p.sample(rng, cond_mu, cond_var);
             let data = header_creator(
                 payload,
                 NoiseType::None,
@@ -452,10 +480,11 @@ struct JsonEdge {
     src: usize,
     dst: usize,
     symbol: String,
-    mu: Vec<f32>,
-    cov: Vec<Vec<f32>>,
+    iat_distr: EdgeDistribution,
+    // mu: Vec<f32>,
+    // cov: Vec<Vec<f32>>,
     count: u32,
-    payloads: JsonPayload,
+    payloads: Option<JsonPayload>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -580,16 +609,19 @@ impl<T: EdgeType> TimedAutomaton<T> {
             let data = if e.symbol.eq("$") {
                 None
             } else {
-                Some(Arc::new(symbol_parser(e.symbol, e.payloads.try_into()?)))
+                Some(Arc::new(symbol_parser(
+                    e.symbol,
+                    e.payloads.unwrap_or(JsonPayload::NoPayload).try_into()?,
+                )))
             };
             let new_edge = TimedEdge {
                 dst_node: e.dst,
                 count: e.count,
                 transition_proba: e.p,
                 data,
-                p: EdgeDistribution::Normal,
-                mu: e.mu.try_into().unwrap(),
-                cov: [[e.cov[0][0], e.cov[0][1]], [e.cov[1][0], e.cov[1][1]]],
+                iat_distr: e.iat_distr, // p: EdgeDistribution::Normal,
+                                        // mu: e.mu.try_into().unwrap(),
+                                        // cov: [[e.cov[0][0], e.cov[0][1]], [e.cov[1][0], e.cov[1][1]]],
             };
             graph[e.src].out_edges.push(new_edge);
             nodes_nb = nodes_nb.max(e.src + 1).max(e.dst + 1);
