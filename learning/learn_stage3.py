@@ -129,10 +129,10 @@ class Exporter:
             guards = [ math.pow(10,l[0]/10) for l in e.guard + e.rec_guard ] # go back to actual values
             assert len(guards) > 0
             if len(set(guards)) == 1:
-                d["iat-distr"] = { "law": "constant", "value": guards[0] }
+                d["iat_distr"] = { "law": "constant", "value": guards[0] }
             else:
                 g = gamma.fit(guards)
-                d["iat-distr"] = { "law": "gamma", "shape": g[0], "loc": g[1], "scale": g[2] }
+                d["iat_distr"] = { "law": "gamma", "shape": g[0], "loc": g[1], "scale": g[2] }
             tmp.append(d)
 
         noise = {}
