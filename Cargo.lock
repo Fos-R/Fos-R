@@ -1870,7 +1870,6 @@ dependencies = [
  "getrandom 0.4.2",
  "include-bytes-zstd",
  "indicatif",
- "kd-tree",
  "log",
  "log-once",
  "nalgebra",
@@ -2619,18 +2618,6 @@ checksum = "b49715b7073f385ba4bc528e5747d02e66cb39c6146efb66b781f131f0fb399c"
 dependencies = [
  "once_cell",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "kd-tree"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e2adf615b2b7a38d0ec8a89b4f3c22e9e2820b1cc1c48c70e848fc83a8fb661"
-dependencies = [
- "num-traits",
- "ordered-float",
- "paste",
- "typenum",
 ]
 
 [[package]]

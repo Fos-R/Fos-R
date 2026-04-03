@@ -1,10 +1,11 @@
 use crate::structs::*;
 use base64::Engine;
-use kd_tree::KdTree;
+use nalgebra::Vector2;
 use rand_core::*;
 use rand_distr::weighted::WeightedIndex;
 use rand_distr::{Distribution, Normal, Poisson};
 use serde::Deserialize;
+use statrs::distribution::Continuous;
 use statrs::distribution::MultivariateNormal;
 use std::collections::HashMap;
 use std::fmt;
@@ -89,7 +90,9 @@ pub struct CrossProductTimedAutomaton<T: EdgeType> {
     // precision: IatPrecision,
     graph: Vec<CrossProductTimedNode<T>>,
     initial_state: usize,
-    accepting_states: KdTree<([i64; 2], usize)>, // to quickly find the closest possible accepting
+    accepting_states_per_cluster: Vec<Vec<usize>>,
+    accepting_states_distr_per_cluster: Vec<WeightedIndex<u32>>,
+    // accepting_states: KdTree<([i64; 2], usize)>, // to quickly find the closest possible accepting
     // state
     #[allow(unused)]
     metadata: AutomatonMetaData,
@@ -179,31 +182,61 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
 
         // transform it into a CrossProductTimedAutomaton
         let mut graph: Vec<CrossProductTimedNode<T>> = Vec::new();
-        let mut accepting_states = Vec::new();
-        let mut marginal_weights = Vec::new();
+
+        let mut accepting_states_per_cluster: Vec<Vec<usize>> = Vec::new();
+        let mut marginal_weights_per_cluster: Vec<Vec<u32>> = Vec::new();
+        for _ in automaton.clusters.iter() {
+            accepting_states_per_cluster.push(Vec::new());
+            marginal_weights_per_cluster.push(Vec::new());
+        }
 
         for (i, node) in closeset.into_iter().enumerate() {
-            if node.state == automaton.accepting_state {
-                accepting_states.push(([node.fwd as i64, node.bwd as i64], i));
-            }
+            // if node.state == automaton.accepting_state {
+            //     accepting_states.push(([node.fwd as i64, node.bwd as i64], i));
+            // }
             let in_edges: Option<Vec<TimedEdge<T>>> = predecessors.remove(&node);
             let dist = in_edges
                 .as_ref()
                 .map(|v| WeightedIndex::new(v.iter().map(|e| e.count)).unwrap());
-            marginal_weights.push(
-                in_edges
-                    .as_ref()
-                    .map(|v| v.iter().map(|e| e.count).sum())
-                    .unwrap_or(0),
-            ); // TODO: une liste par cluster plutôt + vérifier si l’état est bien acceptant
+
+            if node.state == automaton.accepting_state {
+                let mut max: Option<usize> = None;
+                let mut max_value: Option<f64> = None;
+                for (j, cluster) in automaton.clusters.iter().enumerate() {
+                    let p = cluster.ln_pdf(&Vector2::new(node.fwd as f64, node.bwd as f64));
+                    if let Some(val) = max_value
+                        && val < p
+                    {
+                        max_value = Some(p);
+                        max = Some(j);
+                    } else {
+                        max_value = Some(p);
+                        max = Some(j);
+                    }
+                }
+
+                accepting_states_per_cluster[max.unwrap()].push(i);
+                marginal_weights_per_cluster[max.unwrap()].push(
+                    in_edges
+                        .as_ref()
+                        .map(|v| v.iter().map(|e| e.count).sum())
+                        .unwrap_or(0),
+                );
+            }
+
             let in_edges = in_edges.unwrap_or_default();
             graph.push(CrossProductTimedNode { in_edges, dist });
         }
         CrossProductTimedAutomaton {
+            accepting_states_per_cluster,
+            accepting_states_distr_per_cluster: marginal_weights_per_cluster
+                .into_iter()
+                .map(|v| WeightedIndex::new(v).expect("No accepting state for a cluster!"))
+                .collect(),
             // precision: automaton.precision,
             graph,
             initial_state: 0,
-            accepting_states: KdTree::build(accepting_states),
+            // accepting_states: KdTree::build(accepting_states),
             metadata: automaton.metadata,
         }
     }
@@ -212,7 +245,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
 pub trait Automaton<T: EdgeType> {
     fn iat_to_duration(&self, iat: f32) -> Duration;
 
-    fn get_initial_state(&self, fwd_packets_count: usize, bwd_packets_count: usize) -> usize;
+    fn get_initial_state(&self, rng: &mut impl Rng, packet_cluster: usize) -> usize;
 
     fn is_final(&self, n: usize) -> bool;
 
@@ -239,12 +272,9 @@ impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
         }
     }
 
-    fn get_initial_state(&self, fwd_packets_count: usize, bwd_packets_count: usize) -> usize {
-        self.accepting_states
-            .nearest(&([fwd_packets_count as i64, bwd_packets_count as i64]))
-            .unwrap()
-            .item
-            .1
+    fn get_initial_state(&self, rng: &mut impl Rng, packet_cluster: usize) -> usize {
+        self.accepting_states_per_cluster[packet_cluster]
+            [self.accepting_states_distr_per_cluster[packet_cluster].sample(rng)]
     }
 
     fn get_next_edge(&self, rng: &mut impl Rng, current_state: usize) -> &TimedEdge<T> {
@@ -274,7 +304,7 @@ impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
         }
     }
 
-    fn get_initial_state(&self, _f: usize, _b: usize) -> usize {
+    fn get_initial_state(&self, _rng: &mut impl Rng, _packet_cluster: usize) -> usize {
         self.initial_state
     }
 
@@ -296,7 +326,7 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
 ) -> Vec<U> {
     let mut output = Vec::new();
     // Vec::with_capacity(fd.fwd_packets_count.unwrap() + fd.bwd_packets_count.unwrap() + 20); // approximate final size + some margin
-    let mut current_state = automaton.get_initial_state(fd.fwd_packets_count, fd.bwd_packets_count);
+    let mut current_state = automaton.get_initial_state(rng, fd.packets_count_cluster);
 
     while !automaton.is_final(current_state) {
         let e = automaton.get_next_edge(rng, current_state);
@@ -339,7 +369,7 @@ pub struct TimedAutomaton<T: EdgeType> {
     // precision: IatPrecision,
     graph: Vec<TimedNode<T>>,
     metadata: AutomatonMetaData,
-    clusters: Vec<MultivariateNormal<nalgebra::Dyn>>,
+    clusters: Vec<MultivariateNormal<nalgebra::Const<2>>>,
     initial_state: usize,
     accepting_state: usize,
 }
@@ -544,7 +574,7 @@ impl TryFrom<JsonPayload> for PayloadType {
 impl<T: EdgeType> TimedAutomaton<T> {
     pub fn import_timed_automaton(
         a: JsonAutomaton,
-        clusters: Vec<MultivariateNormal<nalgebra::Dyn>>,
+        clusters: Vec<MultivariateNormal<nalgebra::Const<2>>>,
         // precision: IatPrecision,
         symbol_parser: impl Fn(String, PayloadType) -> T,
     ) -> Result<Self, String> {
