@@ -1,4 +1,6 @@
 use crate::{stage1, stage2, stage3};
+use include_dir::include_dir;
+use include_dir::{Dir, DirEntry};
 use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
@@ -57,138 +59,14 @@ impl ModelsSource {
             ModelsSource::CICIDS17 => Ok(
                 #[cfg(debug_assertions)]
                 {
-                    vec![
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/dce_rpc-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/dns-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/dns.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ftp-data-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ftp-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/gssapi-RST.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/gssapi-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/http-REJ.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/http-RST.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/http-S0.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/http-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/http-SH.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/krb.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/krb_tcp-RST.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/krb-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ldap_tcp-REJ.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ldap_tcp-RST.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ldap_udp.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ntp.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ssh-S0.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ssh-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ssl-REJ.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ssl-RST.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ssl-S0.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ssl-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ssl-SH.json",
-                            1
-                        ))
-                        .unwrap(),
-                    ]
+                    let d: Dir =
+                        include_dir!("$CARGO_MANIFEST_DIR/default_models/cicids17/automata/");
+                    d.find("**/*.json")
+                        .unwrap()
+                        .into_iter()
+                        .filter_map(|e: &DirEntry| e.as_file())
+                        .map(|f| f.contents_utf8().unwrap().to_string())
+                        .collect()
                 },
                 #[cfg(not(debug_assertions))]
                 {
@@ -330,118 +208,13 @@ impl ModelsSource {
             ModelsSource::CUPID => Ok(
                 #[cfg(debug_assertions)]
                 {
-                    vec![
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/dce_rpc-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/dhcp.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/dns.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi-RST.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/http-RST.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/http-S0.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/http-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/krb-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/krb.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/krb_tcp-RST.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/krb_tcp-SH.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ldap_tcp-REJ.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ldap_tcp-RST.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ldap_udp.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ntlm-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ntp.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/smtp-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ssl-RST.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ssl-S0.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ssl-SF.json",
-                            1
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ssl-SH.json",
-                            1
-                        ))
-                        .unwrap(),
-                    ]
+                    let d: Dir = include_dir!("$CARGO_MANIFEST_DIR/default_models/cupid/automata/");
+                    d.find("**/*.json")
+                        .unwrap()
+                        .into_iter()
+                        .filter_map(|e: &DirEntry| e.as_file())
+                        .map(|f| f.contents_utf8().unwrap().to_string())
+                        .collect()
                 },
                 #[cfg(not(debug_assertions))]
                 {
@@ -579,13 +352,7 @@ impl ModelsSource {
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
                 #[cfg(debug_assertions)]
-                {
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/cicids17/bn/bn.bifxml",
-                        1
-                    ))
-                    .unwrap()
-                },
+                include_str!("../default_models/cicids17/bn/bn.bifxml").to_string(),
                 #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
@@ -598,13 +365,7 @@ impl ModelsSource {
             #[cfg(feature = "models_cupid")]
             ModelsSource::CUPID => Ok(
                 #[cfg(debug_assertions)]
-                {
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/cupid/bn/bn.bifxml",
-                        1
-                    ))
-                    .unwrap()
-                },
+                include_str!("../default_models/cupid/bn/bn.bifxml").to_string(),
                 #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
@@ -629,13 +390,7 @@ impl ModelsSource {
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
                 #[cfg(debug_assertions)]
-                {
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/cicids17/pkt_count_clusters.json",
-                        1
-                    ))
-                    .unwrap()
-                },
+                include_str!("../default_models/cicids17/pkt_count_clusters.json").to_string(),
                 #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
@@ -648,13 +403,7 @@ impl ModelsSource {
             #[cfg(feature = "models_cupid")]
             ModelsSource::CUPID => Ok(
                 #[cfg(debug_assertions)]
-                {
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/cupid/pkt_count_clusters.json",
-                        1
-                    ))
-                    .unwrap()
-                },
+                include_str!("../default_models/cupid/pkt_count_clusters.json").to_string(),
                 #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
@@ -680,13 +429,7 @@ impl ModelsSource {
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
                 #[cfg(debug_assertions)]
-                {
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/cicids17/time_profile.json",
-                        1
-                    ))
-                    .unwrap()
-                },
+                include_str!("../default_models/cicids17/time_profile.json").to_string(),
                 #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
@@ -699,13 +442,7 @@ impl ModelsSource {
             #[cfg(feature = "models_cupid")]
             ModelsSource::CUPID => Ok(
                 #[cfg(debug_assertions)]
-                {
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/cupid/time_profile.json",
-                        1
-                    ))
-                    .unwrap()
-                },
+                include_str!("../default_models/cupid/time_profile.json").to_string(),
                 #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
