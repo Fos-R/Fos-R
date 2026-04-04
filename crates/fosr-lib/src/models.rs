@@ -1,5 +1,7 @@
 use crate::{stage1, stage2, stage3};
+#[allow(unused_imports)]
 use include_dir::include_dir;
+#[allow(unused_imports)]
 use include_dir::{Dir, DirEntry};
 use std::ffi::OsStr;
 use std::fs;
@@ -63,7 +65,6 @@ impl ModelsSource {
                         include_dir!("$CARGO_MANIFEST_DIR/default_models/cicids17/automata/");
                     d.find("**/*.json")
                         .unwrap()
-                        .into_iter()
                         .filter_map(|e: &DirEntry| e.as_file())
                         .map(|f| f.contents_utf8().unwrap().to_string())
                         .collect()
@@ -211,7 +212,6 @@ impl ModelsSource {
                     let d: Dir = include_dir!("$CARGO_MANIFEST_DIR/default_models/cupid/automata/");
                     d.find("**/*.json")
                         .unwrap()
-                        .into_iter()
                         .filter_map(|e: &DirEntry| e.as_file())
                         .map(|f| f.contents_utf8().unwrap().to_string())
                         .collect()
