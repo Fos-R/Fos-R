@@ -1869,6 +1869,7 @@ dependencies = [
  "fosr-ebpf",
  "getrandom 0.4.2",
  "include-bytes-zstd",
+ "include_dir",
  "indicatif",
  "log",
  "log-once",
@@ -2429,6 +2430,26 @@ dependencies = [
  "proc-macro-crate 1.3.1",
  "syn 1.0.109",
  "zstd",
+]
+
+[[package]]
+name = "include_dir"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "923d117408f1e49d914f1a379a309cffe4f18c05cf4e3d12e613a15fc81bd0dd"
+dependencies = [
+ "glob",
+ "include_dir_macros",
+]
+
+[[package]]
+name = "include_dir_macros"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cab85a7ed0bd5f0e76d93846e0147172bed2e2d3f859bcc33a8d9699cad1a75"
+dependencies = [
+ "proc-macro2",
+ "quote",
 ]
 
 [[package]]
