@@ -14,16 +14,6 @@ pub const PORT_MAX: u16 = 65535;
 pub const PORT_UNSPECIFIED: u16 = 0;
 
 // ============================================================================
-// IP ADDRESS RANGES
-// ============================================================================
-
-/// Minimum IP octet value for local network (192.168.0.x)
-pub const IP_LOCAL_MIN: u8 = 1;
-
-/// Maximum IP octet value for local network (192.168.0.x)
-pub const IP_LOCAL_MAX: u8 = 254;
-
-// ============================================================================
 // MAC ADDRESS
 // ============================================================================
 
@@ -41,13 +31,6 @@ pub const MAC_LOCAL_BIT: u8 = 0x02;
 
 /// MAC address mask for local bit manipulation
 pub const MAC_LOCAL_MASK: u8 = 0xFE;
-
-// ============================================================================
-// HOST CONFIGURATION DEFAULTS
-// ============================================================================
-
-/// Default usage intensity for hosts (1.0 = baseline, <1 = less active, >1 = more active)
-pub const HOST_USAGE_DEFAULT: f32 = 1.0;
 
 // ============================================================================
 // STREAM TIMING (for visualization)

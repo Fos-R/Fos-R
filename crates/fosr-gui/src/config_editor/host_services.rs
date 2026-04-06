@@ -1,11 +1,10 @@
 //! Service editing UI: HTTP, SSH, DNS, etc. with custom port support.
 
-use crate::shared::config::model::Interface;
-use crate::shared::constants::network::{PORT_UNSPECIFIED, PORT_MAX, PORT_MIN};
-use crate::shared::constants::ui::{
-    PANEL_MIN_WIDTH, POPUP_MAX_HEIGHT, POPUP_MIN_WIDTH, SPACING_SM, SPACING_XS,
-};
+use fosr_lib::config::InterfaceYaml;
+use crate::shared::constants::network::{PORT_MAX, PORT_MIN, PORT_UNSPECIFIED};
+use crate::shared::constants::ui::SPACING_XS;
 use crate::shared::widgets::helpers::info_icon_with_tooltip;
+use crate::shared::widgets::multi_select_picker::multi_select_picker;
 use eframe::egui;
 
 pub const KNOWN_SERVICES: &[(&str, Option<u16>)] = &[
@@ -36,8 +35,6 @@ fn format_service(name: &str, port: Option<u16>) -> String {
 }
 
 /// Look up the default port for a known service name.
-///
-/// Returns the default port for known services.
 fn default_port_for_service(name: &str) -> u16 {
     KNOWN_SERVICES
         .iter()
@@ -46,133 +43,119 @@ fn default_port_for_service(name: &str) -> u16 {
         .unwrap_or(PORT_UNSPECIFIED)
 }
 
-/// Service section rendering
+/// Service section rendering.
 pub fn render_services_section(
     ui: &mut egui::Ui,
     host_idx: usize,
     interface_idx: usize,
-    interface: &mut Interface,
+    interface: &mut InterfaceYaml,
 ) {
-    let service_count = interface.services.len();
-    let id = ui.make_persistent_id(("services", host_idx, interface_idx));
+    let service_count = interface.services.as_ref().map_or(0, |s| s.len());
 
-    egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, false)
-        .show_header(ui, |ui| {
-            ui.label(format!("Services ({service_count})"));
-            info_icon_with_tooltip(ui, "The list of available services provided by the host.");
-        })
-        .body(|ui| {
-            let popup_id = ui.make_persistent_id(("service_popup", host_idx, interface_idx));
-            let add_btn_resp = ui
-                .button(format!("{} Add", egui_material_icons::icons::ICON_ADD))
-                .on_hover_text("Add service");
+    // Picker in a horizontal line: label + info icon + select
+    let service_names: Vec<&str> = KNOWN_SERVICES.iter().map(|(n, _)| *n).collect();
+    let mut selected_names: Vec<String> = interface
+        .services
+        .as_ref()
+        .map(|s| s.iter().map(|svc| parse_service(svc).0).collect())
+        .unwrap_or_default();
 
-            egui::Popup::from_toggle_button_response(&add_btn_resp)
-                .id(popup_id)
-                .show(|ui| {
-                    ui.set_min_width(POPUP_MIN_WIDTH);
-
-                    let search_id = ui.make_persistent_id(("service_search", host_idx, interface_idx));
-                    let mut search_text =
-                        ui.data_mut(|d| d.get_temp::<String>(search_id).unwrap_or_default());
-
-                    let search_resp =
-                        ui.add(egui::TextEdit::singleline(&mut search_text).hint_text("Search..."));
-
-                    if ui.memory(|m| m.focused().is_none()) {
-                        ui.memory_mut(|m| m.request_focus(search_resp.id));
-                    }
-
-                    ui.data_mut(|d| d.insert_temp(search_id, search_text.clone()));
-                    ui.separator();
-
-                    egui::ScrollArea::vertical()
-                        .max_height(POPUP_MAX_HEIGHT)
-                        .auto_shrink([true; 2])
-                        .show(ui, |ui| {
-                            ui.set_width(PANEL_MIN_WIDTH);
-
-                            let filter = search_text.to_lowercase();
-                            let mut any_shown = false;
-
-                            for (name, default_port) in KNOWN_SERVICES {
-                                let already_present = interface.services.iter().any(|s| {
-                                    let (sname, _) = parse_service(s);
-                                    &sname == name
-                                });
-
-                                if (filter.is_empty() || name.to_lowercase().contains(&filter))
-                                    && !already_present
-                                {
-                                    any_shown = true;
-                                    if ui.selectable_label(false, *name).clicked() {
-                                        interface.services.push(format_service(name, *default_port));
-                                        ui.data_mut(|d| d.insert_temp(search_id, String::new()));
-                                        egui::Popup::close_id(ui.ctx(), popup_id);
-                                    }
-                                }
+    ui.horizontal(|ui| {
+        let header_label = format!("Services ({service_count})");
+        if service_count > 0 {
+            let tooltip: Vec<String> = interface
+                .services
+                .as_ref()
+                .map(|s| {
+                    s.iter()
+                        .map(|svc| {
+                            let (name, port) = parse_service(svc);
+                            match port {
+                                Some(p) => format!("{name}:{p}"),
+                                None => name,
                             }
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            ui.label(&header_label).on_hover_text(tooltip.join("\n"));
+        } else {
+            ui.label(header_label);
+        }
+        info_icon_with_tooltip(ui, "The list of services provided by the host on this interface.");
 
-                            if !any_shown {
-                                ui.label(
-                                    egui::RichText::new("No available services")
-                                        .italics()
-                                        .weak(),
-                                );
-                            }
-                        });
-                });
+        let picker_id = ui.make_persistent_id(("service_picker", host_idx, interface_idx));
+        multi_select_picker(
+            ui,
+            picker_id,
+            &service_names,
+            &mut selected_names,
+            200.0,
+        );
+    });
 
-            ui.add_space(SPACING_SM);
+    // Sync picker selection back to interface services
+    let services = interface.services.get_or_insert_with(Vec::new);
+    sync_services(services, &selected_names);
 
-            let mut service_to_remove: Option<usize> = None;
-
-            for (service_idx, service_raw) in interface.services.iter_mut().enumerate() {
-                render_service_row(
-                    ui,
-                    host_idx,
-                    interface_idx,
-                    service_idx,
-                    service_raw,
-                    &mut service_to_remove,
-                );
-                ui.add_space(SPACING_XS);
-            }
-
-            if let Some(idx) = service_to_remove {
-                interface.services.remove(idx);
-            }
-        });
+    // Collapsible section with port customization
+    if !services.is_empty() {
+        let id = ui.make_persistent_id(("services_ports", host_idx, interface_idx));
+        egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, false)
+            .show_header(ui, |ui| {
+                ui.weak("Custom ports");
+            })
+            .body(|ui| {
+                for service_raw in services.iter_mut() {
+                    render_service_row(ui, host_idx, interface_idx, service_raw);
+                    ui.add_space(SPACING_XS);
+                }
+            });
+    }
 }
 
-/// Render a single service row with name, remove button, and optional custom port.
+/// Sync the picker's name-based selection with the interface's "name:port" services.
+///
+/// - Adds new services with their default port.
+/// - Removes deselected services.
+/// - Preserves custom ports for services that remain selected.
+fn sync_services(services: &mut Vec<String>, selected_names: &[String]) {
+    // Remove services not in the picker selection
+    services.retain(|s| {
+        let name = parse_service(s).0;
+        selected_names.iter().any(|n| n == &name)
+    });
+
+    // Add newly selected services that aren't in the list yet
+    for name in selected_names {
+        let exists = services.iter().any(|s| parse_service(s).0 == *name);
+        if !exists {
+            let port = default_port_for_service(name);
+            services.push(format_service(name, Some(port)));
+        }
+    }
+}
+
+/// Render a single service row with name label and optional custom port editor.
 fn render_service_row(
     ui: &mut egui::Ui,
     host_idx: usize,
     interface_idx: usize,
-    service_idx: usize,
     service_raw: &mut String,
-    remove_request: &mut Option<usize>,
 ) {
     let (service_name, mut service_port) = parse_service(service_raw);
     let default_port = default_port_for_service(&service_name);
 
     // Track whether custom port mode is enabled (persists across frames)
-    let custom_port_id = ui.make_persistent_id(("custom_port", host_idx, interface_idx, service_idx));
+    let custom_port_id =
+        ui.make_persistent_id(("custom_port", host_idx, interface_idx, &*service_raw));
     let is_custom_by_default = service_port.map_or(false, |p| p != default_port);
     let mut custom_port_enabled: bool =
         ui.data_mut(|d| d.get_temp(custom_port_id).unwrap_or(is_custom_by_default));
 
     ui.horizontal(|ui| {
-        // Remove button with service name
-        let btn_text = format!("{} {}", service_name, egui_material_icons::icons::ICON_CLEAR);
-        if ui
-            .button(btn_text)
-            .on_hover_text("Remove service")
-            .clicked()
-        {
-            *remove_request = Some(service_idx);
-        }
+        // Service name as a label
+        ui.strong(&service_name);
 
         // Custom port toggle
         if ui
@@ -194,12 +177,9 @@ fn render_service_row(
 }
 
 /// Resolve port value after toggling custom port checkbox.
-///
-/// When disabling custom port, returns the default (or None if default is 0).
-/// When enabling, returns None to be filled by the editor.
 fn resolve_port_after_toggle(custom_enabled: bool, default_port: u16) -> Option<u16> {
     if custom_enabled {
-        None // Will be set by the DragValue
+        None
     } else if default_port == PORT_UNSPECIFIED {
         None
     } else {
@@ -208,8 +188,6 @@ fn resolve_port_after_toggle(custom_enabled: bool, default_port: u16) -> Option<
 }
 
 /// Render the port editor: either a DragValue or a read-only default label.
-///
-/// Returns the selected port value (if any).
 fn render_port_editor(
     ui: &mut egui::Ui,
     custom_enabled: bool,
@@ -218,22 +196,14 @@ fn render_port_editor(
 ) -> Option<u16> {
     if custom_enabled {
         let mut port_val = current_port.unwrap_or(default_port);
-        if ui
-            .add(
-                egui::DragValue::new(&mut port_val)
-                    .speed(1)
-                    .range(PORT_MIN..=PORT_MAX),
-            )
-            .changed()
-        {
-            Some(port_val)
-        } else {
-            Some(port_val) // Return current value even if unchanged
-        }
+        ui.add(
+            egui::DragValue::new(&mut port_val)
+                .speed(1)
+                .range(PORT_MIN..=PORT_MAX),
+        );
+        Some(port_val)
     } else {
-        // Show default port as read-only label
-        ui.add_enabled(
-            false,
+        ui.add(
             egui::Label::new(egui::RichText::new(format!("(default: {default_port})")).weak()),
         );
         if default_port == PORT_UNSPECIFIED {

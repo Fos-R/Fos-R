@@ -12,6 +12,7 @@ use crate::shared::constants::ui::{
     PLAYBACK_SPEED_STEPS, SPACING_NEGATIVE_XS,
 };
 use eframe::egui;
+use egui_material_icons::icons::{ICON_ADD, ICON_FIT_SCREEN, ICON_IMAGE, ICON_PLAY_ARROW, ICON_REMOVE, ICON_RESTART_ALT, ICON_STOP};
 
 /// Render a legend item with a colored circle (for edge protocols).
 fn legend_item_inline(ui: &mut egui::Ui, label: &str, color: egui::Color32) {
@@ -90,7 +91,7 @@ fn render_play_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
     let accent = ui.visuals().selection.bg_fill;
     let play_button = egui::Button::new(egui::RichText::new(format!(
         "{} {}",
-        egui_material_icons::icons::ICON_PLAY_ARROW,
+        ICON_PLAY_ARROW,
         play_text
     )))
         .fill(accent);
@@ -111,7 +112,7 @@ fn render_play_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
 /// has started at least once (otherwise the Play button shows "Start").
 fn render_restart_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
     if ui
-        .button(egui_material_icons::icons::ICON_RESTART_ALT)
+        .button(ICON_RESTART_ALT)
         .on_hover_text("Restart - reset all statistics and edges")
         .clicked()
     {
@@ -127,7 +128,7 @@ fn render_restart_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
 fn render_stop_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
     let stop_button = egui::Button::new(egui::RichText::new(format!(
         "{} Stop",
-        egui_material_icons::icons::ICON_STOP
+        ICON_STOP
     )))
         .fill(COLOR_STOP);
 
@@ -139,7 +140,7 @@ fn render_stop_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
 /// Render fit-to-screen and export buttons.
 fn render_view_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
     if ui
-        .button(egui_material_icons::icons::ICON_FIT_SCREEN)
+        .button(ICON_FIT_SCREEN)
         .on_hover_text("Fit to screen")
         .clicked()
     {
@@ -147,7 +148,7 @@ fn render_view_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
     }
 
     if ui
-        .button(egui_material_icons::icons::ICON_IMAGE)
+        .button(ICON_IMAGE)
         .on_hover_text("Export as PNG")
         .clicked()
     {
@@ -171,7 +172,7 @@ fn render_speed_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
     let current_idx = find_speed_step_index(speed_value);
 
     if ui
-        .button(egui_material_icons::icons::ICON_REMOVE)
+        .button(ICON_REMOVE)
         .on_hover_text("Slow down")
         .clicked()
     {
@@ -191,7 +192,7 @@ fn render_speed_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
         .on_hover_text("Playback speed - controls how fast network flows are simulated");
 
     if ui
-        .button(egui_material_icons::icons::ICON_ADD)
+        .button(ICON_ADD)
         .on_hover_text("Speed up")
         .clicked()
     {

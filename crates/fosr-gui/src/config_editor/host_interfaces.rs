@@ -1,22 +1,50 @@
-//! Network interface editing UI: IP, MAC address, and associated services.
+//! Network interface editing UI: IP, MAC address, associated services, and uses.
 
 use crate::config_editor::host_services;
-use crate::shared::config::model::{Host, Interface};
+use egui_material_icons::icons::{ICON_ADD, ICON_DELETE};
+use fosr_lib::config::{HostYaml, InterfaceYaml};
 use crate::shared::constants::colors::COLOR_ERROR;
 use crate::shared::constants::network::{
-    IP_LOCAL_MAX, IP_LOCAL_MIN, MAC_ADDRESS_BYTES, MAC_LOCAL_BIT, MAC_LOCAL_MASK,
+    MAC_ADDRESS_BYTES, MAC_LOCAL_BIT, MAC_LOCAL_MASK,
 };
 use crate::shared::constants::ui::{SPACING_MD, SPACING_SM};
-use crate::shared::widgets::helpers::{render_optional_string_input, required_label};
+use crate::shared::widgets::helpers::{info_icon_with_tooltip, render_optional_string_input, required_label};
+use crate::shared::widgets::multi_select_picker::multi_select_picker;
 use eframe::egui;
 use std::collections::HashMap;
+use std::net::Ipv4Addr;
 
-/// Scans all interfaces to find the next available IP in 192.168.0.x
-fn find_available_ip(ip_counts: &HashMap<String, usize>) -> Option<String> {
-    for x in IP_LOCAL_MIN..=IP_LOCAL_MAX {
-        let candidate = format!("192.168.0.{x}");
-        if !ip_counts.contains_key(&candidate) {
-            return Some(candidate);
+/// Find the next available IP within a given subnet/mask.
+pub fn find_available_ip_in_subnet(
+    subnet: Ipv4Addr,
+    mask: u8,
+    ip_counts: &HashMap<String, usize>,
+) -> Option<String> {
+    let subnet_u32 = u32::from(subnet);
+    let host_bits = 32 - mask as u32;
+
+    // Number of assignable host IPs (exclude network address and broadcast).
+    // For a /24: (2^8) - 2 = 254 addresses (192.168.0.1 through 192.168.0.254).
+    let num_hosts = (1u32 << host_bits) - 2;
+
+    for i in 1..=num_hosts {
+        // Build the candidate IP from the subnet prefix + host offset:
+        //
+        //   (1u32 << host_bits) - 1      → host part mask (low bits all 1s)
+        //   !((1u32 << host_bits) - 1)   → network part mask (high bits all 1s, low bits 0s)
+        //   subnet_u32 & network_mask    → zero out the host part, keep the network prefix
+        //   ... | i                      → set host part to the i-th address
+        //
+        // Example with subnet 192.168.1.0/24 (host_bits = 8):
+        //   network_mask = 0xFFFFFF00
+        //   subnet_u32 & network_mask    = 192.168.1.0 (clear host octet)
+        //   ... | 5                      = 192.168.1.5 (i-th host)
+        let network_mask = !((1u32 << host_bits) - 1);
+        let candidate_u32 = (subnet_u32 & network_mask) | i;
+        let candidate = Ipv4Addr::from(candidate_u32);
+        let candidate_str = candidate.to_string();
+        if !ip_counts.contains_key(&candidate_str) {
+            return Some(candidate_str);
         }
     }
     None
@@ -26,25 +54,29 @@ fn find_available_ip(ip_counts: &HashMap<String, usize>) -> Option<String> {
 pub fn render_interfaces_section(
     ui: &mut egui::Ui,
     host_idx: usize,
-    host: &mut Host,
+    host: &mut HostYaml,
     ip_counts: &HashMap<String, usize>,
     mac_counts: &HashMap<String, usize>,
+    subnet_ctx: Option<(Ipv4Addr, u8)>,
 ) {
     ui.horizontal(|ui| {
         ui.label("Interfaces");
         if ui
-            .button(egui_material_icons::icons::ICON_ADD)
+            .button(ICON_ADD)
             .on_hover_text("Add interface")
             .clicked()
         {
-            if let Some(ip) = find_available_ip(ip_counts) {
-                host.interfaces.push(Interface {
+            let ip = subnet_ctx
+                .and_then(|(subnet, mask)| find_available_ip_in_subnet(subnet, mask, ip_counts));
+            if let Some(ip) = ip {
+                host.interfaces.insert(0, InterfaceYaml {
                     ip_addr: ip,
                     mac_addr: Some(generate_mac_until_unique(mac_counts)),
-                    services: Vec::new(),
+                    services: Some(Vec::new()),
+                    uses: None,
                 });
             } else {
-                ui.colored_label(COLOR_ERROR, "No free IP available in 192.168.0.0/24");
+                ui.colored_label(COLOR_ERROR, "No free IP available in this subnet");
             }
         }
     });
@@ -81,7 +113,7 @@ fn render_interface_card(
     ui: &mut egui::Ui,
     host_idx: usize,
     interface_idx: usize,
-    interface: &mut Interface,
+    interface: &mut InterfaceYaml,
     ip_counts: &HashMap<String, usize>,
     mac_counts: &HashMap<String, usize>,
     remove_request: &mut Option<usize>,
@@ -95,7 +127,7 @@ fn render_interface_card(
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui
-                    .button(egui_material_icons::icons::ICON_DELETE)
+                    .button(ICON_DELETE)
                     .on_hover_text("Remove interface")
                     .clicked()
                 {
@@ -113,7 +145,7 @@ fn render_interface_fields(
     ui: &mut egui::Ui,
     host_idx: usize,
     interface_idx: usize,
-    interface: &mut Interface,
+    interface: &mut InterfaceYaml,
     ip_counts: &HashMap<String, usize>,
     mac_counts: &HashMap<String, usize>,
 ) {
@@ -138,6 +170,36 @@ fn render_interface_fields(
 
     // Services section
     host_services::render_services_section(ui, host_idx, interface_idx, interface);
+
+    // Uses section - multi-select picker for protocols the host can use
+    {
+        let protocol_names: Vec<&str> = host_services::KNOWN_SERVICES
+            .iter()
+            .map(|(n, _)| *n)
+            .collect();
+
+        let mut selected: Vec<String> = interface.uses.clone().unwrap_or_default();
+
+        ui.horizontal(|ui| {
+            ui.label("Uses");
+            info_icon_with_tooltip(ui, "Specify what protocols the host can use through this interface.");
+
+            let picker_id = ui.make_persistent_id(("uses_picker", host_idx, interface_idx));
+            multi_select_picker(
+                ui,
+                picker_id,
+                &protocol_names,
+                &mut selected,
+                200.0,
+            );
+        });
+
+        interface.uses = if selected.is_empty() {
+            None
+        } else {
+            Some(selected)
+        };
+    }
 }
 
 /// Generate a random MAC address with the locally administered bit set.
@@ -154,7 +216,7 @@ fn generate_local_mac() -> String {
 }
 
 /// Generate a unique random MAC address, retrying until one not in use is found.
-fn generate_mac_until_unique(mac_counts: &HashMap<String, usize>) -> String {
+pub fn generate_mac_until_unique(mac_counts: &HashMap<String, usize>) -> String {
     loop {
         let mac = generate_local_mac();
 

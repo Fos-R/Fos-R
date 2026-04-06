@@ -76,15 +76,6 @@ pub const MODAL_WIDTH_SM: f32 = 370.0;
 /// Default modal width (px) - startup, template selection
 pub const MODAL_WIDTH_MD: f32 = 400.0;
 
-/// Panel minimum width for popup content (px)
-pub const PANEL_MIN_WIDTH: f32 = 250.0;
-
-/// Panel popup minimum width (px)
-pub const POPUP_MIN_WIDTH: f32 = 180.0;
-
-/// Panel popup maximum height (px)
-pub const POPUP_MAX_HEIGHT: f32 = 200.0;
-
 /// Node info modal width (px)
 pub const NODE_MODAL_WIDTH: f32 = 250.0;
 
@@ -149,10 +140,13 @@ pub const TOOLTIP_DELAY: f32 = 0.1;
 // ============================================================================
 
 /// Startup card height (px)
-pub const STARTUP_CARD_HEIGHT: f32 = 120.0;
+pub const STARTUP_CARD_INITIAL_HEIGHT: f32 = 175.0;
+
+/// Template card height (px)
+pub const STARTUP_CARD_TEMPLATE_HEIGHT: f32 = 125.0;
 
 /// Number of columns in initial startup modal
-pub const STARTUP_COLUMNS_INITIAL: usize = 2;
+pub const STARTUP_COLUMNS_INITIAL: usize = 3;
 
 /// Number of columns in template selection modal
 pub const STARTUP_COLUMNS_TEMPLATES: usize = 3;
@@ -191,6 +185,19 @@ pub const TIMEZONE_POPUP_MAX_HEIGHT: f32 = 450.0;
 
 /// Timezone list maximum height
 pub const TIMEZONE_LIST_MAX_HEIGHT: f32 = 400.0;
+
+// ============================================================================
+// SEARCHABLE COMBO
+// ============================================================================
+
+/// Default width for the combo button.
+pub const DEFAULT_COMBO_WIDTH: f32 = 160.0;
+
+/// Default maximum height for the popup area.
+pub const DEFAULT_COMBO_POPUP_MAX_HEIGHT: f32 = 250.0;
+
+/// Default maximum height for the scrollable list.
+pub const DEFAULT_COMBO_LIST_MAX_HEIGHT: f32 = 200.0;
 
 // ============================================================================
 // VISUALIZATION: NODE SIZING

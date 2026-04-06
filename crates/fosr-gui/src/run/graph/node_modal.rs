@@ -2,13 +2,16 @@
 
 use super::state::{NetworkNode, NodeType, VisualizationState};
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
-use crate::shared::config::model::Host;
+use fosr_lib::config::HostYaml;
+use fosr_lib::structs::OS;
 use crate::shared::config::state::ConfigFileState;
+use crate::shared::widgets::helpers::os_display_name;
 use crate::shared::constants::colors::{COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT};
 use crate::shared::constants::ui::{
     INDENT_STANDARD, LEGEND_ICON_SIZE, NODE_MODAL_WIDTH, SPACING_LG, SPACING_SM,
 };
 use eframe::egui;
+use egui_material_icons::icons::{ICON_CLOSE, ICON_SAVE};
 use egui_graphs::events::{Event, PayloadNodeClick};
 
 /// Process graph click events from the event buffer.
@@ -30,7 +33,7 @@ pub fn process_graph_events(
                 configuration_file_state
                     .config_model
                     .as_ref()
-                    .and_then(|c| c.hosts.get(idx).cloned())
+                    .and_then(|c| c.get_host(idx).cloned())
             });
         }
     }
@@ -123,14 +126,14 @@ fn render_modal_header(ui: &mut egui::Ui, node_data: &NetworkNode, has_edit_buff
 }
 
 /// Render editable fields for the host (hostname, OS, IPs).
-fn render_editable_fields(ui: &mut egui::Ui, host: &mut Host) {
+fn render_editable_fields(ui: &mut egui::Ui, host: &mut HostYaml) {
     render_hostname_field(ui, host);
     render_os_dropdown(ui, host);
     render_ip_fields(ui, host);
 }
 
 /// Render editable hostname field.
-fn render_hostname_field(ui: &mut egui::Ui, host: &mut Host) {
+fn render_hostname_field(ui: &mut egui::Ui, host: &mut HostYaml) {
     ui.horizontal(|ui| {
         ui.label("Hostname:");
         let mut buf = host.hostname.clone().unwrap_or_default();
@@ -148,34 +151,28 @@ fn render_hostname_field(ui: &mut egui::Ui, host: &mut Host) {
 }
 
 /// Render editable OS dropdown.
-fn render_os_dropdown(ui: &mut egui::Ui, host: &mut Host) {
+fn render_os_dropdown(ui: &mut egui::Ui, host: &mut HostYaml) {
     ui.horizontal(|ui| {
         ui.label("OS:");
-        let selected = host.os.as_deref().unwrap_or("<none>");
+        let selected = os_display_name(host.os).to_string();
         egui::ComboBox::from_id_salt("modal_os")
             .selected_text(selected)
             .show_ui(ui, |ui| {
-                if ui.selectable_label(host.os.is_none(), "<none>").clicked() {
+                if ui.selectable_label(host.os.is_none(), os_display_name(None)).clicked() {
                     host.os = None;
                 }
-                if ui
-                    .selectable_label(host.os.as_deref() == Some("Linux"), "Linux")
-                    .clicked()
-                {
-                    host.os = Some("Linux".to_string());
+                if ui.selectable_label(host.os == Some(OS::Linux), os_display_name(Some(OS::Linux))).clicked() {
+                    host.os = Some(OS::Linux);
                 }
-                if ui
-                    .selectable_label(host.os.as_deref() == Some("Windows"), "Windows")
-                    .clicked()
-                {
-                    host.os = Some("Windows".to_string());
+                if ui.selectable_label(host.os == Some(OS::Windows), os_display_name(Some(OS::Windows))).clicked() {
+                    host.os = Some(OS::Windows);
                 }
             });
     });
 }
 
 /// Render editable IP address fields.
-fn render_ip_fields(ui: &mut egui::Ui, host: &mut Host) {
+fn render_ip_fields(ui: &mut egui::Ui, host: &mut HostYaml) {
     ui.label("IP Addresses:");
     for interface in &mut host.interfaces {
         ui.horizontal(|ui| {
@@ -198,7 +195,9 @@ fn render_readonly_fields(ui: &mut egui::Ui, node_data: &NetworkNode) {
     if node_data.node_type != NodeType::Internet {
         ui.horizontal(|ui| {
             ui.label("OS:");
-            ui.label(egui::RichText::new(format!("{:?}", node_data.os)).monospace());
+            ui.label(egui::RichText::new(
+                node_data.os.to_string()
+            ).monospace());
         });
         ui.label("IP Addresses:");
         for ip in &node_data.ip_addrs {
@@ -215,14 +214,14 @@ fn render_modal_footer(ui: &mut egui::Ui, has_edit_buffer: bool, save_clicked: &
     if has_edit_buffer {
         ui.horizontal(|ui| {
             if ui
-                .button(egui_material_icons::icons::ICON_CLOSE)
+                .button(ICON_CLOSE)
                 .on_hover_text("Cancel")
                 .clicked()
             {
                 ui.close();
             }
             if ui
-                .button(egui_material_icons::icons::ICON_SAVE)
+                .button(ICON_SAVE)
                 .on_hover_text("Save")
                 .clicked()
             {
@@ -232,7 +231,7 @@ fn render_modal_footer(ui: &mut egui::Ui, has_edit_buffer: bool, save_clicked: &
         });
     } else {
         if ui
-            .button(egui_material_icons::icons::ICON_CLOSE)
+            .button(ICON_CLOSE)
             .on_hover_text("Close")
             .clicked()
         {
@@ -242,6 +241,11 @@ fn render_modal_footer(ui: &mut egui::Ui, has_edit_buffer: bool, save_clicked: &
 }
 
 /// Apply changes from edit buffer back to the config model.
+///
+/// Uses the flat host index from `node_to_host` to find the host in `ConfigurationYaml`.
+/// This relies on the graph being rebuilt from scratch on every config change - the index
+/// is positional across networks then internet, so it would be wrong if the graph were
+/// updated incrementally without a full rebuild.
 fn apply_changes_to_config(
     state: &mut VisualizationState,
     config_file_state: &mut ConfigFileState,
@@ -251,7 +255,7 @@ fn apply_changes_to_config(
         if let Some(host) = config_file_state
             .config_model
             .as_mut()
-            .and_then(|c| c.hosts.get_mut(idx))
+            .and_then(|c| c.get_host_mut(idx))
         {
             *host = buffer;
         }

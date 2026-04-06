@@ -1,17 +1,14 @@
 //! Startup modal for choosing configuration source (templates or import).
 
-use crate::config_templates::{load_template, TEMPLATES};
+use crate::config_templates::{load_empty_config, load_template, TEMPLATES};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::config::file_ops::poll_file_import;
 use crate::shared::config::file_ops::trigger_file_import;
 use crate::shared::config::state::{ConfigFileState, StartupModalStep};
 use crate::shared::constants::colors::COLOR_TEXT_MUTED;
-use crate::shared::constants::ui::{
-    ICON_SIZE_LG, MODAL_WIDTH_MD, SPACING_LG, SPACING_SM, SPACING_XL, SPACING_XS,
-    STARTUP_CARD_HEIGHT, STARTUP_COLUMNS_INITIAL, STARTUP_COLUMNS_TEMPLATES, TEXT_SIZE_LG,
-    TEXT_SIZE_SM,
-};
+use crate::shared::constants::ui::{ICON_SIZE_LG, MODAL_WIDTH_MD, SPACING_LG, SPACING_SM, SPACING_XL, SPACING_XS, STARTUP_CARD_INITIAL_HEIGHT, STARTUP_CARD_TEMPLATE_HEIGHT, STARTUP_COLUMNS_INITIAL, STARTUP_COLUMNS_TEMPLATES, TEXT_SIZE_LG, TEXT_SIZE_SM};
 use eframe::egui;
+use egui_material_icons::icons::{ICON_ARROW_BACK, ICON_EDIT, ICON_LAN, ICON_UPLOAD_FILE};
 
 /// Builds the frame style for a startup card based on hover state.
 fn card_frame_for_hover(ui: &egui::Ui, is_hovered: bool) -> egui::Frame {
@@ -28,6 +25,7 @@ fn render_card_content(ui: &mut egui::Ui, icon: &str, title: &str, description: 
     // Disable text selection so the whole card acts as a single clickable area
     ui.style_mut().interaction.selectable_labels = false;
     ui.set_width(ui.available_width());
+    ui.set_height(ui.available_height());
 
     ui.vertical_centered(|ui| {
         ui.add_space(SPACING_LG);
@@ -46,8 +44,8 @@ fn render_card_content(ui: &mut egui::Ui, icon: &str, title: &str, description: 
 
 /// A clickable card with icon, title and description.
 /// Returns true if the card was clicked.
-fn startup_card(ui: &mut egui::Ui, icon: &str, title: &str, description: &str) -> bool {
-    let desired_size = egui::vec2(ui.available_width(), STARTUP_CARD_HEIGHT);
+fn startup_card(ui: &mut egui::Ui, icon: &str, title: &str, description: &str, min_height: f32) -> bool {
+    let desired_size = egui::vec2(ui.available_width(), min_height);
     let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::click());
 
     let frame = card_frame_for_hover(ui, response.hovered());
@@ -83,24 +81,37 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
         ui.add_space(SPACING_XL);
 
         ui.columns(STARTUP_COLUMNS_INITIAL, |cols| {
-            // Left: default config
+            // Left: empty config
             if startup_card(
                 &mut cols[0],
-                egui_material_icons::icons::ICON_LAN,
+                ICON_EDIT,
+                "Empty configuration",
+                "Start from scratch with a blank configuration",
+                STARTUP_CARD_INITIAL_HEIGHT,
+            ) {
+                load_empty_config(state);
+            }
+
+            // Middle: default config (templates)
+            if startup_card(
+                &mut cols[1],
+                ICON_LAN,
                 "Default configuration",
-                "Choose from preset templates\nfor different network types",
+                "Choose from preset templates for different network types",
+                STARTUP_CARD_INITIAL_HEIGHT,
             ) {
                 state.modal_state = StartupModalStep::TemplateSelection;
             }
 
             // Right: import file
             if startup_card(
-                &mut cols[1],
-                egui_material_icons::icons::ICON_UPLOAD_FILE,
+                &mut cols[2],
+                ICON_UPLOAD_FILE,
                 "Import YAML file",
-                "Load your own network\nconfiguration from a file",
+                "Load your own network configuration from a file",
+                STARTUP_CARD_INITIAL_HEIGHT,
             ) {
-                trigger_file_import(state, cols[1].ctx());
+                trigger_file_import(state, cols[2].ctx());
             }
         });
 
@@ -118,7 +129,7 @@ fn render_template_selection_modal(ctx: &egui::Context, state: &mut ConfigFileSt
         // Header with back button
         ui.horizontal(|ui| {
             if ui
-                .button(egui_material_icons::icons::ICON_ARROW_BACK)
+                .button(ICON_ARROW_BACK)
                 .on_hover_text("Back")
                 .clicked()
             {
@@ -137,6 +148,7 @@ fn render_template_selection_modal(ctx: &egui::Context, state: &mut ConfigFileSt
                     template.icon,
                     template.title,
                     template.description,
+                    STARTUP_CARD_TEMPLATE_HEIGHT,
                 ) {
                     load_template(state, template);
                 }

@@ -1,6 +1,6 @@
 //! Configuration file operations: loading and saving config files.
 
-use crate::shared::config::model::Configuration;
+use fosr_lib::config::ConfigurationYaml;
 use crate::shared::config::parser::parse_config_yaml;
 use crate::shared::config::state::ConfigFileState;
 #[cfg(not(target_arch = "wasm32"))]
@@ -142,7 +142,7 @@ fn clear_loaded_config(configuration_file_state: &mut ConfigFileState) {
 /// Enforce date and format in metadata before saving.
 ///
 /// Sets the date to today and format version to 1.
-pub fn enforce_metadata_defaults(config: &mut Configuration) {
+pub fn enforce_metadata_defaults(config: &mut ConfigurationYaml) {
     let now: DateTime<Local> = Local::now();
     config.metadata.date = Some(now.format("%Y/%m/%d").to_string());
     config.metadata.format = Some(1);
