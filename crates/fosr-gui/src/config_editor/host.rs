@@ -1,142 +1,335 @@
-//! Host editing UI: hostname, OS, type, and client protocols.
+//! Network-scoped host editing UI: networks as collapsible sections with nested hosts.
 //!
-//! This module provides the visual editor for configuring hosts in the network.
-//! Each host is displayed as a collapsible section with fields for basic settings
-//! (hostname, OS, type, usage) and a nested interfaces section.
+//! This module provides the visual editor for configuring networks and hosts.
+//! Each network is displayed as a collapsible section with editable subnet/mask/name
+//! fields, a nested list of hosts, and an "Add host" button.
 
-use crate::config_editor::{host_interfaces, host_services, host_validation};
-use crate::shared::config::model::{Configuration, Host};
+use crate::config_editor::{host_interfaces, host_validation};
 use crate::shared::constants::colors::COLOR_ERROR;
-use crate::shared::constants::network::HOST_USAGE_DEFAULT;
-use crate::shared::constants::ui::{
-    PANEL_MIN_WIDTH, POPUP_MAX_HEIGHT, POPUP_MIN_WIDTH, SPACING_MD, SPACING_SM,
+use crate::shared::constants::ui::{SPACING_MD, SPACING_SM};
+use crate::shared::widgets::helpers::{
+    info_icon_with_tooltip, os_display_name, render_optional_string_input,
 };
-use crate::shared::widgets::helpers::{render_optional_string_input, info_icon_with_tooltip};
 use eframe::egui;
+use fosr_lib::config::{next_ui_id, HostType, InterfaceYaml};
+use fosr_lib::config::{ConfigurationYaml, HostYaml, NetworkYaml};
+use fosr_lib::structs::OS;
 use std::collections::HashMap;
+use std::net::Ipv4Addr;
+use egui_material_icons::icons::{ICON_ADD, ICON_CLEAR, ICON_DELETE, ICON_WARNING};
+use crate::config_editor::host_validation::{count_addresses, find_available_subnet, validate_network_subnet_overlap, collect_other_subnets};
 
-/// Render the hosts section with add button and collapsible host cards.
-///
-/// Each host shows validation errors in the header if present.
-/// Supports adding new hosts (inserted at top) and removing hosts.
-pub fn render_hosts_section(ui: &mut egui::Ui, model: &mut Configuration) {
-    ui.horizontal(|ui| {
-        ui.heading("Hosts");
-        if ui
-            .button(egui_material_icons::icons::ICON_ADD)
-            .on_hover_text("Add host")
-            .clicked()
-        {
-            model.hosts.insert(0, Host::default());
-        }
-    });
-    ui.add_space(SPACING_MD);
+/// Render the full networks section with per-network collapsible sections,
+/// an "Add network" button, and an "Internet" section at the bottom.
+pub fn render_hosts_section(ui: &mut egui::Ui, model: &mut ConfigurationYaml) {
+    let (ip_counts, mac_counts) = count_addresses(model);
 
-    if model.hosts.is_empty() {
-        ui.label("No hosts in this configuration.");
-        return;
+    let mut network_to_remove: Option<usize> = None;
+
+    if ui
+        .button(format!(
+            "{} Add network",
+            ICON_ADD
+        ))
+        .on_hover_text("Add a new network")
+        .clicked()
+    {
+        let net_count = model.networks.len();
+        let Some(subnet) = find_available_subnet(&model.networks) else {
+            log::warn!("No available /24 subnet in 192.168.0.0/16 range - all 254 slots overlap with existing networks");
+            return;
+        };
+
+        model.add_network(NetworkYaml {
+            ui_id: next_ui_id(),
+            subnet,
+            mask: 24,
+            name: format!("Network {}", net_count + 1),
+            hosts: vec![],
+        });
     }
 
-    // Pre-compute address counts for duplicate detection
-    let (ip_counts, mac_counts) = host_validation::count_addresses(model);
+    // Compute subnet overlap warnings once for all networks
+    let overlap_warnings: Vec<Vec<String>> = model.networks.iter().enumerate().map(|(i, _)| {
+        let others = collect_other_subnets(&model.networks, i);
+        validate_network_subnet_overlap(&model.networks[i], &others)
+    }).collect();
 
-    // Track removal request (can't remove during iteration)
-    let mut host_to_remove: Option<usize> = None;
-
-    for (idx, host) in model.hosts.iter_mut().enumerate() {
-        render_host_card(ui, idx, host, &ip_counts, &mac_counts, &mut host_to_remove);
+    // Render each network as a collapsible section
+    for (net_idx, network) in model.networks.iter_mut().enumerate() {
+        render_network_section(
+            ui,
+            net_idx,
+            network,
+            &ip_counts,
+            &mac_counts,
+            &overlap_warnings[net_idx],
+            &mut network_to_remove,
+        );
         ui.add_space(SPACING_MD);
     }
 
-    // Apply removal after iteration completes
-    if let Some(idx) = host_to_remove {
-        model.hosts.remove(idx);
+    // Apply network removal after iteration
+    if let Some(idx) = network_to_remove {
+        model.remove_network(idx);
     }
+
+    ui.add_space(SPACING_MD);
+
+    // Internet section
+    render_internet_section(ui, model, &ip_counts, &mac_counts);
+}
+
+/// Render a single network as a collapsible section with editable fields and nested hosts.
+fn render_network_section(
+    ui: &mut egui::Ui,
+    net_idx: usize,
+    network: &mut NetworkYaml,
+    ip_counts: &HashMap<String, usize>,
+    mac_counts: &HashMap<String, usize>,
+    overlap_warnings: &[String],
+    network_to_remove: &mut Option<usize>,
+) {
+    let host_count = network.hosts.len();
+    let header_text = format!(
+        "{} ({}/{}) - {} host{}",
+        network.name,
+        network.subnet,
+        network.mask,
+        host_count,
+        if host_count != 1 { "s" } else { "" }
+    );
+    // Use a unique ID to properly identify a section's state to a specific network.
+    // This ensures, for instance, that an opened section stays open if a new network is added.
+    let id = ui.make_persistent_id(("network_section", network.ui_id));
+
+    // Only the first network section is expanded by default.
+    egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, net_idx == 0)
+        .show_header(ui, |ui| {
+            if overlap_warnings.is_empty() {
+                ui.strong(&header_text);
+            } else {
+                let error_text = format!("{} {}\n{}", ICON_WARNING, header_text, overlap_warnings.join("\n"));
+                ui.colored_label(COLOR_ERROR, error_text);
+            }
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let hover_text = format!("Remove network '{}' and all its hosts", network.name);
+                if ui
+                    .button(ICON_DELETE)
+                    .on_hover_text(hover_text)
+                    .clicked()
+                {
+                    *network_to_remove = Some(net_idx);
+                }
+            });
+        })
+        .body(|ui| {
+            // Editable network fields
+            render_network_fields(ui, network);
+            ui.add_space(SPACING_SM);
+
+            // "Add host" button at top
+            if ui
+                .button(format!("{} Add host", ICON_ADD))
+                .on_hover_text("Add host to this network")
+                .clicked()
+            {
+                let host = create_host_with_network_ip(network, ip_counts, mac_counts);
+                network.hosts.insert(0, host);
+            }
+
+            ui.add_space(SPACING_SM);
+
+            // Render hosts
+            let mut host_to_remove: Option<usize> = None;
+            for (local_idx, host) in network.hosts.iter_mut().enumerate() {
+                render_host_card(
+                    ui,
+                    (net_idx, local_idx),
+                    Some((network.subnet, network.mask)),
+                    host,
+                    ip_counts,
+                    mac_counts,
+                    &mut host_to_remove,
+                );
+                ui.add_space(SPACING_SM);
+            }
+            if let Some(idx) = host_to_remove {
+                network.hosts.remove(idx);
+            }
+        });
+}
+
+/// Render editable subnet, mask, and name fields for a network.
+fn render_network_fields(ui: &mut egui::Ui, network: &mut NetworkYaml) {
+    ui.horizontal(|ui| {
+        ui.label("Subnet");
+        let mut subnet_str = network.subnet.to_string();
+        if ui
+            .add(egui::TextEdit::singleline(&mut subnet_str).desired_width(120.0))
+            .changed()
+        {
+            if let Ok(ip) = subnet_str.parse() {
+                network.subnet = ip;
+            }
+        }
+
+        ui.label("/");
+        let mut mask_val = network.mask as u32;
+        if ui
+            .add(egui::DragValue::new(&mut mask_val).range(1..=31).speed(0.1))
+            .changed()
+        {
+            network.mask = mask_val as u8;
+        }
+
+        ui.label("Name");
+        ui.text_edit_singleline(&mut network.name);
+    });
+}
+
+/// Render the Internet section - similar to a network section but without subnet/mask/name.
+fn render_internet_section(
+    ui: &mut egui::Ui,
+    model: &mut ConfigurationYaml,
+    ip_counts: &HashMap<String, usize>,
+    mac_counts: &HashMap<String, usize>,
+) {
+    let host_count = model.internet.len();
+    let id = ui.make_persistent_id("internet_section");
+
+    egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, true)
+        .show_header(ui, |ui| {
+            ui.strong(format!(
+                "Internet ({} host{})",
+                host_count,
+                if host_count != 1 { "s" } else { "" }
+            ));
+            info_icon_with_tooltip(ui, "Catch-all section for hosts outside the topology's defined networks. Assign any IP or leave it empty for a random one.");
+        })
+        .body(|ui| {
+            if ui
+                .button(format!(
+                    "{} Add internet host",
+                    ICON_ADD
+                ))
+                .on_hover_text("Add host to internet")
+                .clicked()
+            {
+                let host = create_internet_host(mac_counts);
+                model.internet.insert(0, host);
+            }
+
+            ui.add_space(SPACING_SM);
+
+            let mut host_to_remove: Option<usize> = None;
+            for (local_idx, host) in model.internet.iter_mut().enumerate() {
+                render_host_card(
+                    ui,
+                    (model.networks.len(), local_idx), // use network count as "internet net idx"
+                    None, // no subnet context
+                    host,
+                    ip_counts,
+                    mac_counts,
+                    &mut host_to_remove,
+                );
+                ui.add_space(SPACING_SM);
+            }
+            if let Some(idx) = host_to_remove {
+                model.internet.remove(idx);
+            }
+        });
 }
 
 /// Render a single host as a collapsible card.
-///
-/// The header shows the host name and any validation errors.
-/// The body contains all editable fields organized in sections.
 fn render_host_card(
     ui: &mut egui::Ui,
-    index: usize,
-    host: &mut Host,
+    key: (usize, usize),
+    subnet_ctx: Option<(Ipv4Addr, u8)>,
+    host: &mut HostYaml,
     ip_counts: &HashMap<String, usize>,
     mac_counts: &HashMap<String, usize>,
     remove_request: &mut Option<usize>,
 ) {
     let display_name = host_display_name(host);
-    let errors = host_validation::validate_host(host, ip_counts, mac_counts);
+    let mut errors = host_validation::validate_host(host, ip_counts, mac_counts);
 
-    // First host is expanded by default
-    let id = ui.make_persistent_id(("host", index));
-    egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, index == 0)
+    // Verify that the host has at least one interface in the subnet
+    if let Some((subnet, mask)) = subnet_ctx {
+        if let Some(warning) = host_validation::validate_host_network_placement(host, subnet, mask)
+        {
+            errors.push(warning);
+        }
+    }
+
+    // Use a unique ID to properly identify a section's state to a specific host.
+    // This ensures, for instance, that an opened section stays open if a new host is added.
+    let id = ui.make_persistent_id(("host_card", host.ui_id));
+    let is_first = key.1 == 0;
+
+    egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, is_first)
         .show_header(ui, |ui| {
             render_host_header(ui, &display_name, &errors, host);
-            render_host_delete_button(ui, index, remove_request);
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let hover_text = format!("Remove host '{}'", display_name);
+                if ui
+                    .button(ICON_DELETE)
+                    .on_hover_text(hover_text)
+                    .clicked()
+                {
+                    *remove_request = Some(key.1);
+                }
+            });
         })
         .body(|ui| {
-            render_host_basic_fields(ui, index, host);
+            render_host_basic_fields(ui, key, host);
             ui.separator();
-            host_interfaces::render_interfaces_section(ui, index, host, ip_counts, mac_counts);
+            host_interfaces::render_interfaces_section(ui, key.1, host, ip_counts, mac_counts, subnet_ctx);
         });
 }
 
 /// Render the host header with name, errors, and tooltip.
-fn render_host_header(
-    ui: &mut egui::Ui,
-    display_name: &str,
-    errors: &[String],
-    host: &Host,
-) {
+fn render_host_header(ui: &mut egui::Ui, display_name: &str, errors: &[String], host: &HostYaml) {
     ui.horizontal(|ui| {
         if errors.is_empty() {
             ui.label(display_name).on_hover_ui(|ui| {
                 render_host_tooltip(ui, host);
             });
         } else {
-            let warning_icon = egui_material_icons::icons::ICON_WARNING;
+            let warning_icon = ICON_WARNING;
             let error_text = errors.join(", ");
             let label_text = format!("{} {} - {}", warning_icon, display_name, error_text);
 
-            ui.colored_label(COLOR_ERROR, label_text)
-                .on_hover_ui(|ui| {
-                    render_host_tooltip(ui, host);
-                });
+            ui.colored_label(COLOR_ERROR, label_text).on_hover_ui(|ui| {
+                render_host_tooltip(ui, host);
+            });
         }
     });
 }
 
-/// Render the delete button aligned to the right of the header.
-fn render_host_delete_button(
-    ui: &mut egui::Ui,
-    index: usize,
-    remove_request: &mut Option<usize>,
-) {
-    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        if ui
-            .button(egui_material_icons::icons::ICON_DELETE)
-            .on_hover_text("Remove host")
-            .clicked()
-        {
-            *remove_request = Some(index);
-        }
+/// Render the host summary tooltip showing type, uses, and interfaces.
+fn render_host_tooltip(ui: &mut egui::Ui, host: &HostYaml) {
+    let host_type = host.host_type.map_or("<auto>", |ht| match ht {
+        HostType::Server => "server",
+        HostType::User => "user",
     });
-}
-
-/// Render the host summary tooltip showing type, protocols, and interfaces.
-fn render_host_tooltip(ui: &mut egui::Ui, host: &Host) {
-    let host_type = host.r#type.as_deref().unwrap_or("<auto>");
     ui.horizontal(|ui| {
         ui.label("Type :");
         ui.strong(host_type);
     });
 
-    if !host.client.is_empty() {
+    // Show uses from interfaces
+    let all_uses: Vec<&str> = host
+        .interfaces
+        .iter()
+        .filter_map(|i| i.uses.as_ref())
+        .flatten()
+        .map(String::as_str)
+        .collect();
+    if !all_uses.is_empty() {
         ui.horizontal(|ui| {
-            ui.label("Client protocols :");
-            ui.strong(host.client.join(", "));
+            ui.label("Uses protocols :");
+            ui.strong(all_uses.join(", "));
         });
     }
 
@@ -147,270 +340,126 @@ fn render_host_tooltip(ui: &mut egui::Ui, host: &Host) {
         ui.label("  No interfaces configured.");
     } else {
         for interface in &host.interfaces {
-            let services_str = if interface.services.is_empty() {
-                "no services".to_string()
-            } else {
-                interface.services.join(", ")
-            };
-            ui.label(format!("  • {} ({})", interface.ip_addr, services_str));
+            let services_str = interface
+                .services
+                .as_ref()
+                .map_or("no services".to_string(), |s| {
+                    if s.is_empty() {
+                        "no services".to_string()
+                    } else {
+                        s.join(", ")
+                    }
+                });
+            ui.label(format!("  - {} ({})", interface.ip_addr, services_str));
         }
     }
 }
 
-/// Render the basic host fields: OS, hostname, usage, type, and client protocols.
-fn render_host_basic_fields(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
-    render_os_dropdown(ui, host_idx, &mut host.os);
+/// Render the basic host fields: OS, hostname, and type.
+fn render_host_basic_fields(ui: &mut egui::Ui, key: (usize, usize), host: &mut HostYaml) {
+    render_os_dropdown(ui, key, host);
     render_optional_string_input(ui, "Hostname", &mut host.hostname, "host1");
-    render_usage_field(ui, host);
-    render_type_dropdown(ui, host_idx, host);
-    render_client_protocols(ui, host_idx, host);
+    render_type_dropdown(ui, key, host);
 }
 
 /// Dropdown selector for the Operating System (Linux/Windows/none).
-fn render_os_dropdown(ui: &mut egui::Ui, host_idx: usize, host_os: &mut Option<String>) {
+fn render_os_dropdown(ui: &mut egui::Ui, key: (usize, usize), host: &mut HostYaml) {
     ui.horizontal(|ui| {
         ui.label("OS");
 
-        let selected_text = host_os.as_deref().unwrap_or("<none>");
+        let selected_text = os_display_name(host.os);
 
-        egui::ComboBox::from_id_salt((host_idx, "host_os_combo"))
+        egui::ComboBox::from_id_salt((key, "host_os_combo"))
             .selected_text(selected_text)
             .show_ui(ui, |ui| {
-                if ui.selectable_label(host_os.is_none(), "<none>").clicked() {
-                    *host_os = None;
+                if ui.selectable_label(host.os.is_none(), os_display_name(None)).clicked() {
+                    host.os = None;
                 }
 
                 ui.separator();
 
                 if ui
-                    .selectable_label(host_os.as_deref() == Some("Linux"), "Linux")
+                    .selectable_label(host.os == Some(OS::Linux), os_display_name(Some(OS::Linux)))
                     .clicked()
                 {
-                    *host_os = Some("Linux".to_string());
+                    host.os = Some(OS::Linux);
                 }
                 if ui
-                    .selectable_label(host_os.as_deref() == Some("Windows"), "Windows")
+                    .selectable_label(host.os == Some(OS::Windows), os_display_name(Some(OS::Windows)))
                     .clicked()
                 {
-                    *host_os = Some("Windows".to_string());
+                    host.os = Some(OS::Windows);
                 }
             });
 
-        if host_os.is_some()
+        if host.os.is_some()
             && ui
-            .button(egui_material_icons::icons::ICON_CLEAR)
+            .button(ICON_CLEAR)
             .on_hover_text("Clear OS")
             .clicked()
         {
-            *host_os = None;
-        }
-    });
-}
-
-/// Usage intensity field with drag value and clear button.
-///
-/// Usage affects how much network traffic this host generates.
-/// Default is 1.0 (baseline), lower means less traffic, higher means more.
-fn render_usage_field(ui: &mut egui::Ui, host: &mut Host) {
-    ui.horizontal(|ui| {
-        ui.label("Usage");
-        info_icon_with_tooltip(
-            ui,
-            &format!(
-                "Optional (default value: {0}). The usage intensity of the host. \
-                 {0} is the baseline, < {0} means less usage than usual, \
-                 and > {0} means higher usage",
-                HOST_USAGE_DEFAULT
-            ),
-        );
-
-        let mut usage_val = host.usage.unwrap_or(HOST_USAGE_DEFAULT);
-        if ui
-            .add(egui::DragValue::new(&mut usage_val).speed(0.1))
-            .changed()
-        {
-            // Store as None if at default (to avoid serializing default values)
-            host.usage = if (usage_val - HOST_USAGE_DEFAULT).abs() < f32::EPSILON {
-                None
-            } else {
-                Some(usage_val)
-            };
-        }
-
-        if ui
-            .button(egui_material_icons::icons::ICON_CLEAR)
-            .on_hover_text("Clear")
-            .clicked()
-        {
-            host.usage = None;
+            host.os = None;
         }
     });
 }
 
 /// Dropdown selector for host type (server/user/auto).
-///
-/// - server: provides services to other hosts
-/// - user: consumes services from servers
-/// - auto: determined based on whether services are defined
-fn render_type_dropdown(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
+fn render_type_dropdown(ui: &mut egui::Ui, key: (usize, usize), host: &mut HostYaml) {
     ui.horizontal(|ui| {
         ui.label("Type");
         info_icon_with_tooltip(
             ui,
             "Defines the role of the host. A server provides services, while a user (client) \
              consumes services. If the host is a server, it must define services. If it is a user, \
-             it must define client protocols. If set to <auto>, the role is determined automatically: \
-             server if at least one service is defined, otherwise user.",
+             it must define client protocols (via interface 'uses'). If set to <auto>, the role is \
+             determined automatically: server if at least one service is defined, otherwise user.",
         );
-        let selected_text = host.r#type.as_deref().unwrap_or("<auto>").to_string();
+        let selected_text = host.host_type.map_or("<auto>", |ht| match ht {
+            HostType::Server => "server",
+            HostType::User => "user",
+        });
 
-        egui::ComboBox::from_id_salt((host_idx, "host_type"))
+        egui::ComboBox::from_id_salt((key, "host_type"))
             .selected_text(selected_text)
             .show_ui(ui, |ui| {
                 if ui
-                    .selectable_label(host.r#type.is_none(), "<auto>")
+                    .selectable_label(host.host_type.is_none(), "<auto>")
                     .clicked()
                 {
-                    host.r#type = None;
+                    host.host_type = None;
                 }
                 if ui
-                    .selectable_label(host.r#type.as_deref() == Some("server"), "server")
+                    .selectable_label(host.host_type == Some(HostType::Server), "server")
                     .clicked()
                 {
-                    host.r#type = Some("server".to_string());
+                    host.host_type = Some(HostType::Server);
                 }
                 if ui
-                    .selectable_label(host.r#type.as_deref() == Some("user"), "user")
+                    .selectable_label(host.host_type == Some(HostType::User), "user")
                     .clicked()
                 {
-                    host.r#type = Some("user".to_string());
+                    host.host_type = Some(HostType::User);
                 }
             });
 
         if ui
-            .button(egui_material_icons::icons::ICON_CLEAR)
+            .button(ICON_CLEAR)
             .on_hover_text("Clear")
             .clicked()
         {
-            host.r#type = None;
+            host.host_type = None;
         }
     });
-}
-
-/// Client protocols selector with searchable popup.
-///
-/// Shows a popup with all available protocols from KNOWN_SERVICES,
-/// filtered by search text. Selected protocols appear as removable chips.
-fn render_client_protocols(ui: &mut egui::Ui, host_idx: usize, host: &mut Host) {
-    ui.horizontal(|ui| {
-        ui.label("Client protocols");
-        info_icon_with_tooltip(ui, "Specify what services the host is a client of.");
-
-        let popup_id = ui.make_persistent_id(("client_proto_popup", host_idx));
-        let add_btn_resp = ui
-            .button(format!("{} Add", egui_material_icons::icons::ICON_ADD))
-            .on_hover_text("Add protocol");
-
-        render_protocol_popup(popup_id, host_idx, add_btn_resp, host);
-        render_protocol_chips(ui, host);
-    });
-}
-
-/// Render the searchable protocol selection popup.
-fn render_protocol_popup(
-    popup_id: egui::Id,
-    host_idx: usize,
-    add_btn_resp: egui::Response,
-    host: &mut Host,
-) {
-    egui::Popup::from_toggle_button_response(&add_btn_resp)
-        .id(popup_id)
-        .show(|ui| {
-            ui.set_min_width(POPUP_MIN_WIDTH);
-
-            // Search field with auto-focus
-            let search_id = ui.make_persistent_id(("protocol_search", host_idx));
-            let mut search_text = ui.data_mut(|d| d.get_temp::<String>(search_id).unwrap_or_default());
-
-            let search_resp =
-                ui.add(egui::TextEdit::singleline(&mut search_text).hint_text("Search..."));
-
-            // Auto-focus search field when popup opens
-            if ui.memory(|m| m.focused().is_none()) {
-                ui.memory_mut(|m| m.request_focus(search_resp.id));
-            }
-
-            ui.data_mut(|d| d.insert_temp(search_id, search_text.clone()));
-
-            ui.separator();
-
-            // Protocol list with filtering
-            egui::ScrollArea::vertical()
-                .max_height(POPUP_MAX_HEIGHT)
-                .auto_shrink([true, true])
-                .show(ui, |ui| {
-                    ui.set_width(PANEL_MIN_WIDTH);
-
-                    let filter = search_text.to_lowercase();
-                    let mut any_shown = false;
-
-                    for (name, _) in host_services::KNOWN_SERVICES {
-                        let matches_filter = filter.is_empty() || name.to_lowercase().contains(&filter);
-                        let already_added = host.client.contains(&name.to_string());
-
-                        if matches_filter && !already_added {
-                            any_shown = true;
-                            if ui.selectable_label(false, *name).clicked() {
-                                host.client.push(name.to_string());
-                                ui.data_mut(|d| d.insert_temp(search_id, String::new()));
-                                egui::Popup::close_id(ui.ctx(), popup_id);
-                            }
-                        }
-                    }
-
-                    if !any_shown {
-                        ui.label(
-                            egui::RichText::new("No available protocols")
-                                .italics()
-                                .weak(),
-                        );
-                    }
-                });
-        });
-}
-
-/// Render selected protocols as removable chips.
-fn render_protocol_chips(ui: &mut egui::Ui, host: &mut Host) {
-    let mut protocol_to_remove: Option<usize> = None;
-
-    for (protocol_idx, protocol) in host.client.iter().enumerate() {
-        let button_text = format!("{} {}", protocol, egui_material_icons::icons::ICON_CLEAR);
-        if ui
-            .button(button_text)
-            .on_hover_text("Remove protocol")
-            .clicked()
-        {
-            protocol_to_remove = Some(protocol_idx);
-        }
-    }
-
-    if let Some(idx) = protocol_to_remove {
-        host.client.remove(idx);
-    }
 }
 
 /// Determine the display name for a host.
-///
-/// Priority: hostname > first IP address > "Unconfigured host"
-fn host_display_name(host: &Host) -> String {
-    // Try hostname first
+fn host_display_name(host: &HostYaml) -> String {
     if let Some(name) = host.hostname.as_deref() {
         if !name.trim().is_empty() {
             return name.to_string();
         }
     }
 
-    // Fall back to first interface IP
     if let Some(interface) = host.interfaces.first() {
         if !interface.ip_addr.trim().is_empty() {
             return interface.ip_addr.clone();
@@ -418,4 +467,36 @@ fn host_display_name(host: &Host) -> String {
     }
 
     "Unconfigured host".to_string()
+}
+
+/// Create a new host with one interface whose IP is auto-assigned from the network's subnet.
+fn create_host_with_network_ip(
+    network: &NetworkYaml,
+    ip_counts: &HashMap<String, usize>,
+    mac_counts: &HashMap<String, usize>,
+) -> HostYaml {
+    let ip = host_interfaces::find_available_ip_in_subnet(network.subnet, network.mask, ip_counts)
+        .unwrap_or_default();
+    HostYaml {
+        interfaces: vec![InterfaceYaml {
+            ip_addr: ip,
+            mac_addr: Some(host_interfaces::generate_mac_until_unique(mac_counts)),
+            services: Some(Vec::new()),
+            uses: None,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Create a new internet host (no subnet context, empty IP for manual entry).
+fn create_internet_host(mac_counts: &HashMap<String, usize>) -> HostYaml {
+    HostYaml {
+        interfaces: vec![InterfaceYaml {
+            ip_addr: String::new(),
+            mac_addr: Some(host_interfaces::generate_mac_until_unique(mac_counts)),
+            services: Some(Vec::new()),
+            uses: None,
+        }],
+        ..Default::default()
+    }
 }

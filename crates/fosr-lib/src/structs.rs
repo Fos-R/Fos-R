@@ -79,7 +79,7 @@ impl Protocol {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq)]
 #[allow(clippy::upper_case_acronyms)]
 #[serde(rename_all = "lowercase")]
 /// A list of application layer protocol
@@ -142,12 +142,21 @@ impl TryFrom<String> for L7Proto {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 /// The OS of an host. By default, assume Linux
 pub enum OS {
     #[default]
     Linux,
     Windows,
+}
+
+impl Display for OS {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            OS::Linux => write!(f, "Linux"),
+            OS::Windows => write!(f, "Windows"),
+        }
+    }
 }
 
 impl OS {

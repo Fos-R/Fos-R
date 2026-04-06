@@ -1,74 +1,394 @@
 use crate::structs::*;
 
 use pnet::util::MacAddr;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::net::Ipv4Addr;
+use std::sync::atomic::{AtomicU64, Ordering};
 use rand::prelude::*;
 
-#[derive(Debug)]
 /// The configuration file of the network and the hosts
+/// TODO: clean useless attributes
+#[derive(Debug)]
 pub struct Configuration {
-    // TODO: faire du tri dans ce qui n’est pas utile
     /// The metadata of the configuration
     pub metadata: Metadata,
+
     // /// The list of hosts
     // pub hosts: Vec<Host>,
+
     /// The list of networks
     pub networks: Vec<Network>,
+
     /// A hashmap that maps an IP to a MAC address (if it is defined in the config file)
     // pub mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
+
     /// A hashmap that maps an IP to an OS (if it is defined in the config file)
     pub os_map: HashMap<Ipv4Addr, OS>,
+
     // /// The usages of each IP address
     // pub usages_map: HashMap<Ipv4Addr, f64>,
+
     /// The list of "users" IPs
     pub users: Vec<Ipv4Addr>,
+
     /// The list of "servers" IPs
     pub servers: Vec<Ipv4Addr>,
+
     /// The list of services proposed in the configuration
     pub services: Vec<L7Proto>,
+
     /// Overridden listening ports
     pub open_ports: HashMap<(Ipv4Addr, L7Proto), u16>,
+
+    /// The list of servers that provide each service
     servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
+
+    /// The list of users that use each service
     users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-struct ConfigurationYaml {
-    pub metadata: Metadata,
-    pub networks: Vec<Network>,
-    pub internet: Vec<Host>
+impl Configuration {
+    /// Get all hosts in the configuration.
+    pub fn get_hosts(&self) -> Vec<&Host> {
+        let out: Vec<&Host> = self.networks.iter().flat_map(|n| n.hosts.iter()).collect();
+        out
+    }
+
+    /// Get the list of servers that provide a service
+    pub fn get_servers_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
+        self.servers_per_service
+            .get(service)
+            .unwrap_or(&vec![])
+            .clone()
+    }
+
+    /// Get the list of users that use a service
+    pub fn get_users_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
+        self.users_per_service
+            .get(service)
+            .unwrap_or(&vec![])
+            .clone()
+    }
 }
 
-#[derive(Deserialize, Debug)]
+/// A network in the simulation, containing resolved hosts.
+#[derive(Debug)]
 pub struct Network {
     pub subnet: Ipv4Addr,
     pub mask: u8,
     pub name: String,
-    pub hosts: Vec<Host>
+    pub hosts: Vec<Host>,
+}
+
+/// Metadata of the configuration file.
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct Metadata {
+    /// The title of the config file
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub title: String,
+
+    /// The description of the config file
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub desc: Option<String>,
+
+    /// The author of the config file
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
+
+    /// The "last modified" date of the config file
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
+
+    /// The user-defined version of the config file
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+
+    /// The lib-defined format version of the config file
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum HostType {
+    Server,
+    User,
+}
+
+/// A host in the network
+/// TODO: clean useless attributes
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+#[serde(from = "HostYaml")]
+pub struct Host {
+    /// Its hostname
+    pub hostname: Option<String>,
+
+    /// Its OS
+    pub os: OS,
+
+    // /// Its usage. 1 is standard, less than 1 is less usage than standard, more than 1 is more usage than standrad
+    // pub usage: f64,
+
+    // client: Option<Vec<L7Proto>>, // we keep the option here, because there is a difference
+    // between an empty list (no service is used) and nothing
+    // (default services are used)
+
+    /// The type of host (server or user)
+    pub host_type: HostType,
+
+    /// Its interfaces
+    pub interfaces: Vec<Interface>,
+}
+
+impl Host {
+    /// Get the list of IP addresses of an host.
+    pub fn get_ip_addr(&self) -> Vec<Ipv4Addr> {
+        self.interfaces.iter().map(|i| i.ip_addr).collect()
+    }
+}
+
+/// A network interface of an host.
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+#[serde(try_from = "InterfaceYaml")]
+pub struct Interface {
+    /// Its MAC address
+    pub mac_addr: Option<MacAddr>,
+    /// The services it provides (may be empty)
+    pub services: Vec<L7Proto>,
+    /// Its IP address
+    pub ip_addr: Ipv4Addr,
+    /// The open ports of services, if they are not the default one
+    pub open_ports: HashMap<L7Proto, u16>,
+    /// The services it uses (may be empty)
+    pub uses: Option<Vec<L7Proto>>,
+}
+
+/// Global counter for stable UI identifiers (not serialized to YAML).
+static NEXT_UI_ID: AtomicU64 = AtomicU64::new(1);
+
+/// Generate a unique UI ID used as a stable key for egui collapsing state.
+pub fn next_ui_id() -> u64 {
+    NEXT_UI_ID.fetch_add(1, Ordering::Relaxed)
+}
+
+/// The YAML-level configuration structure.
+/// This is the shared model used for both parsing and serializing config files.
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ConfigurationYaml {
+    pub metadata: Metadata,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub networks: Vec<NetworkYaml>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub internet: Vec<HostYaml>,
+}
+
+impl ConfigurationYaml {
+    /// Get total number of hosts across all networks and internet.
+    pub fn count_hosts(&self) -> usize {
+        self.networks.iter().map(|n| n.hosts.len()).sum::<usize>()
+            + self.internet.len()
+    }
+
+    /// Get a host by flat index (networks first, then internet), mutable.
+    ///
+    /// **Safety net:** These flat-index methods are only used by the run/graph node modal
+    /// to map graph nodes back to hosts in the YAML model. They work because the entire
+    /// graph is rebuilt from scratch whenever the config changes (see `update_from_config`),
+    /// so the flat indexes always reflect the current structure.
+    pub fn get_host_mut(&mut self, flat_idx: usize) -> Option<&mut HostYaml> {
+        let mut remaining = flat_idx;
+        for network in &mut self.networks {
+            if remaining < network.hosts.len() {
+                return Some(&mut network.hosts[remaining]);
+            }
+            remaining -= network.hosts.len();
+        }
+        self.internet.get_mut(remaining)
+    }
+
+    /// Get a host by flat index, immutable.
+    pub fn get_host(&self, flat_idx: usize) -> Option<&HostYaml> {
+        let mut remaining = flat_idx;
+        for network in &self.networks {
+            if remaining < network.hosts.len() {
+                return Some(&network.hosts[remaining]);
+            }
+            remaining -= network.hosts.len();
+        }
+        self.internet.get(remaining)
+    }
+
+    /// Get the network name for a host at a given flat index.
+    pub fn get_network_name(&self, flat_idx: usize) -> Option<&str> {
+        let mut remaining = flat_idx;
+        for network in &self.networks {
+            if remaining < network.hosts.len() {
+                return Some(&network.name);
+            }
+            remaining -= network.hosts.len();
+        }
+        if remaining < self.internet.len() {
+            Some("Internet")
+        } else {
+            None
+        }
+    }
+
+    /// Remove a host by flat index.
+    pub fn remove_host(&mut self, flat_idx: usize) {
+        let mut remaining = flat_idx;
+        for network in &mut self.networks {
+            if remaining < network.hosts.len() {
+                network.hosts.remove(remaining);
+                return;
+            }
+            remaining -= network.hosts.len();
+        }
+        if remaining < self.internet.len() {
+            self.internet.remove(remaining);
+        }
+    }
+
+    /// Add a new network to the configuration.
+    pub fn add_network(&mut self, network: NetworkYaml) {
+        self.networks.insert(0, network);
+    }
+
+    /// Remove a network by index.
+    pub fn remove_network(&mut self, idx: usize) {
+        if idx < self.networks.len() {
+            self.networks.remove(idx);
+        }
+    }
+}
+
+/// YAML-level network representation.
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct NetworkYaml {
+    // This is not serialized in YAML, but created on deserialization as a
+    // unique ID to be used in the GUI to uniquely identify UI elements.
+    #[serde(skip, default = "next_ui_id")]
+    pub ui_id: u64,
+
+    pub subnet: Ipv4Addr,
+
+    pub mask: u8,
+
+    pub name: String,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hosts: Vec<HostYaml>,
+}
+
+/// YAML-level host representation with String-based fields for editing.
+/// TODO: clean useless attributes
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct HostYaml {
+    // This is not serialized in YAML, but created on deserialization as a
+    // unique ID to be used in the GUI to uniquely identify UI elements.
+    #[serde(skip, default = "next_ui_id")]
+    pub ui_id: u64,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hostname: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub os: Option<OS>,
+
+    // usage: Option<f64>,
+    // client: Option<Vec<L7Proto>>,
+
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub host_type: Option<HostType>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub interfaces: Vec<InterfaceYaml>,
+}
+
+impl HostYaml {
+    /// Create a new host with a unique UI ID.
+    pub fn new() -> Self {
+        Self {
+            ui_id: NEXT_UI_ID.fetch_add(1, Ordering::Relaxed),
+            hostname: None,
+            os: None,
+            host_type: None,
+            interfaces: Vec::new(),
+        }
+    }
+}
+
+impl Default for HostYaml {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct InterfaceYaml {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mac_addr: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub services: Option<Vec<String>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uses: Option<Vec<String>>,
+
+    // Required: the IPv4 address of this interface.
+    pub ip_addr: String,
+}
+
+impl Default for InterfaceYaml {
+    fn default() -> Self {
+        Self {
+            mac_addr: None,
+            services: None,
+            uses: None,
+            ip_addr: String::new(),
+        }
+    }
 }
 
 impl From<ConfigurationYaml> for Configuration {
     fn from(c: ConfigurationYaml) -> Self {
-        let users: Vec<Ipv4Addr> = c
-            .networks
+        // Convert YAML structs to runtime structs
+        let internet: Vec<Host> = c.internet.into_iter().map(Host::from).collect();
+        let networks_yaml = c.networks;
+        let networks: Vec<Network> = networks_yaml
+            .into_iter()
+            .map(|n| Network {
+                subnet: n.subnet,
+                mask: n.mask,
+                name: n.name,
+                hosts: n.hosts.into_iter().map(Host::from).collect(),
+            })
+            .collect();
+
+        let users: Vec<Ipv4Addr> = networks
             .iter()
-            .map(|n| &n.hosts)
-            .flatten()
+            .flat_map(|n| &n.hosts)
+            .chain(&internet)
             .filter_map(|h| match h.host_type {
                 HostType::User => Some(h.get_ip_addr()),
                 HostType::Server => None,
             })
             .flatten()
             .collect();
-        let servers: Vec<Ipv4Addr> = c
-            .networks
+        let servers: Vec<Ipv4Addr> = networks
             .iter()
-            .map(|n| &n.hosts)
-            .flatten()
+            .flat_map(|n| &n.hosts)
+            .chain(&internet)
             .filter_map(|h| match h.host_type {
                 HostType::Server => Some(h.get_ip_addr()),
                 HostType::User => None,
@@ -77,29 +397,20 @@ impl From<ConfigurationYaml> for Configuration {
             .collect();
         let mut os_map: HashMap<Ipv4Addr, OS> = HashMap::new();
         // let mut usages_map: HashMap<Ipv4Addr, f64> = HashMap::new();
-        for network in c.networks.iter() {
-            for host in network.hosts.iter() {
-                for interface in host.interfaces.iter() {
-                    os_map.insert(interface.ip_addr, host.os);
-                    // usages_map.insert(interface.ip_addr, host.usage);
-                }
-            }
-        }
-        for host in c.internet.iter() {
+        for host in networks.iter().flat_map(|n| n.hosts.iter()).chain(&internet) {
             for interface in host.interfaces.iter() {
                 os_map.insert(interface.ip_addr, host.os);
                 // usages_map.insert(interface.ip_addr, host.usage);
             }
         }
-
-
+        
         // let mut mac_addr_map: HashMap<Ipv4Addr, MacAddr> = HashMap::new();
         let mut services: HashSet<L7Proto> = HashSet::new();
         let mut servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
         let mut users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
         let mut open_ports: HashMap<(Ipv4Addr, L7Proto), u16> = HashMap::new();
 
-        let all_hosts = c.internet.iter().chain(c.networks.iter().map(|n| n.hosts.iter()).flatten());
+        let all_hosts = internet.iter().chain(networks.iter().flat_map(|n| n.hosts.iter()));
         for interface in all_hosts.flat_map(|h| &h.interfaces) {
             // if let Some(mac_addr) = interface.mac_addr {
             //     mac_addr_map.insert(interface.ip_addr, mac_addr);
@@ -117,7 +428,7 @@ impl From<ConfigurationYaml> for Configuration {
             }
         }
 
-        let all_hosts = c.internet.iter().chain(c.networks.iter().map(|n| n.hosts.iter()).flatten());
+        let all_hosts = internet.iter().chain(networks.iter().flat_map(|n| n.hosts.iter()));
         for host in all_hosts {
             for i in &host.interfaces {
                 if let Some(client) = &i.uses {
@@ -157,12 +468,12 @@ impl From<ConfigurationYaml> for Configuration {
 
         // let hosts = c.internet.into_iter().chain(c.networks.into_iter().map(|n| n.hosts.into_iter()).flatten()).collect();
 
-        let mut networks = c.networks;
-        networks.push(Network { subnet: Ipv4Addr::new(0,0,0,0), mask: 0, name: "Internet".to_string(), hosts: c.internet });
+        let mut all_networks = networks;
+        all_networks.push(Network { subnet: Ipv4Addr::new(0, 0, 0, 0), mask: 0, name: "Internet".to_string(), hosts: internet });
 
         Configuration {
             metadata: c.metadata,
-            networks,
+            networks: all_networks,
             os_map,
             // usages_map,
             // mac_addr_map,
@@ -176,98 +487,11 @@ impl From<ConfigurationYaml> for Configuration {
     }
 }
 
-impl Configuration {
-    pub fn get_hosts(&self) -> Vec<&Host> {
-        let out: Vec<&Host> = self.networks.iter().map(|n| n.hosts.iter()).flatten().collect();
-        out
-    }
-
-    /// Get the list of servers that provide a service
-    pub fn get_servers_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
-        self.servers_per_service
-            .get(service)
-            .unwrap_or(&vec![])
-            .clone()
-    }
-
-    /// Get the list of users that uses a service
-    pub fn get_users_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
-        self.users_per_service
-            .get(service)
-            .unwrap_or(&vec![])
-            .clone()
-    }
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-/// Metadata of the configuration file
-pub struct Metadata {
-    /// The title of the config file
-    pub title: String,
-    /// The description of the config file
-    pub desc: Option<String>,
-    /// The author of the config file
-    pub author: Option<String>,
-    /// The "last modified" date of the config file
-    pub date: Option<String>,
-    /// The user-defined version of the config file
-    pub version: Option<String>,
-    /// The lib-defined format version of the config file
-    pub format: Option<u64>,
-}
-
-#[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum HostType {
-    Server,
-    User,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-#[serde(from = "HostYaml")]
-/// A host in the network
-pub struct Host {
-    /// Its hostname
-    pub hostname: Option<String>,
-    /// Its OS
-    pub os: OS,
-    // /// Its usage. 1 is standard, less than 1 is less usage than standard, more than 1 is more usage than standrad
-    // pub usage: f64,
-    // client: Option<Vec<L7Proto>>, // we keep the option here, because there is a difference
-    // between an empty list (no service is used) and nothing
-    // (default services are used)
-    /// The type of host (server or user)
-    pub host_type: HostType,
-    /// Its interfaces
-    pub interfaces: Vec<Interface>,
-}
-
-impl Host {
-    /// Get the list of IP addresses of an host. Cannot be empty.
-    pub fn get_ip_addr(&self) -> Vec<Ipv4Addr> {
-        self.interfaces.iter().map(|i| i.ip_addr).collect()
-    }
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-struct HostYaml {
-    hostname: Option<String>,
-    os: Option<OS>,
-    // usage: Option<f64>,
-    // client: Option<Vec<L7Proto>>,
-    #[serde(rename = "type")]
-    host_type: Option<HostType>,
-    interfaces: Vec<Interface>,
-}
-
 impl From<HostYaml> for Host {
     fn from(h: HostYaml) -> Self {
         let host_type = h.host_type.unwrap_or(
             // if there is at least one service, the type is "server"
-            if h.interfaces.iter().any(|i| !i.services.is_empty()) {
+            if h.interfaces.iter().any(|i| i.services.as_ref().map_or(false, |s| !s.is_empty())) {
                 HostType::Server
             } else {
                 HostType::User
@@ -278,36 +502,15 @@ impl From<HostYaml> for Host {
             os: h.os.unwrap_or(OS::Linux),
             // usage: h.usage.unwrap_or(1.0),
             host_type,
-            interfaces: h.interfaces,
+            interfaces: h.interfaces.into_iter().map(Interface::try_from)
+                .filter_map(|r| {
+                    if let Err(e) = &r { log::warn!("Skipping interface: {e}"); }
+                    r.ok()
+                })
+                .collect(),
             // client: h.client,
         }
     }
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-#[serde(try_from = "InterfaceYaml")]
-/// A network interface
-pub struct Interface {
-    /// Its MAC address
-    pub mac_addr: Option<MacAddr>,
-    /// The services it provides (may be empty)
-    pub services: Vec<L7Proto>,
-    /// Its IP address
-    pub ip_addr: Ipv4Addr,
-    /// The open ports of services, if they are not the default one
-    pub open_ports: HashMap<L7Proto, u16>,
-    /// The services is uses (may be empty)
-    pub uses: Option<Vec<L7Proto>>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-struct InterfaceYaml {
-    mac_addr: Option<String>,
-    services: Option<Vec<String>>,
-    uses: Option<Vec<String>>,
-    ip_addr: String,
 }
 
 impl TryFrom<InterfaceYaml> for Interface {
@@ -344,8 +547,8 @@ impl TryFrom<InterfaceYaml> for Interface {
 
         let mut rng = rand::rng();
         let ip_addr = match i.ip_addr.as_str() {
-            "auto" => Ipv4Addr::new(0,0,0,0),
-            "internet" => Ipv4Addr::new(rng.random::<u8>(),rng.random::<u8>(),rng.random::<u8>(),rng.random::<u8>()), // TODO: ne pas générer complètement au hasard pour éviter les collisions et permettre d’utiliser une seed
+            "auto" => Ipv4Addr::new(0, 0, 0, 0),
+            "internet" => Ipv4Addr::new(rng.random::<u8>(), rng.random::<u8>(), rng.random::<u8>(), rng.random::<u8>()), // TODO: ne pas générer complètement au hasard pour éviter les collisions et permettre d'utiliser une seed
             _ => i.ip_addr.parse().expect("Cannot parse IP address")
         };
         Ok(Interface {

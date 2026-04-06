@@ -8,6 +8,9 @@ use crate::shared::constants::ui::{
     ZOOM_STEP,
 };
 use eframe::egui;
+use egui_material_icons::icons::{ICON_ADD, ICON_REMOVE};
+#[cfg(target_arch = "wasm32")]
+use egui_material_icons::icons::{ICON_FULLSCREEN_EXIT, ICON_FULLSCREEN};
 use eframe::egui::global_theme_preference_switch;
 
 /// Available tabs in the Fos-R application.
@@ -25,6 +28,7 @@ pub struct TopBarState {
     pub current_tab: AppTab,
     pub zoom_factor: f32,
     pub has_errors: bool,
+    pub has_hosts: bool,
 }
 
 /// Renders a tab button with consistent styling.
@@ -93,16 +97,21 @@ fn render_tab_buttons(
     let text_size = TEXT_SIZE_DEFAULT;
     let has_errors = state.has_errors;
 
-    // Run tab (disabled when config has errors)
+    // Run tab (disabled when config has errors or no hosts)
+    let run_enabled = !has_errors && state.has_hosts;
     if let Some(tab) = render_tab_button(
         ui,
         text_size,
         "Run",
         AppTab::Run,
         state.current_tab == AppTab::Run,
-        !has_errors,
+        run_enabled,
         "Live preview and PCAP generation from the current configuration.",
-        "Configuration is invalid. Fix errors in the Configuration tab to enable Run.",
+        if has_errors {
+            "Configuration is invalid. Fix errors in the Configuration tab to enable Run."
+        } else {
+            "No hosts in the configuration. Add at least one host to enable Run."
+        },
     ) {
         return Some(tab);
     }
@@ -137,7 +146,7 @@ fn render_zoom_controls(ui: &mut egui::Ui, ctx: &egui::Context) -> f32 {
         ui.spacing_mut().item_spacing.x = 2.0;
 
         if ui
-            .button(egui_material_icons::icons::ICON_ADD)
+            .button(ICON_ADD)
             .on_hover_text("Zoom in")
             .clicked()
         {
@@ -148,7 +157,7 @@ fn render_zoom_controls(ui: &mut egui::Ui, ctx: &egui::Context) -> f32 {
         ui.label(format!("{:.0}%", (new_zoom - ZOOM_OFFSET) * 100.0));
 
         if ui
-            .button(egui_material_icons::icons::ICON_REMOVE)
+            .button(ICON_REMOVE)
             .on_hover_text("Zoom out")
             .clicked()
         {
@@ -187,9 +196,9 @@ fn toggle_fullscreen(is_fullscreen: bool) {
 fn render_fullscreen_toggle(ui: &mut egui::Ui) {
     let fullscreen = is_fullscreen();
     let (icon, tooltip) = if fullscreen {
-        (egui_material_icons::icons::ICON_FULLSCREEN_EXIT, "Exit fullscreen")
+        (ICON_FULLSCREEN_EXIT, "Exit fullscreen")
     } else {
-        (egui_material_icons::icons::ICON_FULLSCREEN, "Fullscreen")
+        (ICON_FULLSCREEN, "Fullscreen")
     };
 
     if ui.button(icon).on_hover_text(tooltip).clicked() {

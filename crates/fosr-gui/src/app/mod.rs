@@ -106,14 +106,27 @@ impl FosrApp {
 
     /// Render the top bar and update internal state from user interactions.
     fn render_top_bar(&mut self, ctx: &egui::Context) {
+        let has_hosts = self.config_file_state
+            .config_model
+            .as_ref()
+            .map_or(false, |m| m.count_hosts() > 0);
+
         // Render top bar and get updated state
         let top_bar_state = TopBarState {
             current_tab: self.current_tab,
             zoom_factor: self.zoom_factor,
             has_errors: self.config_file_state.has_errors,
+            has_hosts,
         };
         let updated_state = render_top_bar(ctx, top_bar_state);
-        self.current_tab = updated_state.current_tab;
+
+        // If Run tab is not accessible (only possible on initial load after choosing empty config),
+        // force switch to Configuration to avoid rendering the graph with no hosts.
+        if updated_state.current_tab == AppTab::Run && (!has_hosts || self.config_file_state.has_errors) {
+            self.current_tab = AppTab::Configuration;
+        } else {
+            self.current_tab = updated_state.current_tab;
+        }
         self.zoom_factor = updated_state.zoom_factor;
     }
 

@@ -8,6 +8,11 @@ use super::process::start_generation;
 use super::validation::first_invalid_param;
 #[cfg(not(target_arch = "wasm32"))]
 use super::wireshark::open_in_wireshark;
+use egui_material_icons::icons::{ICON_KEYBOARD_ARROW_DOWN, ICON_KEYBOARD_ARROW_UP, ICON_PLAY_ARROW, ICON_STOP};
+#[cfg(not(target_arch = "wasm32"))]
+use egui_material_icons::icons::{ICON_LAN, ICON_SAVE};
+#[cfg(target_arch = "wasm32")]
+use egui_material_icons::icons::{ICON_DOWNLOAD};
 use crate::run::state::RunTabState;
 use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::{COLOR_ERROR, COLOR_STOP, COLOR_SUCCESS};
@@ -115,7 +120,7 @@ fn render_generate_button(
         let button = egui::Button::new(
             egui::RichText::new(format!(
                 "{} Generate",
-                egui_material_icons::icons::ICON_PLAY_ARROW
+                ICON_PLAY_ARROW
             ))
                 .size(TEXT_SIZE_MD),
         )
@@ -131,7 +136,7 @@ fn render_generate_button(
 /// Stop button to cancel ongoing generation.
 fn render_stop_button(ui: &mut egui::Ui, state: &mut RunTabState) {
     let button = egui::Button::new(
-        egui::RichText::new(format!("{} Stop", egui_material_icons::icons::ICON_STOP))
+        egui::RichText::new(format!("{} Stop", ICON_STOP))
             .size(TEXT_SIZE_MD),
     )
         .fill(COLOR_STOP)
@@ -156,9 +161,9 @@ fn render_completion_buttons(ui: &mut egui::Ui, state: &mut RunTabState) {
 /// Save/Download button for the generated PCAP.
 fn render_save_button(ui: &mut egui::Ui, state: &mut RunTabState) {
     #[cfg(not(target_arch = "wasm32"))]
-    let save_text = format!("{} Save", egui_material_icons::icons::ICON_SAVE);
+    let save_text = format!("{} Save", ICON_SAVE);
     #[cfg(target_arch = "wasm32")]
-    let save_text = format!("{} Download", egui_material_icons::icons::ICON_DOWNLOAD);
+    let save_text = format!("{} Download", ICON_DOWNLOAD);
 
     let button = egui::Button::new(egui::RichText::new(save_text).size(TEXT_SIZE_MD))
         .min_size(egui::vec2(BUTTON_MIN_WIDTH_SM, BUTTON_HEIGHT));
@@ -212,7 +217,7 @@ fn save_pcap_wasm(pcap_bytes: Option<Vec<u8>>, file_name: &str) {
 #[cfg(not(target_arch = "wasm32"))]
 fn render_wireshark_button(ui: &mut egui::Ui, state: &mut RunTabState) {
     let button = egui::Button::new(
-        egui::RichText::new(format!("{} Open", egui_material_icons::icons::ICON_LAN))
+        egui::RichText::new(format!("{} Open", ICON_LAN))
             .size(TEXT_SIZE_MD),
     )
         .min_size(egui::vec2(BUTTON_MIN_WIDTH_SM, BUTTON_HEIGHT));
@@ -240,9 +245,9 @@ fn render_wireshark_button(ui: &mut egui::Ui, state: &mut RunTabState) {
 /// Options toggle button to show/hide the options panel.
 fn render_options_toggle(ui: &mut egui::Ui, state: &mut RunTabState) {
     let icon = if state.panel_open {
-        egui_material_icons::icons::ICON_KEYBOARD_ARROW_DOWN
+        ICON_KEYBOARD_ARROW_DOWN
     } else {
-        egui_material_icons::icons::ICON_KEYBOARD_ARROW_UP
+        ICON_KEYBOARD_ARROW_UP
     };
     let tooltip = if state.panel_open { "Hide options" } else { "Show options" };
 

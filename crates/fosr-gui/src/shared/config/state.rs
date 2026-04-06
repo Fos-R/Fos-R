@@ -1,6 +1,6 @@
 //! Configuration file state management.
 
-use crate::shared::config::model::Configuration;
+use fosr_lib::config::ConfigurationYaml;
 use rfd::FileHandle;
 #[cfg(target_arch = "wasm32")]
 use std::sync::mpsc::Receiver;
@@ -21,7 +21,7 @@ pub struct ConfigFileState {
     pub config_file_content: Option<String>,
     #[cfg(target_arch = "wasm32")]
     pub config_file_content_receiver: Option<Receiver<Result<String, String>>>,
-    pub config_model: Option<Configuration>,
+    pub config_model: Option<ConfigurationYaml>,
     pub config_error: Option<String>,
     /// Whether the user has chosen a configuration (default or imported).
     /// When false, the startup modal is shown.

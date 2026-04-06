@@ -3,7 +3,7 @@
 use super::shapes::{NetworkEdgeShape, NetworkNodeShape};
 use super::stream::{FlowEvent, FlowStreamer};
 use super::graph_layout::arrange_nodes_in_circle;
-use crate::shared::config::model::Host;
+use fosr_lib::config::HostYaml;
 use crate::shared::constants::ui::DELAY_FRAMES_QUICK;
 use eframe::egui;
 use egui_graphs::events::Event;
@@ -211,6 +211,11 @@ impl NetworkData {
     }
 
     /// Add one node per host (with all its IPs).
+    ///
+    /// Hosts are assigned a flat positional index via `enumerate()`. This index is stored
+    /// in `node_to_host` so the node modal can look up the corresponding `HostYaml` later.
+    /// This is safe because the graph is always rebuilt from scratch on config changes
+    /// (see `config_handling.rs`), so indexes stay consistent.
     fn add_host_nodes(&mut self, config: &config::Configuration) {
         for (host_idx, host) in config.get_hosts().iter().enumerate() {
             let all_ips: Vec<Ipv4Addr> = host.interfaces.iter().map(|i| i.ip_addr).collect();
@@ -321,7 +326,7 @@ pub struct NodeModalState {
     pub events_buffer: Rc<RefCell<Vec<Event>>>,
     pub clicked_node: Option<NodeIndex>,
     pub open: bool,
-    pub edit_buffer: Option<Host>,
+    pub edit_buffer: Option<HostYaml>,
 }
 
 impl Default for NodeModalState {

@@ -1,7 +1,8 @@
 //! Configuration toolbar UI: file picker, template menu, save button, and mode toggle.
 
+use egui_material_icons::icons::{ICON_CODE, ICON_DELETE, ICON_DESCRIPTION, ICON_EDIT, ICON_FOLDER_OPEN, ICON_SAVE_AS, ICON_WARNING};
 use crate::config_editor::state::ConfigurationTabState;
-use crate::config_templates::{load_template, TEMPLATES};
+use crate::config_templates::{load_empty_config, load_template, TEMPLATES};
 use crate::shared::config::file_ops::{enforce_metadata_defaults, trigger_file_import};
 use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::COLOR_WARNING;
@@ -28,6 +29,7 @@ pub fn render_configuration_toolbar(
     ui.horizontal(|ui| {
         render_file_import_button(ui, state);
         render_template_menu_button(ui, state);
+        render_clear_all_button(ui, state);
         render_file_save_button(ui, state);
         render_filename(ui, state);
         render_mode_toggle_button(ui, tab_state);
@@ -44,7 +46,7 @@ fn render_file_import_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
     } else {
         ("Open", "Open a configuration file from disk")
     };
-    let button_text = format!("{} {label}", egui_material_icons::icons::ICON_FOLDER_OPEN);
+    let button_text = format!("{} {label}", ICON_FOLDER_OPEN);
     if ui
         .button(&button_text)
         .on_hover_text(tooltip)
@@ -62,7 +64,7 @@ fn render_file_import_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
 /// Dropdown menu listing available configuration templates.
 /// Clicking a template loads it into the editor.
 fn render_template_menu_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
-    let label = format!("{} Template", egui_material_icons::icons::ICON_DESCRIPTION);
+    let label = format!("{} Template", ICON_DESCRIPTION);
     let template_menu =
         ui.menu_button(&label, |menu_ui| {
             for template in TEMPLATES {
@@ -76,6 +78,21 @@ fn render_template_menu_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
             }
         });
     template_menu.response.on_hover_text("Choose a template configuration to open");
+}
+
+/// Clear all button to reset the configuration to an empty state.
+fn render_clear_all_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
+    if state.config_model.is_none() {
+        return;
+    }
+    let label = format!("{} Clear all", ICON_DELETE);
+    if ui
+        .button(&label)
+        .on_hover_text("Reset to a blank configuration")
+        .clicked()
+    {
+        load_empty_config(state);
+    }
 }
 
 /// Save button with "Save as" functionality.
@@ -93,7 +110,7 @@ fn render_file_save_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
     } else {
         ("Save as", "Save the current configuration as a file")
     };
-    let button_text = format!("{} {label}", egui_material_icons::icons::ICON_SAVE_AS);
+    let button_text = format!("{} {label}", ICON_SAVE_AS);
     if ui
         .button(&button_text)
         .on_hover_text(tooltip)
@@ -177,7 +194,7 @@ fn render_filename(ui: &mut egui::Ui, state: &ConfigFileState) {
 /// Render filename label with optional dirty indicator and hover text.
 fn render_filename_with_status(ui: &mut egui::Ui, filename: &str, is_dirty: bool, hover_text: &str) {
     if is_dirty {
-        ui.colored_label(COLOR_WARNING, egui_material_icons::icons::ICON_WARNING)
+        ui.colored_label(COLOR_WARNING, ICON_WARNING)
             .on_hover_text("Unsaved changes detected - download the file to avoid losing them.");
         let label = ui.colored_label(COLOR_WARNING, filename);
         if !hover_text.is_empty() {
@@ -202,8 +219,8 @@ fn render_mode_toggle_button(ui: &mut egui::Ui, tab_state: &mut ConfigurationTab
         labeled_toggle(
             ui,
             &mut tab_state.is_code_mode,
-            &format!("{} Code", egui_material_icons::icons::ICON_CODE),
-            &format!("{} Visual", egui_material_icons::icons::ICON_EDIT),
+            &format!("{} Code", ICON_CODE),
+            &format!("{} Visual", ICON_EDIT),
             "Code Mode: edit as raw YAML.",
             "Visual Mode: edit using the graphical interface.",
         );

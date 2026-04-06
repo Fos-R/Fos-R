@@ -6,6 +6,20 @@ use crate::shared::constants::ui::{
     TOGGLE_ITEM_SPACING,
 };
 use eframe::egui::{self, TextFormat, text::LayoutJob};
+use egui_material_icons::icons::ICON_CLEAR;
+use fosr_lib::structs::OS;
+
+/// Return a display name for an optional OS value.
+///
+/// Returns a static string to avoid per-frame allocations.
+/// For contexts that need `String`, use `OS`'s `Display` impl directly.
+pub fn os_display_name(os: Option<OS>) -> &'static str {
+    match os {
+        Some(OS::Linux) => "Linux",
+        Some(OS::Windows) => "Windows",
+        None => "<none>",
+    }
+}
 
 /// Display a small info icon with a tooltip.
 pub fn info_icon_with_tooltip(ui: &mut egui::Ui, tooltip: &str) {
@@ -58,7 +72,7 @@ pub fn render_optional_string_input(
 
         // Explicit clear button
         if ui
-            .button(egui_material_icons::icons::ICON_CLEAR)
+            .button(ICON_CLEAR)
             .on_hover_text("Clear")
             .clicked()
         {
@@ -137,7 +151,7 @@ pub fn render_optional_text_area(
     }
 
     if ui
-        .button(egui_material_icons::icons::ICON_CLEAR)
+        .button(ICON_CLEAR)
         .on_hover_text("Clear")
         .clicked()
     {

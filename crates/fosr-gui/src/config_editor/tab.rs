@@ -2,9 +2,10 @@
 
 use crate::config_editor::state::ConfigurationTabState;
 use crate::config_editor::{host, host_validation, yaml_editor};
+use egui_material_icons::icons::ICON_WARNING;
 use crate::config_editor::toolbar::render_configuration_toolbar;
 use crate::shared::config::file_ops::load_config_file_contents;
-use crate::shared::config::model::Configuration;
+use fosr_lib::config::ConfigurationYaml;
 use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::COLOR_ERROR;
 use crate::shared::constants::ui::{SPACING_MD, TEXT_EDIT_DEFAULT_ROWS};
@@ -22,15 +23,15 @@ pub fn render_configuration_tab(
     // Eagerly load config file contents when a file is selected
     load_config_file_contents(file_state);
 
-    egui::ScrollArea::vertical().show(ui, |ui| {
-        // File Selection
-        render_configuration_toolbar(ui, tab_state, file_state);
+    // Toolbar stays fixed above the scroll area
+    render_configuration_toolbar(ui, tab_state, file_state);
 
-        render_parse_error_banner(ui, file_state);
+    render_parse_error_banner(ui, file_state);
 
-        if file_state.config_chosen {
-            ui.separator();
+    ui.separator();
 
+    if file_state.config_chosen {
+        egui::ScrollArea::vertical().show(ui, |ui| {
             if !tab_state.is_code_mode {
                 // Visual mode
                 if let Some(model) = file_state.config_model.as_mut() {
@@ -61,8 +62,8 @@ pub fn render_configuration_tab(
                 .config_model
                 .as_ref()
                 .is_some_and(host_validation::has_model_errors);
-        }
-    });
+        });
+    }
 }
 
 /// Sync model state to YAML content and update dirty flag.
@@ -101,7 +102,7 @@ fn render_parse_error_banner(ui: &mut egui::Ui, state: &ConfigFileState) {
             COLOR_ERROR,
             format!(
                 "{} YAML parsing failed",
-                egui_material_icons::icons::ICON_WARNING
+                ICON_WARNING
             ),
         );
         ui.colored_label(COLOR_ERROR, err);
@@ -109,14 +110,13 @@ fn render_parse_error_banner(ui: &mut egui::Ui, state: &ConfigFileState) {
 }
 
 /// Metadata rendering
-fn render_metadata_section(ui: &mut egui::Ui, model: &mut Configuration) {
+fn render_metadata_section(ui: &mut egui::Ui, model: &mut ConfigurationYaml) {
     ui.add_space(SPACING_MD);
 
     // Title
     ui.horizontal(|ui| {
         required_label(ui, "Title");
-        let title = model.metadata.title.get_or_insert_with(String::new);
-        ui.text_edit_singleline(title);
+        ui.text_edit_singleline(&mut model.metadata.title);
     });
 
     render_optional_text_area(

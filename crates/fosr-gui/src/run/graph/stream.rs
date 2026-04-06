@@ -188,15 +188,6 @@ impl FlowStreamingState {
             .peek()
             .map_or(true, |f| f.scheduled_time < self.virtual_elapsed() + self.buffer_ahead)
     }
-
-    /// Check if rate limiting allows generation (desktop only).
-    ///
-    /// Limits generation rate to avoid CPU spinning when the buffer is already full.
-    #[cfg(not(target_arch = "wasm32"))]
-    fn can_generate(&self) -> bool {
-        self.pending_flows.is_empty()
-            || self.last_generation.elapsed() >= Duration::from_millis(STREAM_RATE_LIMIT_MS)
-    }
 }
 
 /// Generate flows and add them to the pending queue.
@@ -209,10 +200,6 @@ fn generate_flows_to_buffer(
     s1: &BNGenerator,
     initial_timestamp: Duration,
 ) -> bool {
-    if !state.can_generate() {
-        return true; // Rate limited, but Stage 0 may still have more
-    }
-
     if let Some(timestamp) = s0.next() {
         if let Ok(flows) = s1.generate_flows(timestamp) {
             for seeded_flow in flows {
@@ -436,6 +423,14 @@ impl FlowStreamer {
 
             // Generate flows until buffer is full or Stage 0 exhausted
             while state.needs_more_flows() && running.load(Ordering::SeqCst) {
+                // Rate limit: exit inner loop so virtual time can advance
+                if !state.pending_flows.is_empty()
+                    && state.last_generation.elapsed()
+                    < Duration::from_millis(STREAM_RATE_LIMIT_MS)
+                {
+                    break;
+                }
+
                 if !generate_flows_to_buffer(&mut state, &mut s0, &s1, initial_timestamp) {
                     break; // Stage 0 exhausted
                 }

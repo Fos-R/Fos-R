@@ -1,6 +1,6 @@
 //! Predefined configuration templates: Home, Enterprise, Datacenter.
 
-use crate::shared::config::model::Configuration;
+use fosr_lib::config::{ConfigurationYaml, Metadata};
 use crate::shared::config::state::ConfigFileState;
 use egui_material_icons::icons;
 
@@ -45,7 +45,7 @@ pub static TEMPLATES: &[Template] = &[
 /// On parse failure, sets the error without modifying the existing model.
 pub fn load_template(state: &mut ConfigFileState, template: &Template) {
     // Parse first, fail-fast if invalid
-    let model = match serde_yaml::from_str::<Configuration>(template.yaml) {
+    let model = match serde_yaml::from_str::<ConfigurationYaml>(template.yaml) {
         Ok(model) => model,
         Err(e) => {
             state.config_error = Some(e.to_string());
@@ -61,7 +61,7 @@ pub fn load_template(state: &mut ConfigFileState, template: &Template) {
 fn apply_template_to_state(
     state: &mut ConfigFileState,
     template: &Template,
-    model: Configuration,
+    model: ConfigurationYaml,
 ) {
     state.picked_config_file = None;
     state.config_file_content = Some(template.yaml.to_string());
@@ -71,4 +71,29 @@ fn apply_template_to_state(
     state.config_chosen = true;
     state.is_dirty = false;
     state.loaded_template_id = Some(template.id.to_string());
+}
+
+/// Load an empty configuration with only metadata.
+pub fn load_empty_config(state: &mut ConfigFileState) {
+    let model = ConfigurationYaml {
+        metadata: Metadata {
+            title: String::new(),
+            desc: None,
+            author: None,
+            date: None,
+            version: None,
+            format: None,
+        },
+        networks: vec![],
+        internet: vec![],
+    };
+    let yaml = serde_yaml::to_string(&model).unwrap_or_default();
+    state.picked_config_file = None;
+    state.config_file_content = Some(yaml.clone());
+    state.config_model = Some(model);
+    state.clean_snapshot = Some(yaml);
+    state.config_error = None;
+    state.config_chosen = true;
+    state.is_dirty = false;
+    state.loaded_template_id = None;
 }
