@@ -28,10 +28,7 @@ fn deterministic_fast_generation() -> Result<(), Box<dyn std::error::Error>> {
     cmd.assert().success();
     thread::sleep(time::Duration::from_millis(500));
 
-    let mut file = File::open(&file_path)?;
-    let mut sha256 = Sha256::new();
-    io::copy(&mut file, &mut sha256)?;
-    let hash = sha256.finalize();
+    let hash = Sha256::digest(&fs::read_to_string(&file_path)?);
     assert_eq!(
         hex::encode(hash),
         "633e1a7cc866c23778f6fa3ef6d5501c5cb4e0007409a937dc62ec821caa5626"
@@ -59,10 +56,7 @@ fn deterministic_efficient_generation() -> Result<(), Box<dyn std::error::Error>
     cmd.assert().success();
     thread::sleep(time::Duration::from_millis(500));
 
-    let mut file = File::open(&file_path)?;
-    let mut sha256 = Sha256::new();
-    io::copy(&mut file, &mut sha256)?;
-    let hash = sha256.finalize();
+    let hash = Sha256::digest(&fs::read_to_string(&file_path)?);
     assert_eq!(
         hex::encode(hash),
         "633e1a7cc866c23778f6fa3ef6d5501c5cb4e0007409a937dc62ec821caa5626"

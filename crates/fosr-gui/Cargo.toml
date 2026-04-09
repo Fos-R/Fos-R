@@ -27,12 +27,12 @@ models = ["fosr-lib/models_cupid", "fosr-lib/models_cicids17"]
 native = []
 
 [dependencies]
-chrono = "0.4.43"
+chrono = "0.4.44"
 chrono-tz = "0.10.4"
 eframe = "0.33.3"
 egui_extras = { version = "0.33.3", features = ["chrono", "all_loaders", "syntect", "serde"] }
 log = "0.4.29"
-wasm-bindgen = "0.2.108"
+wasm-bindgen = "0.2.117"
 fosr-lib = { version = "1.0.0-dev", path = "../fosr-lib" }
 rfd = "0.17.2"
 humantime = "2.3.0"
@@ -48,12 +48,12 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 gloo-timers = { version = "0.3", features = ["futures"] }
-wasm-bindgen-futures = "0.4.58"
-web-sys = { version = "0.3.85", features = ["Element", "Document", "Window"] }
+wasm-bindgen-futures = "0.4.67"
+web-sys = { version = "0.3.94", features = ["Element", "Document", "Window"] }
 getrandom = { version = "0.3.4", features = ["wasm_js"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = { version = "0.11.9", default-features = false, features = ["auto-color", "humantime"] }
-tempfile = "3.26.0"
+env_logger = { version = "0.11.10", default-features = false, features = ["auto-color", "humantime"] }
+tempfile = "3.27.0"
 open = "5.3.3"
 
