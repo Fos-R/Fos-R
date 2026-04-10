@@ -62,8 +62,8 @@ pub const BUTTON_MIN_WIDTH_SM: f32 = 75.0;
 /// Large button minimum width (px) - Generate
 pub const BUTTON_MIN_WIDTH_LG: f32 = 85.0;
 
-/// Button padding (horizontal, vertical)
-pub const BUTTON_PADDING: (f32, f32) = (5.0, 2.0);
+/// Tab button padding (horizontal, vertical) in the top bar
+pub const TAB_BUTTON_PADDING: (f32, f32) = (40.0, 2.0);
 
 // ============================================================================
 // PANELS & MODALS
@@ -115,8 +115,15 @@ pub const WINDOW_MIN_HEIGHT: f32 = 500.0;
 /// Minimum zoom level (fraction)
 pub const ZOOM_MIN: f32 = 0.8;
 
-/// Maximum zoom level (fraction)
-pub const ZOOM_MAX: f32 = 2.0;
+/// Maximum zoom level (fraction) for native builds.
+/// This avoids for instance the protocols legend (graph view) or the navbar buttons to overflow.
+#[cfg(not(target_arch = "wasm32"))]
+pub const ZOOM_MAX: f32 = 1.9;
+
+/// Maximum zoom level (fraction) for WASM builds.
+/// This avoids for instance the protocols legend (graph view) or the navbar buttons to overflow.
+#[cfg(target_arch = "wasm32")]
+pub const ZOOM_MAX: f32 = 1.5;
 
 /// Zoom step increment (fraction)
 pub const ZOOM_STEP: f32 = 0.1;
@@ -187,6 +194,13 @@ pub const TIMEZONE_POPUP_MAX_HEIGHT: f32 = 450.0;
 pub const TIMEZONE_LIST_MAX_HEIGHT: f32 = 400.0;
 
 // ============================================================================
+// MULTI-SELECT PICKER
+// ============================================================================
+
+/// Default width for the multi-select picker popup.
+pub const MULTI_SELECT_PICKER_WIDTH: f32 = 200.0;
+
+// ============================================================================
 // SEARCHABLE COMBO
 // ============================================================================
 
@@ -245,27 +259,77 @@ pub const PLAYBACK_SPEED_EPSILON: f32 = 0.01;
 // VISUALIZATION: LAYOUT & DISPLAY
 // ============================================================================
 
-/// Graph layout radius multiplier (scales with node count)
-pub const GRAPH_LAYOUT_RADIUS_MULTIPLIER: f32 = 80.0;
+/// Angular gap between clusters in radial layout (radians)
+pub const CLUSTER_GAP_RAD: f32 = 0.05;
 
-/// Graph layout radius base offset
-pub const GRAPH_LAYOUT_RADIUS_BASE: f32 = 100.0;
+/// Graph layout radius multiplier for cluster mode (scales with subnet count)
+pub const GRAPH_LAYOUT_CLUSTER_RADIUS_MULTIPLIER: f32 = 82.5;
 
-/// Fit to screen padding (fraction of screen)
-pub const FIT_TO_SCREEN_PADDING: f32 = 0.15;
+/// Graph layout radius base offset for cluster mode
+pub const GRAPH_LAYOUT_CLUSTER_RADIUS_BASE: f32 = 82.5;
+
+/// Graph layout radius multiplier for flat mode (scales with node count)
+pub const GRAPH_LAYOUT_FLAT_RADIUS_MULTIPLIER: f32 = 60.0;
+
+/// Graph layout radius base offset for flat mode
+pub const GRAPH_LAYOUT_FLAT_RADIUS_BASE: f32 = 60.0;
+
+/// Fit to screen padding with subnet zones (fraction of screen)
+pub const FIT_TO_SCREEN_PADDING_WITH_ZONES: f32 = 0.3;
+
+/// Fit to screen padding in flat mode
+pub const FIT_TO_SCREEN_PADDING_FLAT: f32 = 0.15;
+
+// ============================================================================
+// VISUALIZATION: SUBNET ZONES
+// ============================================================================
+
+/// Base padding around subnet zone bounding box (canvas px)
+pub const ZONE_PAD_BASE: f32 = 40.0;
+
+/// Extra horizontal padding for zone labels on left/right/bottom (canvas px)
+pub const ZONE_PAD_LABEL: f32 = 25.0;
+
+/// Top padding reduction (canvas px)
+pub const ZONE_PAD_TOP_INSET: f32 = 15.0;
+
+/// Zone rectangle corner rounding radius (canvas px)
+pub const ZONE_RECT_ROUNDING: f32 = 6.0;
+
+/// Zone border stroke width (canvas px)
+pub const ZONE_BORDER_STROKE_WIDTH: f32 = 1.0;
+
+/// Golden ratio conjugate (phi - 1 = 1/phi), used for distinct hue distribution.
+pub const GOLDEN_RATIO_CONJUGATE: f32 = 0.6180339887498949;
+
+/// HSL saturation for colored subnet zones in dark mode
+pub const ZONE_COLOR_SATURATION_DARK: f32 = 0.40;
+
+/// HSL lightness for colored subnet zones in dark mode
+pub const ZONE_COLOR_LIGHTNESS_DARK: f32 = 0.35;
+
+/// HSL saturation for colored subnet zones in light mode
+pub const ZONE_COLOR_SATURATION_LIGHT: f32 = 0.35;
+
+/// HSL lightness for colored subnet zones in light mode
+pub const ZONE_COLOR_LIGHTNESS_LIGHT: f32 = 0.70;
+
+/// Alpha for subnet zone fills (0-255)
+pub const ZONE_COLOR_ALPHA: u8 = 45;
+
 
 /// Base timeout for active links display (ms), adjusted by speed.
 /// Controls how long links stay in active state.
 pub const ACTIVE_LINK_BASE_TIMEOUT_MS: f32 = 500.0;
 
 /// Overlay margin from screen edges (px)
-pub const OVERLAY_MARGIN: f32 = 4.0;
+pub const OVERLAY_MARGIN: f32 = 5.0;
 
 /// Legend icon size (px) - for node/edge legend icons
-pub const LEGEND_ICON_SIZE: f32 = 20.0;
+pub const LEGEND_ICON_SIZE: f32 = 12.0;
 
 /// Legend marker radius (px) - for edge protocol color dots
-pub const LEGEND_MARKER_RADIUS: f32 = 6.0;
+pub const LEGEND_MARKER_RADIUS: f32 = 5.0;
 
 // ============================================================================
 // TIMING (frames)

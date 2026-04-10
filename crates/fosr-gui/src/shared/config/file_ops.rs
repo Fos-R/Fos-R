@@ -16,14 +16,8 @@ use std::sync::mpsc::channel;
 ///
 /// On desktop: synchronous file picker via native dialog.
 /// On WASM: async file picker, result arrives via `config_file_receiver`.
-/// Clears any previously loaded config state before picking a new file.
+/// Clears any previously loaded config state only when a new file is picked.
 pub fn trigger_file_import(state: &mut ConfigFileState, ctx: &egui::Context) {
-    state.config_file_content = None;
-    #[cfg(target_arch = "wasm32")]
-    {
-        state.config_file_content_receiver = None;
-    }
-
     #[cfg(not(target_arch = "wasm32"))]
     {
         let _ = ctx;
@@ -37,6 +31,7 @@ pub fn trigger_file_import(state: &mut ConfigFileState, ctx: &egui::Context) {
 
     #[cfg(target_arch = "wasm32")]
     {
+        state.config_file_content_receiver = None;
         let (sender, receiver) = channel();
         state.config_file_receiver = Some(receiver);
         let ctx = ctx.clone();

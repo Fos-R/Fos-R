@@ -23,7 +23,11 @@ pub fn count_addresses(config: &ConfigurationYaml) -> AddressCounts {
         .chain(&config.internet)
     {
         for interface in &host.interfaces {
-            *ip_counts.entry(interface.ip_addr.clone()).or_insert(0) += 1;
+            // Skip "auto" and empty IPs - they are placeholders resolved at generation time
+            // and should not participate in duplicate detection.
+            if !interface.ip_addr.is_empty() && interface.ip_addr != "auto" {
+                *ip_counts.entry(interface.ip_addr.clone()).or_insert(0) += 1;
+            }
             if let Some(mac) = &interface.mac_addr {
                 *mac_counts.entry(mac.clone()).or_insert(0) += 1;
             }

@@ -1,18 +1,19 @@
 //! Graph overlay UI: control buttons, stats display, and legends for nodes/edges.
 
-use super::state::{ScreenshotStateMachine, VisualizationState};
+use super::state::{ScreenshotStateMachine, SubnetDisplayMode, VisualizationState};
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
 use crate::shared::constants::colors::{
-    COLOR_EDGE_INACTIVE, COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT, COLOR_PROTOCOL_DNS,
-    COLOR_PROTOCOL_HTTP, COLOR_PROTOCOL_HTTPS, COLOR_PROTOCOL_OTHER, COLOR_PROTOCOL_SMTP,
-    COLOR_PROTOCOL_SSH, COLOR_STOP,
+    COLOR_EDGE_INACTIVE, COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT, COLOR_STOP,
+    color_for_protocol,
 };
+use fosr_lib::structs::L7Proto;
+use strum::IntoEnumIterator;
 use crate::shared::constants::ui::{
     LEGEND_ICON_SIZE, LEGEND_MARKER_RADIUS, OVERLAY_MARGIN, PLAYBACK_SPEED_EPSILON,
     PLAYBACK_SPEED_STEPS, SPACING_NEGATIVE_XS,
 };
 use eframe::egui;
-use egui_material_icons::icons::{ICON_ADD, ICON_FIT_SCREEN, ICON_IMAGE, ICON_PLAY_ARROW, ICON_REMOVE, ICON_RESTART_ALT, ICON_STOP};
+use egui_material_icons::icons::{ICON_ADD, ICON_AUTORENEW, ICON_FIT_SCREEN, ICON_IMAGE, ICON_LAN, ICON_PLAY_ARROW, ICON_REMOVE, ICON_RESTART_ALT, ICON_STOP};
 
 /// Render a legend item with a colored circle (for edge protocols).
 fn legend_item_inline(ui: &mut egui::Ui, label: &str, color: egui::Color32) {
@@ -137,15 +138,25 @@ fn render_stop_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
     }
 }
 
-/// Render fit-to-screen and export buttons.
+/// Render fit-to-screen, reset layout, subnet mode, and export buttons.
 fn render_view_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
     if ui
         .button(ICON_FIT_SCREEN)
         .on_hover_text("Fit to screen")
         .clicked()
     {
-        state.view.reset_requested = true;
+        state.view.fit_to_screen_requested = true;
     }
+
+    if ui
+        .button(ICON_AUTORENEW)
+        .on_hover_text("Reset node positions")
+        .clicked()
+    {
+        state.view.layout_reset_requested = true;
+    }
+
+    render_subnet_mode_menu(ui, state);
 
     if ui
         .button(ICON_IMAGE)
@@ -154,6 +165,33 @@ fn render_view_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
     {
         state.screenshot_export = ScreenshotStateMachine::HidingOverlays;
     }
+}
+
+/// Render the subnet display mode dropdown menu.
+fn render_subnet_mode_menu(ui: &mut egui::Ui, state: &mut VisualizationState) {
+    let current = state.subnet_mode;
+    ui.menu_button(ICON_LAN, |menu_ui| {
+        for mode in SubnetDisplayMode::iter() {
+            let is_selected = mode == current;
+            let btn = egui::Button::new(mode.label()).selected(is_selected);
+            if menu_ui
+                .add(btn)
+                .on_hover_text(mode.tooltip())
+                .clicked()
+            {
+                let was_flat = state.subnet_mode == SubnetDisplayMode::Flat;
+                state.subnet_mode = mode;
+                state.network.set_subnet_mode(mode);
+                // Layout changes between flat and zone modes, so reset
+                if was_flat != (mode == SubnetDisplayMode::Flat) {
+                    state.view.layout_reset_requested = true;
+                }
+                menu_ui.close();
+            }
+        }
+    })
+    .response
+    .on_hover_text("Subnet display mode");
 }
 
 /// Render playback speed controls with −/+ buttons.
@@ -221,7 +259,7 @@ pub fn render_overlay_stats(ui: &mut egui::Ui, state: &VisualizationState) {
     let local_rect = ui.max_rect();
 
     egui::Area::new(egui::Id::new("viz_overlay_stats"))
-        .fixed_pos(local_rect.left_bottom() + egui::vec2(OVERLAY_MARGIN, 0.0))
+        .fixed_pos(local_rect.left_bottom() + egui::vec2(OVERLAY_MARGIN, -OVERLAY_MARGIN))
         .pivot(egui::Align2::LEFT_BOTTOM)
         .order(egui::Order::Foreground)
         .show(ui.ctx(), |ui| {
@@ -277,12 +315,9 @@ pub fn render_overlay_edge_legend(ui: &mut egui::Ui) {
                 .shadow(egui::epaint::Shadow::NONE)
                 .show(ui, |ui| {
                     legend_item_inline(ui, "Inactive", COLOR_EDGE_INACTIVE);
-                    legend_item_inline(ui, "HTTP", COLOR_PROTOCOL_HTTP);
-                    legend_item_inline(ui, "HTTPS", COLOR_PROTOCOL_HTTPS);
-                    legend_item_inline(ui, "SSH", COLOR_PROTOCOL_SSH);
-                    legend_item_inline(ui, "DNS", COLOR_PROTOCOL_DNS);
-                    legend_item_inline(ui, "SMTP", COLOR_PROTOCOL_SMTP);
-                    legend_item_inline(ui, "Other", COLOR_PROTOCOL_OTHER);
+                    for proto in L7Proto::iter() {
+                        legend_item_inline(ui, proto.ui_label(), color_for_protocol(&proto));
+                    }
                 })
                 .response
                 .on_hover_text(

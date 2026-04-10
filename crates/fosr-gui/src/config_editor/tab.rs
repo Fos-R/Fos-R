@@ -71,26 +71,16 @@ pub fn render_configuration_tab(
 /// Serializes the current model to YAML string and compares against
 /// the clean snapshot to detect unsaved changes.
 fn sync_model_to_yaml_state(state: &mut ConfigFileState) {
-    let Some(model) = &state.config_model else {
-        return;
-    };
+    let had_error = state.config_error.is_some();
+    state.sync_model_to_yaml();
 
-    // Serialize model to YAML (done once, reused for dirty check)
-    let model_yaml = match serde_yaml::to_string(model) {
-        Ok(yaml) => {
-            state.config_error = None;
-            yaml
+    // If serialization succeeded, update dirty flag by comparing with cached snapshot YAML
+    if !had_error && state.config_error.is_none() {
+        if let Some(model_yaml) = &state.config_file_content {
+            if let Some(snap_yaml) = &state.clean_snapshot {
+                state.is_dirty = *model_yaml != *snap_yaml;
+            }
         }
-        Err(e) => {
-            state.config_error = Some(e.to_string());
-            return;
-        }
-    };
-    state.config_file_content = Some(model_yaml.clone());
-
-    // Update dirty flag by comparing with cached snapshot YAML
-    if let Some(snap_yaml) = &state.clean_snapshot {
-        state.is_dirty = model_yaml != *snap_yaml;
     }
 }
 

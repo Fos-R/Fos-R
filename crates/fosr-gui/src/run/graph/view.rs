@@ -9,9 +9,9 @@ use super::overlays::{
 };
 use super::screenshot::handle_screenshot_export;
 use super::shapes::{NetworkEdgeShape, NetworkNodeShape};
-use super::state::{NetworkEdge, NetworkNode, ScreenshotStateMachine, GraphViewState};
+use super::state::{NetworkEdge, NetworkNode, ScreenshotStateMachine, GraphViewState, SubnetDisplayMode};
 use crate::run::state::RunTabState;
-use crate::shared::constants::ui::FIT_TO_SCREEN_PADDING;
+use crate::shared::constants::ui::{FIT_TO_SCREEN_PADDING_FLAT, FIT_TO_SCREEN_PADDING_WITH_ZONES};
 use eframe::egui;
 
 /// Render the graph view with overlays.
@@ -23,49 +23,66 @@ use eframe::egui;
 /// 4. Handles screenshot export state machine
 /// 5. Renders UI overlays (buttons, stats, legends)
 pub fn render_graph_view(ui: &mut egui::Ui, state: &mut RunTabState) {
-    let inner_response = egui::CentralPanel::default().show(ui.ctx(), |ui| {
-        handle_window_resize(ui, &mut state.visualization.view);
+    let inner_response = egui::CentralPanel::default()
+        .frame(egui::Frame::NONE) // No frame, this avoids having white borders around the pane
+        .show(ui.ctx(), |ui| {
+            handle_window_resize(ui, &mut state.visualization.view);
 
-        let fit_to_screen = take_reset_request(&mut state.visualization.view);
+            // Handle layout reset: redistribute nodes and fit to screen
+            if state.visualization.view.layout_reset_requested {
+                state.visualization.view.layout_reset_requested = false;
+                state.visualization.network.distribute_layout(state.visualization.subnet_mode);
+                state.visualization.network.set_subnet_mode(state.visualization.subnet_mode);
+                state.visualization.view.fit_to_screen_requested = true;
+            }
 
-        let mut graph_view = egui_graphs::GraphView::<
-            NetworkNode,
-            NetworkEdge,
-            petgraph::Undirected,
-            petgraph::stable_graph::DefaultIx,
-            NetworkNodeShape,
-            NetworkEdgeShape,
-            egui_graphs::FruchtermanReingoldWithCenterGravityState,
-            egui_graphs::LayoutForceDirected<egui_graphs::FruchtermanReingoldWithCenterGravity>,
-        >::new(&mut state.visualization.network.graph)
-            .with_interactions(&egui_graphs::SettingsInteraction::new()
-                .with_node_clicking_enabled(true)
-                .with_dragging_enabled(true))
-            .with_event_sink(&state.visualization.modal.events_buffer)
-            .with_styles(&egui_graphs::SettingsStyle::new().with_labels_always(true))
-            .with_navigations(
-                &egui_graphs::SettingsNavigation::new()
-                    .with_fit_to_screen_enabled(fit_to_screen)
-                    // padding to avoid cropping with labels and overlays
-                    .with_fit_to_screen_padding(FIT_TO_SCREEN_PADDING)
-                    .with_zoom_and_pan_enabled(true),
-            );
+            // Recompute subnet zone bounds so they follow dragged nodes
+            state.visualization.network.recompute_zone_bounds();
 
-        // TODO: handle layout properly instead of just deactivating auto-layout
-        disable_force_directed_layout(ui, &mut state.visualization.view);
+            let fit_to_screen = take_fit_request(&mut state.visualization.view);
+            let padding = match state.visualization.subnet_mode {
+                SubnetDisplayMode::Flat => FIT_TO_SCREEN_PADDING_FLAT,
+                _ => FIT_TO_SCREEN_PADDING_WITH_ZONES,
+            };
 
-        ui.add(&mut graph_view);
+            let mut graph_view = egui_graphs::GraphView::<
+                NetworkNode,
+                NetworkEdge,
+                petgraph::Undirected,
+                petgraph::stable_graph::DefaultIx,
+                NetworkNodeShape,
+                NetworkEdgeShape,
+                egui_graphs::FruchtermanReingoldWithCenterGravityState,
+                egui_graphs::LayoutForceDirected<egui_graphs::FruchtermanReingoldWithCenterGravity>,
+            >::new(&mut state.visualization.network.graph)
+                .with_interactions(&egui_graphs::SettingsInteraction::new()
+                    .with_node_clicking_enabled(true)
+                    .with_dragging_enabled(true))
+                .with_event_sink(&state.visualization.modal.events_buffer)
+                .with_styles(&egui_graphs::SettingsStyle::new().with_labels_always(true))
+                .with_navigations(
+                    &egui_graphs::SettingsNavigation::new()
+                        .with_fit_to_screen_enabled(fit_to_screen)
+                        // padding to avoid cropping with labels and overlays
+                        .with_fit_to_screen_padding(padding)
+                        .with_zoom_and_pan_enabled(true),
+                );
 
-        handle_screenshot_export(ui, &mut state.visualization);
+            // TODO: handle layout properly instead of just deactivating auto-layout
+            disable_force_directed_layout(ui, &mut state.visualization.view);
 
-        // Hide overlays during export to get clean screenshot
-        if state.visualization.screenshot_export == ScreenshotStateMachine::Idle {
-            render_overlay_buttons(ui, &mut state.visualization);
-            render_overlay_stats(ui, &state.visualization);
-            render_overlay_node_legend(ui);
-            render_overlay_edge_legend(ui);
-        }
-    });
+            ui.add(&mut graph_view);
+
+            handle_screenshot_export(ui, &mut state.visualization);
+
+            // Hide overlays during export to get clean screenshot
+            if state.visualization.screenshot_export == ScreenshotStateMachine::Idle {
+                render_overlay_buttons(ui, &mut state.visualization);
+                render_overlay_stats(ui, &state.visualization);
+                render_overlay_node_legend(ui);
+                render_overlay_edge_legend(ui);
+            }
+        });
 
     // Use panel rect directly - it's already in screen coordinates
     // and represents the full panel area (ui.max_rect() excludes internal padding)
@@ -81,21 +98,21 @@ fn handle_window_resize(ui: &egui::Ui, view: &mut GraphViewState) {
     match view.last_screen_size {
         Some(last) if last != screen_size => {
             view.last_screen_size = Some(screen_size);
-            view.reset_requested = true;
+            view.fit_to_screen_requested = true;
         }
         None => view.last_screen_size = Some(screen_size),
         _ => {}
     }
 }
 
-/// Consume reset request and return whether fit-to-screen should run.
+/// Consume fit-to-screen request and return whether it should run.
 ///
-/// Returns true for one frame when reset is requested,
+/// Returns true for one frame when requested,
 /// then clears the flag so it doesn't repeat.
-fn take_reset_request(view: &mut GraphViewState) -> bool {
-    let fit = view.reset_requested;
+fn take_fit_request(view: &mut GraphViewState) -> bool {
+    let fit = view.fit_to_screen_requested;
     if fit {
-        view.reset_requested = false;
+        view.fit_to_screen_requested = false;
     }
     fit
 }

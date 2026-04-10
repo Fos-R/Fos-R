@@ -69,7 +69,7 @@ fn handle_delayed_fit_to_screen(view: &mut GraphViewState) {
         if countdown > 0 {
             view.delayed_fit_countdown = Some(countdown - 1);
         } else {
-            view.reset_requested = true;
+            view.fit_to_screen_requested = true;
             view.delayed_fit_countdown = None;
         }
     }
