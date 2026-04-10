@@ -44,6 +44,7 @@ default = []
 net_injection = ["pnet/std"]
 models_cupid = []
 models_cicids17 = []
+models_dedale = []
 
 # Linux only
 iptables = ["net_injection"]

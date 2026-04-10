@@ -45,15 +45,22 @@ impl fmt::Display for InjectionAlgo {
 #[derive(ValueEnum, Debug, Clone)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum DefaultModels {
+    #[cfg(feature = "models_cicids17")]
     CICIDS17,
+    #[cfg(feature = "models_cupid")]
     CUPID,
+    #[cfg(feature = "models_dedale")]
+    DEDALE,
 }
 
 impl DefaultModels {
     pub fn get_source(&self) -> models::ModelsSource {
         match &self {
+            #[cfg(feature = "models_cicids17")]
             DefaultModels::CICIDS17 => models::ModelsSource::CICIDS17,
-            DefaultModels::CUPID => models::ModelsSource::CUPID,
+            #[cfg(feature = "models_dedale")]
+            DefaultModels::DEDALE => models::ModelsSource::DEDALE,
+            _ => unreachable!(),
         }
     }
 }
