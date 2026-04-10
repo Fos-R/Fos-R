@@ -6,6 +6,7 @@
 //! - Self-documenting code with named colors
 
 use eframe::egui::Color32;
+use fosr_lib::structs::L7Proto;
 
 // ============================================================================
 // SEMANTIC COLORS (UI state)
@@ -66,5 +67,57 @@ pub const COLOR_PROTOCOL_DNS: Color32 = Color32::from_rgb(230, 126, 34);
 /// SMTP protocol color (yellow)
 pub const COLOR_PROTOCOL_SMTP: Color32 = Color32::from_rgb(241, 196, 15);
 
-/// Other/unknown protocol color (gray)
-pub const COLOR_PROTOCOL_OTHER: Color32 = Color32::from_rgb(149, 165, 166);
+/// DHCP protocol color (teal)
+pub const COLOR_PROTOCOL_DHCP: Color32 = Color32::from_rgb(0, 188, 212);
+
+/// Telnet protocol color (salmon)
+pub const COLOR_PROTOCOL_TELNET: Color32 = Color32::from_rgb(233, 30, 99);
+
+/// IMAPS protocol color (indigo)
+pub const COLOR_PROTOCOL_IMAPS: Color32 = Color32::from_rgb(63, 81, 181);
+
+/// MQTT protocol color (lime)
+pub const COLOR_PROTOCOL_MQTT: Color32 = Color32::from_rgb(139, 195, 74);
+
+/// KMS protocol color (deep orange)
+pub const COLOR_PROTOCOL_KMS: Color32 = Color32::from_rgb(255, 87, 34);
+
+/// MulticastDNS protocol color (pink)
+pub const COLOR_PROTOCOL_MDNS: Color32 = Color32::from_rgb(240, 98, 146);
+
+/// NTP protocol color (cyan)
+pub const COLOR_PROTOCOL_NTP: Color32 = Color32::from_rgb(0, 229, 255);
+
+// ============================================================================
+// VISUALIZATION: SUBNET ZONE COLORS
+// ============================================================================
+
+/// RGB components for the uniform subnet zone fill color
+pub const ZONE_UNIFORM_RGB: (u8, u8, u8) = (52, 119, 235);
+
+/// Brighten amount for zone borders and labels in dark mode
+pub const ZONE_ACCENT_BRIGHTEN: u8 = 150;
+
+/// Alpha for zone borders and labels in dark mode
+pub const ZONE_ACCENT_ALPHA_DARK: u8 = 200;
+
+/// Alpha for zone borders and labels in light mode
+pub const ZONE_ACCENT_ALPHA_LIGHT: u8 = 150;
+
+/// Returns the visualization color for a given L7 protocol.
+pub fn color_for_protocol(proto: &L7Proto) -> Color32 {
+    match proto {
+        L7Proto::HTTP => COLOR_PROTOCOL_HTTP,
+        L7Proto::HTTPS => COLOR_PROTOCOL_HTTPS,
+        L7Proto::SSH => COLOR_PROTOCOL_SSH,
+        L7Proto::DNS => COLOR_PROTOCOL_DNS,
+        L7Proto::SMTP => COLOR_PROTOCOL_SMTP,
+        L7Proto::DHCP => COLOR_PROTOCOL_DHCP,
+        L7Proto::Telnet => COLOR_PROTOCOL_TELNET,
+        L7Proto::IMAPS => COLOR_PROTOCOL_IMAPS,
+        L7Proto::MQTT => COLOR_PROTOCOL_MQTT,
+        L7Proto::KMS => COLOR_PROTOCOL_KMS,
+        L7Proto::MulticastDNS => COLOR_PROTOCOL_MDNS,
+        L7Proto::NTP => COLOR_PROTOCOL_NTP,
+    }
+}

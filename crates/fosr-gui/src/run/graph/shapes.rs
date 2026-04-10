@@ -6,67 +6,153 @@
 //! - `closest_boundary_point`: where edges connect to the node boundary
 //! - `is_inside`: hit-testing for clicking and dragging
 
-use super::state::{NetworkEdge, EdgeState, LinkDirection, NetworkNode, NodeType};
+use super::state::{NetworkEdge, EdgeState, LinkDirection, NetworkNode, NodeType, SubnetDisplayMode, ZoneDisplay};
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
 use crate::shared::constants::colors::{
-    COLOR_EDGE_INACTIVE, COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT, COLOR_PROTOCOL_DNS,
-    COLOR_PROTOCOL_HTTP, COLOR_PROTOCOL_HTTPS, COLOR_PROTOCOL_OTHER, COLOR_PROTOCOL_SMTP,
-    COLOR_PROTOCOL_SSH, COLOR_TEXT_MUTED,
+    COLOR_EDGE_INACTIVE,
+    COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT,
+    COLOR_TEXT_MUTED,
+    ZONE_ACCENT_ALPHA_DARK, ZONE_ACCENT_ALPHA_LIGHT, ZONE_ACCENT_BRIGHTEN,
+    ZONE_UNIFORM_RGB,
+    color_for_protocol,
 };
 use crate::shared::constants::ui::{
     EDGE_ARROW_ANGLE_RAD, EDGE_ARROW_SIZE, EDGE_FLOW_SCALE, EDGE_WIDTH_MAX, EDGE_WIDTH_MIN,
-    NODE_FLOW_SCALE_FACTOR, NODE_RADIUS_MAX, NODE_RADIUS_MIN, SPACING_XS, TEXT_SIZE_DEFAULT,
+    GOLDEN_RATIO_CONJUGATE, NODE_FLOW_SCALE_FACTOR, NODE_RADIUS_MAX, NODE_RADIUS_MIN,
+    SPACING_XS, TEXT_SIZE_DEFAULT, TEXT_SIZE_SM,
+    ZONE_BORDER_STROKE_WIDTH, ZONE_COLOR_ALPHA,
+    ZONE_COLOR_LIGHTNESS_DARK, ZONE_COLOR_LIGHTNESS_LIGHT,
+    ZONE_COLOR_SATURATION_DARK, ZONE_COLOR_SATURATION_LIGHT,
+    ZONE_RECT_ROUNDING,
 };
-use eframe::egui::{self, Color32, Pos2, Rect, Shape, TextureOptions, Vec2, load::SizeHint};
+use eframe::egui::{self, Color32, Pos2, Rect, Shape, StrokeKind, TextureOptions, Vec2, load::SizeHint};
+use eframe::epaint::FontsView;
 use egui_graphs::{DisplayEdge, DisplayNode, DrawContext, Node, NodeProps};
-use fosr_lib::L7Proto;
 
-/// Calculate node radius using hybrid linear/proportional scaling.
+/// Hybrid linear/proportional scaling.
 ///
-/// The scaling works in two phases:
-/// 1. **Linear phase**: While the maximum possible radius is below `NODE_RADIUS_MAX`,
-///    each node grows proportionally to its flow count.
-/// 2. **Proportional phase**: Once we would exceed `NODE_RADIUS_MAX`, switch to
-///    ratio-based scaling so the most active node is always at max size.
+/// Two-phase approach:
+/// 1. **Linear phase**: While the max linear value stays below `max_val`,
+///    each item grows proportionally to its count.
+/// 2. **Proportional phase**: Once linear would exceed `max_val`, switch to
+///    ratio-based scaling so the most active item is always at max.
 ///
-/// This ensures nodes grow smoothly at low traffic, but remain comparable at high traffic.
-fn calculate_node_radius(flow_count: u32, max_flow_count: u32) -> f32 {
-    let max_linear = NODE_RADIUS_MIN + max_flow_count as f32 * NODE_FLOW_SCALE_FACTOR;
+/// This ensures smooth growth at low traffic and comparability at high traffic.
+fn hybrid_scale(
+    count: u32,
+    max_count: u32,
+    min_val: f32,
+    scale: f32,
+    max_val: f32,
+) -> f32 {
+    let max_linear = min_val + max_count as f32 * scale;
 
-    if max_linear < NODE_RADIUS_MAX {
-        // Linear phase: everyone grows normally
-        NODE_RADIUS_MIN + flow_count as f32 * NODE_FLOW_SCALE_FACTOR
+    if max_linear < max_val {
+        // Linear phase: all edges grow normally
+        min_val + count as f32 * scale
     } else {
         // Proportional phase: scale by ratio to max
-        let ratio = if max_flow_count > 0 {
-            flow_count as f32 / max_flow_count as f32
+        let ratio = if max_count > 0 {
+            count as f32 / max_count as f32
         } else {
             0.0
         };
-        NODE_RADIUS_MIN + ratio * (NODE_RADIUS_MAX - NODE_RADIUS_MIN)
+        min_val + ratio * (max_val - min_val)
     }
 }
 
-/// Calculate edge width using hybrid linear/proportional scaling.
-///
-/// Uses the same two-phase approach as `calculate_node_radius`:
-/// 1. **Linear phase**: Edges grow proportionally while below `EDGE_WIDTH_MAX`.
-/// 2. **Proportional phase**: Ratio-based scaling to keep the busiest edge at max width.
-fn calculate_edge_width(flow_count: u32, max_flow_count: u32) -> f32 {
-    let max_linear = EDGE_WIDTH_MIN + max_flow_count as f32 * EDGE_FLOW_SCALE;
+fn calculate_node_radius(flow_count: u32, max_flow_count: u32) -> f32 {
+    hybrid_scale(flow_count, max_flow_count, NODE_RADIUS_MIN, NODE_FLOW_SCALE_FACTOR, NODE_RADIUS_MAX)
+}
 
-    if max_linear < EDGE_WIDTH_MAX {
-        // Linear phase: all edges grow normally
-        EDGE_WIDTH_MIN + flow_count as f32 * EDGE_FLOW_SCALE
-    } else {
-        // Proportional phase: scale by ratio to max
-        let ratio = if max_flow_count > 0 {
-            flow_count as f32 / max_flow_count as f32
-        } else {
-            0.0
-        };
-        EDGE_WIDTH_MIN + ratio * (EDGE_WIDTH_MAX - EDGE_WIDTH_MIN)
+fn calculate_edge_width(flow_count: u32, max_flow_count: u32) -> f32 {
+    hybrid_scale(flow_count, max_flow_count, EDGE_WIDTH_MIN, EDGE_FLOW_SCALE, EDGE_WIDTH_MAX)
+}
+
+/// Generate a subnet zone color based on the display mode.
+///
+/// - `SubnetDisplayMode::Subnet`: uniform color for all subnets.
+/// - `SubnetDisplayMode::ColoredSubnets`: golden-ratio hue for distinct colors.
+fn subnet_zone_color(idx: usize, dark_mode: bool, mode: SubnetDisplayMode) -> Color32 {
+    match mode {
+        SubnetDisplayMode::Flat => Color32::TRANSPARENT,
+        SubnetDisplayMode::Subnet => {
+            let (r, g, b) = ZONE_UNIFORM_RGB;
+            Color32::from_rgba_unmultiplied(r, g, b, ZONE_COLOR_ALPHA)
+        }
+        SubnetDisplayMode::ColoredSubnets => {
+            let hue = ((idx as f32 * GOLDEN_RATIO_CONJUGATE) % 1.0) * 360.0;
+            if dark_mode {
+                hsl_to_color32(hue, ZONE_COLOR_SATURATION_DARK, ZONE_COLOR_LIGHTNESS_DARK, ZONE_COLOR_ALPHA)
+            } else {
+                hsl_to_color32(hue, ZONE_COLOR_SATURATION_LIGHT, ZONE_COLOR_LIGHTNESS_LIGHT, ZONE_COLOR_ALPHA)
+            }
+        }
     }
+}
+
+/// Convert HSL (hue in degrees, saturation 0-1, lightness 0-1, alpha 0-255) to Color32.
+fn hsl_to_color32(h: f32, s: f32, l: f32, a: u8) -> Color32 {
+    let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
+    let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
+    let m = l - c / 2.0;
+    let (r1, g1, b1) = match h % 360.0 {
+        h if h < 60.0 => (c, x, 0.0),
+        h if h < 120.0 => (x, c, 0.0),
+        h if h < 180.0 => (0.0, c, x),
+        h if h < 240.0 => (0.0, x, c),
+        h if h < 300.0 => (x, 0.0, c),
+        _ => (c, 0.0, x),
+    };
+    let r = ((r1 + m) * 255.0) as u8;
+    let g = ((g1 + m) * 255.0) as u8;
+    let b = ((b1 + m) * 255.0) as u8;
+    Color32::from_rgba_unmultiplied(r, g, b, a)
+}
+
+/// Brighten a base color in dark mode or keep it with adjusted alpha in light mode.
+///
+/// Used for zone border and label colors that must stand out against the
+/// semi-transparent zone fill.
+fn zone_accent_color(
+    base: Color32,
+    dark_mode: bool,
+    brighten: u8,
+    alpha_dark: u8,
+    alpha_light: u8,
+) -> Color32 {
+    if dark_mode {
+        Color32::from_rgba_unmultiplied(
+            base.r().saturating_add(brighten),
+            base.g().saturating_add(brighten),
+            base.b().saturating_add(brighten),
+            alpha_dark,
+        )
+    } else {
+        Color32::from_rgba_unmultiplied(base.r(), base.g(), base.b(), alpha_light)
+    }
+}
+
+/// Layout a text string into a galley for rendering.
+fn layout_text(
+    fonts: &mut FontsView,
+    text: &str,
+    size: f32,
+    color: Color32,
+    italics: bool,
+) -> std::sync::Arc<egui::Galley> {
+    let mut job = egui::text::LayoutJob::default();
+    job.append(
+        text,
+        0.0,
+        egui::TextFormat {
+            font_id: egui::FontId::proportional(size),
+            color,
+            italics,
+            ..Default::default()
+        },
+    );
+    fonts.layout_job(job)
 }
 
 /// Custom node shape that displays hostname and IP, with icon based on node type
@@ -77,6 +163,8 @@ pub struct NetworkNodeShape {
     ips: Vec<String>,
     location: Pos2,
     node_type: NodeType,
+    /// Subnet zone rendering metadata.
+    zone: ZoneDisplay,
 }
 
 impl NetworkNodeShape {
@@ -90,6 +178,11 @@ impl NetworkNodeShape {
             payload.hostname.clone(),
             ips,
         )
+    }
+
+    /// Sync zone rendering fields from the node payload.
+    fn sync_zone_fields(&mut self, p: &NetworkNode) {
+        self.zone = p.zone.clone();
     }
 
     /// Get the image source for this node type.
@@ -126,50 +219,71 @@ impl NetworkNodeShape {
     /// Render the node labels (hostname + IPs) below the icon.
     fn render_labels(&self, ctx: &DrawContext, pos: Pos2, radius: f32) -> Vec<Shape> {
         let mut shapes = Vec::new();
-        let font_size = TEXT_SIZE_DEFAULT;
-        let font_id = egui::FontId::proportional(font_size);
-        let mut current_y = pos.y + radius + SPACING_XS;
+        // All sizes below scale with zoom level
+        let hostname_size = ctx.meta.canvas_to_screen_size(TEXT_SIZE_DEFAULT);
+        let ip_size = ctx.meta.canvas_to_screen_size(TEXT_SIZE_SM);
+        let line_spacing = ctx.meta.canvas_to_screen_size(SPACING_XS);
+        let mut current_y = pos.y + radius + line_spacing;
 
         ctx.ctx.fonts_mut(|f| {
-            // Draw hostname in italic
             if let Some(ref hostname) = self.hostname {
-                let mut job = egui::text::LayoutJob::default();
-                job.append(
-                    hostname,
-                    0.0,
-                    egui::TextFormat {
-                        font_id: font_id.clone(),
-                        color: COLOR_TEXT_MUTED,
-                        italics: true,
-                        ..Default::default()
-                    },
-                );
-                let galley = f.layout_job(job);
+                // Draw hostname in italic
+                let galley = layout_text(f, hostname, hostname_size, COLOR_TEXT_MUTED, true);
                 let label_pos = Pos2::new(pos.x - galley.size().x / 2.0, current_y);
                 shapes.push(Shape::galley(label_pos, galley, COLOR_TEXT_MUTED));
-                current_y += font_size + SPACING_XS;
+                current_y += hostname_size + line_spacing;
             }
 
-            // Draw IPs (normal) - skip for Internet node
+            // Draw IPs (smaller font) - skip for Internet node
             if self.node_type != NodeType::Internet {
                 for ip in &self.ips {
-                    let mut job = egui::text::LayoutJob::default();
-                    job.append(
-                        ip,
-                        0.0,
-                        egui::TextFormat {
-                            font_id: font_id.clone(),
-                            color: COLOR_TEXT_MUTED,
-                            ..Default::default()
-                        },
-                    );
-                    let galley = f.layout_job(job);
+                    let galley = layout_text(f, ip, ip_size, COLOR_TEXT_MUTED, false);
                     let label_pos = Pos2::new(pos.x - galley.size().x / 2.0, current_y);
                     shapes.push(Shape::galley(label_pos, galley, COLOR_TEXT_MUTED));
-                    current_y += font_size + SPACING_XS;
+                    current_y += ip_size + line_spacing;
                 }
             }
         });
+
+        shapes
+    }
+
+    /// Render a filled rounded rectangle behind the nodes for this subnet zone.
+    fn render_zone_background(&self, ctx: &DrawContext) -> Vec<Shape> {
+        let mut shapes = Vec::new();
+        let center = ctx.meta.canvas_to_screen_pos(self.zone.center);
+        let half_w = ctx.meta.canvas_to_screen_size(self.zone.half_size.x);
+        let half_h = ctx.meta.canvas_to_screen_size(self.zone.half_size.y);
+        let dark_mode = ctx.ctx.style().visuals.dark_mode;
+        let color = subnet_zone_color(self.zone.color_idx, dark_mode, self.zone.subnet_mode);
+
+        let rect = Rect::from_center_size(center, Vec2::new(half_w * 2.0, half_h * 2.0));
+        let rounding = ctx.meta.canvas_to_screen_size(ZONE_RECT_ROUNDING);
+
+        shapes.push(Shape::rect_filled(rect, rounding, color));
+
+        // Accent color: brighten in dark mode, keep original in light mode
+        let accent_color = zone_accent_color(color, dark_mode, ZONE_ACCENT_BRIGHTEN, ZONE_ACCENT_ALPHA_DARK, ZONE_ACCENT_ALPHA_LIGHT);
+        shapes.push(Shape::rect_stroke(
+            rect,
+            rounding,
+            egui::Stroke::new(ZONE_BORDER_STROKE_WIDTH, accent_color),
+            StrokeKind::Outside,
+        ));
+
+        // Zone label (subnet name + CIDR) above the rectangle
+        if let Some(ref label) = self.zone.label {
+            let font_size = ctx.meta.canvas_to_screen_size(TEXT_SIZE_SM);
+
+            ctx.ctx.fonts_mut(|f| {
+                let galley = layout_text(f, label, font_size, accent_color, false);
+                let label_pos = Pos2::new(
+                    rect.left() + ctx.meta.canvas_to_screen_size(SPACING_XS),
+                    rect.top() - galley.size().y - ctx.meta.canvas_to_screen_size(SPACING_XS),
+                );
+                shapes.push(Shape::galley(label_pos, galley, accent_color));
+            });
+        }
 
         shapes
     }
@@ -178,13 +292,16 @@ impl NetworkNodeShape {
 impl From<NodeProps<NetworkNode>> for NetworkNodeShape {
     fn from(props: NodeProps<NetworkNode>) -> Self {
         let (radius, node_type, hostname, ips) = Self::style_from_payload(&props.payload);
-        Self {
+        let mut shape = Self {
             radius,
             hostname,
             ips,
             location: props.location(),
             node_type,
-        }
+            zone: ZoneDisplay::default(),
+        };
+        shape.sync_zone_fields(&props.payload);
+        shape
     }
 }
 
@@ -201,12 +318,17 @@ for NetworkNodeShape
     }
 
     /// Set how a node is drawn in the graph.
-    /// A node can be composed of several shapes (icon + labels).
+    /// A node can be composed of several shapes (zone background, icon, labels).
     fn shapes(&mut self, ctx: &DrawContext) -> Vec<Shape> {
         let mut shapes = Vec::new();
         let pos = ctx.meta.canvas_to_screen_pos(self.location);
-        let radius = ctx.meta.canvas_to_screen_size(self.radius);
 
+        // Draw subnet zone background if this node is the designated zone drawer
+        if self.zone.draws_zone {
+            shapes.extend(self.render_zone_background(ctx));
+        }
+
+        let radius = ctx.meta.canvas_to_screen_size(self.radius);
         shapes.extend(self.render_icon(ctx, pos, radius));
         shapes.extend(self.render_labels(ctx, pos, radius));
 
@@ -220,6 +342,7 @@ for NetworkNodeShape
         self.hostname = hostname;
         self.ips = ips;
         self.location = state.location();
+        self.sync_zone_fields(&state.payload);
     }
 
     /// Defines the zone where we can click to drag the node
@@ -228,10 +351,16 @@ for NetworkNodeShape
     }
 }
 
-/// Get edge style based on protocol, direction, and flow count
+/// Get edge style: (color, width, arrow_start, arrow_end)
+/// Edges with flow_count == 0 and Inactive state are invisible (no visual representation).
 fn edge_style(edge_data: &NetworkEdge) -> (Color32, f32, bool, bool) {
     match &edge_data.state {
         EdgeState::Inactive => {
+            if edge_data.flow_count == 0 {
+                // Zero-flow edge: hide
+                return (Color32::TRANSPARENT, 0.0, false, false);
+            }
+            // Thin solid gray if this edge has been active at least once in the past
             let width = calculate_edge_width(edge_data.flow_count, edge_data.max_flow_count);
             (COLOR_EDGE_INACTIVE, width, false, false)
         }
@@ -240,14 +369,7 @@ fn edge_style(edge_data: &NetworkEdge) -> (Color32, f32, bool, bool) {
             direction,
             ..
         } => {
-            let color = match protocol {
-                L7Proto::HTTP => COLOR_PROTOCOL_HTTP,
-                L7Proto::HTTPS => COLOR_PROTOCOL_HTTPS,
-                L7Proto::SSH => COLOR_PROTOCOL_SSH,
-                L7Proto::DNS => COLOR_PROTOCOL_DNS,
-                L7Proto::SMTP => COLOR_PROTOCOL_SMTP,
-                _ => COLOR_PROTOCOL_OTHER,
-            };
+            let color = color_for_protocol(protocol);
             let (arrow_start, arrow_end) = match direction {
                 LinkDirection::Forward => (false, true),
                 LinkDirection::Backward => (true, false),
@@ -314,6 +436,11 @@ DisplayEdge<
         >,
         ctx: &DrawContext,
     ) -> Vec<Shape> {
+        // Zero-flow edges produce no shapes
+        if self.width == 0.0 {
+            return vec![];
+        }
+
         let start_center = start.location();
         let end_center = end.location();
         let dir = end_center - start_center;
@@ -324,10 +451,12 @@ DisplayEdge<
         let start_pos = ctx.meta.canvas_to_screen_pos(start_boundary);
         let end_pos = ctx.meta.canvas_to_screen_pos(end_boundary);
 
-        let mut shapes = vec![Shape::line_segment(
-            [start_pos, end_pos],
-            egui::Stroke::new(ctx.meta.canvas_to_screen_size(self.width), self.color),
-        )];
+        let stroke = egui::Stroke::new(
+            ctx.meta.canvas_to_screen_size(self.width),
+            self.color,
+        );
+
+        let mut shapes = vec![Shape::line_segment([start_pos, end_pos], stroke)];
 
         let arrow_size = ctx.meta.canvas_to_screen_size(EDGE_ARROW_SIZE);
         let arrow_angle = EDGE_ARROW_ANGLE_RAD;

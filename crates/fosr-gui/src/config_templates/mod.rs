@@ -53,24 +53,28 @@ pub fn load_template(state: &mut ConfigFileState, template: &Template) {
         }
     };
 
+    // Normalize snapshot through serde_yaml so dirty comparison is consistent
+    let snapshot = serde_yaml::to_string(&model).unwrap_or_default();
+
     // Apply state changes only after successful parse
-    apply_template_to_state(state, template, model);
+    apply_template_to_state(state, template.id, model, snapshot);
 }
 
 /// Reset state and apply a successfully-parsed template.
 fn apply_template_to_state(
     state: &mut ConfigFileState,
-    template: &Template,
+    template_id: &'static str,
     model: ConfigurationYaml,
+    snapshot: String,
 ) {
     state.picked_config_file = None;
-    state.config_file_content = Some(template.yaml.to_string());
+    state.config_file_content = Some(snapshot.clone());
     state.config_model = Some(model);
-    state.clean_snapshot = Some(template.yaml.to_string());
+    state.clean_snapshot = Some(snapshot);
     state.config_error = None;
     state.config_chosen = true;
     state.is_dirty = false;
-    state.loaded_template_id = Some(template.id.to_string());
+    state.loaded_template_id = Some(template_id.to_string());
 }
 
 /// Load an empty configuration with only metadata.

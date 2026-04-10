@@ -1,18 +1,38 @@
 //! Node click handling and info/edit modal for the visualization graph.
 
-use super::state::{NetworkNode, NodeType, VisualizationState};
+use super::state::{NetworkNode, NodeType, VisualizationState, INTERNET_HOST_SENTINEL};
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
-use fosr_lib::config::HostYaml;
-use fosr_lib::structs::OS;
 use crate::shared::config::state::ConfigFileState;
-use crate::shared::widgets::helpers::os_display_name;
 use crate::shared::constants::colors::{COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT};
 use crate::shared::constants::ui::{
     INDENT_STANDARD, LEGEND_ICON_SIZE, NODE_MODAL_WIDTH, SPACING_LG, SPACING_SM,
 };
+use crate::shared::widgets::helpers::os_display_name;
 use eframe::egui;
 use egui_material_icons::icons::{ICON_CLOSE, ICON_SAVE};
 use egui_graphs::events::{Event, PayloadNodeClick};
+use fosr_lib::config::{ConfigurationYaml, HostYaml};
+use fosr_lib::structs::OS;
+
+/// Look up a host by `(net_idx, host_idx)` position.
+fn get_host_by_pos<'a>(model: &'a ConfigurationYaml, pos: (usize, usize)) -> Option<&'a HostYaml> {
+    let (net_idx, h_idx) = pos;
+    if net_idx == INTERNET_HOST_SENTINEL {
+        model.internet.get(h_idx)
+    } else {
+        model.networks.get(net_idx).and_then(|n| n.hosts.get(h_idx))
+    }
+}
+
+/// Look up a host by `(net_idx, host_idx)` position, mutably.
+fn get_host_by_pos_mut<'a>(model: &'a mut ConfigurationYaml, pos: (usize, usize)) -> Option<&'a mut HostYaml> {
+    let (net_idx, h_idx) = pos;
+    if net_idx == INTERNET_HOST_SENTINEL {
+        model.internet.get_mut(h_idx)
+    } else {
+        model.networks.get_mut(net_idx).and_then(|n| n.hosts.get_mut(h_idx))
+    }
+}
 
 /// Process graph click events from the event buffer.
 pub fn process_graph_events(
@@ -28,12 +48,12 @@ pub fn process_graph_events(
             state.modal.open = true;
 
             // Clone the host into the edit buffer
-            let host_idx = state.network.node_to_host.get(&node_idx).copied();
-            state.modal.edit_buffer = host_idx.and_then(|idx| {
+            let host_pos = state.network.node_to_host.get(&node_idx).copied();
+            state.modal.edit_buffer = host_pos.and_then(|pos| {
                 configuration_file_state
                     .config_model
                     .as_ref()
-                    .and_then(|c| c.get_host(idx).cloned())
+                    .and_then(|c| get_host_by_pos(c, pos).cloned())
             });
         }
     }
@@ -60,7 +80,7 @@ pub fn render_node_info_modal(
     };
 
     let node_data = node.payload().clone();
-    let host_idx = state.network.node_to_host.get(&node_idx).copied();
+    let host_pos = state.network.node_to_host.get(&node_idx).copied();
     let has_edit_buffer = state.modal.edit_buffer.is_some();
 
     let mut save_clicked = false;
@@ -82,7 +102,7 @@ pub fn render_node_info_modal(
 
     // Apply changes to config model on Save
     if save_clicked {
-        apply_changes_to_config(state, config_file_state, host_idx);
+        apply_changes_to_config(state, config_file_state, host_pos);
     }
 
     // Close on Escape or click outside (discard changes)
@@ -242,28 +262,25 @@ fn render_modal_footer(ui: &mut egui::Ui, has_edit_buffer: bool, save_clicked: &
 
 /// Apply changes from edit buffer back to the config model.
 ///
-/// Uses the flat host index from `node_to_host` to find the host in `ConfigurationYaml`.
-/// This relies on the graph being rebuilt from scratch on every config change - the index
-/// is positional across networks then internet, so it would be wrong if the graph were
-/// updated incrementally without a full rebuild.
+/// Uses the `(net_idx, host_idx)` pair from `node_to_host` to find the host
+/// in `ConfigurationYaml`.
 fn apply_changes_to_config(
     state: &mut VisualizationState,
     config_file_state: &mut ConfigFileState,
-    host_idx: Option<usize>,
+    host_pos: Option<(usize, usize)>,
 ) {
-    if let (Some(idx), Some(buffer)) = (host_idx, state.modal.edit_buffer.take()) {
-        if let Some(host) = config_file_state
+    if let (Some(pos), Some(buffer)) = (host_pos, state.modal.edit_buffer.take()) {
+        let host_found = config_file_state
             .config_model
             .as_mut()
-            .and_then(|c| c.get_host_mut(idx))
-        {
-            *host = buffer;
-        }
-        // Sync config model back to YAML so other tabs and handle_config_changes pick it up
-        if let Some(model) = &config_file_state.config_model {
-            if let Ok(yaml) = serde_yaml::to_string(model) {
-                config_file_state.config_file_content = Some(yaml);
-            }
+            .and_then(|c| get_host_by_pos_mut(c, pos))
+            .map(|host| {
+                *host = buffer;
+            });
+
+        if host_found.is_some() {
+            // Sync config model back to YAML so other tabs and handle_config_changes pick it up
+            config_file_state.sync_model_to_yaml();
         }
     }
 }

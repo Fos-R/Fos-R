@@ -6,6 +6,7 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
 use std::net::Ipv4Addr;
 use std::time::Duration;
+use strum::{Display, EnumIter, IntoEnumIterator};
 use thingbuf::Recycle;
 
 /// A general wrapper to pass a seed along with actual data
@@ -79,9 +80,10 @@ impl Protocol {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq, Display, EnumIter)]
 #[allow(clippy::upper_case_acronyms)]
 #[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
 /// A list of application layer protocol
 pub enum L7Proto {
     HTTP,
@@ -99,6 +101,30 @@ pub enum L7Proto {
 }
 
 impl L7Proto {
+    /// All protocol names as strings.
+    pub fn all_names() -> Vec<String> {
+        L7Proto::iter().map(|p| p.to_string()).collect()
+    }
+
+    /// Human-facing label for UI display (e.g. "mDNS", "HTTP").
+    /// Unlike `Display` (lowercase for config use), this preserves capitalization.
+    pub fn ui_label(&self) -> &'static str {
+        match self {
+            L7Proto::HTTP => "HTTP",
+            L7Proto::HTTPS => "HTTPS",
+            L7Proto::SSH => "SSH",
+            L7Proto::DNS => "DNS",
+            L7Proto::DHCP => "DHCP",
+            L7Proto::SMTP => "SMTP",
+            L7Proto::Telnet => "Telnet",
+            L7Proto::IMAPS => "IMAPS",
+            L7Proto::MQTT => "MQTT",
+            L7Proto::KMS => "KMS",
+            L7Proto::MulticastDNS => "mDNS",
+            L7Proto::NTP => "NTP",
+        }
+    }
+
     /// Default destination port that is used if a configuration file does not override it
     pub fn get_default_port(&self) -> u16 {
         match self {

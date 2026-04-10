@@ -1,20 +1,12 @@
 //! Service editing UI: HTTP, SSH, DNS, etc. with custom port support.
 
 use fosr_lib::config::InterfaceYaml;
+use fosr_lib::structs::L7Proto;
 use crate::shared::constants::network::{PORT_MAX, PORT_MIN, PORT_UNSPECIFIED};
-use crate::shared::constants::ui::SPACING_XS;
+use crate::shared::constants::ui::{MULTI_SELECT_PICKER_WIDTH, SPACING_XS};
 use crate::shared::widgets::helpers::info_icon_with_tooltip;
 use crate::shared::widgets::multi_select_picker::multi_select_picker;
 use eframe::egui;
-
-pub const KNOWN_SERVICES: &[(&str, Option<u16>)] = &[
-    ("http", Some(80)),
-    ("https", Some(443)),
-    ("ssh", Some(22)),
-    ("ftp", Some(21)),
-    ("smtp", Some(25)),
-    ("dns", Some(53)),
-];
 
 /// Splits "name:port" into ("name", Some(port))
 fn parse_service(s: &str) -> (String, Option<u16>) {
@@ -34,12 +26,10 @@ fn format_service(name: &str, port: Option<u16>) -> String {
     }
 }
 
-/// Look up the default port for a known service name.
+/// Look up the default port for a known service name via L7Proto.
 fn default_port_for_service(name: &str) -> u16 {
-    KNOWN_SERVICES
-        .iter()
-        .find(|(n, _)| *n == name)
-        .and_then(|(_, p)| *p)
+    L7Proto::try_from(name.to_string())
+        .map(|p| p.get_default_port())
         .unwrap_or(PORT_UNSPECIFIED)
 }
 
@@ -53,7 +43,8 @@ pub fn render_services_section(
     let service_count = interface.services.as_ref().map_or(0, |s| s.len());
 
     // Picker in a horizontal line: label + info icon + select
-    let service_names: Vec<&str> = KNOWN_SERVICES.iter().map(|(n, _)| *n).collect();
+    let service_names = L7Proto::all_names();
+    let service_name_refs: Vec<&str> = service_names.iter().map(|s| s.as_str()).collect();
     let mut selected_names: Vec<String> = interface
         .services
         .as_ref()
@@ -88,9 +79,9 @@ pub fn render_services_section(
         multi_select_picker(
             ui,
             picker_id,
-            &service_names,
+            &service_name_refs,
             &mut selected_names,
-            200.0,
+            MULTI_SELECT_PICKER_WIDTH,
         );
     });
 

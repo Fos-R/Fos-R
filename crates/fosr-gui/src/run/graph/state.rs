@@ -2,12 +2,13 @@
 
 use super::shapes::{NetworkEdgeShape, NetworkNodeShape};
 use super::stream::{FlowEvent, FlowStreamer};
-use super::graph_layout::arrange_nodes_in_circle;
+use super::graph_layout::{arrange_nodes_in_circle, arrange_nodes_in_clusters};
+use crate::shared::constants::ui::{DELAY_FRAMES_QUICK, ZONE_PAD_BASE, ZONE_PAD_LABEL, ZONE_PAD_TOP_INSET};
 use fosr_lib::config::HostYaml;
-use crate::shared::constants::ui::DELAY_FRAMES_QUICK;
 use eframe::egui;
 use egui_graphs::events::Event;
-use fosr_lib::{L7Proto, OS, config, config::HostType};
+use fosr_lib::{L7Proto, OS, config, config::HostType, config::INTERNET_NETWORK_NAME};
+use strum::EnumIter;
 use petgraph::graph::NodeIndex;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -20,6 +21,43 @@ use web_time::Instant;
 
 /// Special IP address representing "The Internet" node
 pub const INTERNET_NODE_IP: Ipv4Addr = Ipv4Addr::new(0, 0, 0, 1);
+
+/// Sentinel `net_idx` in `node_to_host` indicating the host lives in
+/// `ConfigurationYaml.internet` rather than `ConfigurationYaml.networks[i]`.
+pub const INTERNET_HOST_SENTINEL: usize = usize::MAX;
+
+/// Synthetic cluster key for the fallback Internet node when no Internet subnet exists.
+const FALLBACK_INTERNET_CLUSTER: &str = "__internet__";
+
+/// How subnet zones are displayed in the graph.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, EnumIter)]
+pub enum SubnetDisplayMode {
+    /// All nodes placed on a single circle, no zone rectangles.
+    Flat,
+    /// Uniform color zone rectangles for all subnets.
+    #[default]
+    Subnet,
+    /// Each subnet gets a distinct color (golden-ratio hue distribution).
+    ColoredSubnets,
+}
+
+impl SubnetDisplayMode {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Flat => "Flat",
+            Self::Subnet => "Subnet",
+            Self::ColoredSubnets => "Colored subnets",
+        }
+    }
+
+    pub fn tooltip(self) -> &'static str {
+        match self {
+            Self::Flat => "No zones - nodes grouped without borders.",
+            Self::Subnet => "Uniform zone color across all subnets.",
+            Self::ColoredSubnets => "Each subnet gets a distinct color.",
+        }
+    }
+}
 
 /// Node type for visualization (extends HostType with Internet)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -38,13 +76,43 @@ impl From<HostType> for NodeType {
     }
 }
 
+/// Subnet zone rendering metadata, stored on the zone's designated drawer node.
+#[derive(Clone, Debug)]
+pub struct ZoneDisplay {
+    /// Whether this node is designated to draw the subnet zone background.
+    pub draws_zone: bool,
+    /// Center of the zone bounding rectangle (canvas coordinates).
+    pub center: egui::Pos2,
+    /// Half-size of the zone bounding rectangle (canvas coordinates).
+    pub half_size: egui::Vec2,
+    /// Label of the zone (subnet name + CIDR).
+    pub label: Option<String>,
+    /// Color index for dynamic HSL generation.
+    pub color_idx: usize,
+    /// Current subnet display mode.
+    pub subnet_mode: SubnetDisplayMode,
+}
+
+impl Default for ZoneDisplay {
+    fn default() -> Self {
+        Self {
+            draws_zone: false,
+            center: egui::Pos2::ZERO,
+            half_size: egui::Vec2::ZERO,
+            label: None,
+            color_idx: 0,
+            subnet_mode: SubnetDisplayMode::default(),
+        }
+    }
+}
+
 /// Node data: host information
 #[derive(Clone, Debug)]
 pub struct NetworkNode {
     pub ip_addrs: Vec<Ipv4Addr>,
     pub hostname: Option<String>,
     pub node_type: NodeType,
-    #[allow(dead_code)] // Kept for possible future use (node styling by OS?)
+    #[allow(dead_code)] // Kept for possible future use (e.g., node styling by OS)
     pub os: OS,
     /// Number of flows this node has been involved in (as sender or receiver).
     /// Used for dynamic node sizing - more active nodes appear larger.
@@ -52,6 +120,22 @@ pub struct NetworkNode {
     /// Maximum flow count among all nodes (for proportional sizing).
     /// When the linear formula would exceed RADIUS_MAX, we switch to proportional mode.
     pub max_flow_count: u32,
+    /// Subnet zone rendering metadata (populated on the zone's first node).
+    pub zone: ZoneDisplay,
+}
+
+impl Default for NetworkNode {
+    fn default() -> Self {
+        Self {
+            ip_addrs: Vec::new(),
+            hostname: None,
+            node_type: NodeType::User,
+            os: OS::default(),
+            flow_count: 0,
+            max_flow_count: 0,
+            zone: ZoneDisplay::default(),
+        }
+    }
 }
 
 impl NetworkNode {
@@ -59,11 +143,9 @@ impl NetworkNode {
     pub fn internet() -> Self {
         Self {
             ip_addrs: vec![INTERNET_NODE_IP],
-            hostname: Some("Internet".to_string()),
+            hostname: Some(INTERNET_NETWORK_NAME.to_string()),
             node_type: NodeType::Internet,
-            os: OS::Linux, // Doesn't matter for Internet node
-            flow_count: 0,
-            max_flow_count: 0,
+            ..Default::default()
         }
     }
 }
@@ -125,7 +207,7 @@ pub enum EdgeState {
     Inactive,
     Active {
         protocol: L7Proto,
-        #[allow(dead_code)] // Kept for possible future animation effects?
+        #[allow(dead_code)] // Kept for possible future animation effects
         start_time: Instant,
         direction: LinkDirection,
     },
@@ -175,6 +257,15 @@ pub enum ScreenshotStateMachine {
     WaitingForScreenshot,
 }
 
+/// Subnet zone metadata for background rectangle rendering.
+#[derive(Clone, Debug)]
+pub struct SubnetZone {
+    pub name: String,
+    pub subnet: Ipv4Addr,
+    pub mask: u8,
+    pub host_indices: Vec<NodeIndex>,
+}
+
 /// Network structure with graph, IP/Node lookups, and construction methods.
 ///
 /// Use [`NetworkData::from_config`] to build from a configuration.
@@ -182,7 +273,8 @@ pub struct NetworkData {
     pub graph: VisualizationGraph,
     pub known_ips: HashSet<Ipv4Addr>,
     pub ip_to_node: HashMap<Ipv4Addr, NodeIndex>,
-    pub node_to_host: HashMap<NodeIndex, usize>,
+    pub node_to_host: HashMap<NodeIndex, (usize, usize)>,
+    pub subnet_zones: Vec<SubnetZone>,
 }
 
 impl Default for NetworkData {
@@ -192,84 +284,297 @@ impl Default for NetworkData {
             known_ips: HashSet::new(),
             ip_to_node: HashMap::new(),
             node_to_host: HashMap::new(),
+            subnet_zones: Vec::new(),
         }
     }
 }
 
 impl NetworkData {
+    /// Iterate over all node payloads mutably.
+    fn for_each_node_mut(&mut self, mut f: impl FnMut(&mut NetworkNode)) {
+        let indices: Vec<NodeIndex> = self.graph.g().node_indices().collect();
+        for idx in indices {
+            if let Some(node) = self.graph.g_mut().node_weight_mut(idx) {
+                f(node.payload_mut());
+            }
+        }
+    }
     /// Build network data from the configuration.
     ///
-    /// Creates nodes for each host, lays them out in a circle,
-    /// adds the Internet node at center, and connects edges.
-    pub fn from_config(config: &config::Configuration) -> Self {
+    /// Creates nodes for each host (including Internet subnet hosts),
+    /// adds a synthetic Internet node for fallback communications,
+    /// lays them out according to `mode`, and connects edges.
+    pub fn from_config(config: &config::Configuration, mode: SubnetDisplayMode) -> Self {
         let mut data = Self::default();
-        data.add_host_nodes(config);
-        data.distribute_layout();
-        data.add_internet_node();
+        let has_internet_hosts = data.add_host_nodes(config);
+        data.add_internet_node(has_internet_hosts);
+        data.distribute_layout(mode);
         data.add_edges(config);
         data
     }
 
-    /// Add one node per host (with all its IPs).
+    /// Add one node per host (with all its IPs), grouped by network.
     ///
-    /// Hosts are assigned a flat positional index via `enumerate()`. This index is stored
-    /// in `node_to_host` so the node modal can look up the corresponding `HostYaml` later.
-    /// This is safe because the graph is always rebuilt from scratch on config changes
-    /// (see `config_handling.rs`), so indexes stay consistent.
-    fn add_host_nodes(&mut self, config: &config::Configuration) {
-        for (host_idx, host) in config.get_hosts().iter().enumerate() {
-            let all_ips: Vec<Ipv4Addr> = host.interfaces.iter().map(|i| i.ip_addr).collect();
+    /// Returns `true` if the Internet network had configured hosts.
+    ///
+    /// Hosts are identified by a `(net_idx, host_idx)` tuple stored in `node_to_host`,
+    /// so the node modal can look up the corresponding `HostYaml` later.
+    /// Internet hosts use [`INTERNET_HOST_SENTINEL`] as `net_idx` so the modal knows
+    /// to look in `ConfigurationYaml.internet` instead of `networks`.
+    fn add_host_nodes(&mut self, config: &config::Configuration) -> bool {
+        let mut has_internet_hosts = false;
 
-            let node_data = NetworkNode {
-                ip_addrs: all_ips.clone(),
-                hostname: host.hostname.clone(),
-                node_type: host.host_type.into(),
-                os: host.os,
-                flow_count: 0,
-                max_flow_count: 0,
+        for (net_idx, network) in config.networks.iter().enumerate() {
+            if network.name == INTERNET_NETWORK_NAME {
+                if network.hosts.is_empty() {
+                    continue;
+                }
+                has_internet_hosts = true;
+            }
+
+            let mut zone = SubnetZone {
+                name: network.name.clone(),
+                subnet: network.subnet,
+                mask: network.mask,
+                host_indices: Vec::new(),
             };
-            let idx = self.graph.add_node_with_location(node_data, egui::pos2(0.0, 0.0));
-            self.node_to_host.insert(idx, host_idx);
 
-            // Map all IPs of this host to the same node
-            for ip in all_ips {
-                self.known_ips.insert(ip);
-                self.ip_to_node.insert(ip, idx);
+            for (host_idx, host) in network.hosts.iter().enumerate() {
+                // Map all IPs of this host to the same node
+                let all_ips: Vec<Ipv4Addr> = host.interfaces.iter().map(|i| i.ip_addr).collect();
+
+                let node_data = NetworkNode {
+                    ip_addrs: all_ips.clone(),
+                    hostname: host.hostname.clone(),
+                    node_type: host.host_type.into(),
+                    os: host.os,
+                    ..Default::default()
+                };
+
+                // Nodes are initially inserted at position (0, 0). They are distributed in the available zone afterward.
+                let idx = self.graph.add_node_with_location(node_data, egui::pos2(0.0, 0.0));
+
+                // Use sentinel for Internet hosts so the modal looks in model.internet
+                let host_key = if network.name == INTERNET_NETWORK_NAME {
+                    (INTERNET_HOST_SENTINEL, host_idx)
+                } else {
+                    (net_idx, host_idx)
+                };
+                self.node_to_host.insert(idx, host_key);
+                zone.host_indices.push(idx);
+
+                for ip in &all_ips {
+                    self.known_ips.insert(*ip);
+                    self.ip_to_node.insert(*ip, idx);
+                }
+            }
+
+            self.subnet_zones.push(zone);
+        }
+
+        has_internet_hosts
+    }
+
+    /// Compute the padded bounding box for a set of nodes.
+    ///
+    /// Returns `(center, half_size)` in canvas coordinates, or `None` if the
+    /// node list is empty or no positions could be read.
+    fn compute_zone_bounds(&self, host_indices: &[NodeIndex]) -> Option<(egui::Pos2, egui::Vec2)> {
+        if host_indices.is_empty() {
+            return None;
+        }
+
+        let mut min_x = f32::MAX;
+        let mut min_y = f32::MAX;
+        let mut max_x = f32::MIN;
+        let mut max_y = f32::MIN;
+
+        // Iterate over each node of the network to progressively enlarge the rectangle,
+        // so that it includes all the nodes centers.
+        for &idx in host_indices {
+            if let Some(node) = self.graph.g().node_weight(idx) {
+                let loc = node.location();
+                min_x = min_x.min(loc.x);
+                min_y = min_y.min(loc.y);
+                max_x = max_x.max(loc.x);
+                max_y = max_y.max(loc.y);
+            }
+        }
+
+        // Add padding to include the node icons and labels in the rectangle.
+        min_x -= ZONE_PAD_BASE + ZONE_PAD_LABEL;
+        min_y -= ZONE_PAD_BASE - ZONE_PAD_TOP_INSET; // Smaller padding: there is no label above a node.
+        max_x += ZONE_PAD_BASE + ZONE_PAD_LABEL;
+        max_y += ZONE_PAD_BASE + ZONE_PAD_LABEL;
+
+        Some((
+            egui::pos2((min_x + max_x) / 2.0, (min_y + max_y) / 2.0),
+            egui::vec2((max_x - min_x) / 2.0, (max_y - min_y) / 2.0),
+        ))
+    }
+
+    /// Distribute nodes in the graph.
+    ///
+    /// In `Flat` mode, all nodes are placed evenly on a single circle.
+    /// Otherwise, nodes are grouped by subnet in radial sectors.
+    ///
+    /// When an Internet subnet zone exists (i.e. Internet hosts are configured),
+    /// the synthetic Internet node is placed inside that zone.
+    /// Otherwise it gets its own standalone cluster.
+    pub fn distribute_layout(&mut self, mode: SubnetDisplayMode) {
+        let inet_zone_idx = self.subnet_zones.iter().position(|z| z.name == INTERNET_NETWORK_NAME);
+
+        // Add synthetic Internet node into the Internet subnet zone when it exists
+        if let Some(zone_idx) = inet_zone_idx {
+            if let Some(&inet_idx) = self.ip_to_node.get(&INTERNET_NODE_IP) {
+                // Avoid duplicates on repeated calls (e.g. layout reset)
+                if !self.subnet_zones[zone_idx].host_indices.contains(&inet_idx) {
+                    self.subnet_zones[zone_idx].host_indices.push(inet_idx);
+                }
+            }
+        }
+
+        if mode == SubnetDisplayMode::Flat {
+            arrange_nodes_in_circle(&mut self.graph);
+            return;
+        }
+
+        let mut hosts_by_subnet: HashMap<String, Vec<NodeIndex>> = HashMap::new();
+        for zone in &self.subnet_zones {
+            hosts_by_subnet.insert(zone.name.clone(), zone.host_indices.clone());
+        }
+
+        // When no Internet hosts, give the synthetic node its own cluster
+        if inet_zone_idx.is_none() {
+            if let Some(&inet_idx) = self.ip_to_node.get(&INTERNET_NODE_IP) {
+                hosts_by_subnet.insert(FALLBACK_INTERNET_CLUSTER.to_string(), vec![inet_idx]);
+            }
+        }
+
+        arrange_nodes_in_clusters(&mut self.graph, &hosts_by_subnet);
+
+        self.assign_zone_metadata();
+    }
+
+    /// Compute zone bounding boxes and store metadata on each zone's first node.
+    ///
+    /// Called after layout to set `draws_zone`, bounding box, label, and color index
+    /// on the designated node of each subnet zone.
+    fn assign_zone_metadata(&mut self) {
+        self.update_zone_bounds(true);
+    }
+
+    /// Update zone bounding boxes and optionally set full metadata on each zone's first node.
+    ///
+    /// When `full` is true (after layout), also sets `draws_zone`, label, and color index.
+    /// When `full` is false (per-frame recomputation), only updates bounding boxes.
+    fn update_zone_bounds(&mut self, full: bool) {
+        // Sort zones by name for stable ordering and consistent color index
+        let mut zone_order: Vec<usize> = (0..self.subnet_zones.len()).collect();
+        zone_order.sort_by_key(|&i| &self.subnet_zones[i].name);
+
+        for (order_idx, &zone_idx) in zone_order.iter().enumerate() {
+            let zone = &self.subnet_zones[zone_idx];
+            let hosts = &zone.host_indices;
+
+            let (center, half_size) = match self.compute_zone_bounds(hosts) {
+                Some(bounds) => bounds,
+                None => continue,
+            };
+
+            // Reminder: the zone's data is stored in the first node of a subnet.
+            if let Some(&first_idx) = hosts.first() {
+                // Update the node's data relative to the zone.
+                if let Some(node) = self.graph.g_mut().node_weight_mut(first_idx) {
+                    let p = node.payload_mut();
+                    p.zone.center = center;
+                    p.zone.half_size = half_size;
+                    if full {
+                        p.zone.draws_zone = true;
+                        // Do not display CIDR for the "Internet" zone.
+                        p.zone.label = Some(if zone.name == INTERNET_NETWORK_NAME {
+                            zone.name.clone()
+                        } else {
+                            format!("{}\n{}/{}", zone.name, zone.subnet, zone.mask)
+                        });
+                        p.zone.color_idx = order_idx;
+                    }
+                }
             }
         }
     }
 
-    /// Distribute nodes in a circle (before adding Internet, so it stays centered).
-    fn distribute_layout(&mut self) {
-        arrange_nodes_in_circle(&mut self.graph);
-    }
-
-    /// Add the Internet node at the center.
-    fn add_internet_node(&mut self) {
-        let internet_idx = self.graph.add_node_with_location(NetworkNode::internet(), egui::pos2(0.0, 0.0));
+    /// Add the synthetic Internet node for fallback communications.
+    ///
+    /// When `rename` is true (Internet hosts exist), the node is labeled
+    /// "Rest of Internet" to distinguish it from configured Internet hosts.
+    fn add_internet_node(&mut self, rename: bool) {
+        let mut node = NetworkNode::internet();
+        if rename {
+            node.hostname = Some("Rest of Internet".to_string());
+        }
+        let internet_idx = self.graph.add_node_with_location(node, egui::pos2(0.0, 0.0));
         self.ip_to_node.insert(INTERNET_NODE_IP, internet_idx);
     }
 
-    /// Add edges between users, servers, and Internet.
-    fn add_edges(&mut self, config: &config::Configuration) {
-        let internet_idx = self.ip_to_node[&INTERNET_NODE_IP];
+    /// Recompute subnet zone bounding boxes from current node positions.
+    ///
+    /// Should be called each frame before rendering so that dragging a node
+    /// causes its subnet rectangle to follow.
+    pub fn recompute_zone_bounds(&mut self) {
+        self.update_zone_bounds(false);
+    }
 
-        // Add edges from users to servers and Internet
-        for &user_ip in &config.users {
-            if let Some(&user_idx) = self.ip_to_node.get(&user_ip) {
-                for &server_ip in &config.servers {
-                    if let Some(&server_idx) = self.ip_to_node.get(&server_ip) {
-                        self.graph.add_edge(user_idx, server_idx, NetworkEdge::default());
+    /// Propagate the current subnet display mode to all node payloads.
+    pub fn set_subnet_mode(&mut self, mode: SubnetDisplayMode) {
+        // Collect zone drawer nodes once
+        let zone_drawers: HashSet<NodeIndex> = if mode != SubnetDisplayMode::Flat {
+            self.subnet_zones.iter()
+                .filter_map(|z| z.host_indices.first().copied())
+                .collect()
+        } else {
+            HashSet::new()
+        };
+
+        self.for_each_node_mut(|p| {
+            p.zone.subnet_mode = mode;
+            p.zone.draws_zone = false;
+        });
+
+        // Re-enable zone drawing on designated nodes for non-flat modes
+        for drawer_idx in &zone_drawers {
+            if let Some(node) = self.graph.g_mut().node_weight_mut(*drawer_idx) {
+                node.payload_mut().zone.draws_zone = true;
+            }
+        }
+    }
+
+    /// Add edges between users and servers per service, plus edges to Internet.
+    fn add_edges(&mut self, config: &config::Configuration) {
+        let internet_idx = self.ip_to_node.get(&INTERNET_NODE_IP).expect("Internet node must exist");
+
+        for service in &config.services {
+            let users = config.get_users_per_service(service);
+            let servers = config.get_servers_per_service(service);
+
+            for &user_ip in &users {
+                if let Some(&user_idx) = self.ip_to_node.get(&user_ip) {
+                    for &server_ip in &servers {
+                        if let Some(&server_idx) = self.ip_to_node.get(&server_ip) {
+                            self.graph.add_edge(user_idx, server_idx, NetworkEdge::default());
+                        }
                     }
                 }
-                self.graph.add_edge(user_idx, internet_idx, NetworkEdge::default());
             }
         }
 
-        // Add edges from servers to Internet
-        for &server_ip in &config.servers {
-            if let Some(&server_idx) = self.ip_to_node.get(&server_ip) {
-                self.graph.add_edge(server_idx, internet_idx, NetworkEdge::default());
+        // Add edges from all user and server nodes to Internet
+        let mut connected_to_internet: HashSet<NodeIndex> = HashSet::new();
+        for &ip in config.users.iter().chain(config.servers.iter()) {
+            if let Some(&idx) = self.ip_to_node.get(&ip) {
+                if connected_to_internet.insert(idx) {
+                    self.graph.add_edge(idx, *internet_idx, NetworkEdge::default());
+                }
             }
         }
     }
@@ -303,7 +608,9 @@ impl Default for FlowVisualizationState {
 /// Layout and rendering state
 pub struct GraphViewState {
     pub layout_initialized: bool,
-    pub reset_requested: bool,
+    pub fit_to_screen_requested: bool,
+    /// When true, redistribute node positions and fit to screen.
+    pub layout_reset_requested: bool,
     pub delayed_fit_countdown: Option<u8>,
     pub last_screen_size: Option<egui::Vec2>,
     pub graph_rect: Option<egui::Rect>,
@@ -313,7 +620,8 @@ impl Default for GraphViewState {
     fn default() -> Self {
         Self {
             layout_initialized: false,
-            reset_requested: false,
+            fit_to_screen_requested: false,
+            layout_reset_requested: false,
             delayed_fit_countdown: Some(DELAY_FRAMES_QUICK), // Delay initial fit for bottom panel
             last_screen_size: None,
             graph_rect: None,
@@ -358,6 +666,8 @@ pub struct VisualizationState {
     pub auto_start_countdown: Option<u8>,
     /// Whether user has manually started visualization
     pub user_has_started: bool,
+    /// Current subnet display mode
+    pub subnet_mode: SubnetDisplayMode,
 }
 
 impl Default for VisualizationState {
@@ -371,6 +681,7 @@ impl Default for VisualizationState {
             config_content: None,
             auto_start_countdown: None,
             user_has_started: false,
+            subnet_mode: SubnetDisplayMode::default(),
         }
     }
 }
@@ -379,7 +690,9 @@ impl VisualizationState {
     /// Update state from a configuration (preserves some state).
     /// Note: caller should stop visualization before calling this if running.
     pub fn update_from_config(&mut self, config: &config::Configuration) {
-        self.network = NetworkData::from_config(config);
+        let mode = self.subnet_mode;
+        self.network = NetworkData::from_config(config, mode);
+        self.network.set_subnet_mode(mode);
         self.view.layout_initialized = false;
     }
 
@@ -391,13 +704,10 @@ impl VisualizationState {
     /// Reset all flow counts on nodes and edges
     fn reset_flow_counts(&mut self) {
         self.flow.total_flows = 0;
-        for idx in self.network.graph.g().node_indices().collect::<Vec<_>>() {
-            if let Some(node) = self.network.graph.g_mut().node_weight_mut(idx) {
-                let payload = node.payload_mut();
-                payload.flow_count = 0;
-                payload.max_flow_count = 0;
-            }
-        }
+        self.network.for_each_node_mut(|p| {
+            p.flow_count = 0;
+            p.max_flow_count = 0;
+        });
         for idx in self.network.graph.g().edge_indices().collect::<Vec<_>>() {
             if let Some(edge) = self.network.graph.g_mut().edge_weight_mut(idx) {
                 let payload = edge.payload_mut();

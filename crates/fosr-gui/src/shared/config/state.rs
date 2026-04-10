@@ -58,3 +58,21 @@ impl Default for ConfigFileState {
         }
     }
 }
+
+impl ConfigFileState {
+    /// Serialize the current model to YAML and update `config_file_content`.
+    pub fn sync_model_to_yaml(&mut self) {
+        let Some(model) = &self.config_model else {
+            return;
+        };
+        match serde_yaml::to_string(model) {
+            Ok(yaml) => {
+                self.config_error = None;
+                self.config_file_content = Some(yaml);
+            }
+            Err(e) => {
+                self.config_error = Some(e.to_string());
+            }
+        }
+    }
+}

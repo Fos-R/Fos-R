@@ -17,7 +17,7 @@ pub fn parse_config_yaml(configuration_file_state: &mut ConfigFileState) {
     match serde_yaml::from_str::<ConfigurationYaml>(yaml) {
         Ok(model) => {
             if configuration_file_state.clean_snapshot.is_none() {
-                configuration_file_state.clean_snapshot = Some(yaml.to_string());
+                configuration_file_state.clean_snapshot = Some(serde_yaml::to_string(&model).unwrap_or_default());
             }
             configuration_file_state.config_model = Some(model);
             configuration_file_state.is_dirty = true;

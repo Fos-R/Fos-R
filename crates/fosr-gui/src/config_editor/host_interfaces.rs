@@ -3,11 +3,12 @@
 use crate::config_editor::host_services;
 use egui_material_icons::icons::{ICON_ADD, ICON_DELETE};
 use fosr_lib::config::{HostYaml, InterfaceYaml};
+use fosr_lib::structs::L7Proto;
 use crate::shared::constants::colors::COLOR_ERROR;
 use crate::shared::constants::network::{
     MAC_ADDRESS_BYTES, MAC_LOCAL_BIT, MAC_LOCAL_MASK,
 };
-use crate::shared::constants::ui::{SPACING_MD, SPACING_SM};
+use crate::shared::constants::ui::{MULTI_SELECT_PICKER_WIDTH, SPACING_MD, SPACING_SM};
 use crate::shared::widgets::helpers::{info_icon_with_tooltip, render_optional_string_input, required_label};
 use crate::shared::widgets::multi_select_picker::multi_select_picker;
 use eframe::egui;
@@ -68,15 +69,28 @@ pub fn render_interfaces_section(
         {
             let ip = subnet_ctx
                 .and_then(|(subnet, mask)| find_available_ip_in_subnet(subnet, mask, ip_counts));
-            if let Some(ip) = ip {
-                host.interfaces.insert(0, InterfaceYaml {
-                    ip_addr: ip,
-                    mac_addr: Some(generate_mac_until_unique(mac_counts)),
-                    services: Some(Vec::new()),
-                    uses: None,
-                });
-            } else {
-                ui.colored_label(COLOR_ERROR, "No free IP available in this subnet");
+
+            match (ip, subnet_ctx) {
+                (Some(ip), _) => {
+                    host.interfaces.insert(0, InterfaceYaml {
+                        ip_addr: ip,
+                        mac_addr: Some(generate_mac_until_unique(mac_counts)),
+                        services: Some(Vec::new()),
+                        uses: None,
+                    });
+                }
+                (None, None) => {
+                    // Internet host: no subnet context, create interface with empty IP
+                    host.interfaces.insert(0, InterfaceYaml {
+                        ip_addr: String::new(),
+                        mac_addr: Some(generate_mac_until_unique(mac_counts)),
+                        services: Some(Vec::new()),
+                        uses: None,
+                    });
+                }
+                (None, Some(_)) => {
+                    ui.colored_label(COLOR_ERROR, "No free IP available in this subnet");
+                }
             }
         }
     });
@@ -173,10 +187,8 @@ fn render_interface_fields(
 
     // Uses section - multi-select picker for protocols the host can use
     {
-        let protocol_names: Vec<&str> = host_services::KNOWN_SERVICES
-            .iter()
-            .map(|(n, _)| *n)
-            .collect();
+        let protocol_names = L7Proto::all_names();
+        let protocol_name_refs: Vec<&str> = protocol_names.iter().map(|s| s.as_str()).collect();
 
         let mut selected: Vec<String> = interface.uses.clone().unwrap_or_default();
 
@@ -188,9 +200,9 @@ fn render_interface_fields(
             multi_select_picker(
                 ui,
                 picker_id,
-                &protocol_names,
+                &protocol_name_refs,
                 &mut selected,
-                200.0,
+                MULTI_SELECT_PICKER_WIDTH,
             );
         });
 

@@ -4,8 +4,8 @@ use crate::shared::constants::colors::COLOR_ERROR;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::constants::ui::SPACING_SM;
 use crate::shared::constants::ui::{
-    BUTTON_PADDING, PANEL_INNER_MARGIN, TEXT_SIZE_DEFAULT, ZOOM_MAX, ZOOM_MIN, ZOOM_OFFSET,
-    ZOOM_STEP,
+    SPACING_XS, TAB_BUTTON_PADDING, PANEL_INNER_MARGIN, TEXT_SIZE_DEFAULT, ZOOM_MAX, ZOOM_MIN,
+    ZOOM_OFFSET, ZOOM_STEP,
 };
 use eframe::egui;
 use egui_material_icons::icons::{ICON_ADD, ICON_REMOVE};
@@ -143,7 +143,7 @@ fn render_zoom_controls(ui: &mut egui::Ui, ctx: &egui::Context) -> f32 {
     let mut new_zoom = ctx.zoom_factor();
 
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 2.0;
+        ui.spacing_mut().item_spacing.x = SPACING_XS;
 
         if ui
             .button(ICON_ADD)
@@ -230,11 +230,13 @@ pub fn render_top_bar(ctx: &egui::Context, state: TopBarState) -> TopBarState {
         )
         .show(ctx, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
-                ui.spacing_mut().button_padding = egui::vec2(BUTTON_PADDING.0, BUTTON_PADDING.1);
-
-                if let Some(tab) = render_tab_buttons(ui, &state) {
-                    new_state.current_tab = tab;
-                }
+                // Scoped padding for tab buttons only
+                ui.scope(|ui| {
+                    ui.spacing_mut().button_padding = egui::vec2(TAB_BUTTON_PADDING.0, TAB_BUTTON_PADDING.1);
+                    if let Some(tab) = render_tab_buttons(ui, &state) {
+                        new_state.current_tab = tab;
+                    }
+                });
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     render_utility_buttons(ui, ctx, &mut new_state);

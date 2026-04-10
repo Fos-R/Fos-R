@@ -8,6 +8,9 @@ use std::net::Ipv4Addr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use rand::prelude::*;
 
+/// Name of the synthetic Internet network.
+pub const INTERNET_NETWORK_NAME: &str = "Internet";
+
 /// The configuration file of the network and the hosts
 /// TODO: clean useless attributes
 #[derive(Debug)]
@@ -197,66 +200,6 @@ impl ConfigurationYaml {
             + self.internet.len()
     }
 
-    /// Get a host by flat index (networks first, then internet), mutable.
-    ///
-    /// **Safety net:** These flat-index methods are only used by the run/graph node modal
-    /// to map graph nodes back to hosts in the YAML model. They work because the entire
-    /// graph is rebuilt from scratch whenever the config changes (see `update_from_config`),
-    /// so the flat indexes always reflect the current structure.
-    pub fn get_host_mut(&mut self, flat_idx: usize) -> Option<&mut HostYaml> {
-        let mut remaining = flat_idx;
-        for network in &mut self.networks {
-            if remaining < network.hosts.len() {
-                return Some(&mut network.hosts[remaining]);
-            }
-            remaining -= network.hosts.len();
-        }
-        self.internet.get_mut(remaining)
-    }
-
-    /// Get a host by flat index, immutable.
-    pub fn get_host(&self, flat_idx: usize) -> Option<&HostYaml> {
-        let mut remaining = flat_idx;
-        for network in &self.networks {
-            if remaining < network.hosts.len() {
-                return Some(&network.hosts[remaining]);
-            }
-            remaining -= network.hosts.len();
-        }
-        self.internet.get(remaining)
-    }
-
-    /// Get the network name for a host at a given flat index.
-    pub fn get_network_name(&self, flat_idx: usize) -> Option<&str> {
-        let mut remaining = flat_idx;
-        for network in &self.networks {
-            if remaining < network.hosts.len() {
-                return Some(&network.name);
-            }
-            remaining -= network.hosts.len();
-        }
-        if remaining < self.internet.len() {
-            Some("Internet")
-        } else {
-            None
-        }
-    }
-
-    /// Remove a host by flat index.
-    pub fn remove_host(&mut self, flat_idx: usize) {
-        let mut remaining = flat_idx;
-        for network in &mut self.networks {
-            if remaining < network.hosts.len() {
-                network.hosts.remove(remaining);
-                return;
-            }
-            remaining -= network.hosts.len();
-        }
-        if remaining < self.internet.len() {
-            self.internet.remove(remaining);
-        }
-    }
-
     /// Add a new network to the configuration.
     pub fn add_network(&mut self, network: NetworkYaml) {
         self.networks.insert(0, network);
@@ -336,6 +279,9 @@ impl Default for HostYaml {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct InterfaceYaml {
+    // Required: the IPv4 address of this interface.
+    pub ip_addr: String,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mac_addr: Option<String>,
 
@@ -344,18 +290,15 @@ pub struct InterfaceYaml {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uses: Option<Vec<String>>,
-
-    // Required: the IPv4 address of this interface.
-    pub ip_addr: String,
 }
 
 impl Default for InterfaceYaml {
     fn default() -> Self {
         Self {
+            ip_addr: String::new(),
             mac_addr: None,
             services: None,
             uses: None,
-            ip_addr: String::new(),
         }
     }
 }
@@ -469,7 +412,7 @@ impl From<ConfigurationYaml> for Configuration {
         // let hosts = c.internet.into_iter().chain(c.networks.into_iter().map(|n| n.hosts.into_iter()).flatten()).collect();
 
         let mut all_networks = networks;
-        all_networks.push(Network { subnet: Ipv4Addr::new(0, 0, 0, 0), mask: 0, name: "Internet".to_string(), hosts: internet });
+        all_networks.push(Network { subnet: Ipv4Addr::new(0, 0, 0, 0), mask: 0, name: INTERNET_NETWORK_NAME.to_string(), hosts: internet });
 
         Configuration {
             metadata: c.metadata,
