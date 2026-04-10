@@ -10,11 +10,14 @@ use std::path::Path;
 /// The source of models
 pub enum ModelsSource {
     #[cfg(feature = "models_cicids17")]
-    /// Models based on the first day of CICIDS2017 dataset
+    /// Models based on the CICIDS2017 dataset
     CICIDS17,
     #[cfg(feature = "models_cupid")]
-    /// Models based on the first day of CICIDS2017 dataset
+    /// Models based on the CUPID dataset
     CUPID,
+    #[cfg(feature = "models_dedale")]
+    /// Models based on the DEDALE dataset
+    DEDALE,
     /// Models defined by the user
     UserDefined(String),
 }
@@ -332,6 +335,30 @@ impl ModelsSource {
                     ]
                 },
             ),
+            #[cfg(feature = "models_dedale")]
+            ModelsSource::DEDALE => Ok(
+                #[cfg(debug_assertions)]
+                {
+                    let d: Dir =
+                        include_dir!("$CARGO_MANIFEST_DIR/default_models/dedale/automata/");
+                    d.find("**/*.json")
+                        .unwrap()
+                        .filter_map(|e: &DirEntry| { dbg!(&e); e.as_file()})
+                        .map(|f| f.contents_utf8().unwrap().to_string())
+                        .collect()
+                },
+                #[cfg(not(debug_assertions))]
+                {
+                    // FIXME
+                    vec![
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/automata/dce_rpc-SF.json",
+                            22
+                        ))
+                        .unwrap(),
+                    ]
+                },
+            ),
             ModelsSource::UserDefined(path) => {
                 let paths = fs::read_dir(Path::new(path).join("automata").to_str().unwrap())?;
                 let mut automata = vec![];
@@ -362,6 +389,7 @@ impl ModelsSource {
                     .unwrap()
                 },
             ),
+
             #[cfg(feature = "models_cupid")]
             ModelsSource::CUPID => Ok(
                 #[cfg(debug_assertions)]
@@ -370,6 +398,20 @@ impl ModelsSource {
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cupid/bn/bn.bifxml",
+                        22
+                    ))
+                    .unwrap()
+                },
+            ),
+
+            #[cfg(feature = "models_dedale")]
+            ModelsSource::DEDALE => Ok(
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/dedale/bn/bn.bifxml").to_string(),
+                #[cfg(not(debug_assertions))]
+                {
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/dedale/bn/bn.bifxml",
                         22
                     ))
                     .unwrap()
@@ -400,6 +442,7 @@ impl ModelsSource {
                     .unwrap()
                 },
             ),
+
             #[cfg(feature = "models_cupid")]
             ModelsSource::CUPID => Ok(
                 #[cfg(debug_assertions)]
@@ -408,6 +451,20 @@ impl ModelsSource {
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cupid/pkt_count_clusters.json",
+                        22
+                    ))
+                    .unwrap()
+                },
+            ),
+
+            #[cfg(feature = "models_dedale")]
+            ModelsSource::DEDALE => Ok(
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/dedale/pkt_count_clusters.json").to_string(),
+                #[cfg(not(debug_assertions))]
+                {
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/dedale/pkt_count_clusters.json",
                         22
                     ))
                     .unwrap()
@@ -447,6 +504,19 @@ impl ModelsSource {
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cupid/time_profile.json",
+                        22
+                    ))
+                    .unwrap()
+                },
+            ),
+            #[cfg(feature = "models_dedale")]
+            ModelsSource::DEDALE => Ok(
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/dedale/time_profile.json").to_string(),
+                #[cfg(not(debug_assertions))]
+                {
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/dedale/time_profile.json",
                         22
                     ))
                     .unwrap()
