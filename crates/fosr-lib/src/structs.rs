@@ -242,12 +242,8 @@ impl From<Flow> for FlowData {
 pub enum PayloadType {
     /// No payload
     Empty,
-    /// Payload is a UTF-8 text
-    Text(&'static Vec<Vec<u8>>, WeightedIndex<u64>),
     /// Payload is not random and will be replayed
     Binary(&'static Vec<Vec<u8>>, WeightedIndex<u64>),
-    /// Payload is random
-    Random(Vec<usize>, WeightedIndex<u64>),
 }
 
 pub(crate) trait EdgeType: Debug + Clone {

@@ -137,7 +137,7 @@ class Exporter:
             tmp.append(d)
 
         noise = {}
-        noise["no-noise"] = 2**(-ta.cost_transition)
+        noise["no_noise"] = 2**(-ta.cost_transition)
         noise["deletion"] = 2**(-ta.cost_deletion)
         noise["reemission"] = 2**(-ta.cost_reemission)
         noise["transposition"] = 2**(-ta.cost_transposition)
