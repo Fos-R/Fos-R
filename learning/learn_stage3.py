@@ -54,6 +54,7 @@ class PayloadTypeInference:
                     headers[i]+="/UnknownPayload"
                 else:
                     headers[i]+="/"+row["type"].iloc[0]
+
         return " ".join(headers)
 
 # remove ill-formed connection, notably TCP streams not starting with SYN
@@ -198,7 +199,7 @@ if __name__ == '__main__':
         # print("Services in the UDP file:\n",df[["service"]].value_counts())
         df = df.join(flow.set_index("uid"), on="uid", rsuffix="_conn")
         prev_len = len(df)
-        df = df[df["iat"].map(len) < 1000] # remove incomplete flows (1000 is defined in fosr.zeek)
+        df = df[df["iat"].map(len) < 1000] # remove incomplete flows (1000 is defined in data/fosr_feature_extraction.zeek)
         if prev_len > len(df):
             print((prev_len-len(df)),"UDP flows have been ignored because they are too long.")
         df_udp = df
@@ -277,6 +278,10 @@ if __name__ == '__main__':
 
         if args.subsample and len(df) > args.subsample:
             df = df.sample(n=args.subsample, random_state=0)
+
+        if len(df) == 0:
+            print("No connection starting with SYN, skipping")
+            continue
 
         if protocol == "tcp":
             inferer = PayloadTypeInference(payload_types_tcp)
