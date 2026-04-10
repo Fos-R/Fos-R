@@ -214,6 +214,9 @@ if __name__ == '__main__':
             d = { "service": s, "flows": flows, "proto": "udp" }
             automata.append(d)
 
+
+    args.output = args.output or "."
+    os.makedirs(os.path.join(args.output, "bn"), exist_ok=True)
     out_file = open(os.path.join(args.output, "bn/automata-flows.json"), "w")
     json.dump(automata, out_file, indent=1)
 
@@ -366,9 +369,6 @@ if __name__ == '__main__':
     print("Learning time:", time.time() - start)
     print("Model export")
 
-    args.output = args.output or "."
-    if not os.path.exists(args.output):
-        os.makedirs(args.output)
     gumimage.export(bn, os.path.join(args.output, "bn/bn.png"))
     bn.saveBIFXML(os.path.join(args.output, "bn/bn.bifxml"))
 
