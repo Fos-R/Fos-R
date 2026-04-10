@@ -175,6 +175,7 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', help="Increase TADAM’s verbosity.", action="store_true")
     args = parser.parse_args()
     args.output = args.output or "."
+    os.makedirs(args.output, exist_ok=True)
 
     try:
         print("Loading files")
