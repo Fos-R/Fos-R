@@ -32,6 +32,7 @@ struct TimedNode<T: EdgeType> {
 
 #[derive(Deserialize, Debug)]
 #[serde(tag = "law")]
+#[serde(rename_all = "lowercase")]
 enum JsonEdgeDistribution {
     Constant { value: f32 },
     Gamma { shape: f32, loc: f32, scale: f32 },
@@ -352,14 +353,6 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
             // if $-transition, don’t create a header
             let (payload, _) = match data.get_payload_type() {
                 PayloadType::Empty => (Payload::Empty, 0),
-                PayloadType::Random(sizes, distrib) => {
-                    let size = sizes[distrib.sample(rng)];
-                    (Payload::Random(size), size)
-                }
-                PayloadType::Text(tss, distrib) => {
-                    let ts = &tss[distrib.sample(rng)];
-                    (Payload::Binary(ts), ts.len())
-                }
                 PayloadType::Binary(tss, distrib) => {
                     let ts = &tss[distrib.sample(rng)];
                     (Payload::Binary(ts), ts.len())
@@ -453,7 +446,7 @@ impl TryFrom<JsonAutomatonMetaData> for AutomatonMetaData {
 #[derive(Deserialize, Debug, Clone)]
 #[allow(unused)]
 struct Noise {
-    none: f32,
+    no_noise: f32,
     deletion: f32,
     reemission: f32,
     transposition: f32,
@@ -467,7 +460,7 @@ struct Noise {
 pub struct JsonAutomaton {
     edges: Vec<JsonEdge>,
     #[allow(unused)]
-    noise: Noise,
+    statistics: Noise,
     initial_state: usize,
     accepting_state: usize,
     pub protocol: L4Proto,
@@ -488,104 +481,49 @@ struct JsonEdge {
 }
 
 #[derive(Deserialize, Debug)]
-#[serde(tag = "type")]
+// #[serde(tag = "type")]
 #[serde(into = "PayloadType")]
-enum JsonPayload {
-    Lengths {
-        weights: Option<Vec<u64>>,
-        lengths: Vec<usize>,
-    },
-    HexCodes {
-        weights: Option<Vec<u64>>,
-        content: Vec<String>,
-    },
-    Base64 {
-        weights: Option<Vec<u64>>,
-        content: Vec<String>,
-    },
-    Text {
-        weights: Option<Vec<u64>>,
-        content: Vec<String>,
-    },
-    NoPayload,
+struct JsonPayload {
+    weights: Option<Vec<u64>>,
+    content: Vec<String>,
 }
+
+// enum JsonPayload {
+//     Lengths {
+//         weights: Option<Vec<u64>>,
+//         lengths: Vec<usize>,
+//     },
+//     HexCodes {
+//         weights: Option<Vec<u64>>,
+//         content: Vec<String>,
+//     },
+//     Base64 {
+//         weights: Option<Vec<u64>>,
+//         content: Vec<String>,
+//     },
+//     Text {
+//         weights: Option<Vec<u64>>,
+//         content: Vec<String>,
+//     },
+//     NoPayload,
+// }
 
 impl TryFrom<JsonPayload> for PayloadType {
     type Error = String;
 
     fn try_from(p: JsonPayload) -> Result<Self, String> {
-        let hex_decode = |s: String| {
-            s.as_bytes()
-                .chunks(2)
-                .map(|pair| {
-                    ((pair[0] as char).to_digit(16).unwrap() * 16
-                        + (pair[1] as char).to_digit(16).unwrap()) as u8
-                })
-                .collect()
-        };
-
-        match p {
-            JsonPayload::Lengths {
-                weights: w,
-                lengths: l,
-            } => {
-                if l.is_empty() {
-                    Err("No payload information".to_string())
-                } else {
-                    let weights = w.unwrap_or_else(|| vec![1; l.len()]);
-                    Ok(PayloadType::Random(
-                        l,
-                        WeightedIndex::new(weights).map_err(|e| format!("Weights error: {e}"))?,
-                    ))
-                }
-            }
-            JsonPayload::NoPayload => Ok(PayloadType::Empty),
-            JsonPayload::HexCodes {
-                weights: w,
-                content: p,
-            } => {
-                if p.is_empty() {
-                    Err("No payload information".to_string())
-                } else {
-                    let weights = w.unwrap_or_else(|| vec![1; p.len()]);
-                    Ok(PayloadType::Binary(
-                        Box::leak(Box::new(p.into_iter().map(hex_decode).collect())),
-                        WeightedIndex::new(weights).map_err(|e| format!("Weights error: {e}"))?,
-                    ))
-                }
-            }
-            JsonPayload::Base64 {
-                weights: w,
-                content: p,
-            } => {
-                if p.is_empty() {
-                    Err("No payload information".to_string())
-                } else {
-                    let weights = w.unwrap_or_else(|| vec![1; p.len()]);
-                    Ok(PayloadType::Binary(
-                        Box::leak(Box::new(
-                            p.into_iter()
-                                .map(|s| base64::prelude::BASE64_STANDARD.decode(s).unwrap())
-                                .collect(),
-                        )),
-                        WeightedIndex::new(weights).map_err(|e| format!("Weights error: {e}"))?,
-                    ))
-                }
-            }
-            JsonPayload::Text {
-                weights: w,
-                content: p,
-            } => {
-                if p.is_empty() {
-                    Err("No payload information".to_string())
-                } else {
-                    let weights = w.unwrap_or_else(|| vec![1; p.len()]);
-                    Ok(PayloadType::Text(
-                        Box::leak(Box::new(p.into_iter().map(|v| v.into()).collect())),
-                        WeightedIndex::new(weights).map_err(|e| format!("Weights error: {e}"))?,
-                    ))
-                }
-            }
+        if p.content.is_empty() {
+            Ok(PayloadType::Empty)
+        } else {
+            let weights = p.weights.unwrap_or_else(|| vec![1; p.content.len()]);
+            Ok(PayloadType::Binary(
+                Box::leak(Box::new(
+                    p.content.into_iter()
+                        .map(|s| base64::prelude::BASE64_STANDARD.decode(s).unwrap())
+                        .collect(),
+                )),
+                WeightedIndex::new(weights).map_err(|e| format!("Weights error: {e}"))?,
+            ))
         }
     }
 }
@@ -611,7 +549,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
             } else {
                 Some(Arc::new(symbol_parser(
                     e.symbol,
-                    e.payloads.unwrap_or(JsonPayload::NoPayload).try_into()?,
+                    e.payloads.unwrap_or(JsonPayload { weights: None, content: vec![] }).try_into()?,
                 )))
             };
             let new_edge = TimedEdge {
