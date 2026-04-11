@@ -10,6 +10,7 @@ use statrs::distribution::MultivariateNormal;
 use statrs::statistics::{MeanN, VarianceN};
 use std::cmp::max;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
@@ -20,8 +21,8 @@ use std::time::Duration;
 #[derive(Debug, Clone)]
 #[allow(unused)]
 struct CrossProductTimedNode<T: EdgeType> {
-    in_edges: Vec<TimedEdge<T>>,
-    dist: Option<WeightedIndex<u32>>,
+    in_edges: Vec<CrossProductTimedEdge<T>>,
+    dist: Option<Arc<WeightedIndex<u32>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -67,45 +68,31 @@ impl From<JsonEdgeDistribution> for EdgeDistribution {
 }
 
 #[derive(Debug, Clone)]
+pub struct CrossProductTimedEdge<T: EdgeType> {
+    // to reduce the memory footprint, we only keep the essentials
+    dst_node: u32,
+    data: Option<Arc<T>>, // no data if transition to sink state
+    iat_distr: Arc<EdgeDistribution>,
+}
+
+#[derive(Debug, Clone)]
 pub struct TimedEdge<T: EdgeType> {
     // TODO: plutôt que "Option<T>" pour data, utiliser un enum
     // "EpsilonEdge"/"NonEpsilonEdge" pour tout ce qui étiquette une
     // transition (symbole et valeur)
-    dst_node: usize,
-    data: Option<Arc<T>>,  // no data if transition to sink state
-    transition_proba: f32, // not used
-    #[allow(unused)]
+    dst_node: u32,
+    data: Option<Arc<T>>, // no data if transition to sink state
+    transition_proba: f32,
     count: u32,
-    iat_distr: EdgeDistribution,
-    // mu: [f32; 2],
-    // cov: [[f32; 2]; 2], // TODO: créer directement loi normale / poisson
-    // p: EdgeDistribution,
+    iat_distr: Arc<EdgeDistribution>,
 }
-
-// impl EdgeDistribution {
-//     // https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Conditional_distributions
-
-//     fn sample(&self, rng: &mut impl Rng, cond_mu: f32, cond_var: f32) -> f32 {
-//         match &self {
-//             EdgeDistribution::Normal => {
-//                 let normal = Normal::new(cond_mu, cond_var.sqrt()).unwrap();
-//                 normal.sample(rng).max(0.001)
-//             }
-//             EdgeDistribution::Poisson => {
-//                 let poisson = Poisson::new((cond_mu + cond_var) / 2.0).unwrap();
-//                 poisson.sample(rng).max(0.001)
-//             }
-//             EdgeDistribution::Gamma => todo!(),
-//         }
-//     }
-// }
 
 #[derive(Debug)]
 #[allow(unused)]
 pub struct CrossProductTimedAutomaton<T: EdgeType> {
     graph: Vec<CrossProductTimedNode<T>>,
-    initial_state: usize,
-    accepting_states_per_cluster: Vec<Vec<usize>>,
+    initial_state: u32,
+    accepting_states_per_cluster: Vec<Vec<u32>>,
     accepting_states_distr_per_cluster: Vec<WeightedIndex<u32>>,
     #[allow(unused)]
     metadata: AutomatonMetaData,
@@ -113,60 +100,55 @@ pub struct CrossProductTimedAutomaton<T: EdgeType> {
 
 impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
     fn from(automaton: TimedAutomaton<T>) -> Self {
-        let mut max_flow_count: usize = 2;
+        let mut max_fwd: u32 = 1;
+        let mut max_bwd: u32 = 1;
         for c in automaton.clusters.iter() {
-            let fwd = (c.mean().unwrap()[0] + 3f64 * c.variance().unwrap()[0].sqrt()) as usize;
+            let fwd = (c.mean().unwrap()[0] + 3f64 * c.variance().unwrap()[0].sqrt()) as u32;
             // dbg!(&c.mean().unwrap());
             // dbg!(&c.variance().unwrap());
-            let bwd = (c.mean().unwrap()[1] + 3f64 * c.variance().unwrap()[3].sqrt()) as usize;
+            let bwd = (c.mean().unwrap()[1] + 3f64 * c.variance().unwrap()[3].sqrt()) as u32;
             // println!("{fwd} et {bwd}");
-            max_flow_count = max(max_flow_count, fwd + bwd);
+            max_fwd = max(max_fwd, fwd);
+            max_bwd = max(max_bwd, bwd);
         }
 
-        let max_fwd_bwd_index: usize = max_flow_count * (max_flow_count + 1) / 2 + max_flow_count;
+        max_fwd = 200;
+        max_bwd = 200;
 
+        // println!(
+        //     "max: {max_fwd} et {max_bwd}, graph: {}",
+        //     automaton.graph.len()
+        // );
+        let max_flow_count: u32 = max_fwd + max_bwd;
         #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
         struct CrossProductNode {
-            state: usize,
-            fwd: usize,
-            bwd: usize,
-        }
-
-        impl CrossProductNode {
-            fn get_index(&self, max_fwd_bwd_index: usize) -> usize {
-                // Cantor pairing function: https://en.wikipedia.org/wiki/Pairing_function
-                self.state * (max_fwd_bwd_index + 1)
-                    + (self.fwd + self.bwd) * (self.fwd + self.bwd + 1) / 2
-                    + self.bwd
-            }
+            state: u32,
+            fwd: u32,
+            bwd: u32,
         }
 
         log::trace!(
             "Computing cross-product automata for {}",
             automaton.metadata.service
         );
-        let max_state_count = (max_fwd_bwd_index + 1) * automaton.graph.len();
-        let mut openset = Vec::with_capacity(max_state_count);
+        let mut openset = Vec::with_capacity(max_flow_count as usize);
         openset.push(CrossProductNode {
             state: automaton.initial_state,
             fwd: 0,
             bwd: 0,
         });
         let mut predecessors: HashMap<CrossProductNode, Vec<TimedEdge<T>>> =
-            HashMap::with_capacity(max_state_count);
-        let mut closeset = Vec::with_capacity(max_state_count);
-        let mut seen: Vec<bool> = Vec::with_capacity(max_state_count);
-        seen.resize(max_state_count, false);
+            HashMap::with_capacity(max_flow_count as usize);
+        let mut closeset = Vec::with_capacity(max_flow_count as usize);
+        let mut seen = HashSet::new();
         let mut current_node_index = 0;
         // A simple search
         while let Some(node) = openset.pop() {
-            let index = node.get_index(max_fwd_bwd_index);
-            if seen[index] {
+            if seen.contains(&node) {
                 continue;
             }
             closeset.push(node);
-            seen[index] = true;
-            for e in automaton.graph[node.state].out_edges.iter() {
+            for e in automaton.graph[node.state as usize].out_edges.iter() {
                 let successor_node = match &e.data {
                     None => CrossProductNode {
                         state: e.dst_node,
@@ -184,7 +166,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                         bwd: node.bwd + 1,
                     },
                 };
-                if successor_node.fwd + successor_node.bwd <= max_flow_count {
+                if successor_node.fwd <= max_fwd && successor_node.bwd <= max_bwd {
                     openset.push(successor_node);
                     let mut new_edge = e.clone();
                     new_edge.dst_node = current_node_index;
@@ -196,6 +178,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                     }
                 }
             }
+            seen.insert(node);
             current_node_index += 1;
         }
 
@@ -204,41 +187,46 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
         // transform it into a CrossProductTimedAutomaton
         let mut graph: Vec<CrossProductTimedNode<T>> = Vec::new();
 
-        let mut accepting_states_per_cluster: Vec<Vec<usize>> = Vec::new();
+        let mut accepting_states_per_cluster: Vec<Vec<u32>> = Vec::new();
         let mut marginal_weights_per_cluster: Vec<Vec<u32>> = Vec::new();
         for _ in automaton.clusters.iter() {
             accepting_states_per_cluster.push(Vec::new());
             marginal_weights_per_cluster.push(Vec::new());
         }
 
-        for (i, node) in closeset.into_iter().enumerate() {
-            // if node.state == automaton.accepting_state {
-            //     accepting_states.push(([node.fwd as i64, node.bwd as i64], i));
-            // }
-            let in_edges: Option<Vec<TimedEdge<T>>> = predecessors.remove(&node);
-            let dist = in_edges
-                .as_ref()
-                .map(|v| WeightedIndex::new(v.iter().map(|e| e.count)).unwrap());
+        let mut weighted_indices: HashMap<Vec<u32>, Arc<WeightedIndex<u32>>> = HashMap::new();
 
+        for (i, node) in closeset.into_iter().enumerate() {
+            let in_edges: Option<Vec<TimedEdge<T>>> = predecessors.remove(&node);
+            let dist = in_edges.as_ref().map(|v| {
+                let vec: Vec<u32> = v.iter().map(|e| e.count).collect();
+                if let Some(wi) = weighted_indices.get(&vec) {
+                    wi.clone()
+                } else {
+                    let wi = Arc::new(WeightedIndex::new(vec.clone()).unwrap());
+                    weighted_indices.insert(vec, wi.clone());
+                    wi
+                }
+            });
             if node.state == automaton.accepting_state {
-                let mut max: Option<usize> = None;
+                let mut max: Option<u32> = None;
                 let mut max_value: Option<f64> = None;
                 for (j, cluster) in automaton.clusters.iter().enumerate() {
                     let p = cluster.ln_pdf(&Vector2::new(node.fwd as f64, node.bwd as f64));
                     if let Some(val) = max_value {
                         if val < p {
                             max_value = Some(p);
-                            max = Some(j);
+                            max = Some(j as u32);
                         }
                     } else {
                         max_value = Some(p);
-                        max = Some(j);
+                        max = Some(j as u32);
                     }
                 }
                 // println!("Most probable cluster for {} and {}: {}", node.fwd, node.bwd, max.unwrap());
 
-                accepting_states_per_cluster[max.unwrap()].push(i);
-                marginal_weights_per_cluster[max.unwrap()].push(
+                accepting_states_per_cluster[max.unwrap() as usize].push(i as u32);
+                marginal_weights_per_cluster[max.unwrap() as usize].push(
                     in_edges
                         .as_ref()
                         .map(|v| v.iter().map(|e| e.count).sum())
@@ -246,9 +234,19 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                 );
             }
 
-            let in_edges = in_edges.unwrap_or_default();
+            let in_edges: Vec<CrossProductTimedEdge<T>> = in_edges
+                .unwrap_or_default()
+                .into_iter()
+                .map(|e| CrossProductTimedEdge {
+                    dst_node: e.dst_node,
+                    data: e.data,
+                    iat_distr: e.iat_distr,
+                })
+                .collect();
             graph.push(CrossProductTimedNode { in_edges, dist });
         }
+
+        // dbg!(std::mem::size_of_val(&*graph));
         CrossProductTimedAutomaton {
             accepting_states_per_cluster,
             accepting_states_distr_per_cluster: marginal_weights_per_cluster
@@ -265,11 +263,11 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
 pub trait Automaton<T: EdgeType> {
     fn iat_to_duration(&self, iat: f32) -> Duration;
 
-    fn get_initial_state(&self, rng: &mut impl Rng, packet_cluster: usize) -> usize;
+    fn get_initial_state(&self, rng: &mut impl Rng, packet_cluster: usize) -> u32;
 
-    fn is_final(&self, n: usize) -> bool;
+    fn is_final(&self, n: u32) -> bool;
 
-    fn get_next_edge(&self, rng: &mut impl Rng, current_state: usize) -> &TimedEdge<T>;
+    fn get_next_edge(&self, rng: &mut impl Rng, current_state: u32) -> &CrossProductTimedEdge<T>;
 
     fn finalize_timestamps<U: PacketInfo>(&self, vector: &mut Vec<U>, ts: Duration);
 }
@@ -279,7 +277,7 @@ impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
         Duration::from_nanos((iat * 1e3) as u64)
     }
 
-    fn is_final(&self, n: usize) -> bool {
+    fn is_final(&self, n: u32) -> bool {
         n == self.initial_state
     }
 
@@ -292,51 +290,52 @@ impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
         }
     }
 
-    fn get_initial_state(&self, rng: &mut impl Rng, packet_cluster: usize) -> usize {
+    fn get_initial_state(&self, rng: &mut impl Rng, packet_cluster: usize) -> u32 {
         self.accepting_states_per_cluster[packet_cluster]
             [self.accepting_states_distr_per_cluster[packet_cluster].sample(rng)]
     }
 
-    fn get_next_edge(&self, rng: &mut impl Rng, current_state: usize) -> &TimedEdge<T> {
-        debug_assert!(!self.graph[current_state].in_edges.is_empty());
-        let index = match &self.graph[current_state].dist {
+    fn get_next_edge(&self, rng: &mut impl Rng, current_state: u32) -> &CrossProductTimedEdge<T> {
+        debug_assert!(!self.graph[current_state as usize].in_edges.is_empty());
+        let index = match &self.graph[current_state as usize].dist {
             None => 0, // only one outgoing edge
             Some(d) => d.sample(rng),
         };
-        &self.graph[current_state].in_edges[index]
+        &self.graph[current_state as usize].in_edges[index as usize]
     }
 }
 
-impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
-    fn iat_to_duration(&self, iat: f32) -> Duration {
-        Duration::from_nanos((iat * 1e3) as u64)
-    }
+// impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
+//     fn iat_to_duration(&self, iat: f32) -> Duration {
+//         Duration::from_nanos((iat * 1e3) as u64)
+//     }
 
-    fn is_final(&self, n: usize) -> bool {
-        n == self.accepting_state
-    }
+//     fn is_final(&self, n: u32) -> bool {
+//         n == self.accepting_state
+//     }
 
-    fn finalize_timestamps<U: PacketInfo>(&self, vector: &mut Vec<U>, ts: Duration) {
-        let mut current_ts = ts;
-        for p in vector.iter_mut() {
-            current_ts += p.get_ts();
-            p.set_ts(current_ts);
-        }
-    }
+//     fn finalize_timestamps<U: PacketInfo>(&self, vector: &mut Vec<U>, ts: Duration) {
+//         let mut current_ts = ts;
+//         for p in vector.iter_mut() {
+//             current_ts += p.get_ts();
+//             p.set_ts(current_ts);
+//         }
+//     }
 
-    fn get_initial_state(&self, _rng: &mut impl Rng, _packet_cluster: usize) -> usize {
-        self.initial_state
-    }
+//     fn get_initial_state(&self, _rng: &mut impl Rng, _packet_cluster: usize) -> u32 {
+//         self.initial_state
+//     }
 
-    fn get_next_edge(&self, rng: &mut impl Rng, current_state: usize) -> &TimedEdge<T> {
-        debug_assert!(!self.graph[current_state].out_edges.is_empty());
-        let index = match &self.graph[current_state].dist {
-            None => 0, // only one outgoing edge
-            Some(d) => d.sample(rng),
-        };
-        &self.graph[current_state].out_edges[index]
-    }
-}
+//     fn get_next_edge(&self, rng: &mut impl Rng, current_state: u32) -> &CrossProductTimedEdge<T> {
+//         debug_assert!(!self.graph[current_state as usize].out_edges.is_empty());
+//         let index = match &self.graph[current_state as usize].dist {
+//             None => 0, // only one outgoing edge
+//             Some(d) => d.sample(rng),
+//         };
+//         let e = &self.graph[current_state as usize].out_edges[index as usize];
+//         &CrossProductTimedEdge { dst_node: e.dst_node, data: e.data.clone(), iat_distr: e.iat_distr.clone() }
+//     }
+// }
 
 pub fn sample<T: EdgeType, U: PacketInfo>(
     rng: &mut impl Rng,
@@ -381,8 +380,8 @@ pub struct TimedAutomaton<T: EdgeType> {
     graph: Vec<TimedNode<T>>,
     metadata: AutomatonMetaData,
     clusters: Vec<MultivariateNormal<nalgebra::Const<2>>>,
-    initial_state: usize,
-    accepting_state: usize,
+    initial_state: u32,
+    accepting_state: u32,
 }
 
 impl<T: EdgeType> Display for TimedAutomaton<T> {
@@ -461,8 +460,8 @@ pub struct JsonAutomaton {
     edges: Vec<JsonEdge>,
     #[allow(unused)]
     statistics: Noise,
-    initial_state: usize,
-    accepting_state: usize,
+    initial_state: u32,
+    accepting_state: u32,
     pub protocol: L4Proto,
     pub metadata: AutomatonMetaData,
 }
@@ -470,8 +469,8 @@ pub struct JsonAutomaton {
 #[derive(Deserialize, Debug)]
 struct JsonEdge {
     p: f32,
-    src: usize,
-    dst: usize,
+    src: u32,
+    dst: u32,
     symbol: String,
     iat_distr: EdgeDistribution,
     // mu: Vec<f32>,
@@ -518,7 +517,8 @@ impl TryFrom<JsonPayload> for PayloadType {
             let weights = p.weights.unwrap_or_else(|| vec![1; p.content.len()]);
             Ok(PayloadType::Binary(
                 Box::leak(Box::new(
-                    p.content.into_iter()
+                    p.content
+                        .into_iter()
                         .map(|s| base64::prelude::BASE64_STANDARD.decode(s).unwrap())
                         .collect(),
                 )),
@@ -549,7 +549,12 @@ impl<T: EdgeType> TimedAutomaton<T> {
             } else {
                 Some(Arc::new(symbol_parser(
                     e.symbol,
-                    e.payloads.unwrap_or(JsonPayload { weights: None, content: vec![] }).try_into()?,
+                    e.payloads
+                        .unwrap_or(JsonPayload {
+                            weights: None,
+                            content: vec![],
+                        })
+                        .try_into()?,
                 )))
             };
             let new_edge = TimedEdge {
@@ -557,11 +562,9 @@ impl<T: EdgeType> TimedAutomaton<T> {
                 count: e.count,
                 transition_proba: e.p,
                 data,
-                iat_distr: e.iat_distr, // p: EdgeDistribution::Normal,
-                                        // mu: e.mu.try_into().unwrap(),
-                                        // cov: [[e.cov[0][0], e.cov[0][1]], [e.cov[1][0], e.cov[1][1]]],
+                iat_distr: Arc::new(e.iat_distr),
             };
-            graph[e.src].out_edges.push(new_edge);
+            graph[e.src as usize].out_edges.push(new_edge);
             nodes_nb = nodes_nb.max(e.src + 1).max(e.dst + 1);
         }
         for s in graph.iter_mut() {
@@ -572,7 +575,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
             }
         }
         // println!("{:?} {:?}",weights, self.graph[current_state].out_edges);
-        graph.truncate(nodes_nb);
+        graph.truncate(nodes_nb as usize);
         // dbg!(&graph);
         Ok(TimedAutomaton::<T> {
             clusters,
