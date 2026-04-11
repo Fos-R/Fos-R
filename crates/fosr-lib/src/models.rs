@@ -69,7 +69,7 @@ impl ModelsSource {
                     d.find("**/*.json")
                         .unwrap()
                         .filter_map(|e: &DirEntry| e.as_file())
-                        .map(|f| f.contents_utf8().unwrap().to_string())
+                        .map(|f: &include_dir::File| f.contents_utf8().unwrap().to_string())
                         .collect()
                 },
                 #[cfg(not(debug_assertions))]
@@ -216,7 +216,7 @@ impl ModelsSource {
                     d.find("**/*.json")
                         .unwrap()
                         .filter_map(|e: &DirEntry| e.as_file())
-                        .map(|f| f.contents_utf8().unwrap().to_string())
+                        .map(|f: &include_dir::File| f.contents_utf8().unwrap().to_string())
                         .collect()
                 },
                 #[cfg(not(debug_assertions))]
@@ -343,8 +343,8 @@ impl ModelsSource {
                         include_dir!("$CARGO_MANIFEST_DIR/default_models/dedale/automata/");
                     d.find("**/*.json")
                         .unwrap()
-                        .filter_map(|e: &DirEntry| { dbg!(&e); e.as_file()})
-                        .map(|f| f.contents_utf8().unwrap().to_string())
+                        .filter_map(|e: &DirEntry| e.as_file())
+                        .map(|f: &include_dir::File| f.contents_utf8().unwrap().to_string())
                         .collect()
                 },
                 #[cfg(not(debug_assertions))]
