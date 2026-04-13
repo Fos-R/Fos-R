@@ -350,9 +350,6 @@ if __name__ == '__main__':
                 print("Dot file successfully created:",output_name_dot)
             except Exception as e:
                 print("Error during dot save:",e)
-        # except Exception as e:
-            # print(f"Fatal error ({e}) during TADAM learning: skipping")
-        finally:
-            pass
-
+        except Exception as e:
+            print(f"Fatal error ({e}) during TADAM learning: skipping")
 
