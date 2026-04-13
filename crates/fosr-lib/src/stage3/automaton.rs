@@ -260,119 +260,122 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
     }
 }
 
-pub trait Automaton<T: EdgeType> {
-    fn iat_to_duration(&self, iat: f32) -> Duration;
-
-    fn get_initial_state(&self, rng: &mut impl Rng, packet_cluster: usize) -> u32;
-
-    fn is_final(&self, n: u32) -> bool;
-
-    fn get_next_edge(&self, rng: &mut impl Rng, current_state: u32) -> &CrossProductTimedEdge<T>;
-
-    fn finalize_timestamps<U: PacketInfo>(&self, vector: &mut Vec<U>, ts: Duration);
+trait Automaton<T: EdgeType> {
+    fn sample<U: PacketInfo>(
+        &self,
+        rng: &mut impl Rng,
+        fd: &FlowData,
+        header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
+    ) -> Vec<U>;
 }
 
 impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
-    fn iat_to_duration(&self, iat: f32) -> Duration {
-        Duration::from_nanos((iat * 1e3) as u64)
-    }
+    fn sample<U: PacketInfo>(
+        &self,
+        rng: &mut impl Rng,
+        fd: &FlowData,
+        header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
+    ) -> Vec<U> {
+        let mut output = Vec::new();
+        let mut current_state = self.accepting_states_per_cluster[fd.packets_count_cluster]
+            [self.accepting_states_distr_per_cluster[fd.packets_count_cluster].sample(rng)];
 
-    fn is_final(&self, n: u32) -> bool {
-        n == self.initial_state
-    }
+        while current_state != self.initial_state {
+            debug_assert!(!self.graph[current_state as usize].in_edges.is_empty());
+            let index = match &self.graph[current_state as usize].dist {
+                None => 0, // only one outgoing edge
+                Some(d) => d.sample(rng),
+            };
+            let e = &self.graph[current_state as usize].in_edges[index as usize];
 
-    fn finalize_timestamps<U: PacketInfo>(&self, vector: &mut Vec<U>, ts: Duration) {
-        vector.reverse();
-        let mut current_ts = ts;
-        for p in vector.iter_mut() {
+            if let Some(data) = &e.data {
+                // if $-transition, don’t create a header
+                let (payload, _) = match data.get_payload_type() {
+                    PayloadType::Empty => (Payload::Empty, 0),
+                    PayloadType::Binary(tss, distrib) => {
+                        let ts = &tss[distrib.sample(rng)];
+                        (Payload::Binary(ts), ts.len())
+                    }
+                };
+                let iat = e.iat_distr.sample_iat(rng);
+                let data = header_creator(
+                    payload,
+                    NoiseType::None,
+                    Duration::from_nanos((iat * 1e3) as u64),
+                    data,
+                );
+                output.push(data);
+            }
+            current_state = e.dst_node;
+        }
+        output.reverse();
+        let mut current_ts = fd.timestamp;
+        for p in output.iter_mut() {
             current_ts += p.get_ts();
             p.set_ts(current_ts);
         }
-    }
 
-    fn get_initial_state(&self, rng: &mut impl Rng, packet_cluster: usize) -> u32 {
-        self.accepting_states_per_cluster[packet_cluster]
-            [self.accepting_states_distr_per_cluster[packet_cluster].sample(rng)]
-    }
-
-    fn get_next_edge(&self, rng: &mut impl Rng, current_state: u32) -> &CrossProductTimedEdge<T> {
-        debug_assert!(!self.graph[current_state as usize].in_edges.is_empty());
-        let index = match &self.graph[current_state as usize].dist {
-            None => 0, // only one outgoing edge
-            Some(d) => d.sample(rng),
-        };
-        &self.graph[current_state as usize].in_edges[index as usize]
+        output
     }
 }
 
-// impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
-//     fn iat_to_duration(&self, iat: f32) -> Duration {
-//         Duration::from_nanos((iat * 1e3) as u64)
-//     }
+impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
+    fn sample<U: PacketInfo>(
+        &self,
+        rng: &mut impl Rng,
+        fd: &FlowData,
+        header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
+    ) -> Vec<U> {
+        let mut output = Vec::new();
+        let mut current_state = self.initial_state;
 
-//     fn is_final(&self, n: u32) -> bool {
-//         n == self.accepting_state
-//     }
+        while current_state != self.accepting_state {
+            debug_assert!(!self.graph[current_state as usize].out_edges.is_empty());
+            let index = match &self.graph[current_state as usize].dist {
+                None => 0, // only one outgoing edge
+                Some(d) => d.sample(rng),
+            };
+            let e = &self.graph[current_state as usize].out_edges[index as usize];
 
-//     fn finalize_timestamps<U: PacketInfo>(&self, vector: &mut Vec<U>, ts: Duration) {
-//         let mut current_ts = ts;
-//         for p in vector.iter_mut() {
-//             current_ts += p.get_ts();
-//             p.set_ts(current_ts);
-//         }
-//     }
+            if let Some(data) = &e.data {
+                // if $-transition, don’t create a header
+                let (payload, _) = match data.get_payload_type() {
+                    PayloadType::Empty => (Payload::Empty, 0),
+                    PayloadType::Binary(tss, distrib) => {
+                        let ts = &tss[distrib.sample(rng)];
+                        (Payload::Binary(ts), ts.len())
+                    }
+                };
+                let iat = e.iat_distr.sample_iat(rng);
+                let data = header_creator(
+                    payload,
+                    NoiseType::None,
+                    Duration::from_nanos((iat * 1e3) as u64),
+                    data,
+                );
+                output.push(data);
+            }
+            current_state = e.dst_node;
+        }
+        let mut current_ts = fd.timestamp;
+        for p in output.iter_mut() {
+            current_ts += p.get_ts();
+            p.set_ts(current_ts);
+        }
 
-//     fn get_initial_state(&self, _rng: &mut impl Rng, _packet_cluster: usize) -> u32 {
-//         self.initial_state
-//     }
-
-//     fn get_next_edge(&self, rng: &mut impl Rng, current_state: u32) -> &CrossProductTimedEdge<T> {
-//         debug_assert!(!self.graph[current_state as usize].out_edges.is_empty());
-//         let index = match &self.graph[current_state as usize].dist {
-//             None => 0, // only one outgoing edge
-//             Some(d) => d.sample(rng),
-//         };
-//         let e = &self.graph[current_state as usize].out_edges[index as usize];
-//         &CrossProductTimedEdge { dst_node: e.dst_node, data: e.data.clone(), iat_distr: e.iat_distr.clone() }
-//     }
-// }
+        output
+    }
+}
 
 pub fn sample<T: EdgeType, U: PacketInfo>(
     rng: &mut impl Rng,
-    automaton: &impl Automaton<T>,
+    automata: &TimedAutomaton<T>,
+    cons_automata: &CrossProductTimedAutomaton<T>,
     fd: &FlowData,
     header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
 ) -> Vec<U> {
-    let mut output = Vec::new();
-    let mut current_state = automaton.get_initial_state(rng, fd.packets_count_cluster);
-
-    while !automaton.is_final(current_state) {
-        let e = automaton.get_next_edge(rng, current_state);
-        if let Some(data) = &e.data {
-            // if $-transition, don’t create a header
-            let (payload, _) = match data.get_payload_type() {
-                PayloadType::Empty => (Payload::Empty, 0),
-                PayloadType::Binary(tss, distrib) => {
-                    let ts = &tss[distrib.sample(rng)];
-                    (Payload::Binary(ts), ts.len())
-                }
-            };
-            let iat = e.iat_distr.sample_iat(rng);
-            // let cond_mu = e.mu[0] + e.cov[0][1] / e.cov[1][1] * (payload_size as f32 - e.mu[1]);
-            // let cond_var = (0.001_f32).max(e.cov[0][0] - e.cov[0][1] * e.cov[0][1] / e.cov[1][1]);
-            // let iat = e.p.sample(rng, cond_mu, cond_var);
-            let data = header_creator(
-                payload,
-                NoiseType::None,
-                automaton.iat_to_duration(iat),
-                data,
-            );
-            output.push(data);
-        }
-        current_state = e.dst_node;
-    }
-    automaton.finalize_timestamps(&mut output, fd.timestamp);
-    output
+    // TODO: choisir quel automate utiliser
+    automata.sample(rng, fd, header_creator)
 }
 
 #[derive(Debug, Clone)]
