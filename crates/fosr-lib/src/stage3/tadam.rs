@@ -282,18 +282,22 @@ impl Stage3 for TadamGenerator {
 
         // automata is found
         if let Some((a, cons_a)) = automata {
-            let mut packets_info =
+            let packets_info =
                 automaton::sample(&mut rng, a, cons_a, &flow.data, create_tcp_header);
 
-            update_packet_counts(&mut packets_info, &mut flow.data);
+            if let Some(mut packets_info) = packets_info {
+                update_packet_counts(&mut packets_info, &mut flow.data);
 
-            Some(SeededData {
-                seed: rng.next_u64(),
-                data: PacketsIR::<TCPPacketInfo> {
-                    packets_info,
-                    flow: Flow::TCP(flow.data, conn_state),
-                },
-            })
+                Some(SeededData {
+                    seed: rng.next_u64(),
+                    data: PacketsIR::<TCPPacketInfo> {
+                        packets_info,
+                        flow: Flow::TCP(flow.data, conn_state),
+                    },
+                })
+            } else {
+                None
+            }
         } else {
             log_once::warn_once!(
                 "No TCP automaton for {:?} with {:?}",
@@ -314,18 +318,22 @@ impl Stage3 for TadamGenerator {
 
         // automata is found
         if let Some((a, cons_a)) = automata {
-            let mut packets_info =
+            let packets_info =
                 automaton::sample(&mut rng, a, cons_a, &flow.data, create_udp_header);
 
-            update_packet_counts(&mut packets_info, &mut flow.data);
+            if let Some(mut packets_info) = packets_info {
+                update_packet_counts(&mut packets_info, &mut flow.data);
 
-            Some(SeededData {
-                seed: rng.next_u64(),
-                data: PacketsIR::<UDPPacketInfo> {
-                    packets_info,
-                    flow: Flow::UDP(flow.data),
-                },
-            })
+                Some(SeededData {
+                    seed: rng.next_u64(),
+                    data: PacketsIR::<UDPPacketInfo> {
+                        packets_info,
+                        flow: Flow::UDP(flow.data),
+                    },
+                })
+            } else {
+                None
+            }
         } else {
             log_once::warn_once!("No UDP automaton for {:?}", flow.data.l7_proto);
             None
