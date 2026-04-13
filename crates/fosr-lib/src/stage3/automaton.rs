@@ -1,5 +1,6 @@
 use crate::structs::*;
 use base64::Engine;
+use nalgebra::OVector;
 use nalgebra::Vector2;
 use rand_core::*;
 use rand_distr::weighted::WeightedIndex;
@@ -7,6 +8,8 @@ use rand_distr::{Distribution, Gamma};
 use serde::Deserialize;
 use statrs::distribution::Continuous;
 use statrs::distribution::MultivariateNormal;
+use statrs::rand::SeedableRng;
+use statrs::rand::distributions::Distribution as StatRsDistribution;
 use statrs::statistics::{MeanN, VarianceN};
 use std::cmp::max;
 use std::collections::HashMap;
@@ -28,7 +31,7 @@ struct CrossProductTimedNode<T: EdgeType> {
 #[derive(Debug, Clone)]
 struct TimedNode<T: EdgeType> {
     out_edges: Vec<TimedEdge<T>>,
-    dist: Option<WeightedIndex<f32>>,
+    dist: Option<WeightedIndex<u32>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -92,6 +95,7 @@ pub struct TimedEdge<T: EdgeType> {
 pub struct CrossProductTimedAutomaton<T: EdgeType> {
     graph: Vec<CrossProductTimedNode<T>>,
     initial_state: u32,
+    available_clusters: Vec<bool>,
     accepting_states_per_cluster: Vec<Vec<u32>>,
     accepting_states_distr_per_cluster: Vec<WeightedIndex<u32>>,
     #[allow(unused)]
@@ -102,15 +106,24 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
     fn from(automaton: TimedAutomaton<T>) -> Self {
         let mut max_fwd: u32 = 1;
         let mut max_bwd: u32 = 1;
+        const MAX_FWD_BWD: u32 = 100;
+        let mut available_clusters: Vec<bool> = vec![];
+
         for c in automaton.clusters.iter() {
             let fwd = (c.mean().unwrap()[0] + 3f64 * c.variance().unwrap()[0].sqrt()) as u32;
             // dbg!(&c.mean().unwrap());
             // dbg!(&c.variance().unwrap());
             let bwd = (c.mean().unwrap()[1] + 3f64 * c.variance().unwrap()[3].sqrt()) as u32;
-            // println!("{fwd} et {bwd}");
-            max_fwd = max(max_fwd, fwd);
-            max_bwd = max(max_bwd, bwd);
+            if fwd <= MAX_FWD_BWD && bwd <= MAX_FWD_BWD {
+                max_fwd = max(max_fwd, fwd);
+                max_bwd = max(max_bwd, bwd);
+                available_clusters.push(true);
+            } else {
+                available_clusters.push(false);
+            }
         }
+
+        assert!(available_clusters.len() == automaton.clusters.len());
 
         max_fwd = 200;
         max_bwd = 200;
@@ -248,6 +261,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
 
         // dbg!(std::mem::size_of_val(&*graph));
         CrossProductTimedAutomaton {
+            available_clusters,
             accepting_states_per_cluster,
             accepting_states_distr_per_cluster: marginal_weights_per_cluster
                 .into_iter()
@@ -266,7 +280,7 @@ trait Automaton<T: EdgeType> {
         rng: &mut impl Rng,
         fd: &FlowData,
         header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
-    ) -> Vec<U>;
+    ) -> Option<Vec<U>>;
 }
 
 impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
@@ -275,7 +289,7 @@ impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
         rng: &mut impl Rng,
         fd: &FlowData,
         header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
-    ) -> Vec<U> {
+    ) -> Option<Vec<U>> {
         let mut output = Vec::new();
         let mut current_state = self.accepting_states_per_cluster[fd.packets_count_cluster]
             [self.accepting_states_distr_per_cluster[fd.packets_count_cluster].sample(rng)];
@@ -315,7 +329,7 @@ impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
             p.set_ts(current_ts);
         }
 
-        output
+        Some(output)
     }
 }
 
@@ -325,45 +339,131 @@ impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
         rng: &mut impl Rng,
         fd: &FlowData,
         header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
-    ) -> Vec<U> {
-        let mut output = Vec::new();
-        let mut current_state = self.initial_state;
+    ) -> Option<Vec<U>> {
+        struct StateWithDistr {
+            state: u32,
+            fwd: u32,
+            bwd: u32,
+            next_states: Vec<u32>,
+        }
 
-        while current_state != self.accepting_state {
-            debug_assert!(!self.graph[current_state as usize].out_edges.is_empty());
-            let index = match &self.graph[current_state as usize].dist {
-                None => 0, // only one outgoing edge
-                Some(d) => d.sample(rng),
-            };
-            let e = &self.graph[current_state as usize].out_edges[index as usize];
-
-            if let Some(data) = &e.data {
-                // if $-transition, don’t create a header
-                let (payload, _) = match data.get_payload_type() {
-                    PayloadType::Empty => (Payload::Empty, 0),
-                    PayloadType::Binary(tss, distrib) => {
-                        let ts = &tss[distrib.sample(rng)];
-                        (Payload::Binary(ts), ts.len())
+        impl StateWithDistr {
+            fn new<T: EdgeType>(
+                rng: &mut impl Rng,
+                graph: &Vec<TimedNode<T>>,
+                state: u32,
+                fwd: u32,
+                bwd: u32,
+                min_fwd: u32,
+                min_bwd: u32,
+            ) -> Self {
+                if let Some(d) = &graph[state as usize].dist {
+                    let mut d = d.clone();
+                    let mut next_states = vec![];
+                    let mut again = true;
+                    while again {
+                        let index = d.sample(rng);
+                        again = d.update_weights(&[(index, &0u32)]).is_ok();
+                        if (fwd >= min_fwd && bwd >= min_bwd)
+                            || graph[state as usize].out_edges[index as usize]
+                                .data
+                                .is_some()
+                        {
+                            next_states.push(index as u32);
+                        }
                     }
-                };
-                let iat = e.iat_distr.sample_iat(rng);
-                let data = header_creator(
-                    payload,
-                    NoiseType::None,
-                    Duration::from_nanos((iat * 1e3) as u64),
-                    data,
-                );
-                output.push(data);
+                    next_states.reverse(); // first to use at the end of the list
+                    StateWithDistr {
+                        state,
+                        next_states,
+                        fwd,
+                        bwd,
+                    }
+                } else {
+                    StateWithDistr {
+                        state,
+                        next_states: vec![0],
+                        fwd,
+                        bwd,
+                    }
+                }
             }
-            current_state = e.dst_node;
         }
-        let mut current_ts = fd.timestamp;
-        for p in output.iter_mut() {
-            current_ts += p.get_ts();
-            p.set_ts(current_ts);
+        // statrs do not use the same version of rand as the rest, so we have to create a structure
+        // just for it
+        let mut rng_statrs = statrs::rand::rngs::StdRng::seed_from_u64(rng.next_u64());
+        let vec: OVector<f64, nalgebra::Const<2>> =
+            self.clusters[fd.packets_count_cluster].sample(&mut rng_statrs);
+
+        let min_fwd: u32 = vec[0].round() as u32;
+        let min_bwd: u32 = vec[1].round() as u32;
+
+        let mut output: Vec<U> = vec![];
+        let mut state_history: Vec<StateWithDistr> = vec![StateWithDistr::new(
+            rng,
+            &self.graph,
+            self.initial_state,
+            0,
+            0,
+            min_fwd,
+            min_bwd,
+        )];
+
+        while let Some(current_state) = state_history.last_mut() {
+            if current_state.state == self.accepting_state {
+                let mut current_ts = fd.timestamp;
+                for p in output.iter_mut() {
+                    current_ts += p.get_ts();
+                    p.set_ts(current_ts);
+                }
+
+                return Some(output);
+            }
+
+            if let Some(edge_index) = current_state.next_states.pop() {
+                let e = &self.graph[current_state.state as usize].out_edges[edge_index as usize];
+
+                let mut fwd = current_state.fwd;
+                let mut bwd = current_state.bwd;
+
+                if let Some(data) = &e.data {
+                    // if $-transition, don’t create a header
+                    let (payload, _) = match data.get_payload_type() {
+                        PayloadType::Empty => (Payload::Empty, 0),
+                        PayloadType::Binary(tss, distrib) => {
+                            let ts = &tss[distrib.sample(rng)];
+                            (Payload::Binary(ts), ts.len())
+                        }
+                    };
+                    let iat = e.iat_distr.sample_iat(rng);
+                    let data = header_creator(
+                        payload,
+                        NoiseType::None,
+                        Duration::from_nanos((iat * 1e3) as u64),
+                        data,
+                    );
+                    if data.get_direction() == PacketDirection::Forward {
+                        fwd += 1;
+                    } else {
+                        bwd += 1;
+                    }
+                    output.push(data);
+                }
+
+                state_history.push(StateWithDistr::new(
+                    rng,
+                    &self.graph,
+                    e.dst_node,
+                    fwd,
+                    bwd,
+                    min_fwd,
+                    min_bwd,
+                )); // FIXME
+                // can_end
+            }
         }
 
-        output
+        None
     }
 }
 
@@ -373,9 +473,12 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
     cons_automata: &CrossProductTimedAutomaton<T>,
     fd: &FlowData,
     header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
-) -> Vec<U> {
-    // TODO: choisir quel automate utiliser
-    automata.sample(rng, fd, header_creator)
+) -> Option<Vec<U>> {
+    if cons_automata.available_clusters[fd.packets_count_cluster] {
+        cons_automata.sample(rng, fd, header_creator)
+    } else {
+        automata.sample(rng, fd, header_creator)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -573,7 +676,12 @@ impl<T: EdgeType> TimedAutomaton<T> {
         for s in graph.iter_mut() {
             if s.out_edges.len() > 1 {
                 s.dist = Some(
-                    WeightedIndex::new(s.out_edges.iter().map(|e| e.transition_proba)).unwrap(),
+                    WeightedIndex::new(
+                        s.out_edges
+                            .iter()
+                            .map(|e| (e.transition_proba / 2. * (u32::MAX as f32)) as u32),
+                    )
+                    .unwrap(),
                 );
             }
         }

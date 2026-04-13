@@ -33,7 +33,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde-xml-rs = "0.8.2"
 serde_json = "1.0"
 serde_yaml = "0.9.34"
-statrs = "0.18.0"
+statrs = { git = "https://github.com/PFGimenez/statrs.git" }
 thingbuf = "0.1.6"
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
