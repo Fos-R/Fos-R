@@ -236,6 +236,11 @@ impl BinBasedGenerator {
         }
 
         self.current_distrib = get_poisson(&self.lambdas, self.dest_tz_offset, self.next_ts);
+
+        if self.current_distrib.is_none() {
+            log_once::warn_once!("Time window without any flow according to the time model")
+        }
+
         self.remaining_flows = self
             .current_distrib
             .map_or(0, |s| s.sample(&mut self.flow_rng.clone()) as u64);
@@ -261,7 +266,7 @@ impl TimeModel {
         let profile: TimeModel = serde_json::from_str(&m.get_time_profile()?)
             .map_err(|e| format!("Cannot parse the time model: {e}"))?;
         log::info!(
-            "Time model learned on {} have been loaded",
+            "Time model learned on {} has been loaded",
             profile.metadata.input_file
         );
         Ok(profile)
@@ -296,7 +301,7 @@ pub fn run_channel(
     tx_s1: Sender<SeededData<TimePoint>>,
     stats: Arc<Stats>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    log::trace!("Start S1");
+    log::trace!("Start S1 (channel)");
     let initial_ts = generator.get_initial_ts();
     for ts in generator {
         if stats.should_stop() {
@@ -314,7 +319,7 @@ pub fn run_channel(
 
 /// Generate data into a vector
 pub fn run_vec(generator: impl Stage1) -> Vec<SeededData<TimePoint>> {
-    log::trace!("Start S1");
+    log::trace!("Start S1 (vec)");
     let mut vector = vec![];
     for ts in generator {
         vector.push(ts);

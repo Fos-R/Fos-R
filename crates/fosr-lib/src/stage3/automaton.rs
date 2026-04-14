@@ -108,10 +108,13 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
         let mut available_clusters: Vec<bool> = vec![];
 
         for c in automaton.clusters.iter() {
-            let fwd = (c.mean().unwrap()[0] + 3f64 * c.variance().unwrap()[0].sqrt()) as u32;
+            let fwd =
+                (c.mean().unwrap()[0] + 3f64 * c.variance().unwrap()[0].sqrt()).round() as u32;
             // dbg!(&c.mean().unwrap());
             // dbg!(&c.variance().unwrap());
-            let bwd = (c.mean().unwrap()[1] + 3f64 * c.variance().unwrap()[3].sqrt()) as u32;
+            let bwd =
+                (c.mean().unwrap()[1] + 3f64 * c.variance().unwrap()[3].sqrt()).round() as u32;
+            // dbg!(&fwd, &bwd);
             if fwd <= MAX_FWD_BWD && bwd <= MAX_FWD_BWD {
                 max_fwd = max(max_fwd, fwd);
                 max_bwd = max(max_bwd, bwd);
@@ -121,13 +124,9 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
             }
         }
 
+        // dbg!(&max_fwd, &max_bwd);
         assert!(available_clusters.len() == automaton.clusters.len());
 
-        // println!(
-        //     "max: {max_fwd} et {max_bwd}, graph: {}",
-        //     automaton.graph.len()
-        // );
-        let max_flow_count: u32 = max_fwd + max_bwd;
         #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
         struct CrossProductNode {
             state: u32,
@@ -139,19 +138,17 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
             "Computing cross-product automata for {}",
             automaton.metadata.service
         );
-        let mut openset = Vec::with_capacity(max_flow_count as usize); // TODO: with_capacity
-        // vraiment utile ? il
-        // manque le * |state|
+        let mut openset = vec![];
         openset.push(CrossProductNode {
             state: automaton.initial_state,
             fwd: 0,
             bwd: 0,
         });
-        let mut predecessors: HashMap<CrossProductNode, Vec<TimedEdge<T>>> =
-            HashMap::with_capacity(max_flow_count as usize);
-        let mut closeset = Vec::with_capacity(max_flow_count as usize);
+        let mut predecessors: HashMap<CrossProductNode, Vec<TimedEdge<T>>> = HashMap::new();
+        let mut closeset = vec![];
         let mut seen = HashSet::new();
         let mut current_node_index = 0;
+
         // A simple search
         while let Some(node) = openset.pop() {
             if seen.contains(&node) {
@@ -233,7 +230,12 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                         max = Some(j as u32);
                     }
                 }
-                // println!("Most probable cluster for {} and {}: {}", node.fwd, node.bwd, max.unwrap());
+                // println!(
+                //     "Most probable cluster for {} and {}: {}",
+                //     node.fwd,
+                //     node.bwd,
+                //     max.unwrap()
+                // );
 
                 accepting_states_per_cluster[max.unwrap() as usize].push(i as u32);
                 marginal_weights_per_cluster[max.unwrap() as usize].push(
@@ -260,41 +262,26 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
             .into_iter()
             .enumerate()
             .map(|(i, b)| {
-                if b {
-                    Some((
-                        accepting_states_per_cluster[i].clone(),
-                        WeightedIndex::new(&marginal_weights_per_cluster[i])
-                            .expect("No accepting state for a cluster!"),
-                    ))
+                if b && let Ok(w) = WeightedIndex::new(&marginal_weights_per_cluster[i]) {
+                    log::trace!("Cluster {i} is in the cross-product automata");
+                    Some((accepting_states_per_cluster[i].clone(), w))
                 } else {
+                    // It is possible that there is no accepting state for a cluster if the learned
+                    // automaton is not correct
+                    log::trace!("Cluster {i} is in the initial automata");
                     None
                 }
             })
             .collect();
 
-        // dbg!(std::mem::size_of_val(&*graph));
         CrossProductTimedAutomaton {
             clusters,
-            // accepting_states_per_cluster,
-            // accepting_states_distr_per_cluster: marginal_weights_per_cluster
-            //     .into_iter()
-            //     .map(|v| WeightedIndex::new(v).expect("No accepting state for a cluster!"))
-            //     .collect(),
             graph,
             initial_state: 0,
             metadata: automaton.metadata,
         }
     }
 }
-
-// trait Automaton<T: EdgeType> {
-//     fn sample<U: PacketInfo>(
-//         &self,
-//         rng: &mut impl Rng,
-//         fd: &FlowData,
-//         header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
-//     ) -> Option<Vec<U>>;
-// }
 
 impl<T: EdgeType> CrossProductTimedAutomaton<T> {
     fn sample<U: PacketInfo>(
@@ -607,26 +594,6 @@ struct JsonPayload {
     weights: Option<Vec<u64>>,
     content: Vec<String>,
 }
-
-// enum JsonPayload {
-//     Lengths {
-//         weights: Option<Vec<u64>>,
-//         lengths: Vec<usize>,
-//     },
-//     HexCodes {
-//         weights: Option<Vec<u64>>,
-//         content: Vec<String>,
-//     },
-//     Base64 {
-//         weights: Option<Vec<u64>>,
-//         content: Vec<String>,
-//     },
-//     Text {
-//         weights: Option<Vec<u64>>,
-//         content: Vec<String>,
-//     },
-//     NoPayload,
-// }
 
 impl TryFrom<JsonPayload> for PayloadType {
     type Error = String;

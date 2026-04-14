@@ -340,7 +340,7 @@ impl BayesianModel {
             .get_bn()
             .map_err(|e| format!("Cannot find the Bayesian networks: {e}"))?;
 
-        log::info!("Loading Bayesian network");
+        log::trace!("Loading Bayesian network");
         let bif_common = bifxml::from_str(&bn_string)?;
 
         let (bn, bin_count) = bn_from_bif(bif_common)?;
@@ -842,14 +842,15 @@ fn bn_from_bif(
                 v.outcome
                     .clone()
                     .into_iter()
-                    .map(|s| s[4..].parse::<u8>().expect("Not a valid TTL"))
+                    .map(|s| s[4..].parse::<u8>().unwrap_or(64))
                     .collect(),
             )),
             "Dst TTL" => Some(Feature::DstTTL(
                 v.outcome
                     .clone()
                     .into_iter()
-                    .map(|s| s[4..].parse::<u8>().expect("Not a valid TTL"))
+                    .map(|s| s[4..].parse::<u8>().unwrap_or(64)) // TODO: should be handled in the
+                    // Bayesian network learning
                     .collect(),
             )),
             "Src MAC" => Some(Feature::SrcMac(
