@@ -95,9 +95,7 @@ pub struct TimedEdge<T: EdgeType> {
 pub struct CrossProductTimedAutomaton<T: EdgeType> {
     graph: Vec<CrossProductTimedNode<T>>,
     initial_state: u32,
-    available_clusters: Vec<bool>,
-    accepting_states_per_cluster: Vec<Vec<u32>>,
-    accepting_states_distr_per_cluster: Vec<WeightedIndex<u32>>,
+    clusters: Vec<Option<(Vec<u32>, WeightedIndex<u32>)>>,
     #[allow(unused)]
     metadata: AutomatonMetaData,
 }
@@ -125,9 +123,6 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
 
         assert!(available_clusters.len() == automaton.clusters.len());
 
-        max_fwd = 200;
-        max_bwd = 200;
-
         // println!(
         //     "max: {max_fwd} et {max_bwd}, graph: {}",
         //     automaton.graph.len()
@@ -144,7 +139,9 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
             "Computing cross-product automata for {}",
             automaton.metadata.service
         );
-        let mut openset = Vec::with_capacity(max_flow_count as usize);
+        let mut openset = Vec::with_capacity(max_flow_count as usize); // TODO: with_capacity
+        // vraiment utile ? il
+        // manque le * |state|
         openset.push(CrossProductNode {
             state: automaton.initial_state,
             fwd: 0,
@@ -259,14 +256,30 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
             graph.push(CrossProductTimedNode { in_edges, dist });
         }
 
+        let clusters = available_clusters
+            .into_iter()
+            .enumerate()
+            .map(|(i, b)| {
+                if b {
+                    Some((
+                        accepting_states_per_cluster[i].clone(),
+                        WeightedIndex::new(&marginal_weights_per_cluster[i])
+                            .expect("No accepting state for a cluster!"),
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
         // dbg!(std::mem::size_of_val(&*graph));
         CrossProductTimedAutomaton {
-            available_clusters,
-            accepting_states_per_cluster,
-            accepting_states_distr_per_cluster: marginal_weights_per_cluster
-                .into_iter()
-                .map(|v| WeightedIndex::new(v).expect("No accepting state for a cluster!"))
-                .collect(),
+            clusters,
+            // accepting_states_per_cluster,
+            // accepting_states_distr_per_cluster: marginal_weights_per_cluster
+            //     .into_iter()
+            //     .map(|v| WeightedIndex::new(v).expect("No accepting state for a cluster!"))
+            //     .collect(),
             graph,
             initial_state: 0,
             metadata: automaton.metadata,
@@ -274,25 +287,25 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
     }
 }
 
-trait Automaton<T: EdgeType> {
-    fn sample<U: PacketInfo>(
-        &self,
-        rng: &mut impl Rng,
-        fd: &FlowData,
-        header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
-    ) -> Option<Vec<U>>;
-}
+// trait Automaton<T: EdgeType> {
+//     fn sample<U: PacketInfo>(
+//         &self,
+//         rng: &mut impl Rng,
+//         fd: &FlowData,
+//         header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
+//     ) -> Option<Vec<U>>;
+// }
 
-impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
+impl<T: EdgeType> CrossProductTimedAutomaton<T> {
     fn sample<U: PacketInfo>(
         &self,
         rng: &mut impl Rng,
         fd: &FlowData,
         header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
+        starting_state: u32,
     ) -> Option<Vec<U>> {
         let mut output = Vec::new();
-        let mut current_state = self.accepting_states_per_cluster[fd.packets_count_cluster]
-            [self.accepting_states_distr_per_cluster[fd.packets_count_cluster].sample(rng)];
+        let mut current_state = starting_state;
 
         while current_state != self.initial_state {
             debug_assert!(!self.graph[current_state as usize].in_edges.is_empty());
@@ -300,7 +313,7 @@ impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
                 None => 0, // only one outgoing edge
                 Some(d) => d.sample(rng),
             };
-            let e = &self.graph[current_state as usize].in_edges[index as usize];
+            let e = &self.graph[current_state as usize].in_edges[index];
 
             if let Some(data) = &e.data {
                 // if $-transition, don’t create a header
@@ -333,7 +346,7 @@ impl<T: EdgeType> Automaton<T> for CrossProductTimedAutomaton<T> {
     }
 }
 
-impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
+impl<T: EdgeType> TimedAutomaton<T> {
     fn sample<U: PacketInfo>(
         &self,
         rng: &mut impl Rng,
@@ -350,7 +363,7 @@ impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
         impl StateWithDistr {
             fn new<T: EdgeType>(
                 rng: &mut impl Rng,
-                graph: &Vec<TimedNode<T>>,
+                graph: &[TimedNode<T>],
                 state: u32,
                 fwd: u32,
                 bwd: u32,
@@ -364,10 +377,8 @@ impl<T: EdgeType> Automaton<T> for TimedAutomaton<T> {
                     while again {
                         let index = d.sample(rng);
                         again = d.update_weights(&[(index, &0u32)]).is_ok();
-                        if (fwd >= min_fwd && bwd >= min_bwd)
-                            || graph[state as usize].out_edges[index as usize]
-                                .data
-                                .is_some()
+                        if (fwd + bwd >= min_fwd + min_bwd)
+                            || graph[state as usize].out_edges[index].data.is_some()
                         {
                             next_states.push(index as u32);
                         }
@@ -474,8 +485,12 @@ pub fn sample<T: EdgeType, U: PacketInfo>(
     fd: &FlowData,
     header_creator: impl Fn(Payload, NoiseType, Duration, &T) -> U,
 ) -> Option<Vec<U>> {
-    if cons_automata.available_clusters[fd.packets_count_cluster] {
-        cons_automata.sample(rng, fd, header_creator)
+    if let Some((accepting_states_per_cluster, accepting_states_distr_per_cluster)) =
+        &cons_automata.clusters[fd.packets_count_cluster]
+    {
+        let initial_state =
+            accepting_states_per_cluster[accepting_states_distr_per_cluster.sample(rng)];
+        cons_automata.sample(rng, fd, header_creator, initial_state)
     } else {
         automata.sample(rng, fd, header_creator)
     }
