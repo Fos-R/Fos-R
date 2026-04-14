@@ -28,7 +28,7 @@ pub fn run_channel(
     tx_s2: Sender<SeededData<Flow>>,
     stats: Arc<Stats>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    log::trace!("Start S2");
+    log::trace!("Start S2 (channel)");
     for ts in rx_s2 {
         if stats.should_stop() {
             break;
@@ -46,7 +46,7 @@ pub fn run_vec(
     generator: impl Stage2,
     vec_s2: Vec<SeededData<TimePoint>>,
 ) -> Result<Vec<SeededData<Flow>>, String> {
-    log::trace!("Start S2");
+    log::trace!("Start S2 (vec)");
     let mut vector = Vec::with_capacity(vec_s2.len());
     for ts in vec_s2 {
         for f in generator.generate_flows(ts)? {

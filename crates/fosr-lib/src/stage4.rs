@@ -495,7 +495,7 @@ pub fn run_channel<T: PacketInfo>(
     pcap_export: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Prepare stage 4
-    log::trace!("Start S4");
+    log::trace!("Start S4 (channel)");
 
     let mut payload_array: [u8; 65536] = [0; 65536]; // to avoid allocating Vec for payloads
     // everytime. 65536 is the maximum payload
@@ -531,6 +531,7 @@ pub fn run_vec<T: PacketInfo>(
     vec_s4: Vec<SeededData<PacketsIR<T>>>,
     stats: Arc<Stats>,
 ) -> Vec<Packet> {
+    log::trace!("Start S4 (vec)");
     let mut payload_array: [u8; 65536] = [0; 65536]; // to avoid allocating Vec for payloads
     let mut packet: [u8; 65536] = [0; 65536];
     let mut all_packets: Vec<Packet> =
@@ -557,6 +558,7 @@ pub fn run_vec<T: PacketInfo>(
         }
     }
 
+    log::trace!("S4 stops");
     all_packets
 }
 

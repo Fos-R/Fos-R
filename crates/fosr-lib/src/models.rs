@@ -344,6 +344,10 @@ impl ModelsSource {
                     d.find("**/*.json")
                         .unwrap()
                         .filter_map(|e: &DirEntry| e.as_file())
+                        .filter(|e| !e.path().to_str().unwrap().ends_with("-language.json"))
+                        .inspect(|e| {
+                            log::debug!("Including automata file {:?}", e.path());
+                        })
                         .map(|f: &include_dir::File| f.contents_utf8().unwrap().to_string())
                         .collect()
                 },

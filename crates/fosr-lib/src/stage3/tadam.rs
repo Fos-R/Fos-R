@@ -18,10 +18,6 @@ struct AutomataSet<T: EdgeType> {
 pub struct AutomataLibrary {
     tcp_automata: HashMap<(&'static str, TCPConnState), AutomataSet<TCPEdgeTuple>>,
     udp_automata: HashMap<&'static str, AutomataSet<UDPEdgeTuple>>,
-    // cons_icmp_automata: HashMap<&'static str, automaton::CrossProductTimedAutomaton<ICMPEdgeTuple>>,
-    // tcp_automata: HashMap<(&'static str, TCPConnState), automaton::TimedAutomaton<TCPEdgeTuple>>,
-    // udp_automata: HashMap<&'static str, automaton::TimedAutomaton<UDPEdgeTuple>>,
-    // icmp_automata: HashMap<&'static str, automaton::TimedAutomaton<ICMPEdgeTuple>>,
 }
 
 impl AutomataLibrary {
@@ -38,9 +34,6 @@ impl AutomataLibrary {
 
         let mut nb = 0;
         let mut lib = AutomataLibrary {
-            // cons_tcp_automata: HashMap::new(),
-            // cons_udp_automata: HashMap::new(),
-            // cons_icmp_automata: HashMap::new(),
             tcp_automata: HashMap::new(),
             udp_automata: HashMap::new(),
             // icmp_automata: HashMap::new(),
@@ -98,7 +91,6 @@ impl AutomataLibrary {
                 let a = automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(
                     a,
                     automata_clusters.clone(),
-                    // automaton::IatPrecision::Milli,
                     parse_tcp_symbol,
                 )?;
                 log::debug!("Import TCP {a}");
@@ -109,8 +101,6 @@ impl AutomataLibrary {
                         cons_a: a.into(),
                     },
                 );
-                // self.cons_tcp_automata
-                // .insert((l7proto, conn_state.unwrap()), a.into());
             }
             L4Proto::UDP => {
                 let automata_clusters = clusters
@@ -131,7 +121,6 @@ impl AutomataLibrary {
                 let a = automaton::TimedAutomaton::<UDPEdgeTuple>::import_timed_automaton(
                     a,
                     automata_clusters.clone(),
-                    // automaton::IatPrecision::Micro,
                     parse_udp_symbol,
                 )?;
                 log::debug!("Import UDP {a}");
@@ -142,18 +131,8 @@ impl AutomataLibrary {
                         cons_a: a.into(),
                     },
                 );
-                // self.cons_udp_automata.insert(l7proto, a.into());
             }
-            L4Proto::ICMP => todo!(), // {
-                                      //     let a = automaton::TimedAutomaton::<ICMPEdgeTuple>::import_timed_automaton(
-                                      //         a,
-                                      //         // automaton::IatPrecision::Micro,
-                                      //         parse_icmp_symbol,
-                                      //     )?;
-                                      //     log::debug!("Import ICMP {a}");
-                                      //     // self.icmp_automata.insert(l7proto, a.clone());
-                                      //     self.cons_icmp_automata.insert(l7proto, a.into());
-                                      // }
+            L4Proto::ICMP => todo!(),
         }
         Ok(())
     }
@@ -268,21 +247,6 @@ impl Stage3 for TadamGenerator {
     ) -> Option<SeededData<PacketsIR<TCPPacketInfo>>> {
         let mut rng = Pcg32::seed_from_u64(flow.seed);
         let automata = self.lib.tcp_automata.get(&(flow.data.l7_proto, conn_state));
-        // let mut a = self.lib.tcp_automata.get(&(flow.data.l7_proto, conn_state));
-
-        // if a.is_none() {
-        //     a = self
-        //         .lib
-        //         .cons_tcp_automata
-        //         .get(&(flow.data.l7_proto, TCPConnState::SF));
-        //     // a = self
-        //     //     .lib
-        //     //     .tcp_automata
-        //     //     .get(&(flow.data.l7_proto, TCPConnState::SF));
-        //     if a.is_some() {
-        //         conn_state = TCPConnState::SF;
-        //     }
-        // }
 
         // automata is found
         if let Some(AutomataSet { uncons_a, cons_a }) = automata {
@@ -300,6 +264,12 @@ impl Stage3 for TadamGenerator {
                     },
                 })
             } else {
+                log_once::warn_once!(
+                    "Generation failure of automaton {:?}-{:?} for cluster {}",
+                    flow.data.l7_proto,
+                    conn_state,
+                    flow.data.packets_count_cluster
+                );
                 None
             }
         } else {
