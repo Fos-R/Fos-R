@@ -4,6 +4,7 @@ use nalgebra::OVector;
 use nalgebra::Vector2;
 use rand_core::*;
 use rand_distr::weighted::WeightedIndex;
+use rand_distr::weighted::WeightedTreeIndex;
 use rand_distr::{Distribution, Gamma};
 use serde::Deserialize;
 use statrs::distribution::Continuous;
@@ -332,7 +333,7 @@ struct StateWithDistr {
     fwd: u32,
     bwd: u32,
     state: u32,
-    next_state_distr: Option<WeightedIndex<u32>>,
+    next_state_distr: Option<WeightedTreeIndex<u32>>,
 }
 
 impl StateWithDistr {
@@ -344,17 +345,17 @@ impl StateWithDistr {
         can_end: bool,
     ) -> Self {
         let mut d = match &graph[state as usize].dist {
-            Some(d) => Some(d.clone()),
-            None => Some(WeightedIndex::new(vec![1]).unwrap()), // only one output edge
+            Some(d) => Some(WeightedTreeIndex::new(d.weights()).unwrap()),
+            None => Some(WeightedTreeIndex::new(vec![1u32]).unwrap()), // only one output edge
         };
 
         if let Some(ref mut distr) = d {
-            let weight_number = distr.weights().count();
+            let weight_number = distr.len();
             for index in 0..weight_number {
                 // we cannot finish yet
                 if !can_end && graph[state as usize].out_edges[index].data.is_none() {
-                    let error = distr.update_weights(&[(index, &0u32)]).is_err();
-                    if error {
+                    distr.update(index, 0u32).unwrap();
+                    if !distr.is_valid() {
                         d = None;
                         break;
                     }
@@ -375,8 +376,8 @@ impl StateWithDistr {
         if let Some(ref mut d) = self.next_state_distr {
             let index = d.sample(rng);
             // after sampling a state, we immediately update Weighted Index
-            let error = d.update_weights(&[(index, &0u32)]).is_err();
-            if error {
+            d.update(index, 0u32).unwrap();
+            if !d.is_valid() {
                 self.next_state_distr = None;
             }
             Some(index as u32)
