@@ -253,17 +253,6 @@ pub(crate) trait EdgeType: Debug + Clone {
 
 // Stage 3 and 4 structures
 
-/// The type of noise to apply to a packet
-#[derive(Debug, Clone, Copy)]
-#[allow(unused)]
-pub enum NoiseType {
-    None,
-    Deleted,
-    Reemitted,
-    Transposed,
-    Added,
-}
-
 /// The direction of a packet
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum PacketDirection {
@@ -305,7 +294,6 @@ impl Payload {
 
 pub trait PacketInfo: Clone + Debug {
     #[allow(unused)]
-    fn get_noise_type(&self) -> NoiseType;
     fn get_direction(&self) -> PacketDirection;
     fn get_ts(&self) -> Duration;
     fn set_ts(&mut self, ts: Duration);

@@ -353,14 +353,26 @@ impl ModelsSource {
                 },
                 #[cfg(not(debug_assertions))]
                 {
+                    let d: Dir =
+                        include_dir!("$CARGO_MANIFEST_DIR/default_models/dedale/automata/");
+                    d.find("**/*.json")
+                        .unwrap()
+                        .filter_map(|e: &DirEntry| e.as_file())
+                        .filter(|e| !e.path().to_str().unwrap().ends_with("-language.json"))
+                        .inspect(|e| {
+                            log::debug!("Including automata file {:?}", e.path());
+                        })
+                        .map(|f: &include_dir::File| f.contents_utf8().unwrap().to_string())
+                        .collect()
+
                     // FIXME
-                    vec![
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/dce_rpc-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                    ]
+                    // vec![
+                    //     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                    //         "default_models/cicids17/automata/dce_rpc-SF.json",
+                    //         22
+                    //     ))
+                    //     .unwrap(),
+                    // ]
                 },
             ),
             ModelsSource::UserDefined(path) => {

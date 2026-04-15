@@ -10,8 +10,6 @@ pub struct TCPPacketInfo {
     pub ts: Duration,
     /// the direction of the packet
     pub direction: PacketDirection,
-    /// whether the packet is a noise
-    pub noise: NoiseType,
     /// SYN flag?
     pub s_flag: bool,
     /// ACK flag?
@@ -32,9 +30,6 @@ impl PacketInfo for TCPPacketInfo {
     }
     fn get_ts(&self) -> Duration {
         self.ts
-    }
-    fn get_noise_type(&self) -> NoiseType {
-        self.noise
     }
     fn set_ts(&mut self, ts: Duration) {
         self.ts = ts
@@ -79,16 +74,10 @@ pub fn parse_tcp_symbol(symbol: String, p: PayloadType) -> TCPEdgeTuple {
     }
 }
 
-pub fn create_tcp_header(
-    payload: Payload,
-    noise: NoiseType,
-    ts: Duration,
-    e: &TCPEdgeTuple,
-) -> TCPPacketInfo {
+pub fn create_tcp_header(payload: Payload, ts: Duration, e: &TCPEdgeTuple) -> TCPPacketInfo {
     TCPPacketInfo {
         payload,
         ts,
-        noise,
         direction: e.direction,
         s_flag: e.s_flag,
         a_flag: e.a_flag,
