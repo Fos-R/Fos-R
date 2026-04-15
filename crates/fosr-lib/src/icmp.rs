@@ -10,8 +10,6 @@ pub struct ICMPPacketInfo {
     pub ts: Duration,
     /// the direction of the packet
     pub direction: PacketDirection,
-    /// whether the packet is a noise
-    pub noise: NoiseType,
 }
 
 impl PacketInfo for ICMPPacketInfo {
@@ -20,9 +18,6 @@ impl PacketInfo for ICMPPacketInfo {
     }
     fn get_ts(&self) -> Duration {
         self.ts
-    }
-    fn get_noise_type(&self) -> NoiseType {
-        self.noise
     }
     fn set_ts(&mut self, ts: Duration) {
         self.ts = ts
@@ -54,15 +49,9 @@ pub fn parse_icmp_symbol(symbol: String, _t: PayloadType) -> ICMPEdgeTuple {
 }
 
 #[allow(unused)]
-pub fn create_icmp_header(
-    _payload: Payload,
-    noise: NoiseType,
-    ts: Duration,
-    e: &ICMPEdgeTuple,
-) -> ICMPPacketInfo {
+pub fn create_icmp_header(_payload: Payload, ts: Duration, e: &ICMPEdgeTuple) -> ICMPPacketInfo {
     ICMPPacketInfo {
         ts,
         direction: e.direction,
-        noise,
     }
 }

@@ -10,8 +10,6 @@ pub struct UDPPacketInfo {
     pub ts: Duration,
     /// the direction of the packet
     pub direction: PacketDirection,
-    /// whether the packet is a noise
-    pub noise: NoiseType,
 }
 
 impl PacketInfo for UDPPacketInfo {
@@ -20,9 +18,6 @@ impl PacketInfo for UDPPacketInfo {
     }
     fn get_ts(&self) -> Duration {
         self.ts
-    }
-    fn get_noise_type(&self) -> NoiseType {
-        self.noise
     }
     fn set_ts(&mut self, ts: Duration) {
         self.ts = ts
@@ -56,15 +51,9 @@ pub fn parse_udp_symbol(symbol: String, p: PayloadType) -> UDPEdgeTuple {
 }
 
 #[allow(unused)]
-pub fn create_udp_header(
-    payload: Payload,
-    noise: NoiseType,
-    ts: Duration,
-    e: &UDPEdgeTuple,
-) -> UDPPacketInfo {
+pub fn create_udp_header(payload: Payload, ts: Duration, e: &UDPEdgeTuple) -> UDPPacketInfo {
     UDPPacketInfo {
         payload,
-        noise,
         ts,
         direction: e.direction,
     }
