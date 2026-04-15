@@ -329,6 +329,7 @@ impl<T: EdgeType> CrossProductTimedAutomaton<T> {
     }
 }
 
+#[derive(Debug)]
 struct StateWithDistr {
     fwd: u32,
     bwd: u32,
@@ -346,7 +347,7 @@ impl StateWithDistr {
     ) -> Self {
         let mut d = match &graph[state as usize].dist {
             Some(d) => Some(WeightedTreeIndex::new(d.weights()).unwrap()),
-            None => Some(WeightedTreeIndex::new(vec![1u32]).unwrap()), // only one output edge
+            None => Some(WeightedTreeIndex::new([1u32]).unwrap()), // only one output edge
         };
 
         if let Some(ref mut distr) = d {
@@ -375,7 +376,7 @@ impl StateWithDistr {
     fn get_next_state(&mut self, rng: &mut impl Rng) -> Option<u32> {
         if let Some(ref mut d) = self.next_state_distr {
             let index = d.sample(rng);
-            // after sampling a state, we immediately update Weighted Index
+            // after sampling a state, we immediately update the distribution
             d.update(index, 0u32).unwrap();
             if !d.is_valid() {
                 self.next_state_distr = None;
@@ -413,17 +414,6 @@ impl<T: EdgeType> TimedAutomaton<T> {
         )];
 
         while let Some(current_state) = state_history.last_mut() {
-            // If we arrived at the accepting state, finalize the timestamp
-            // TODO: move that part to below
-            if current_state.state == self.accepting_state {
-                let mut current_ts = fd.timestamp;
-                for p in output.iter_mut() {
-                    current_ts += p.get_ts();
-                    p.set_ts(current_ts);
-                }
-
-                return Some(output);
-            }
 
             if let Some(edge_index) = current_state.get_next_state(rng) {
                 let e = &self.graph[current_state.state as usize].out_edges[edge_index as usize];
@@ -449,6 +439,18 @@ impl<T: EdgeType> TimedAutomaton<T> {
                         bwd += 1;
                     }
                     output.push(data);
+                } else {
+                    // We arrived at the accepting state
+                    assert!(e.dst_node == self.accepting_state);
+
+                    // Finalize the timestamps
+                    let mut current_ts = fd.timestamp;
+                    for p in output.iter_mut() {
+                        current_ts += p.get_ts();
+                        p.set_ts(current_ts);
+                    }
+
+                    return Some(output);
                 }
 
                 state_history.push(StateWithDistr::new(
@@ -459,9 +461,11 @@ impl<T: EdgeType> TimedAutomaton<T> {
                     fwd + bwd >= min_fwd + min_bwd,
                 ));
             } else {
-                // no more next state for this node
+                // no more next state for this node: we backtrack
                 state_history.pop();
+                output.pop();
             }
+            assert!(output.is_empty() || (output.len() + 1 == state_history.len()));
         }
         // No more state at all: the goal is unreachable
         None
