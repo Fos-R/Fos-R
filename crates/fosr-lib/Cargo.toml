@@ -15,6 +15,7 @@ keywords = ["networking", "ai", "security"]
 base64 = "0.22.1"
 chrono = "0.4.44"
 crossbeam-channel = "0.5.15"
+derivative = "2.2.0"
 fosr-ebpf = { version = "0.1.1", path = "../fosr-ebpf", optional = true }
 include-bytes-zstd = "0.1.0"
 include_dir = { version = "0.7.4", features = ["glob"] }

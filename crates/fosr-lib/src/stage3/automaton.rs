@@ -1,5 +1,6 @@
 use crate::structs::*;
 use base64::Engine;
+use derivative::Derivative;
 use nalgebra::OVector;
 use nalgebra::Vector2;
 use rand_core::*;
@@ -14,7 +15,7 @@ use statrs::rand::distributions::Distribution as StatRsDistribution;
 use statrs::statistics::{MeanN, VarianceN};
 use std::cmp::max;
 use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
@@ -33,6 +34,15 @@ struct CrossProductTimedNode<T: EdgeType> {
 struct TimedNode<T: EdgeType> {
     out_edges: Vec<TimedEdge<T>>,
     dist: Option<WeightedIndex<u32>>,
+}
+
+impl<T: EdgeType> TimedNode<T> {
+    fn get_likelihood(&self, edge_index: usize) -> f64 {
+        match &self.dist {
+            None => 0.,
+            Some(d) => (d.weight(edge_index).unwrap() as f64) / (d.total_weight() as f64),
+        }
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -96,7 +106,7 @@ pub struct TimedEdge<T: EdgeType> {
 pub struct CrossProductTimedAutomaton<T: EdgeType> {
     graph: Vec<CrossProductTimedNode<T>>,
     initial_state: u32,
-    clusters: Vec<Option<(Vec<u32>, WeightedIndex<u32>)>>,
+    clusters: Vec<Option<(Vec<u32>, WeightedIndex<f64>)>>,
     #[allow(unused)]
     metadata: AutomatonMetaData,
 }
@@ -105,7 +115,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
     fn from(automaton: TimedAutomaton<T>) -> Self {
         let mut max_fwd: u32 = 1;
         let mut max_bwd: u32 = 1;
-        const MAX_FWD_BWD: u32 = 100;
+        const MAX_FWD_BWD: u32 = 200;
         let mut available_clusters: Vec<bool> = vec![];
 
         for c in automaton.clusters.iter() {
@@ -128,54 +138,71 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
         // dbg!(&max_fwd, &max_bwd);
         assert!(available_clusters.len() == automaton.clusters.len());
 
-        #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
+        #[derive(Derivative)]
+        #[derivative(Hash, PartialEq)]
+        #[derive(Copy, Clone, Debug)]
         struct CrossProductNode {
             state: u32,
+            #[derivative(Hash = "ignore")]
+            #[derivative(PartialEq = "ignore")]
+            likelihood: f64,
+            // for equality
             fwd: u32,
             bwd: u32,
         }
+
+        impl Eq for CrossProductNode {}
 
         log::trace!(
             "Computing cross-product automata for {}",
             automaton.metadata.service
         );
-        let mut openset = vec![];
-        openset.push(CrossProductNode {
+        let mut openset = VecDeque::new();
+        openset.push_back(CrossProductNode {
             state: automaton.initial_state,
+            likelihood: 0.,
             fwd: 0,
             bwd: 0,
         });
+
+        // The predecessors in the initial automata become successors in the cross-product automata
         let mut predecessors: HashMap<CrossProductNode, Vec<TimedEdge<T>>> = HashMap::new();
         let mut closeset = vec![];
-        let mut seen = HashSet::new();
+        // let mut seen = HashSet::new();
         let mut current_node_index = 0;
 
-        // A simple search
-        while let Some(node) = openset.pop() {
-            if seen.contains(&node) {
-                continue;
-            }
+        // A simple BFS search
+        while let Some(node) = openset.pop_front() {
+            // assert!(!seen.contains(&node));
             closeset.push(node);
-            for e in automaton.graph[node.state as usize].out_edges.iter() {
+            for (edge_index, e) in automaton.graph[node.state as usize]
+                .out_edges
+                .iter()
+                .enumerate()
+            {
+                let likelihood = node.likelihood
+                    + automaton.graph[node.state as usize].get_likelihood(edge_index);
                 let successor_node = match &e.data {
                     None => CrossProductNode {
                         state: e.dst_node,
                         fwd: node.fwd,
                         bwd: node.bwd,
+                        likelihood,
                     }, // epsilon-transitions do not affect the counts
                     Some(d) if d.get_direction() == PacketDirection::Forward => CrossProductNode {
                         state: e.dst_node,
                         fwd: node.fwd + 1,
                         bwd: node.bwd,
+                        likelihood,
                     },
                     _ => CrossProductNode {
                         state: e.dst_node,
                         fwd: node.fwd,
                         bwd: node.bwd + 1,
+                        likelihood,
                     },
                 };
                 if successor_node.fwd <= max_fwd && successor_node.bwd <= max_bwd {
-                    openset.push(successor_node);
                     let mut new_edge = e.clone();
                     new_edge.dst_node = current_node_index;
                     let value = predecessors.get_mut(&successor_node);
@@ -184,9 +211,16 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                     } else {
                         predecessors.insert(successor_node, vec![new_edge]);
                     }
+
+                    // This node is already in the openset
+                    if let Some(node) = openset.iter_mut().find(|e| e == &&successor_node) {
+                        node.likelihood += successor_node.likelihood;
+                    } else {
+                        openset.push_back(successor_node);
+                    }
                 }
             }
-            seen.insert(node);
+            // seen.insert(node);
             current_node_index += 1;
         }
 
@@ -196,7 +230,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
         let mut graph: Vec<CrossProductTimedNode<T>> = Vec::new();
 
         let mut accepting_states_per_cluster: Vec<Vec<u32>> = Vec::new();
-        let mut marginal_weights_per_cluster: Vec<Vec<u32>> = Vec::new();
+        let mut marginal_weights_per_cluster: Vec<Vec<f64>> = Vec::new();
         for _ in automaton.clusters.iter() {
             accepting_states_per_cluster.push(Vec::new());
             marginal_weights_per_cluster.push(Vec::new());
@@ -220,31 +254,33 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                 let mut max: Option<u32> = None;
                 let mut max_value: Option<f64> = None;
                 for (j, cluster) in automaton.clusters.iter().enumerate() {
-                    let p = cluster.ln_pdf(&Vector2::new(node.fwd as f64, node.bwd as f64));
-                    if let Some(val) = max_value {
-                        if val < p {
+                    if available_clusters[j] {
+                        let p = cluster.ln_pdf(&Vector2::new(node.fwd as f64, node.bwd as f64));
+                        if let Some(val) = max_value {
+                            if val < p {
+                                max_value = Some(p);
+                                max = Some(j as u32);
+                            }
+                        } else {
                             max_value = Some(p);
                             max = Some(j as u32);
                         }
-                    } else {
-                        max_value = Some(p);
-                        max = Some(j as u32);
                     }
                 }
-                // println!(
-                //     "Most probable cluster for {} and {}: {}",
-                //     node.fwd,
-                //     node.bwd,
-                //     max.unwrap()
-                // );
+                if let Some(max) = max {
+                    // println!(
+                    //     "Most probable cluster for {} and {}: {}",
+                    //     node.fwd,
+                    //     node.bwd,
+                    //     max
+                    // );
 
-                accepting_states_per_cluster[max.unwrap() as usize].push(i as u32);
-                marginal_weights_per_cluster[max.unwrap() as usize].push(
-                    in_edges
-                        .as_ref()
-                        .map(|v| v.iter().map(|e| e.count).sum())
-                        .unwrap_or(0),
-                );
+                    accepting_states_per_cluster[max as usize].push(i as u32);
+                    marginal_weights_per_cluster[max as usize]
+                        .push(node.likelihood * (u32::MAX as f64));
+                } else {
+                    unreachable!();
+                }
             }
 
             let in_edges: Vec<CrossProductTimedEdge<T>> = in_edges
@@ -414,7 +450,6 @@ impl<T: EdgeType> TimedAutomaton<T> {
         )];
 
         while let Some(current_state) = state_history.last_mut() {
-
             if let Some(edge_index) = current_state.get_next_state(rng) {
                 let e = &self.graph[current_state.state as usize].out_edges[edge_index as usize];
 
