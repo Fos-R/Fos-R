@@ -126,7 +126,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
             let bwd =
                 (c.mean().unwrap()[1] + 3f64 * c.variance().unwrap()[3].sqrt()).round() as u32;
             // dbg!(&fwd, &bwd);
-            if fwd <= MAX_FWD_BWD && bwd <= MAX_FWD_BWD {
+            if fwd + bwd <= MAX_FWD_BWD {
                 max_fwd = max(max_fwd, fwd);
                 max_bwd = max(max_bwd, bwd);
                 available_clusters.push(true);
