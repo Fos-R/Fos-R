@@ -20,8 +20,8 @@ use std::time::Duration;
 /// This structure holds the flow that is being built. Since we cannot instance all the variables
 /// at the same time, each variable is an Option
 struct IntermediateVector {
-    src_ip_role: Option<IpRole>,
-    dst_ip_role: Option<IpRole>,
+    // src_ip_role: Option<IpRole>,
+    // dst_ip_role: Option<IpRole>,
     l7_proto: Option<&'static str>,
     dst_port: Option<u16>,
     src_port: Option<u16>,
@@ -69,26 +69,26 @@ struct BayesianNetworkNode {
                          // in the cpt
 }
 
-#[derive(Debug, Clone)]
-enum IpRole {
-    User,
-    Server,
-    Internet,
-}
+// #[derive(Debug, Clone)]
+// enum IpRole {
+//     User,
+//     Server,
+//     Internet,
+// }
 
 // TODO: refaire proprement
-impl TryFrom<String> for IpRole {
-    type Error = String;
+// impl TryFrom<String> for IpRole {
+//     type Error = String;
 
-    fn try_from(s: String) -> Result<IpRole, Self::Error> {
-        match s.as_str() {
-            "User" => Ok(IpRole::User),
-            "Server" => Ok(IpRole::Server),
-            "Internet" => Ok(IpRole::Internet),
-            _ => Err("Cannot parse IpRole {s}".to_string()),
-        }
-    }
-}
+//     fn try_from(s: String) -> Result<IpRole, Self::Error> {
+//         match s.as_str() {
+//             "User" => Ok(IpRole::User),
+//             "Server" => Ok(IpRole::Server),
+//             "Internet" => Ok(IpRole::Internet),
+//             _ => Err("Cannot parse IpRole {s}".to_string()),
+//         }
+//     }
+// }
 
 #[derive(Debug, Clone)]
 enum AnonymizedIpv4Addr {
@@ -107,8 +107,8 @@ enum DstPt {
 enum Feature {
     // for each feature, we associate a domain
     TimeBin(usize), // cardinality only
-    SrcIpRole(Vec<IpRole>),
-    DstIpRole(Vec<IpRole>),
+    // SrcIpRole(Vec<IpRole>),
+    // DstIpRole(Vec<IpRole>),
     SrcIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
     DstIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
     DstPt(Vec<DstPt>), // the port comes from the network file (must be chosen after the dest IP)
@@ -125,7 +125,7 @@ enum Feature {
 impl Feature {
     fn get_value_string(&self, index: usize) -> String {
         match &self {
-            Feature::SrcIpRole(v) | Feature::DstIpRole(v) => format!("{:?}", v[index]),
+            // Feature::SrcIpRole(v) | Feature::DstIpRole(v) => format!("{:?}", v[index]),
             Feature::SrcIp(v) | Feature::DstIp(v) => format!("{:?}", v[index]),
             Feature::DstPt(v) => format!("{:?}", v[index]),
             Feature::PktCount(_) => format!("Cluster {index}"),
@@ -140,7 +140,7 @@ impl Feature {
 
     fn get_cardinality(&self) -> usize {
         match &self {
-            Feature::SrcIpRole(v) | Feature::DstIpRole(v) => v.len(),
+            // Feature::SrcIpRole(v) | Feature::DstIpRole(v) => v.len(),
             Feature::SrcIp(v) | Feature::DstIp(v) => v.len(),
             Feature::DstPt(v) => v.len(),
             Feature::PktCount(card) => *card,
@@ -246,8 +246,8 @@ impl BayesianNetwork {
                         // println!("Sampled value for {:?}: {}", v.feature, i);
                         new_discrete_vector.push(i);
                         match &v.feature {
-                            Feature::SrcIpRole(v) => domain_vector.src_ip_role = Some(v[i].clone()),
-                            Feature::DstIpRole(v) => domain_vector.dst_ip_role = Some(v[i].clone()),
+                            // Feature::SrcIpRole(v) => domain_vector.src_ip_role = Some(v[i].clone()),
+                            // Feature::DstIpRole(v) => domain_vector.dst_ip_role = Some(v[i].clone()),
                             Feature::SrcTTL(v) => domain_vector.ttl_client = Some(v[i]),
                             Feature::DstTTL(v) => domain_vector.ttl_server = Some(v[i]),
                             Feature::SrcMac(v) => domain_vector.src_mac = Some(v[i]),
@@ -798,13 +798,13 @@ fn bn_from_bif(
                 Some(Feature::TimeBin(v.outcome.len()))
             }
             "Cat Packet" => Some(Feature::PktCount(v.outcome.len())),
-            "Src IP Role" => Some(Feature::SrcIpRole(
-                v.outcome
-                    .clone()
-                    .into_iter()
-                    .map(<std::string::String as TryInto<IpRole>>::try_into)
-                    .collect::<Result<Vec<IpRole>, String>>()?,
-            )),
+            // "Src IP Role" => Some(Feature::SrcIpRole(
+            //     v.outcome
+            //         .clone()
+            //         .into_iter()
+            //         .map(<std::string::String as TryInto<IpRole>>::try_into)
+            //         .collect::<Result<Vec<IpRole>, String>>()?,
+            // )),
             "Src IP Addr" => Some(Feature::SrcIp(
                 v.outcome
                     .clone()
@@ -815,13 +815,13 @@ fn bn_from_bif(
                     })
                     .collect(),
             )),
-            "Dst IP Role" => Some(Feature::DstIpRole(
-                v.outcome
-                    .clone()
-                    .into_iter()
-                    .map(<std::string::String as TryInto<IpRole>>::try_into)
-                    .collect::<Result<Vec<IpRole>, String>>()?,
-            )),
+            // "Dst IP Role" => Some(Feature::DstIpRole(
+            //     v.outcome
+            //         .clone()
+            //         .into_iter()
+            //         .map(<std::string::String as TryInto<IpRole>>::try_into)
+            //         .collect::<Result<Vec<IpRole>, String>>()?,
+            // )),
             "Dst IP Addr" => Some(Feature::DstIp(
                 v.outcome
                     .clone()

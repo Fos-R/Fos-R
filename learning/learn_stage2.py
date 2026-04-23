@@ -220,6 +220,10 @@ if __name__ == '__main__':
     out_file = open(os.path.join(args.output, "bn/automata-flows.json"), "w")
     json.dump(automata, out_file, indent=1)
 
+    # Remove flow with more than 200 packets
+    flow["Pkts count"] = flow["orig_pkts"] + flow["resp_pkts"]
+    flow = flow[flow["Pkts count"] <= 200]
+
     # anonymise public IP
     flow['Src IP Addr'] = flow['id.orig_h'].apply(remove_public_ip)
     flow['Dst IP Addr'] = flow['id.resp_h'].apply(remove_public_ip)
