@@ -1,92 +1,80 @@
 {
  "edges": [
   {
-   "payloads": {
-    "type": "NoPayload"
-   },
-   "p": 1.0,
-   "count": 1000,
-   "src": 0,
-   "dst": 1,
-   "symbol": "S_>_Empty",
-   "mu": [
-    0.0,
-    0.0
-   ],
-   "cov": [
-    [
-     1e-06,
-     0.0
-    ],
-    [
-     0.0,
-     1e-06
-    ]
-   ]
-  },
-  {
-   "payloads": {
-    "type": "NoPayload"
-   },
-   "p": 0.6544502617801047,
-   "count": 1000,
-   "src": 1,
+   "p": 0.3958333333333333,
+   "count": 75,
+   "src": 3,
    "dst": 2,
-   "symbol": "$",
-   "mu": [
-    0.0,
-    0.0
-   ],
-   "cov": [
-    [
-     1e-06,
-     0.0
-    ],
-    [
-     0.0,
-     1e-06
-    ]
-   ]
+   "symbol": "S_>_Empty",
+   "iat_distr": {
+    "law": "gamma",
+    "shape": 0.05369530999797875,
+    "loc": 1995262.3149688786,
+    "scale": 1.9370015235324471
+   }
   },
   {
-   "payloads": {
-    "type": "NoPayload"
-   },
-   "p": 0.34554973821989526,
-   "count": 373,
-   "src": 1,
-   "dst": 1,
+   "p": 0.3333333333333333,
+   "count": 190,
+   "src": 2,
+   "dst": 3,
    "symbol": "S_>_Empty",
-   "mu": [
-    2138.8541666666665,
-    0.0
-   ],
-   "cov": [
-    [
-     754405.18362687,
-     0.0
-    ],
-    [
-     0.0,
-     1e-06
-    ]
-   ]
+   "iat_distr": {
+    "law": "gamma",
+    "shape": 219.45037146235592,
+    "loc": -13824490.514382109,
+    "scale": 73479.96735878728
+   }
+  },
+  {
+   "p": 0.6041666666666666,
+   "count": 116,
+   "src": 3,
+   "dst": 1,
+   "symbol": "$",
+   "iat_distr": {
+    "law": "constant",
+    "value": 1.0
+   }
+  },
+  {
+   "p": 1.0,
+   "count": 500,
+   "src": 0,
+   "dst": 2,
+   "symbol": "S_>_Empty",
+   "iat_distr": {
+    "law": "constant",
+    "value": 1.0
+   }
+  },
+  {
+   "p": 0.6666666666666666,
+   "count": 384,
+   "src": 2,
+   "dst": 1,
+   "symbol": "$",
+   "iat_distr": {
+    "law": "constant",
+    "value": 1.0
+   }
   }
  ],
- "noise": {
-  "none": 0.9984208448480063,
-  "deletion": 0.0003947887879984208,
-  "reemission": 0.0003947887879984208,
-  "transposition": 0.0003947887879984208,
-  "addition": 0.0003947887879984208
+ "statistics": {
+  "no_noise": 0.9960753532182104,
+  "deletion": 0.0007849293563579279,
+  "reemission": 0.0007849293563579279,
+  "transposition": 0.0007849293563579279,
+  "addition": 0.0007849293563579279,
+  "substitution": 0.0007849293563579279
  },
  "initial_state": 0,
- "accepting_state": 2,
+ "accepting_state": 1,
  "protocol": "tcp",
  "metadata": {
   "service": "ssl",
   "conn_state": "S0",
   "input_file": "cicids17-train",
-  "creation_time": "2026-01-26 12:07:11.727606"
+  "creation_time": "2026-04-26 14:40:51.285697"
  }
 }

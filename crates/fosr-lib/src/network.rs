@@ -7,10 +7,10 @@ use std::collections::HashSet;
 use std::net::Ipv4Addr;
 
 #[derive(Debug)]
-/// The networkuration file of the network and the hosts
+/// The network file of the network and the hosts
 pub struct Network {
     // TODO: faire du tri dans ce qui n’est pas utile
-    /// The metadata of the networkuration
+    /// The metadata of the network
     pub metadata: Metadata,
     /// The list of hosts
     pub hosts: Vec<Host>,
@@ -24,7 +24,7 @@ pub struct Network {
     pub users: Vec<Ipv4Addr>,
     /// The list of "servers" IPs
     pub servers: Vec<Ipv4Addr>,
-    /// The list of services proposed in the networkuration
+    /// The list of services proposed in the network
     pub services: Vec<&'static str>,
     /// Overridden listening ports
     pub open_ports: HashMap<(Ipv4Addr, &'static str), u16>,
@@ -161,7 +161,7 @@ impl Network {
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-/// Metadata of the networkuration file
+/// Metadata of the network file
 pub struct Metadata {
     /// The title of the network file
     pub title: String,
@@ -299,11 +299,11 @@ impl TryFrom<InterfaceYaml> for Interface {
     }
 }
 
-/// Import a networkuration from a string. The string can be either in JSON or YAML format (the
+/// Import a network from a string. The string can be either in JSON or YAML format (the
 /// truth is that YAML is a superset of JSON).
 pub fn import_network(network_string: &str) -> Network {
     let network: Network = serde_yaml::from_str::<NetworkYaml>(network_string)
-        .expect("Cannot parse the networkuration file")
+        .expect("Cannot parse the network file")
         .into();
     log::info!("\"{}\" successfully loaded", network.metadata.title);
     log::trace!("Network: {network:?}");
@@ -319,7 +319,7 @@ mod tests {
         let network = import_network(
             r#"
 metadata:
-  title: Sample networkuration
+  title: Sample network
 hosts:
   - interfaces:
       - services:
@@ -338,11 +338,11 @@ hosts:
         let network = import_network(
             r#"
 metadata:
-  title: Sample networkuration # Mandatory. The title of the networkuration file.
-  desc: A sample networkuration file to show all the different available fields # Optional. A description of the networkuration file.
+  title: Sample network # Mandatory. The title of the network file.
+  desc: A sample network file to show all the different available fields # Optional. A description of the network file.
   author: Jane Doe # Optional. Author of the file.
   date: 2025/11/05 # Optional. Last modification date.
-  version: 0.1.0 # Optional. The version number of this networkuration file. Format is free.
+  version: 0.1.0 # Optional. The version number of this network file. Format is free.
   format: 1 # Reserved for now. The version will be bumped when the format changes.
 
 hosts:
@@ -375,8 +375,8 @@ hosts:
             r#"
 {
     "metadata": {
-        "title": "Sample JSON networkuration",
-        "desc": "A sample networkuration file to show all the different available fields",
+        "title": "Sample JSON network",
+        "desc": "A sample network file to show all the different available fields",
         "author": "Jane Doe",
         "date": "2025/11/05",
         "version": "0.1.0",

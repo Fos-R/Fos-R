@@ -1,0 +1,12 @@
+tadam-learner
+numpy
+pandas
+matplotlib
+seaborn
+scikit-learn
+pyagrum
+
+matplotlib_inline
+ipython
+prdc
+notebook
