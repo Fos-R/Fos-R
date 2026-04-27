@@ -318,11 +318,11 @@ fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), Stri
     node.removed_values.insert(index);
     if node.removed_values.len() == node.feature.get_cardinality() {
         Err(format!(
-            "No value of {:?} can lead to a flow compatible with the networkuration",
+            "No value of {:?} can lead to a flow compatible with the network",
             node.feature
         ))
-    } else {
-        for cpt in node.cpt.as_mut().unwrap().iter_mut() {
+    } else if let Some(cpt) = node.cpt.as_mut() {
+        for cpt in cpt.iter_mut() {
             if let Some(weights) = cpt {
                 let result = weights.update_weights(&[(index, &0.0f64)]);
                 if result.is_err() {
@@ -330,6 +330,9 @@ fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), Stri
                 }
             }
         }
+        Ok(())
+    } else {
+        // We cannot remove values of Time since we do not sample it and it has no CPT
         Ok(())
     }
 }
@@ -471,7 +474,7 @@ impl BayesianModel {
     //         match &mut node.feature {
     //             // we set the probability of absent services to 0
     //             Feature::L7Proto(v) => {
-    //                 // get services present in the networkuration
+    //                 // get services present in the network
     //                 for s in network.services.iter() {
     //                     if !v.contains(s) {
     //                         log::warn!(

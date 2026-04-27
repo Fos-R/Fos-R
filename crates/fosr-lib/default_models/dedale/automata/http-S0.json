@@ -1,0 +1,67 @@
+{
+ "edges": [
+  {
+   "p": 1.0,
+   "count": 17,
+   "src": 3,
+   "dst": 2,
+   "symbol": "S_>_Empty",
+   "iat_distr": {
+    "law": "constant",
+    "value": 1995262.3149688789
+   }
+  },
+  {
+   "p": 0.2786885245901639,
+   "count": 17,
+   "src": 2,
+   "dst": 3,
+   "symbol": "S_>_Empty",
+   "iat_distr": {
+    "law": "gamma",
+    "shape": 0.7397265943750306,
+    "loc": 999999.9999999999,
+    "scale": 96188.70868162744
+   }
+  },
+  {
+   "p": 1.0,
+   "count": 44,
+   "src": 0,
+   "dst": 2,
+   "symbol": "S_>_Empty",
+   "iat_distr": {
+    "law": "constant",
+    "value": 1.0
+   }
+  },
+  {
+   "p": 0.7213114754098361,
+   "count": 44,
+   "src": 2,
+   "dst": 1,
+   "symbol": "$",
+   "iat_distr": {
+    "law": "constant",
+    "value": 1.0
+   }
+  }
+ ],
+ "statistics": {
+  "no_noise": 0.9609375,
+  "deletion": 0.0078125,
+  "reemission": 0.0078125,
+  "transposition": 0.0078125,
+  "addition": 0.0078125,
+  "substitution": 0.0078125
+ },
+ "initial_state": 0,
+ "accepting_state": 1,
+ "protocol": "tcp",
+ "metadata": {
+  "service": "http",
+  "conn_state": "S0",
+  "input_file": "dedale-train",
+  "creation_time": "2026-04-01 17:31:35.664203"
+ }
+}

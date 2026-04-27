@@ -58,9 +58,10 @@ impl DefaultModels {
         match &self {
             #[cfg(feature = "models_cicids17")]
             DefaultModels::CICIDS17 => models::ModelsSource::CICIDS17,
+            #[cfg(feature = "models_cupid")]
+            DefaultModels::CUPID => models::ModelsSource::CUPID,
             #[cfg(feature = "models_dedale")]
             DefaultModels::DEDALE => models::ModelsSource::DEDALE,
-            _ => unreachable!(),
         }
     }
 }

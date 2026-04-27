@@ -1,116 +1,67 @@
 {
  "edges": [
   {
-   "payloads": {
-    "type": "NoPayload"
-   },
    "p": 1.0,
-   "count": 936,
+   "count": 500,
    "src": 0,
    "dst": 1,
    "symbol": "S_>_Empty",
-   "mu": [
-    0.0,
-    0.0
-   ],
-   "cov": [
-    [
-     1e-06,
-     0.0
-    ],
-    [
-     0.0,
-     1e-06
-    ]
-   ]
+   "iat_distr": {
+    "law": "constant",
+    "value": 1.0
+   }
   },
   {
-   "payloads": {
-    "type": "NoPayload"
-   },
-   "p": 0.003194888178913738,
-   "count": 3,
+   "p": 0.9960159362549801,
+   "count": 500,
+   "src": 1,
+   "dst": 2,
+   "symbol": "RA_<_Empty",
+   "iat_distr": {
+    "law": "gamma",
+    "shape": 1.6227186179256563,
+    "loc": 13599.762387701212,
+    "scale": 64798.26135768823
+   }
+  },
+  {
+   "p": 1.0,
+   "count": 500,
+   "src": 2,
+   "dst": 3,
+   "symbol": "$",
+   "iat_distr": {
+    "law": "constant",
+    "value": 1.0
+   }
+  },
+  {
+   "p": 0.00398406374501992,
+   "count": 2,
    "src": 1,
    "dst": 1,
    "symbol": "S_>_Empty",
-   "mu": [
-    2994.6666666666665,
-    0.0
-   ],
-   "cov": [
-    [
-     1.3333343333333332,
-     0.0
-    ],
-    [
-     0.0,
-     1e-06
-    ]
-   ]
-  },
-  {
-   "payloads": {
-    "type": "NoPayload"
-   },
-   "p": 0.9968051118210862,
-   "count": 936,
-   "src": 1,
-   "dst": 3,
-   "symbol": "RA_<_Empty",
-   "mu": [
-    118.2681623931624,
-    0.0
-   ],
-   "cov": [
-    [
-     6028.594323181091,
-     0.0
-    ],
-    [
-     0.0,
-     1e-06
-    ]
-   ]
-  },
-  {
-   "payloads": {
-    "type": "NoPayload"
-   },
-   "p": 1.0,
-   "count": 936,
-   "src": 3,
-   "dst": 2,
-   "symbol": "$",
-   "mu": [
-    0.0,
-    0.0
-   ],
-   "cov": [
-    [
-     1e-06,
-     0.0
-    ],
-    [
-     0.0,
-     1e-06
-    ]
-   ]
+   "iat_distr": {
+    "law": "constant",
+    "value": 3162277.6601683795
+   }
   }
  ],
- "noise": {
-  "none": 0.9985795454545454,
-  "deletion": 0.0003551136363636366,
-  "reemission": 0.0003551136363636366,
-  "transposition": 0.0003551136363636366,
-  "addition": 0.0003551136363636366
+ "statistics": {
+  "no_noise": 0.996684350132626,
+  "deletion": 0.0006631299734748014,
+  "reemission": 0.0006631299734748014,
+  "transposition": 0.0006631299734748014,
+  "addition": 0.0006631299734748014,
+  "substitution": 0.0006631299734748014
  },
  "initial_state": 0,
- "accepting_state": 2,
+ "accepting_state": 3,
  "protocol": "tcp",
  "metadata": {
   "service": "ssl",
   "conn_state": "REJ",
   "input_file": "cicids17-train",
-  "creation_time": "2026-01-26 12:05:53.047990"
+  "creation_time": "2026-04-26 14:39:52.730270"
  }
 }
