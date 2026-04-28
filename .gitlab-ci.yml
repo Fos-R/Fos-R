@@ -188,7 +188,7 @@ generate:
       - DATASET:
         - cupid
         - cicids17
-        #- dedale
+        - dedale
   artifacts:
     expire_in: 3 days
     when: always
@@ -245,7 +245,7 @@ analyze-dataset:
       - DATASET:
         - cupid
         - cicids17
-        #- dedale
+        - dedale
   artifacts:
     expire_in: 3 days
     paths: # do not export the pcap files
@@ -299,7 +299,7 @@ evaluate-dataset:
       - DATASET:
         - cupid
         - cicids17
-        #- dedale
+        - dedale
   artifacts:
     expire_in: 3 days
     paths:
@@ -345,7 +345,7 @@ pages:
     - pandoc changelog.md -o changelog.html --template template.html --include-after-body footer.html --standalone --toc
     - pandoc cupid.md -o cupid.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
     - pandoc cicids17.md -o cicids17.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
-    # - pandoc dedale.md -o dedale.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
+    - pandoc dedale.md -o dedale.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
     - rm *.md
   artifacts:
     expire_in: 3 days
