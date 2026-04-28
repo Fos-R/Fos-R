@@ -182,7 +182,7 @@ generate:
   script:
     - git checkout $CI_COMMIT_REF_NAME
     - mkdir -p data/$DATASET/$DATASET-fosr
-    - cargo run -- augment-dataset -o data/$DATASET/$DATASET-fosr/data.pcap -s 0 -d 1day -t 0 -p fast --tz CET -m $DATASET
+    - cargo run -- augment-dataset -o data/$DATASET/$DATASET-fosr/data.pcap -s 0 -d 1day -t 0 -p fast --tz UTC -m $DATASET
   parallel:
     matrix:
       - DATASET:

@@ -21,7 +21,7 @@ fn deterministic_fast_generation() -> Result<(), Box<dyn std::error::Error>> {
         .args(["-d", "1h"])
         .args(["-t", "0"])
         .args(["-p", "fast"])
-        .args(["--tz", "CET"])
+        .args(["--tz", "UTC"])
         .args(["-m", "cupid"])
         .env("RUST_LOG", "trace")
         .spawn()?;
@@ -49,7 +49,7 @@ fn deterministic_efficient_generation() -> Result<(), Box<dyn std::error::Error>
         .args(["-d", "1h"])
         .args(["-t", "0"])
         .args(["-p", "fast"])
-        .args(["--tz", "CET"])
+        .args(["--tz", "UTC"])
         .args(["-m", "cupid"])
         .env("RUST_LOG", "trace")
         .spawn()?;

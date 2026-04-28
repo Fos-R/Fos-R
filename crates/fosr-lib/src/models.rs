@@ -186,8 +186,7 @@ impl ModelsSource {
             ModelsSource::CUPID => Ok(
                 // #[cfg(debug_assertions)]
                 {
-                    let d: Dir =
-                        include_dir!("$CARGO_MANIFEST_DIR/default_models/cupid/automata/");
+                    let d: Dir = include_dir!("$CARGO_MANIFEST_DIR/default_models/cupid/automata/");
                     d.find("**/*.json")
                         .unwrap()
                         .filter_map(|e: &DirEntry| e.as_file())
