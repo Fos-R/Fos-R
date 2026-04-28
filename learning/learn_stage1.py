@@ -10,8 +10,10 @@ if __name__ == '__main__':
     parser.add_argument('--input', required=True, help="Input directory.")
     parser.add_argument('--output', required=True, help="Output directory.")
     parser.add_argument('--offset', help="Offset from UTC (in hours).", type=float)
+    parser.add_argument('--bin-count', help="Number of bins per day (by default, 15-min bins)", type=float)
     args = parser.parse_args()
     args.offset = args.offset or 0 # default: consider it’s UTC
+    bin_count = args.bin_count or 24 * 4
 
     print("Loading file")
     conn_input = os.path.join(args.input, "conn.log")
@@ -19,11 +21,13 @@ if __name__ == '__main__':
     dates = (flow["ts"] + (60 * 60 * args.offset)) % (60 * 60 * 24)
 
     print("Computing model")
-    bin_edges = np.linspace(0, 60 * 60 * 24, 24 * 4)  # one bin per 15 minutes
+    bin_edges = np.linspace(0, 60 * 60 * 24, bin_count)
     bin_indices = np.digitize(dates, bin_edges)
-    hist = np.bincount(bin_indices)
+    hist = np.bincount(bin_indices)[1:].tolist()
+    hist = (hist + bin_count * [0])[:bin_count] # pad with zero
+    assert len(hist) == bin_count
 
-    data = { "histogram": hist[1:].tolist(), "metadata": { "creation_time": str(datetime.datetime.now()), "input_file": os.path.basename(os.path.normpath(args.input)) }}
+    data = { "histogram": hist, "metadata": { "creation_time": str(datetime.datetime.now()), "input_file": os.path.basename(os.path.normpath(args.input)) }}
 
     with open(os.path.join(args.output,'time_profile.json'), 'w') as f:
         json.dump(data, f)
