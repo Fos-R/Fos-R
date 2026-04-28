@@ -966,12 +966,13 @@ impl Stage2 for BNGenerator {
         let mut restart = true;
         while restart {
             restart = false;
-            discrete_vector.clear();
-            discrete_vector.push(min(
+            let time = min(
                 self.model.bin_count - 1,
-                (ts.data.date_time.num_seconds_from_midnight() as usize) / (3600 * 24)
-                    * self.model.bin_count,
-            ));
+                ((ts.data.date_time.num_seconds_from_midnight() as f64 / (3600. * 24.)).fract()
+                    * (self.model.bin_count as f64)) as usize,
+            );
+            discrete_vector.clear();
+            discrete_vector.push(time);
             domain_vector = self.model.bn.sample(&mut rng, &mut discrete_vector)?;
 
             if domain_vector.src_ip == domain_vector.dst_ip {

@@ -77,7 +77,7 @@ impl Iterator for BinBasedGenerator {
         self.remaining_flows -= 1;
         self.total_flow_count += 1;
         let unix_time = Duration::from_millis(self.time_distrib.sample(&mut self.flow_rng.clone()));
-        let date_time = DateTime::from_timestamp_secs(self.initial_ts.as_secs() as i64)
+        let date_time = DateTime::from_timestamp_secs(unix_time.as_secs() as i64)
             .unwrap()
             .with_timezone(&self.dest_tz_offset);
         Some(SeededData {
