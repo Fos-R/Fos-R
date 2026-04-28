@@ -62,7 +62,7 @@ impl ModelsSource {
         match &self {
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
-                #[cfg(debug_assertions)]
+                // #[cfg(debug_assertions)]
                 {
                     let d: Dir =
                         include_dir!("$CARGO_MANIFEST_DIR/default_models/cicids17/automata/");
@@ -76,115 +76,115 @@ impl ModelsSource {
                         .map(|f: &include_dir::File| f.contents_utf8().unwrap().to_string())
                         .collect()
                 },
-                #[cfg(not(debug_assertions))]
-                {
-                    vec![
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/dce_rpc,gssapi,krb-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/dce_rpc,gssapi,smb-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/dce_rpc-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/dns.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ftp-data-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ftp-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/gssapi,krb,smb-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/gssapi,ntlm,smb-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/http-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/http-S0.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/http-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/krb.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/krb_tcp-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ldap_tcp-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ldap_udp.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ntp.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ssl-REJ.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ssl-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ssl-S0.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cicids17/automata/ssl-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                    ]
-                },
+                // #[cfg(not(debug_assertions))]
+                // {
+                //     vec![
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/dce_rpc,gssapi,krb-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/dce_rpc,gssapi,smb-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/dce_rpc-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/dns.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/ftp-data-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/ftp-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/gssapi,krb,smb-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/gssapi,ntlm,smb-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/http-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/http-S0.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/http-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/krb.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/krb_tcp-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/ldap_tcp-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/ldap_udp.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/ntp.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/ssl-REJ.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/ssl-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/ssl-S0.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cicids17/automata/ssl-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //     ]
+                // },
             ),
             #[cfg(feature = "models_cupid")]
             ModelsSource::CUPID => Ok(
-                #[cfg(debug_assertions)]
+                // #[cfg(debug_assertions)]
                 {
                     let d: Dir =
                         include_dir!("$CARGO_MANIFEST_DIR/default_models/cupid/automata/");
@@ -198,135 +198,135 @@ impl ModelsSource {
                         .map(|f: &include_dir::File| f.contents_utf8().unwrap().to_string())
                         .collect()
                 },
-                #[cfg(not(debug_assertions))]
-                {
-                    vec![
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/dce_rpc,gssapi,krb,ntlm-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/dce_rpc,gssapi,krb-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/dce_rpc,gssapi,krb,smb-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/dce_rpc,gssapi,smb-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/dce_rpc,ntlm-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/dce_rpc-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/dhcp.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/dns.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,krb,smb-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,krb,smb-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,ntlm,smb-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,ntlm,smb-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/gssapi,smb-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/http-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/http-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/krb.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/krb_tcp-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ldap_tcp-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ldap_udp.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ntp.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/smtp-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ssl-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/cupid/automata/ssl-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                    ]
-                },
+                // #[cfg(not(debug_assertions))]
+                // {
+                //     vec![
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/dce_rpc,gssapi,krb,ntlm-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/dce_rpc,gssapi,krb-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/dce_rpc,gssapi,krb,smb-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/dce_rpc,gssapi,smb-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/dce_rpc,ntlm-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/dce_rpc-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/dhcp.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/dns.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/gssapi,krb,smb-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/gssapi,krb,smb-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/gssapi,ntlm,smb-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/gssapi,ntlm,smb-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/gssapi,smb-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/gssapi,smb-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/http-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/http-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/krb.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/krb_tcp-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/ldap_tcp-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/ldap_udp.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/ntp.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/smtp-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/ssl-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/cupid/automata/ssl-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //     ]
+                // },
             ),
             #[cfg(feature = "models_dedale")]
             ModelsSource::DEDALE => Ok(
-                #[cfg(debug_assertions)]
+                // #[cfg(debug_assertions)]
                 {
                     let d: Dir =
                         include_dir!("$CARGO_MANIFEST_DIR/default_models/dedale/automata/");
@@ -340,106 +340,106 @@ impl ModelsSource {
                         .map(|f: &include_dir::File| f.contents_utf8().unwrap().to_string())
                         .collect()
                 },
-                #[cfg(not(debug_assertions))]
-                {
-                    vec![
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/dce_rpc,gssapi,krb-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/dce_rpc,gssapi,krb-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/dce_rpc-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/dce_rpc-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/dhcp.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/dns.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/dns-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/gssapi,krb,smb-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/http-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/http-S0.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/http-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/ldap_tcp-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/ldap_udp.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/ntp.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/quic,ssl.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/smtp,ssl-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/ssl-RST.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/ssl-S0.json",
-                            22
-                        ))
-                        .unwrap(),
-                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                            "default_models/dedale/automata/ssl-SF.json",
-                            22
-                        ))
-                        .unwrap(),
-                    ]
-                },
+                // #[cfg(not(debug_assertions))]
+                // {
+                //     vec![
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/dce_rpc,gssapi,krb-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/dce_rpc,gssapi,krb-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/dce_rpc-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/dce_rpc-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/dhcp.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/dns.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/dns-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/gssapi,krb,smb-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/http-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/http-S0.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/http-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/ldap_tcp-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/ldap_udp.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/ntp.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/quic,ssl.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/smtp,ssl-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/ssl-RST.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/ssl-S0.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                //             "default_models/dedale/automata/ssl-SF.json",
+                //             1
+                //         ))
+                //         .unwrap(),
+                //     ]
+                // },
             ),
             ModelsSource::UserDefined(path) => {
                 let paths = fs::read_dir(Path::new(path).join("automata").to_str().unwrap())?;
@@ -466,7 +466,7 @@ impl ModelsSource {
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cicids17/bn/bn.bifxml",
-                        22
+                        1
                     ))
                     .unwrap()
                 },
@@ -480,7 +480,7 @@ impl ModelsSource {
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cupid/bn/bn.bifxml",
-                        22
+                        1
                     ))
                     .unwrap()
                 },
@@ -494,7 +494,7 @@ impl ModelsSource {
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/dedale/bn/bn.bifxml",
-                        22
+                        1
                     ))
                     .unwrap()
                 },
@@ -519,7 +519,7 @@ impl ModelsSource {
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cicids17/pkt_count_clusters.json",
-                        22
+                        1
                     ))
                     .unwrap()
                 },
@@ -533,7 +533,7 @@ impl ModelsSource {
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cupid/pkt_count_clusters.json",
-                        22
+                        1
                     ))
                     .unwrap()
                 },
@@ -547,7 +547,7 @@ impl ModelsSource {
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/dedale/pkt_count_clusters.json",
-                        22
+                        1
                     ))
                     .unwrap()
                 },
@@ -573,7 +573,7 @@ impl ModelsSource {
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cicids17/time_profile.json",
-                        22
+                        1
                     ))
                     .unwrap()
                 },
@@ -586,7 +586,7 @@ impl ModelsSource {
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cupid/time_profile.json",
-                        22
+                        1
                     ))
                     .unwrap()
                 },
@@ -599,7 +599,7 @@ impl ModelsSource {
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/dedale/time_profile.json",
-                        22
+                        1
                     ))
                     .unwrap()
                 },

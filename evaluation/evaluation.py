@@ -115,7 +115,7 @@ def evaluate_flow(flow_real, flow_synthetic):
     results.append({"data": "Flow", "feature": "Flags History", "metric": "JSD", "value": jsd(flow_real["history"],flow_synthetic["history"])})
     # we only consider connections with a connection state (i.e., TCP)
     results.append({"data": "Flow", "feature": "Connection State", "metric": "JSD", "value": jsd(flow_real[flow_real["conn_state"] != "-"]["conn_state"],flow_synthetic[flow_synthetic["conn_state"] != "-"]["conn_state"])})
-    results.append({"data": "Flow", "feature": "L4 Protocol", "metric": "JSD", "value": jsd(flow_real["ip_proto"],flow_synthetic["ip_proto"])})
+    results.append({"data": "Flow", "feature": "L3 Protocol", "metric": "JSD", "value": jsd(flow_real["ip_proto"],flow_synthetic["ip_proto"])})
 
     # EMD for numerical data
     results.append({"data": "Flow", "feature": "Duration", "metric": "EMD", "value": wasserstein_distance(flow_real["duration"],flow_synthetic["duration"])})
