@@ -206,7 +206,9 @@ tests:
     GIT_CHECKOUT: "false"
   script:
     - git checkout $CI_COMMIT_REF_NAME
+    # test for debug and release
     - cargo test -p fosr-cli -- --nocapture
+    - cargo test -r -p fosr-cli -- --nocapture
   artifacts:
     expire_in: 3 days
     when: always
