@@ -51,6 +51,8 @@ impl From<IntermediateVector> for Flow {
             packets_count_cluster: p.packets_count_cluster.unwrap(),
             fwd_packets_count: 0, //p.fwd_packets_count.unwrap(), FIXME
             bwd_packets_count: 0, //p.bwd_packets_count.unwrap(), FIXME
+            src_mac: p.src_mac.unwrap(),
+            dst_mac: p.dst_mac.unwrap(),
             timestamp: p.timestamp.unwrap(),
             l7_proto: p.l7_proto.unwrap(),
         };
