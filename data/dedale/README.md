@@ -14,3 +14,5 @@ The pcap files were downloaded from <https://dedale.inria.fr/>. We split the fil
 - dedale-reference has been extracted with `editcap -A "2024-12-23 12:00:00" -B "2024-12-23 13:00:00"`
 
 The pcap files are already temporally ordered and contain no vlan packets, no so further processing were performed.
+
+The timezone of the dataset is UTC+1.

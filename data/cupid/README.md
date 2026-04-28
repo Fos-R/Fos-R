@@ -20,3 +20,4 @@ The pcap files were processed as follow:
 - vlan packets have been removed with tshark with the filter `not vlan`
 - the output format was set to pcap and not pcapng
 
+The timezone of the dataset is UTC-6.

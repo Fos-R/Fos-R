@@ -20,3 +20,4 @@ The pcap files were processed as follow:
 - duplicated packets were removed with the attached "remove_duplication.sh" script (that comes from <https://gitlab.inria.fr/mlanvin/crisis2022/>)
 - vlan packets have been removed with tshark with the filter `not vlan`
 
+The timezone of the dataset is UTC-3.

@@ -13,8 +13,6 @@ import pyagrum.lib.image as gumimage
 from IPython.display import Image
 import time
 
-# TODO: il faut créer deux RB. L’un juste pour la génération sans configuration (sans Role), et un autre pour la génération avec configuration (sans port destination / IP)
-
 pd.options.mode.copy_on_write = True
 
 local_net = ['192.168.', '10.', '0.', '127.', '192.0.0', '198.18', '198.19']
@@ -64,11 +62,10 @@ def cluster_to_string(n):
     # to ensure alphabetical order = numerical order
     return "cluster-"+f'{n:03}'
 
-
 bin_count = 24
 
-def categorize_time(t):
-    n = int(t % (60*60*24) // (60*60*24 / bin_count))
+def categorize_time(offset, t):
+    n = int((t + 60 * 60 * offset) % (60*60*24) // (60*60*24 / bin_count))
     # to ensure alphabetical order = numerical order
     return "bin-"+f'{n:03}'
 
@@ -114,7 +111,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Learn a Bayesian network for Fos-R.')
     parser.add_argument('--input', required=True, help="Select the input folder.")
     parser.add_argument('--output', help="Select the output directory.")
+    parser.add_argument('--offset', help="Offset from UTC (in hours).", type=float)
     args = parser.parse_args()
+    args.offset = args.offset or 0 # default: consider it’s UTC
 
     conn_input = os.path.join(args.input, "conn.log")
 
@@ -148,7 +147,7 @@ if __name__ == '__main__':
     print("Services in the UDP file:\n",udp_fosr["service"].value_counts())
 
     print("Extracting")
-    flow["Time"] = flow["ts"].apply(categorize_time)
+    flow["Time"] = flow["ts"].apply(functools.partial(categorize_time, args.offset))
 
     flow["Proto"] = flow["proto"].str.upper()
 
@@ -331,7 +330,6 @@ if __name__ == '__main__':
         common_data[c] = common_data[c].cat.set_categories(full_domains[c])
 
     # Vars without children are useful for transferring the knowledge to other network topologies
-    # TODO: add an option to enable that
     # vars_without_children = ["Src IP Addr", "Dst IP Addr", "Dst Pt", "Src TTL", "Dst TTL", "Src MAC", "Dst MAC"]
     vars_without_children = []
 
