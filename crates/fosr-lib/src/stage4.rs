@@ -29,7 +29,6 @@ use std::time::Duration;
 pub struct Stage4 {
     taint: bool,
     // config: Hosts,
-    zero: MacAddr,
 }
 
 #[derive(Debug, Clone)]
@@ -299,7 +298,6 @@ impl Stage4 {
         Stage4 {
             taint,
             // config,
-            zero: MacAddr::zero(),
         }
     }
 
@@ -331,8 +329,8 @@ impl Stage4 {
                 + MutableTcpPacket::minimum_packet_size()
                 + packet_info.payload.get_payload_size();
 
-            let mut mac_src = &self.zero;
-            let mut mac_dst = &self.zero;
+            let mut mac_src = &input.data.flow.get_data().src_mac;
+            let mut mac_dst = &input.data.flow.get_data().dst_mac;
             // let mut mac_src = self.config.get_mac(&flow.src_ip).unwrap_or(&self.zero);
             // let mut mac_dst = self.config.get_mac(&flow.dst_ip).unwrap_or(&self.zero);
             if matches!(packet_info.get_direction(), PacketDirection::Backward) {
@@ -391,11 +389,17 @@ impl Stage4 {
                 + MutableUdpPacket::minimum_packet_size()
                 + packet_info.payload.get_payload_size();
 
+            let mut mac_src = &input.data.flow.get_data().src_mac;
+            let mut mac_dst = &input.data.flow.get_data().dst_mac;
+            if matches!(packet_info.get_direction(), PacketDirection::Backward) {
+                (mac_src, mac_dst) = (mac_dst, mac_src);
+            }
+
             packet[..packet_size].fill(0);
             self.setup_ethernet_frame(
                 &mut packet[..packet_size],
-                &self.zero,
-                &self.zero,
+                mac_src,
+                mac_dst,
                 // self.config.get_mac(&flow.src_ip).unwrap_or(&self.zero),
                 // self.config.get_mac(&flow.dst_ip).unwrap_or(&self.zero),
             );

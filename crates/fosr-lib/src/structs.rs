@@ -1,5 +1,6 @@
 use chrono::{DateTime, FixedOffset};
 use pcap_file::pcap;
+use pnet::util::MacAddr;
 use rand_distr::Uniform;
 use rand_distr::weighted::WeightedIndex;
 use serde::{Deserialize, Serialize};
@@ -214,6 +215,8 @@ pub struct FlowData {
     // In online mode, the local IP will always be the source
     pub src_ip: Ipv4Addr,
     pub dst_ip: Ipv4Addr,
+    pub src_mac: MacAddr,
+    pub dst_mac: MacAddr,
     pub src_port: u16,
     pub dst_port: u16,
     pub ttl_client: u8,
@@ -386,6 +389,8 @@ impl Default for Packets {
             flow: Flow::UDP(FlowData {
                 src_ip: Ipv4Addr::new(1, 2, 3, 4),
                 dst_ip: Ipv4Addr::new(5, 6, 7, 8),
+                src_mac: MacAddr::zero(),
+                dst_mac: MacAddr::zero(),
                 src_port: 0,
                 dst_port: 0,
                 ttl_client: 0,
