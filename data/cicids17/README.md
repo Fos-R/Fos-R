@@ -11,8 +11,8 @@ description: "Documentation on the CICIDS17 dataset"
 The pcap files were downloaded from <https://cicresearch.ca/CICDataset/CIC-IDS-2017/>.
 
 - cicids17-train is Monday-WorkingHours.pcap
-- cicids17-eval is Tuesday-WorkingHours.pcap from 10:30 to 13:30 (extracted with `editcap -A "2017-07-04 13:30:00" -B "2017-07-04 16:30:00"` (because New Brunswick was at UTC-3 at that moment)
-- cicids-reference is Tuesday-WorkingHours.pcap" (extracted with `editcap -A "2017-07-04 13:30:00" -B "2017-07-04 16:30:00"` (idem)
+- cicids17-eval is Tuesday-WorkingHours.pcap from 10:30 to 13:30 (extracted with `editcap -A "2017-07-04 13:30:00" -B "2017-07-04 16:30:00"`, because New Brunswick was at UTC-3 at that moment)
+- cicids17-reference is Wednesday-WorkingHours_without_duplication.pcap from 12:00 to 15:00 (extracted with `editcap -A "2017-07-05 15:00:00" -B "2017-07-05 18:00:00"`, idem)
 
 The pcap files were processed as follow:
 
