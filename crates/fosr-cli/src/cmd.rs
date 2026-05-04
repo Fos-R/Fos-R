@@ -22,6 +22,7 @@ pub enum NetEnabler {
 pub enum GenerationProfile {
     Fast,
     Efficient,
+    Auto,
 }
 
 impl fmt::Display for GenerationProfile {
@@ -218,8 +219,8 @@ pub enum Command {
         #[arg(
             short,
             long,
-            default_value_t = GenerationProfile::Efficient,
-            help = "The generation profile to use. Either \"fast\" that optimizes CPU use but the entire dataset must fit in RAM, or \"efficient\" that requires less RAM but is slower"
+            default_value_t = GenerationProfile::Auto,
+            help = "The generation profile to use. Either \"fast\" that optimizes CPU use but the entire dataset must fit in RAM, \"efficient\" that requires less RAM but is slower or \"auto\" for a smart selection."
         )]
         profile: GenerationProfile,
         #[arg(
@@ -281,8 +282,8 @@ pub enum Command {
         #[arg(
             short,
             long,
-            default_value_t = GenerationProfile::Efficient,
-            help = "The generation profile to use. Either \"fast\" that optimizes CPU use but the entire dataset must fit in RAM, or \"efficient\" that requires less RAM but is slower"
+            default_value_t = GenerationProfile::Auto,
+            help = "The generation profile to use. Either \"fast\" that optimizes CPU use but the entire dataset must fit in RAM, \"efficient\" that requires less RAM but is slower or \"auto\" for a smart selection."
         )]
         profile: GenerationProfile,
         #[arg(short, long, help = "Path to the network file")]
