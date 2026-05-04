@@ -16,7 +16,7 @@
 - Faster (up to ~5x) generation
 - Added `--tz` option and timezone support more generally
 - Added `--jobs` option
-- Two generation profiles: fast or efficient
+- Two generation profiles: "fast" or "efficient" (can be "auto")
 
 #### fosr
 

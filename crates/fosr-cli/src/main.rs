@@ -307,6 +307,7 @@ fn generate_pcap(
     let s3 = stage3::tadam::TadamGenerator::new(automata_library);
     let s4 = stage4::Stage4::new(taint); //, model.network);
     let jobs = jobs.unwrap_or(max(1, num_cpus::get() / 2));
+
     match profile {
         cmd::GenerationProfile::Fast => {
             run_fast(
@@ -321,9 +322,22 @@ fn generate_pcap(
                 jobs,
                 Arc::new(stats::Stats::new(target)),
             );
-            // }
         }
-        cmd::GenerationProfile::Efficient => {
+        cmd::GenerationProfile::Auto if duration <= Duration::from_secs(24 * 60 * 60) => {
+            run_fast(
+                ExportParams {
+                    outfile,
+                    order_pcap: !no_order_pcap,
+                },
+                s1,
+                s2,
+                s3,
+                s4,
+                jobs,
+                Arc::new(stats::Stats::new(target)),
+            );
+        }
+        cmd::GenerationProfile::Efficient | cmd::GenerationProfile::Auto => {
             let (s2_count, s3_count, s4_count) = (
                 max(1, jobs / 3),
                 max(1, jobs / 3),
@@ -504,6 +518,7 @@ fn run_efficient<T: inject::NetEnabler>(
     stats: Arc<stats::Stats>,
     #[allow(unused)] s5net: Option<InjectParam<T>>,
 ) {
+    log::debug!("Generation with \"efficient\" profile");
     let (s2, s2_count) = s2;
     let (s3, s3_count) = s3;
     let (s4, s4_count) = s4;
@@ -751,6 +766,7 @@ fn run_fast(
     jobs: usize,
     stats: Arc<stats::Stats>,
 ) {
+    log::debug!("Generation with \"fast\" profile");
     // TODO: remettre "stats", ctrlc, etc.
     let start = Instant::now();
 
