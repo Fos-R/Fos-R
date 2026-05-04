@@ -4,6 +4,7 @@ import os
 import json
 import datetime
 import argparse
+import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Learn temporal models for Fos-R.')
@@ -31,3 +32,12 @@ if __name__ == '__main__':
 
     with open(os.path.join(args.output,'time_profile.json'), 'w') as f:
         json.dump(data, f)
+
+    plt.stairs(hist, bin_edges, fill=True)
+    plt.xlabel("Time of the day")
+    plt.ylabel('Flow count')
+    plt.title(f'Temporel model from {os.path.basename(os.path.normpath(args.input)) }')
+    plt.grid(True)
+    plt.savefig(os.path.join(args.output,f"temporal_model.png"), dpi=300, bbox_inches="tight")
+    plt.clf()
+
