@@ -372,6 +372,7 @@ if __name__ == '__main__':
     print("Model export")
 
     gumimage.export(bn, os.path.join(args.output, "bn/bn.png"))
+    gumimage.export(bn, os.path.join(args.output, "bn/bn.ps"))
     bn.saveBIFXML(os.path.join(args.output, "bn/bn.bifxml"))
 
     try:

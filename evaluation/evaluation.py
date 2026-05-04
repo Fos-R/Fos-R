@@ -5,7 +5,6 @@ import numpy as np
 from math import log2
 from scipy.stats import wasserstein_distance
 from sklearn.preprocessing import LabelEncoder
-from imblearn.over_sampling import RandomOverSampler
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
@@ -127,17 +126,17 @@ def evaluate_flow(flow_real, flow_synthetic):
 
     nice_names = {"duration": "Duration", "orig_bytes": "Source Bytes", "resp_bytes": "Dest. Bytes", "orig_pkts": "Source Packets", "resp_pkts": "Dest. Packets", "id.orig_h": "Source IP", "id.resp_h": "Dest. IP", "id.resp_p": "Dest. Port", "proto": "L4 Protocol", "service": "L7 Protocol", "history": "Flags History", "conn_state": "Connection State", "ip_proto": "L3 Protocol"}
 
-    # Spearman correlation for numerical data
-    for (i,f1) in enumerate(["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts"]):
-        for (j,f2) in enumerate(["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts"]):
-            if i < j:
-                results.append({"data": "Flow", "feature": f"{nice_names[f1]} & {nice_names[f2]}", "metric": "Spearman corr. difference", "value": stats.spearmanr(flow_synthetic[f1], flow_synthetic[f2]).statistic - stats.spearmanr(flow_real[f1], flow_real[f2]).statistic})
+    # # Spearman correlation for numerical data
+    # for (i,f1) in enumerate(["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts"]):
+    #     for (j,f2) in enumerate(["duration", "orig_bytes", "resp_bytes", "orig_pkts", "resp_pkts"]):
+    #         if i < j:
+    #             results.append({"data": "Flow", "feature": f"{nice_names[f1]} & {nice_names[f2]}", "metric": "Spearman corr. difference", "value": stats.spearmanr(flow_synthetic[f1], flow_synthetic[f2]).statistic - stats.spearmanr(flow_real[f1], flow_real[f2]).statistic})
 
-    # Mutual information for categorical data
-    for (i,f1) in enumerate(["id.orig_h", "id.resp_h", "id.resp_p", "proto", "service","history", "conn_state", "ip_proto"]):
-        for (j,f2) in enumerate(["id.orig_h", "id.resp_h", "id.resp_p", "proto", "service","history", "conn_state", "ip_proto"]):
-            if i < j:
-                results.append({"data": "Flow", "feature": f"{nice_names[f1]} & {nice_names[f2]}", "metric": "Mutual Information", "value":  mutual_info_score(flow_synthetic[f1], flow_synthetic[f2]) - mutual_info_score(flow_real[f1], flow_real[f2])})
+    # # Mutual information for categorical data
+    # for (i,f1) in enumerate(["id.orig_h", "id.resp_h", "id.resp_p", "proto", "service","history", "conn_state", "ip_proto"]):
+    #     for (j,f2) in enumerate(["id.orig_h", "id.resp_h", "id.resp_p", "proto", "service","history", "conn_state", "ip_proto"]):
+    #         if i < j:
+    #             results.append({"data": "Flow", "feature": f"{nice_names[f1]} & {nice_names[f2]}", "metric": "Mutual Information", "value":  mutual_info_score(flow_synthetic[f1], flow_synthetic[f2]) - mutual_info_score(flow_real[f1], flow_real[f2])})
 
     discrete_similarity = lambda l1, l2: 1-hamming(l1,l2)
 
@@ -179,9 +178,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate the generated data.')
     parser.add_argument('--eval', required=True, help="Select the folder with Zeek logs of evaluation data.")
     parser.add_argument('--reference', required=True, help="Select the folder with Zeek logs of reference data.")
-    parser.add_argument('--synthetic', help="Select the folder with Zeek logs of synthetic data.")
-    parser.add_argument('--baseline', choices=["naive","ros","smote","adasyn"], help="Select a baseline to run")
-    parser.add_argument('--baseline-train', help="Select the folder with Zeek logs of train data.")
+    parser.add_argument('--synthetic', required=True, help="Select the folder with Zeek logs of synthetic data.")
+    parser.add_argument('--synthetic-name', required=True, help="The name of the synthetic data.")
+    # parser.add_argument('--baseline', choices=["naive","ros","smote","adasyn"], help="Select a baseline to run")
+    # parser.add_argument('--baseline-train', help="Select the folder with Zeek logs of train data.")
     parser.add_argument('--output', required=True, help="Output directory.")
     args = parser.parse_args()
 
@@ -203,10 +203,9 @@ if __name__ == '__main__':
     try:
         flow_eval = pd.read_csv(os.path.join(args.eval, "conn.log"), header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
         flow_ref = pd.read_csv(os.path.join(args.reference, "conn.log"), header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
-        if args.synthetic:
-            flow_synthetic = pd.read_csv(os.path.join(args.synthetic, "conn.log"), header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
-        elif args.baseline_train:
-            flow_synthetic = pd.read_csv(os.path.join(args.baseline_train, "conn.log"), header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
+        flow_synthetic = pd.read_csv(os.path.join(args.synthetic, "conn.log"), header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
+        # elif args.baseline_train:
+        #     flow_synthetic = pd.read_csv(os.path.join(args.baseline_train, "conn.log"), header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
     except Exception as e:
         print(f"Cannot process conn.log!",e)
         exit(1)
@@ -219,10 +218,9 @@ if __name__ == '__main__':
     try:
         flow_eval_weird = pd.read_csv(os.path.join(args.eval, "weird.log"), header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "name", "addl", "notice", "peer", "source"])
         flow_ref_weird = pd.read_csv(os.path.join(args.reference, "weird.log"), header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "name", "addl", "notice", "peer", "source"])
-        if args.synthetic:
-            flow_synthetic_weird = pd.read_csv(os.path.join(args.synthetic, "weird.log"), header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "name", "addl", "notice", "peer", "source"])
-        elif args.baseline_train:
-            flow_synthetic_weird = pd.read_csv(os.path.join(args.baseline_train, "weird.log"), header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "name", "addl", "notice", "peer", "source"])
+        flow_synthetic_weird = pd.read_csv(os.path.join(args.synthetic, "weird.log"), header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "name", "addl", "notice", "peer", "source"])
+        # elif args.baseline_train:
+            # flow_synthetic_weird = pd.read_csv(os.path.join(args.baseline_train, "weird.log"), header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "name", "addl", "notice", "peer", "source"])
     except Exception as e:
         print(f"Cannot process weird.log!",e)
         exit(1)
@@ -245,10 +243,9 @@ if __name__ == '__main__':
     try:
         flow_eval_ip = pd.read_csv(os.path.join(args.eval, "ip.csv"))
         flow_ref_ip = pd.read_csv(os.path.join(args.reference, "ip.csv"))
-        if args.synthetic:
-            flow_synthetic_ip = pd.read_csv(os.path.join(args.synthetic, "ip.csv"))
-        elif args.baseline_train:
-            flow_synthetic_ip = pd.read_csv(os.path.join(args.baseline_train, "ip.csv"))
+        flow_synthetic_ip = pd.read_csv(os.path.join(args.synthetic, "ip.csv"))
+        # elif args.baseline_train:
+            # flow_synthetic_ip = pd.read_csv(os.path.join(args.baseline_train, "ip.csv"))
     except Exception as e:
         print(f"Cannot process ip.csv!",e)
         exit(1)
@@ -257,10 +254,9 @@ if __name__ == '__main__':
     try:
         flow_eval_tcp = pd.read_csv(os.path.join(args.eval, "tcp.csv"))
         flow_ref_tcp = pd.read_csv(os.path.join(args.reference, "tcp.csv"))
-        if args.synthetic:
-            flow_synthetic_tcp = pd.read_csv(os.path.join(args.synthetic, "tcp.csv"))
-        elif args.baseline_train:
-            flow_synthetic_tcp = pd.read_csv(os.path.join(args.baseline_train, "tcp.csv"))
+        flow_synthetic_tcp = pd.read_csv(os.path.join(args.synthetic, "tcp.csv"))
+        # elif args.baseline_train:
+            # flow_synthetic_tcp = pd.read_csv(os.path.join(args.baseline_train, "tcp.csv"))
     except Exception as e:
         print(f"Cannot process tcp.csv!",e)
         exit(1)
@@ -314,18 +310,18 @@ if __name__ == '__main__':
         plt.savefig(os.path.join(args.output,f"marginal-{feature}-{os.path.split(args.synthetic)[-1]}.png"), dpi=300, bbox_inches="tight")
         plt.clf()
 
-    if args.baseline:
-        print("Generating new data with",args.baseline)
-        assert args.baseline_train # TODO proprement
-        if args.baseline == "naive":
-            for c in flow_synthetic.columns:
-                flow_synthetic[c] = flow_synthetic[c].sample(frac=1, random_state=0).reset_index(drop=True)
-        elif args.baseline == "ros":
-            # flow_synthetic = flow_synthetic.sample(frac=1, replace=True, random_state=0, axis="index")
-            flow_synthetic = flow_synthetic.sample(frac=1, replace=True, random_state=0, axis="index")
-            # use the dataset once with label 0 and twice with label 1. To balance the dataset, ROS will generate as many examples as the dataset
+    # if args.baseline:
+    #     print("Generating new data with",args.baseline)
+    #     assert args.baseline_train # TODO proprement
+    #     if args.baseline == "naive":
+    #         for c in flow_synthetic.columns:
+    #             flow_synthetic[c] = flow_synthetic[c].sample(frac=1, random_state=0).reset_index(drop=True)
+    #     elif args.baseline == "ros":
+    #         # flow_synthetic = flow_synthetic.sample(frac=1, replace=True, random_state=0, axis="index")
+    #         flow_synthetic = flow_synthetic.sample(frac=1, replace=True, random_state=0, axis="index")
+    #         # use the dataset once with label 0 and twice with label 1. To balance the dataset, ROS will generate as many examples as the dataset
 
-    print("\tSYNTHETIC DATA")
+    print(f"\tSYNTHETIC DATA ({args.synthetic_name})")
     results_synthetic = evaluate_flow(flow_eval, flow_synthetic)
     results_synthetic = results_synthetic + evaluate_weird(flow_eval, flow_synthetic, flow_eval_weird, flow_synthetic_weird)
     results_synthetic = results_synthetic + evaluate_pcap(pcap_eval, pcap_synthetic)
@@ -339,7 +335,7 @@ if __name__ == '__main__':
     results_ref = results_ref + evaluate_ip(flow_eval_ip, flow_ref_ip)
     results_ref = results_ref + evaluate_tcp(flow_eval_tcp, flow_ref_tcp)
 
-    results_synthetic = { "method": "Fos-R (last)", "results": {f"{r['feature']} {r['data']} {r['metric']}": r for r in results_synthetic }}
+    results_synthetic = { "method": args.synthetic_name, "results": {f"{r['feature']} {r['data']} {r['metric']}": r for r in results_synthetic }}
     results_ref = { "method": "Reference", "results": {f"{r['feature']} {r['data']} {r['metric']}": r for r in results_ref }}
     # results_ref  = { "method": "Reference", "results": results_ref }
 
