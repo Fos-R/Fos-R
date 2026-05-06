@@ -8,7 +8,7 @@
 
 - New stage 1 with realistic time distribution
 - New stage 2 with Bayesian networks
-- New default models (CICIDS17 and CUPID)
+- New default models (CICIDS17, CUPID and DEDALE)
 
 #### fosr-cli
 
