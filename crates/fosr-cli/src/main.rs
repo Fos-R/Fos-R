@@ -284,14 +284,14 @@ fn generate_pcap(
     // the initial timestamp was computed assuming that the timezone is UTC.
     // now, compute the actual timestamp taking into account the timezone
     if ts_requires_offset {
-        initial_ts = Duration::from_secs(
-            DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
-                .unwrap()
-                .naive_utc()
-                .and_local_timezone(tz_offset)
-                .unwrap()
-                .timestamp() as u64,
-        );
+        let duration: i64 = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
+            .unwrap()
+            .naive_utc()
+            .and_local_timezone(tz_offset)
+            .unwrap()
+            .timestamp();
+        let duration: u64 = i64::try_into(duration).expect("Time before UNIX epoch!");
+        initial_ts = Duration::from_secs(duration);
     }
 
     let s1 = stage1::BinBasedGenerator::new(
