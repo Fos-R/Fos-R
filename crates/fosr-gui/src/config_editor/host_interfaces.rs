@@ -2,7 +2,7 @@
 
 use crate::config_editor::host_services;
 use egui_material_icons::icons::{ICON_ADD, ICON_DELETE};
-use fosr_lib::config::{HostYaml, InterfaceYaml};
+use fosr_lib::network::{HostYaml, InterfaceYaml};
 use fosr_lib::structs::L7Proto;
 use crate::shared::constants::colors::COLOR_ERROR;
 use crate::shared::constants::network::{

@@ -3,7 +3,7 @@
 use chrono::{DateTime, Offset, TimeZone};
 use chrono_tz::Tz;
 use fosr_lib::{
-    models, stage0, stage1, stage2, stage2::tadam::TadamGenerator, stage3, stats::Target,
+    models, stage1, stage2, stage3, stage3::tadam::TadamGenerator, stage4, stats::Target,
 };
 use indicatif::HumanBytes;
 use std::sync::Arc;
@@ -59,7 +59,7 @@ pub fn generate(
     let initial_ts = parse_start_time(start_time)?;
     let tz_offset = resolve_timezone_offset(timezone, initial_ts)?;
 
-    let s0 = stage0::BinBasedGenerator::new(
+    let s0 = stage1::BinBasedGenerator::new(
         seed,
         false,
         None,
@@ -68,9 +68,9 @@ pub fn generate(
         Some(parsed_duration),
         tz_offset,
     );
-    let s1 = stage1::bayesian_networks::BNGenerator::new(bayesian_network, false);
+    let s1 = stage2::bayesian_networks::BNGenerator::new(bayesian_network, false);
     let s2 = TadamGenerator::new(automata_library);
-    let s3 = stage3::Stage3::new(taint);
+    let s3 = stage4::Stage4::new(taint);
     log::info!("Run single thread");
     execute_generation_pipeline(
         order_pcap,
@@ -87,12 +87,12 @@ pub fn generate(
 
 /// Loads ML models from bundled assets, optionally applying a config profile.
 fn load_models(profile: &Option<String>) -> Result<models::Models, String> {
-    let source = models::ModelsSource::Legacy;
+    let source = models::ModelsSource::CUPID;
     let mut model = models::Models::from_source(source)
         .map_err(|e| format!("Failed to load ML models: {}", e))?;
     if let Some(config) = profile {
         model = model
-            .with_string_config(config)
+            .with_string_network(config)
             .map_err(|e| format!("Failed to apply config: {}", e))?;
     }
     Ok(model)
@@ -158,10 +158,10 @@ fn resolve_timezone_offset(
 /// Executes the 4-stage pipeline sequentially with cancellation support.
 fn execute_generation_pipeline(
     order_pcap: bool,
-    s0: impl stage0::Stage0,
-    s1: impl stage1::Stage1,
-    s2: impl stage2::Stage2,
-    s3: stage3::Stage3,
+    s0: impl stage1::Stage1,
+    s1: impl stage2::Stage2,
+    s2: impl stage3::Stage3,
+    s3: stage4::Stage4,
     send_progress: impl Fn(f32),
     send_pcap: impl Fn(Vec<u8>),
     throughput_sender: Option<Sender<String>>,
@@ -172,7 +172,7 @@ fn execute_generation_pipeline(
     let start = Instant::now();
 
     log::info!("Stage 0 generation");
-    let stage0_output = stage0::run_vec(s0);
+    let stage1_output = stage1::run_vec(s0);
     if is_cancelled() {
         log::info!("Generation cancelled after stage 0");
         return Ok(());
@@ -180,7 +180,7 @@ fn execute_generation_pipeline(
     send_progress(0.2);
 
     log::info!("Stage 1 generation");
-    let stage1_output = stage1::run_vec(s1, stage0_output).map_err(|e| format!("Stage 1 failed: {}", e))?;
+    let stage2_output = stage2::run_vec(s1, stage1_output).map_err(|e| format!("Stage 1 failed: {}", e))?;
     if is_cancelled() {
         log::info!("Generation cancelled after stage 1");
         return Ok(());
@@ -188,7 +188,7 @@ fn execute_generation_pipeline(
     send_progress(0.4);
 
     log::info!("Stage 2 generation");
-    let stage2_output = stage2::run_vec(s2, stage1_output);
+    let stage3_output = stage3::run_vec(s2, stage2_output);
     if is_cancelled() {
         log::info!("Generation cancelled after stage 2");
         return Ok(());
@@ -196,8 +196,8 @@ fn execute_generation_pipeline(
     send_progress(0.6);
 
     log::info!("Stage 3 generation");
-    let stage3_packets = generate_stage3_packets(&s3, stage2_output, &is_cancelled);
-    let mut all_packets = match stage3_packets {
+    let stage4_packets = generate_stage4_packets(&s3, stage3_output, &is_cancelled);
+    let mut all_packets = match stage4_packets {
         Some(p) => p,
         None => return Ok(()), // Cancelled
     };
@@ -230,42 +230,55 @@ fn execute_generation_pipeline(
     }
 
     let pcap_bytes =
-        stage3::to_pcap_vec(&all_packets).map_err(|e| format!("Failed to create PCAP: {}", e))?;
+        stage4::to_pcap_vec(&all_packets).map_err(|e| format!("Failed to create PCAP: {}", e))?;
     send_pcap(pcap_bytes);
     send_progress(1.0);
     Ok(())
 }
 
 /// Generates UDP, TCP, and ICMP packets. Returns None if cancelled.
-fn generate_stage3_packets(
-    s3: &stage3::Stage3,
-    vec: stage2::S2Vector,
+fn generate_stage4_packets(
+    s3: &stage4::Stage4,
+    vec: stage3::S3Vector,
     is_cancelled: &impl Fn() -> bool,
 ) -> Option<Vec<fosr_lib::Packet>> {
     let mut all_packets = vec![];
+    let stats = Arc::new(fosr_lib::stats::Stats::new(fosr_lib::stats::Target::None));
+    { 
+        let stats = stats.clone();
 
-    all_packets.extend(stage3::run_vec(
-        |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
-        vec.udp,
-    ));
+        all_packets.extend(stage4::run_vec(
+            |f, p, v, a| s3.generate_udp_packets(f, p, v, a),
+            vec.udp,
+            stats,
+        ));
+    }
     if is_cancelled() {
         log::info!("Generation cancelled during stage 3");
         return None;
     }
+    { 
+        let stats = stats.clone();
 
-    all_packets.extend(stage3::run_vec(
+    all_packets.extend(stage4::run_vec(
         |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
         vec.tcp,
+        stats,
     ));
+    }
     if is_cancelled() {
         log::info!("Generation cancelled during stage 3");
         return None;
     }
+    { 
+        let stats = stats.clone();
 
-    all_packets.extend(stage3::run_vec(
+    all_packets.extend(stage4::run_vec(
         |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
         vec.icmp,
+        stats,
     ));
+    }
     if is_cancelled() {
         log::info!("Generation cancelled during stage 3");
         return None;

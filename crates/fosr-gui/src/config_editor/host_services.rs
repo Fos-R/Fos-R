@@ -1,6 +1,6 @@
 //! Service editing UI: HTTP, SSH, DNS, etc. with custom port support.
 
-use fosr_lib::config::InterfaceYaml;
+use fosr_lib::network::InterfaceYaml;
 use fosr_lib::structs::L7Proto;
 use crate::shared::constants::network::{PORT_MAX, PORT_MIN, PORT_UNSPECIFIED};
 use crate::shared::constants::ui::{MULTI_SELECT_PICKER_WIDTH, SPACING_XS};

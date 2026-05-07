@@ -1,6 +1,6 @@
 //! Configuration file operations: loading and saving config files.
 
-use fosr_lib::config::ConfigurationYaml;
+use fosr_lib::network::ConfigurationYaml;
 use crate::shared::config::parser::parse_config_yaml;
 use crate::shared::config::state::ConfigFileState;
 #[cfg(not(target_arch = "wasm32"))]

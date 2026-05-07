@@ -14,9 +14,9 @@ use crate::shared::constants::network::{STREAM_BUFFER_AHEAD_SECS, STREAM_CHECK_I
 use chrono::{DateTime, Offset, TimeZone};
 use fosr_lib::{
     L7Proto, models,
-    stage0,
-    stage1::Stage1,
-    stage1::bayesian_networks::BNGenerator,
+    stage1,
+    stage2::Stage2,
+    stage2::bayesian_networks::BNGenerator,
 };
 use std::collections::BinaryHeap;
 use std::net::Ipv4Addr;
@@ -130,7 +130,7 @@ impl ScheduledFlow {
             event: FlowEvent {
                 src_ip: flow_data.src_ip,
                 dst_ip: flow_data.dst_ip,
-                protocol: flow_data.l7_proto,
+                protocol: L7Proto::HTTP, // flow_data.l7_proto, FIXME!
                 timestamp: flow_data.timestamp,
             },
             scheduled_time,
@@ -196,7 +196,7 @@ impl FlowStreamingState {
 #[cfg(not(target_arch = "wasm32"))]
 fn generate_flows_to_buffer(
     state: &mut FlowStreamingState,
-    s0: &mut stage0::BinBasedGenerator,
+    s0: &mut stage1::BinBasedGenerator,
     s1: &BNGenerator,
     initial_timestamp: Duration,
 ) -> bool {
@@ -220,7 +220,7 @@ fn generate_flows_to_buffer(
 #[cfg(target_arch = "wasm32")]
 fn generate_flows_to_buffer_wasm(
     state: &mut FlowStreamingState,
-    s0: &mut stage0::BinBasedGenerator,
+    s0: &mut stage1::BinBasedGenerator,
     s1: &BNGenerator,
     initial_timestamp: Duration,
 ) {
@@ -292,7 +292,7 @@ fn emit_scheduled_flows_wasm(
 
 /// Flow streamer that continuously generates flow events
 pub struct FlowStreamer {
-    s0: stage0::BinBasedGenerator,
+    s0: stage1::BinBasedGenerator,
     s1: BNGenerator,
     sender: Sender<FlowEvent>,
     running: Arc<AtomicBool>,
@@ -311,13 +311,13 @@ impl FlowStreamer {
         speed: Arc<RwLock<f32>>,
         sender: Sender<FlowEvent>,
     ) -> Result<Self, String> {
-        let source = models::ModelsSource::Legacy;
+        let source = models::ModelsSource::CUPID;
         let mut model = models::Models::from_source(source)
             .map_err(|e| format!("Failed to load models: {}", e))?;
 
         if let Some(config) = config_content {
             model = model
-                .with_string_config(config)
+                .with_string_network(config)
                 .map_err(|e| format!("Failed to apply config: {}", e))?;
             log::info!("FlowStreamer: config applied");
         } else {
@@ -333,7 +333,7 @@ impl FlowStreamer {
 
         let tz_offset = Self::get_local_timezone_offset(initial_ts);
 
-        let s0 = stage0::BinBasedGenerator::new(
+        let s0 = stage1::BinBasedGenerator::new(
             None, // Random seed
             false,
             None,
@@ -401,7 +401,7 @@ impl FlowStreamer {
 
     #[cfg(not(target_arch = "wasm32"))]
     fn streaming_loop(
-        mut s0: stage0::BinBasedGenerator,
+        mut s0: stage1::BinBasedGenerator,
         s1: BNGenerator,
         sender: Sender<FlowEvent>,
         running: Arc<AtomicBool>,
@@ -451,7 +451,7 @@ impl FlowStreamer {
 
     #[cfg(target_arch = "wasm32")]
     async fn streaming_loop_wasm(
-        mut s0: stage0::BinBasedGenerator,
+        mut s0: stage1::BinBasedGenerator,
         s1: BNGenerator,
         sender: Sender<FlowEvent>,
         running: Arc<AtomicBool>,

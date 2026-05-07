@@ -1,4 +1,4 @@
-use crate::{stage1, stage2, stage3};
+use crate::{stage1, stage2, stage3, network};
 #[allow(unused_imports)]
 use include_dir::include_dir;
 #[allow(unused_imports)]
@@ -41,20 +41,22 @@ impl Models {
         })
     }
 
-    // pub fn with_network(mut self, path: &str) -> Result<Self, String> {
-    //     let network = network::import_network(
-    //         &fs::read_to_string(Path::new(path))
-    //             .map_err(|e| format!("Cannot open the network file: {e}"))?,
-    //     );
-    //     self.bn.apply_network(&network)?;
-    //     Ok(self)
-    // }
+    pub fn with_network(mut self, path: &str) -> Result<Self, String> {
+        let network = network::import_network(
+            &fs::read_to_string(Path::new(path))
+                .map_err(|e| format!("Cannot open the network file: {e}"))?,
+        );
+        // FIXME
+        // self.bn.apply_network(&network)?;
+        Ok(self)
+    }
 
-    // pub fn with_string_network(mut self, network: &str) -> Result<Self, String> {
-    //     let network = network::import_network(network);
-    //     self.bn.apply_network(&network)?;
-    //     Ok(self)
-    // }
+    pub fn with_string_network(mut self, network: &str) -> Result<Self, String> {
+        let network = network::import_network(network);
+        // FIXME
+        // self.bn.apply_network(&network)?;
+        Ok(self)
+    }
 }
 
 impl ModelsSource {
