@@ -1,0 +1,207 @@
+metadata:
+  title: Datacenter Network Configuration
+  desc: A server-heavy setup with multiple server types
+  author: FosR
+  version: 1.0.0
+  format: 1
+
+networks:
+  # ==================== LOAD BALANCER TIER ====================
+  - subnet: 10.0.1.0
+    mask: 24
+    name: "Load Balancers"
+    hosts:
+      - hostname: lb-primary
+        os: Linux
+        type: server
+        interfaces:
+          - ip_addr: 10.0.1.10
+            mac_addr: 00:14:2A:3F:01:01
+            services:
+              - https:443
+              - http:80
+            uses:
+              - https
+              - http
+              - dns
+
+      - hostname: lb-secondary
+        os: Linux
+        type: server
+        interfaces:
+          - ip_addr: 10.0.1.11
+            mac_addr: 00:14:2A:3F:01:02
+            services:
+              - https:443
+              - http:80
+            uses:
+              - https
+              - http
+              - dns
+
+  # ==================== WEB SERVER TIER ====================
+  - subnet: 10.0.2.0
+    mask: 24
+    name: "Web Servers"
+    hosts:
+      - hostname: web-server-01
+        os: Linux
+        type: server
+        interfaces:
+          - ip_addr: 10.0.2.10
+            mac_addr: 00:14:2A:3F:02:01
+            services:
+              - https:443
+              - http:80
+            uses:
+              - https
+              - http
+
+      - hostname: web-server-02
+        os: Linux
+        type: server
+        interfaces:
+          - ip_addr: 10.0.2.11
+            mac_addr: 00:14:2A:3F:02:02
+            services:
+              - https:443
+              - http:80
+            uses:
+              - https
+              - http
+
+      - hostname: web-server-03
+        os: Linux
+        type: server
+        interfaces:
+          - ip_addr: 10.0.2.12
+            mac_addr: 00:14:2A:3F:02:03
+            services:
+              - https:443
+              - http:80
+            uses:
+              - https
+              - http
+
+  # ==================== APPLICATION TIER ====================
+  - subnet: 10.0.3.0
+    mask: 24
+    name: "Application Servers"
+    hosts:
+      - hostname: app-server-01
+        os: Linux
+        type: server
+        interfaces:
+          - ip_addr: 10.0.3.10
+            mac_addr: 00:14:2A:3F:03:01
+            services:
+              - https:8443
+              - ssh:22
+            uses:
+              - https
+              - ssh
+
+      - hostname: app-server-02
+        os: Linux
+        type: server
+        interfaces:
+          - ip_addr: 10.0.3.11
+            mac_addr: 00:14:2A:3F:03:02
+            services:
+              - https:8443
+              - ssh:22
+            uses:
+              - https
+              - ssh
+
+  # ==================== DATABASE TIER ====================
+  - subnet: 10.0.4.0
+    mask: 24
+    name: "Database Servers"
+    hosts:
+      - hostname: db-primary
+        os: Linux
+        type: server
+        interfaces:
+          - ip_addr: 10.0.4.10
+            mac_addr: 00:14:2A:3F:04:01
+            services:
+              - https:5432
+              - ssh:22
+            uses:
+              - https
+              - ssh
+
+      - hostname: db-replica-01
+        os: Linux
+        type: server
+        interfaces:
+          - ip_addr: 10.0.4.11
+            mac_addr: 00:14:2A:3F:04:02
+            services:
+              - https:5432
+            uses:
+              - https
+
+      - hostname: db-replica-02
+        os: Linux
+        type: server
+        interfaces:
+          - ip_addr: 10.0.4.12
+            mac_addr: 00:14:2A:3F:04:03
+            services:
+              - https:5432
+            uses:
+              - https
+
+  # ==================== CACHE TIER ====================
+  - subnet: 10.0.5.0
+    mask: 24
+    name: "Cache"
+    hosts:
+      - hostname: cache-server
+        os: Linux
+        type: server
+        interfaces:
+          - ip_addr: 10.0.5.10
+            mac_addr: 00:14:2A:3F:05:01
+            services:
+              - https:6379
+            uses:
+              - https
+
+  # ==================== MONITORING ====================
+  - subnet: 10.0.6.0
+    mask: 24
+    name: "Monitoring"
+    hosts:
+      - hostname: monitoring-server
+        os: Linux
+        type: server
+        interfaces:
+          - ip_addr: 10.0.6.10
+            mac_addr: 00:14:2A:3F:06:01
+            services:
+              - https:9090
+              - ssh:22
+            uses:
+              - https
+              - ssh
+              - dns
+
+  # ==================== DNS ====================
+  - subnet: 10.0.7.0
+    mask: 24
+    name: "DNS"
+    hosts:
+      - hostname: dns-server
+        os: Linux
+        type: server
+        interfaces:
+          - ip_addr: 10.0.7.10
+            mac_addr: 00:14:2A:3F:07:01
+            services:
+              - dns:53
+            uses:
+              - https
+              - dns

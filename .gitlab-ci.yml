@@ -121,8 +121,8 @@ build-wasm32:
   script:
     - git checkout $CI_COMMIT_REF_NAME
     - rustup target add wasm32-unknown-unknown
-    - cargo install wasm-bindgen-cli
-    - cargo build -p fosr-gui -r --target wasm32-unknown-unknown --no-default-features --features models
+    - cargo install wasm-bindgen-cli --version 0.2.114
+    - cargo build -p fosr-gui -r --target wasm32-unknown-unknown --no-default-features
     - wasm-bindgen --out-dir public --target web target/wasm32-unknown-unknown/release/fosr_gui.wasm --no-typescript
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
