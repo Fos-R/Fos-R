@@ -1,6 +1,6 @@
 //! Configuration YAML parsing.
 
-use fosr_lib::config::ConfigurationYaml;
+use fosr_lib::network::ConfigurationYaml;
 use crate::shared::config::state::ConfigFileState;
 
 /// Parse the YAML content into a ConfigurationYaml model.

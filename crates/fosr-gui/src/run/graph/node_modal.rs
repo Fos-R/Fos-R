@@ -11,7 +11,7 @@ use crate::shared::widgets::helpers::os_display_name;
 use eframe::egui;
 use egui_material_icons::icons::{ICON_CLOSE, ICON_SAVE};
 use egui_graphs::events::{Event, PayloadNodeClick};
-use fosr_lib::config::{ConfigurationYaml, HostYaml};
+use fosr_lib::network::{ConfigurationYaml, HostYaml};
 use fosr_lib::structs::OS;
 
 /// Look up a host by `(net_idx, host_idx)` position.

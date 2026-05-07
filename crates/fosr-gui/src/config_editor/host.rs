@@ -11,8 +11,8 @@ use crate::shared::widgets::helpers::{
     info_icon_with_tooltip, os_display_name, render_optional_string_input,
 };
 use eframe::egui;
-use fosr_lib::config::{next_ui_id, HostType, InterfaceYaml};
-use fosr_lib::config::{ConfigurationYaml, HostYaml, NetworkYaml};
+use fosr_lib::network::{next_ui_id, HostType, InterfaceYaml};
+use fosr_lib::network::{ConfigurationYaml, HostYaml, NetworkYaml};
 use fosr_lib::structs::OS;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;

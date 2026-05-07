@@ -508,7 +508,7 @@ impl TryFrom<InterfaceYaml> for Interface {
 
 /// Import a configuration from a string. The string can be either in JSON or YAML format (the
 /// truth is that YAML is a superset of JSON).
-pub fn import_config(config_string: &str) -> Configuration {
+pub fn import_network(config_string: &str) -> Configuration {
     let config: Configuration = serde_yaml::from_str::<ConfigurationYaml>(config_string)
         .expect("Cannot parse the configuration file")
         .into();

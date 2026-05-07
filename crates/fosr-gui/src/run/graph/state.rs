@@ -4,10 +4,10 @@ use super::shapes::{NetworkEdgeShape, NetworkNodeShape};
 use super::stream::{FlowEvent, FlowStreamer};
 use super::graph_layout::{arrange_nodes_in_circle, arrange_nodes_in_clusters};
 use crate::shared::constants::ui::{DELAY_FRAMES_QUICK, ZONE_PAD_BASE, ZONE_PAD_LABEL, ZONE_PAD_TOP_INSET};
-use fosr_lib::config::HostYaml;
+use fosr_lib::network::HostYaml;
 use eframe::egui;
 use egui_graphs::events::Event;
-use fosr_lib::{L7Proto, OS, config, config::HostType, config::INTERNET_NETWORK_NAME};
+use fosr_lib::{L7Proto, OS, network, network::HostType, network::INTERNET_NETWORK_NAME};
 use strum::EnumIter;
 use petgraph::graph::NodeIndex;
 use std::cell::RefCell;
@@ -304,7 +304,7 @@ impl NetworkData {
     /// Creates nodes for each host (including Internet subnet hosts),
     /// adds a synthetic Internet node for fallback communications,
     /// lays them out according to `mode`, and connects edges.
-    pub fn from_config(config: &config::Configuration, mode: SubnetDisplayMode) -> Self {
+    pub fn from_config(config: &network::Configuration, mode: SubnetDisplayMode) -> Self {
         let mut data = Self::default();
         let has_internet_hosts = data.add_host_nodes(config);
         data.add_internet_node(has_internet_hosts);
@@ -321,7 +321,7 @@ impl NetworkData {
     /// so the node modal can look up the corresponding `HostYaml` later.
     /// Internet hosts use [`INTERNET_HOST_SENTINEL`] as `net_idx` so the modal knows
     /// to look in `ConfigurationYaml.internet` instead of `networks`.
-    fn add_host_nodes(&mut self, config: &config::Configuration) -> bool {
+    fn add_host_nodes(&mut self, config: &network::Configuration) -> bool {
         let mut has_internet_hosts = false;
 
         for (net_idx, network) in config.networks.iter().enumerate() {
@@ -550,7 +550,7 @@ impl NetworkData {
     }
 
     /// Add edges between users and servers per service, plus edges to Internet.
-    fn add_edges(&mut self, config: &config::Configuration) {
+    fn add_edges(&mut self, config: &network::Configuration) {
         let internet_idx = self.ip_to_node.get(&INTERNET_NODE_IP).expect("Internet node must exist");
 
         for service in &config.services {
@@ -689,7 +689,7 @@ impl Default for VisualizationState {
 impl VisualizationState {
     /// Update state from a configuration (preserves some state).
     /// Note: caller should stop visualization before calling this if running.
-    pub fn update_from_config(&mut self, config: &config::Configuration) {
+    pub fn update_from_config(&mut self, config: &network::Configuration) {
         let mode = self.subnet_mode;
         self.network = NetworkData::from_config(config, mode);
         self.network.set_subnet_mode(mode);

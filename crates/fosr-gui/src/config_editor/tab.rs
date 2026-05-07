@@ -5,7 +5,7 @@ use crate::config_editor::{host, host_validation, yaml_editor};
 use egui_material_icons::icons::ICON_WARNING;
 use crate::config_editor::toolbar::render_configuration_toolbar;
 use crate::shared::config::file_ops::load_config_file_contents;
-use fosr_lib::config::ConfigurationYaml;
+use fosr_lib::network::ConfigurationYaml;
 use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::COLOR_ERROR;
 use crate::shared::constants::ui::{SPACING_MD, TEXT_EDIT_DEFAULT_ROWS};

@@ -34,7 +34,7 @@ eframe = "0.33.3"
 egui_extras = { version = "0.33.3", features = ["chrono", "all_loaders", "syntect", "serde"] }
 log = "0.4.29"
 wasm-bindgen = "0.2.120"
-fosr-lib = { version = "1.0.0-dev", path = "../fosr-lib", features = ["wasm_js"] }
+fosr-lib = { version = "1.0.0-dev", path = "../fosr-lib", features = ["models_cupid"] }
 rfd = "0.17.2"
 humantime = "2.3.0"
 serde = { version = "1", features = ["derive"] }

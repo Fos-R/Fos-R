@@ -1,6 +1,6 @@
 //! Configuration file state management.
 
-use fosr_lib::config::ConfigurationYaml;
+use fosr_lib::network::ConfigurationYaml;
 use rfd::FileHandle;
 #[cfg(target_arch = "wasm32")]
 use std::sync::mpsc::Receiver;

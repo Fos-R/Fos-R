@@ -1,8 +1,8 @@
 //! Host validation: IP/MAC format, conflicts, subnet placement, and type/service consistency.
 
-use fosr_lib::config::{ConfigurationYaml, HostYaml, NetworkYaml};
+use fosr_lib::network::{ConfigurationYaml, HostYaml, NetworkYaml};
 use crate::shared::constants::network::{MAC_ADDRESS_PARTS, MAC_PART_LENGTH};
-use fosr_lib::config::HostType;
+use fosr_lib::network::HostType;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
 
