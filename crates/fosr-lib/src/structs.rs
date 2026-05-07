@@ -8,6 +8,7 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
 use std::net::Ipv4Addr;
 use std::time::Duration;
+use strum::{Display, EnumIter, IntoEnumIterator};
 use thingbuf::Recycle;
 
 /// A general wrapper to pass a seed along with actual data
@@ -138,12 +139,109 @@ impl L4Proto {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq, Display, EnumIter)]
+#[allow(clippy::upper_case_acronyms)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+/// A list of application layer protocol
+pub enum L7Proto {
+    HTTP,
+    HTTPS,
+    SSH,
+    DNS,
+    DHCP,
+    SMTP,
+    Telnet,
+    IMAPS,
+    MQTT,
+    KMS,
+    MulticastDNS,
+    NTP, // TODO complete properly
+}
+
+impl L7Proto {
+    /// All protocol names as strings.
+    pub fn all_names() -> Vec<String> {
+        L7Proto::iter().map(|p| p.to_string()).collect()
+    }
+
+    /// Human-facing label for UI display (e.g. "mDNS", "HTTP").
+    /// Unlike `Display` (lowercase for config use), this preserves capitalization.
+    pub fn ui_label(&self) -> &'static str {
+        match self {
+            L7Proto::HTTP => "HTTP",
+            L7Proto::HTTPS => "HTTPS",
+            L7Proto::SSH => "SSH",
+            L7Proto::DNS => "DNS",
+            L7Proto::DHCP => "DHCP",
+            L7Proto::SMTP => "SMTP",
+            L7Proto::Telnet => "Telnet",
+            L7Proto::IMAPS => "IMAPS",
+            L7Proto::MQTT => "MQTT",
+            L7Proto::KMS => "KMS",
+            L7Proto::MulticastDNS => "mDNS",
+            L7Proto::NTP => "NTP",
+        }
+    }
+
+    /// Default destination port that is used if a configuration file does not override it
+    pub fn get_default_port(&self) -> u16 {
+        match self {
+            L7Proto::HTTP => 80,
+            L7Proto::HTTPS => 443,
+            L7Proto::SSH => 22,
+            L7Proto::DNS => 53,
+            L7Proto::DHCP => 67,
+            L7Proto::SMTP => 587,
+            L7Proto::Telnet => 23,
+            L7Proto::IMAPS => 993,
+            L7Proto::MQTT => 1883,
+            L7Proto::KMS => 1688,
+            L7Proto::MulticastDNS => 5353,
+            L7Proto::NTP => 123,
+            // _ => todo!()
+        }
+    }
+}
+
+// TODO: refaire proprement
+impl TryFrom<String> for L7Proto {
+    type Error = String;
+
+    fn try_from(s: String) -> Result<L7Proto, String> {
+        match s.to_uppercase().replace(" ", "").as_str().trim() {
+            "HTTP" => Ok(L7Proto::HTTP),
+            "HTTPS" => Ok(L7Proto::HTTPS),
+            "SSH" => Ok(L7Proto::SSH),
+            "DNS" => Ok(L7Proto::DNS),
+            "DHCP" => Ok(L7Proto::DHCP),
+            "SMTP" => Ok(L7Proto::SMTP),
+            "TELNET" => Ok(L7Proto::Telnet),
+            "IMAPS" => Ok(L7Proto::IMAPS),
+            "MQTT" => Ok(L7Proto::MQTT),
+            "KMS" => Ok(L7Proto::KMS),
+            "MULTICAST DNS" => Ok(L7Proto::MulticastDNS),
+            "NTP" => Ok(L7Proto::NTP),
+            _ => Err(format!("Unknown protocol: {s}")),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 /// The OS of an host. By default, assume Linux
 pub enum OS {
     #[default]
     Linux,
     Windows,
+}
+
+impl Display for OS {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            OS::Linux => write!(f, "Linux"),
+            OS::Windows => write!(f, "Windows"),
+        }
+    }
 }
 
 impl OS {

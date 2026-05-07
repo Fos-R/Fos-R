@@ -121,7 +121,7 @@ table tr:nth-child(even) {
 #gui_wrapper {
     position: relative;
     width: 100%;
-    height: 550px;
+    height: 800px;
     background: var(--bs-body-bg, #ffffff);
     margin: 15px auto;
     border-radius: 0.5rem;

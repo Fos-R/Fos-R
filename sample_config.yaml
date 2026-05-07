@@ -1,0 +1,44 @@
+metadata:
+  title: Sample configuration # Mandatory. The title of the configuration file.
+  desc: A sample configuration file to show all the different available fields # Optional. A description of the configuration file.
+  author: Jane Doe # Optional. Author of the file.
+  date: 2025/11/05 # Optional. Last modification date.
+  version: 0.1.0 # Optional. The version number of this configuration file. Format is free.
+  format: 1 # Reserved for now. The version will be bumped when the format changes.
+
+networks:
+  - subnet: 192.168.0.0 # Mandatory. The subnet of that network.
+    mask: 24 # Mandatory. The mask of the subnet.
+    name: "Subnet1" # Optional. The name of the subnet.
+    hosts:
+      - hostname: host1 # Optional. The hostname of the host.
+        os: Linux # Optional (default value: Linux). The OS of the host.
+        # usage: 0.8 # Optional (default value: 1.0). The usage intensity of the host. 1 is the baseline, < 1 means less usage than usual, and > 1 means higher usage
+        type: server  # Optional (default value: "server" if there is at least one service, "user" otherwise). Whether this host is used by a user and is a server. Can be either "server" or "user".
+        interfaces:
+          - mac_addr: 00:14:2A:3F:47:D8 # Optional. The MAC address of that interface.
+            services: # Optional (default value: empty list). The list of available services.
+              - https:8080 # an HTTPS server.
+              - ssh   # an SSH server.
+              - dns # a DNS server.
+            ip_addr: 192.168.0.8 # Mandatory. The IP address of this interface. Can be "auto" for automatic attribution.
+      - interfaces:
+          - ip_addr: auto # This host has an interface in the 192.168.0.0/24 subnet that does not provide any service.
+          - ip_addr: 192.168.1.0 # It also has an interface in another subnet (without any service)
+            uses: # Optional (default value: all available services if type is "user", none otherwise). Specify what services the host is a client of. The protocols must be written in lowercase.
+              - https
+              - ssh
+  - subnet: 192.168.1.0 # A second subnet.
+    mask: 24
+    name: "Subnet2"
+    hosts:
+      - interfaces:
+          - ip_addr: auto # This machine has an IP in the 192.168.1.0/24 subnet.
+
+internet: # An optional description of Internet services
+  - hostname: "Google DNS" # Internet hosts follow the same structure as local hosts
+    type: server
+    interfaces:
+      - ip_addr: 8.8.8.8
+        services:
+          - dns
