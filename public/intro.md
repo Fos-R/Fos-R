@@ -30,7 +30,7 @@ Fos-R is a high-quality and high-throughput network traffic generator based on M
 </div>
 <script type="module">
     // Import the WASM initializer and start function.
-    import init, { start } from './fosr_gui.js';
+    import init, { start } from './fosr.js';
 
     async function run() {
         // 1. Initialize the WASM module

@@ -121,16 +121,17 @@ build-wasm32:
   script:
     - git checkout $CI_COMMIT_REF_NAME
     - rustup target add wasm32-unknown-unknown
-    - cargo install wasm-bindgen-cli --version 0.2.114
-    - cargo build -p fosr-gui -r --target wasm32-unknown-unknown --no-default-features
-    - wasm-bindgen --out-dir public --target web target/wasm32-unknown-unknown/release/fosr_gui.wasm --no-typescript
+    # pinning the version so it is consistent with the version in Cargo.toml
+    - cargo install wasm-bindgen-cli --version 0.2.121
+    - cargo build -p fosr -r --target wasm32-unknown-unknown --no-default-features
+    - wasm-bindgen --out-dir public --target web target/wasm32-unknown-unknown/release/fosr.wasm --no-typescript
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   artifacts:
     expire_in: 3 days
     paths:
-      - public/fosr_gui.js
-      - public/fosr_gui_bg.wasm
+      - public/fosr.js
+      - public/fosr_bg.wasm
 
 ### TEST
 
