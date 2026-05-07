@@ -75,13 +75,11 @@ fn sync_model_to_yaml_state(state: &mut ConfigFileState) {
     state.sync_model_to_yaml();
 
     // If serialization succeeded, update dirty flag by comparing with cached snapshot YAML
-    if !had_error && state.config_error.is_none() {
-        if let Some(model_yaml) = &state.config_file_content {
-            if let Some(snap_yaml) = &state.clean_snapshot {
+    if !had_error && state.config_error.is_none() &&
+         let Some(model_yaml) = &state.config_file_content &&
+             let Some(snap_yaml) = &state.clean_snapshot {
                 state.is_dirty = *model_yaml != *snap_yaml;
             }
-        }
-    }
 }
 
 /// Displays a YAML parse error banner below the toolbar, if any.

@@ -65,7 +65,7 @@ pub fn arrange_nodes_in_clusters(
 
     // Reserve a fraction of the circle for inter-cluster gaps
     let num_clusters = subnet_order.iter()
-        .filter(|name| hosts_by_subnet.get(*name).map_or(false, |h| !h.is_empty()))
+        .filter(|name| hosts_by_subnet.get(*name).is_some_and(|h| !h.is_empty()))
         .count()
         .max(1);
     let gap_per_cluster = CLUSTER_GAP_RAD;

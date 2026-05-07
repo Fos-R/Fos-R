@@ -174,7 +174,7 @@ impl NetworkNodeShape {
         let ips: Vec<String> = payload.ip_addrs.iter().map(|ip| ip.to_string()).collect();
         (
             radius,
-            payload.node_type.clone(),
+            payload.node_type,
             payload.hostname.clone(),
             ips,
         )

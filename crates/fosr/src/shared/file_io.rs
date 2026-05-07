@@ -10,7 +10,7 @@ pub fn show_file_picker_desktop() -> Option<FileHandle> {
         .add_filter("YAML Configuration files", &["yaml", "yml"])
         .set_directory(std::env::current_dir().unwrap_or(std::path::PathBuf::from("/")))
         .pick_file()
-        .map(|path| FileHandle::from(path))
+        .map(FileHandle::from)
 }
 
 /// Opens an async file picker dialog for selecting a YAML configuration file (WASM only).
@@ -43,14 +43,14 @@ pub fn save_file_desktop(data: &[u8], file_name: &str) -> Result<FileHandle, Err
         .set_directory(std::env::current_dir().unwrap_or(std::path::PathBuf::from("/")))
         .set_file_name(file_name)
         .save_file()
-        .map(|path| FileHandle::from(path));
+        .map(FileHandle::from);
 
     match result {
         Some(file_handle) => match std::fs::write(file_handle.path(), data) {
             Ok(_) => Ok(file_handle),
             Err(e) => Err(e),
         },
-        None => Err(Error::new(std::io::ErrorKind::Other, "No file selected")),
+        None => Err(Error::other("No file selected")),
     }
 }
 

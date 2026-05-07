@@ -425,14 +425,13 @@ impl NetworkData {
         let inet_zone_idx = self.subnet_zones.iter().position(|z| z.name == INTERNET_NETWORK_NAME);
 
         // Add synthetic Internet node into the Internet subnet zone when it exists
-        if let Some(zone_idx) = inet_zone_idx {
-            if let Some(&inet_idx) = self.ip_to_node.get(&INTERNET_NODE_IP) {
+        if let Some(zone_idx) = inet_zone_idx
+            && let Some(&inet_idx) = self.ip_to_node.get(&INTERNET_NODE_IP) {
                 // Avoid duplicates on repeated calls (e.g. layout reset)
                 if !self.subnet_zones[zone_idx].host_indices.contains(&inet_idx) {
                     self.subnet_zones[zone_idx].host_indices.push(inet_idx);
                 }
             }
-        }
 
         if mode == SubnetDisplayMode::Flat {
             arrange_nodes_in_circle(&mut self.graph);
@@ -445,11 +444,10 @@ impl NetworkData {
         }
 
         // When no Internet hosts, give the synthetic node its own cluster
-        if inet_zone_idx.is_none() {
-            if let Some(&inet_idx) = self.ip_to_node.get(&INTERNET_NODE_IP) {
+        if inet_zone_idx.is_none()
+            && let Some(&inet_idx) = self.ip_to_node.get(&INTERNET_NODE_IP) {
                 hosts_by_subnet.insert(FALLBACK_INTERNET_CLUSTER.to_string(), vec![inet_idx]);
             }
-        }
 
         arrange_nodes_in_clusters(&mut self.graph, &hosts_by_subnet);
 
@@ -571,11 +569,10 @@ impl NetworkData {
         // Add edges from all user and server nodes to Internet
         let mut connected_to_internet: HashSet<NodeIndex> = HashSet::new();
         for &ip in config.users.iter().chain(config.servers.iter()) {
-            if let Some(&idx) = self.ip_to_node.get(&ip) {
-                if connected_to_internet.insert(idx) {
+            if let Some(&idx) = self.ip_to_node.get(&ip)
+                && connected_to_internet.insert(idx) {
                     self.graph.add_edge(idx, *internet_idx, NetworkEdge::default());
                 }
-            }
         }
     }
 }
@@ -649,6 +646,7 @@ impl Default for NodeModalState {
 }
 
 /// Represents the state of the visualization tab.
+#[derive(Default)]
 pub struct VisualizationState {
     /// Network structure and lookups
     pub network: NetworkData,
@@ -670,21 +668,6 @@ pub struct VisualizationState {
     pub subnet_mode: SubnetDisplayMode,
 }
 
-impl Default for VisualizationState {
-    fn default() -> Self {
-        Self {
-            network: NetworkData::default(),
-            flow: FlowVisualizationState::default(),
-            view: GraphViewState::default(),
-            modal: NodeModalState::default(),
-            screenshot_export: ScreenshotStateMachine::default(),
-            config_content: None,
-            auto_start_countdown: None,
-            user_has_started: false,
-            subnet_mode: SubnetDisplayMode::default(),
-        }
-    }
-}
 
 impl VisualizationState {
     /// Update state from a configuration (preserves some state).

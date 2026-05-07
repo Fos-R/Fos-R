@@ -199,11 +199,10 @@ pub fn parse_error_lines(err: &str) -> Vec<usize> {
         let rest = &search[pos + 5..];
         // Read consecutive digits as the line number (stops at " column", end of word, etc.)
         let num: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
-        if let Ok(n) = num.parse::<usize>() {
-            if !found.contains(&n) {
+        if let Ok(n) = num.parse::<usize>()
+            && !found.contains(&n) {
                 found.push(n);
             }
-        }
         // Advance past this match to continue scanning
         search = &search[pos + 5..];
     }

@@ -176,11 +176,10 @@ fn render_interface_fields(
 
     // MAC address field with duplicate warning
     render_optional_string_input(ui, "MAC", &mut interface.mac_addr, "00:14:2A:3F:47:D8");
-    if let Some(mac) = &interface.mac_addr {
-        if mac_counts.get(mac).copied().unwrap_or(0) > 1 {
+    if let Some(mac) = &interface.mac_addr &&
+        mac_counts.get(mac).copied().unwrap_or(0) > 1 {
             ui.colored_label(COLOR_ERROR, "MAC already in use");
         }
-    }
 
     // Services section
     host_services::render_services_section(ui, host_idx, interface_idx, interface);

@@ -300,7 +300,7 @@ pub const ZONE_RECT_ROUNDING: f32 = 6.0;
 pub const ZONE_BORDER_STROKE_WIDTH: f32 = 1.0;
 
 /// Golden ratio conjugate (phi - 1 = 1/phi), used for distinct hue distribution.
-pub const GOLDEN_RATIO_CONJUGATE: f32 = 0.6180339887498949;
+pub const GOLDEN_RATIO_CONJUGATE: f32 = 0.618_034;
 
 /// HSL saturation for colored subnet zones in dark mode
 pub const ZONE_COLOR_SATURATION_DARK: f32 = 0.40;

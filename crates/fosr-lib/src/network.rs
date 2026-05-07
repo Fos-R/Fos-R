@@ -276,7 +276,7 @@ impl Default for HostYaml {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
 pub struct InterfaceYaml {
     // Required: the IPv4 address of this interface.
@@ -290,17 +290,6 @@ pub struct InterfaceYaml {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uses: Option<Vec<String>>,
-}
-
-impl Default for InterfaceYaml {
-    fn default() -> Self {
-        Self {
-            ip_addr: String::new(),
-            mac_addr: None,
-            services: None,
-            uses: None,
-        }
-    }
 }
 
 impl From<ConfigurationYaml> for Configuration {
@@ -434,7 +423,7 @@ impl From<HostYaml> for Host {
     fn from(h: HostYaml) -> Self {
         let host_type = h.host_type.unwrap_or(
             // if there is at least one service, the type is "server"
-            if h.interfaces.iter().any(|i| i.services.as_ref().map_or(false, |s| !s.is_empty())) {
+            if h.interfaces.iter().any(|i| i.services.as_ref().is_some_and(|s| !s.is_empty())) {
                 HostType::Server
             } else {
                 HostType::User

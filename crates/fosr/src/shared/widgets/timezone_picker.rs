@@ -24,15 +24,14 @@ pub fn timezone_picker(ui: &mut egui::Ui, timezone_input: &mut String) {
 
             for tz in TZ_VARIANTS {
                 let tz_str = tz.to_string();
-                if filter.is_empty() || tz_str.to_lowercase().contains(filter) {
-                    if ui
+                if (filter.is_empty() || tz_str.to_lowercase().contains(filter))
+                    && ui
                         .selectable_label(*timezone_input == tz_str, &tz_str)
                         .clicked()
                     {
                         *timezone_input = tz_str;
                         ui.close();
                     }
-                }
             }
         });
 }
