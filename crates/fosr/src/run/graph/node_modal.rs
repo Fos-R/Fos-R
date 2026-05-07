@@ -15,7 +15,7 @@ use fosr_lib::network::{ConfigurationYaml, HostYaml};
 use fosr_lib::structs::OS;
 
 /// Look up a host by `(net_idx, host_idx)` position.
-fn get_host_by_pos<'a>(model: &'a ConfigurationYaml, pos: (usize, usize)) -> Option<&'a HostYaml> {
+fn get_host_by_pos(model: &ConfigurationYaml, pos: (usize, usize)) -> Option<&HostYaml> {
     let (net_idx, h_idx) = pos;
     if net_idx == INTERNET_HOST_SENTINEL {
         model.internet.get(h_idx)
@@ -25,7 +25,7 @@ fn get_host_by_pos<'a>(model: &'a ConfigurationYaml, pos: (usize, usize)) -> Opt
 }
 
 /// Look up a host by `(net_idx, host_idx)` position, mutably.
-fn get_host_by_pos_mut<'a>(model: &'a mut ConfigurationYaml, pos: (usize, usize)) -> Option<&'a mut HostYaml> {
+fn get_host_by_pos_mut(model: &mut ConfigurationYaml, pos: (usize, usize)) -> Option<&mut HostYaml> {
     let (net_idx, h_idx) = pos;
     if net_idx == INTERNET_HOST_SENTINEL {
         model.internet.get_mut(h_idx)

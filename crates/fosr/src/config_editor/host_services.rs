@@ -10,11 +10,10 @@ use eframe::egui;
 
 /// Splits "name:port" into ("name", Some(port))
 fn parse_service(s: &str) -> (String, Option<u16>) {
-    if let Some((name, port)) = s.split_once(':') {
-        if let Ok(p) = port.parse::<u16>() {
+    if let Some((name, port)) = s.split_once(':') &&
+         let Ok(p) = port.parse::<u16>() {
             return (name.to_string(), Some(p));
         }
-    }
     (s.to_string(), None)
 }
 
@@ -140,7 +139,7 @@ fn render_service_row(
     // Track whether custom port mode is enabled (persists across frames)
     let custom_port_id =
         ui.make_persistent_id(("custom_port", host_idx, interface_idx, &*service_raw));
-    let is_custom_by_default = service_port.map_or(false, |p| p != default_port);
+    let is_custom_by_default = service_port.is_some_and(|p| p != default_port);
     let mut custom_port_enabled: bool =
         ui.data_mut(|d| d.get_temp(custom_port_id).unwrap_or(is_custom_by_default));
 
@@ -169,9 +168,7 @@ fn render_service_row(
 
 /// Resolve port value after toggling custom port checkbox.
 fn resolve_port_after_toggle(custom_enabled: bool, default_port: u16) -> Option<u16> {
-    if custom_enabled {
-        None
-    } else if default_port == PORT_UNSPECIFIED {
+    if custom_enabled || default_port == PORT_UNSPECIFIED {
         None
     } else {
         Some(default_port)

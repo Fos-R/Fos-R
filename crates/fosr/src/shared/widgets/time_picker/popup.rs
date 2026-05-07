@@ -133,8 +133,8 @@ impl TimePickerPopup<'_> {
                 ui.label(RichText::new("m").monospace());
             }
 
-            if self.use_12_hour_clock {
-                if ui
+            if self.use_12_hour_clock
+                && ui
                     .button(RichText::new(popup_state.am_pm.to_string()).size(18.))
                     .clicked()
                 {
@@ -143,7 +143,6 @@ impl TimePickerPopup<'_> {
                         AmPm::Pm => AmPm::Am,
                     };
                 }
-            }
 
             // Highlight the active drag value with a border
             let active_rect = match popup_state.timeframe {
@@ -298,7 +297,7 @@ fn draw_timepicker(
                     text_color,
                 );
 
-                if *time % 5 == 0 && *time == i * 5 {
+                if (*time).is_multiple_of(5) && *time == i * 5 {
                     painter.circle_filled(Pos2::new(x_outer, y_outer), 15., highlight_color);
                 }
             }
@@ -341,7 +340,7 @@ fn draw_timepicker(
         TimeFrame::Minute | TimeFrame::Second => {
             let angle = (*time as f32 * 6. - 90.).to_radians();
 
-            let radius = if *time % 5 == 0 {
+            let radius = if (*time).is_multiple_of(5) {
                 radius_outer - 15.
             } else {
                 radius_outer
@@ -350,7 +349,7 @@ fn draw_timepicker(
             let end = center + Vec2::angled(angle) * radius;
             painter.line_segment([center, end], (2., text_color));
 
-            if *time % 5 != 0 {
+            if !(*time).is_multiple_of(5) {
                 painter.circle_filled(end, 4., text_color);
             }
         }

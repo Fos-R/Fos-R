@@ -168,11 +168,10 @@ fn render_network_fields(ui: &mut egui::Ui, network: &mut NetworkYaml) {
         if ui
             .add(egui::TextEdit::singleline(&mut subnet_str).desired_width(120.0))
             .changed()
-        {
-            if let Ok(ip) = subnet_str.parse() {
+        &&
+            let Ok(ip) = subnet_str.parse() {
                 network.subnet = ip;
             }
-        }
 
         ui.label("/");
         let mut mask_val = network.mask as u32;
@@ -255,12 +254,12 @@ fn render_host_card(
     let mut errors = host_validation::validate_host(host, ip_counts, mac_counts);
 
     // Verify that the host has at least one interface in the subnet
-    if let Some((subnet, mask)) = subnet_ctx {
-        if let Some(warning) = host_validation::validate_host_network_placement(host, subnet, mask)
+    if let Some((subnet, mask)) = subnet_ctx 
+        && let Some(warning) = host_validation::validate_host_network_placement(host, subnet, mask)
         {
             errors.push(warning);
         }
-    }
+    
 
     // Use a unique ID to properly identify a section's state to a specific host.
     // This ensures, for instance, that an opened section stays open if a new host is added.
@@ -454,17 +453,14 @@ fn render_type_dropdown(ui: &mut egui::Ui, key: (usize, usize), host: &mut HostY
 
 /// Determine the display name for a host.
 fn host_display_name(host: &HostYaml) -> String {
-    if let Some(name) = host.hostname.as_deref() {
-        if !name.trim().is_empty() {
+    if let Some(name) = host.hostname.as_deref() &&
+         !name.trim().is_empty() {
             return name.to_string();
         }
-    }
 
-    if let Some(interface) = host.interfaces.first() {
-        if !interface.ip_addr.trim().is_empty() {
+    if let Some(interface) = host.interfaces.first() && !interface.ip_addr.trim().is_empty() {
             return interface.ip_addr.clone();
         }
-    }
 
     "Unconfigured host".to_string()
 }

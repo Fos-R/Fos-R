@@ -61,7 +61,7 @@ impl FosrApp {
     fn clamp_zoom(&mut self, ctx: &egui::Context) {
         // Clamp zoom to min/max (prevents Ctrl+/- from exceeding limits)
         let current_zoom = ctx.zoom_factor();
-        if current_zoom < ZOOM_MIN || current_zoom > ZOOM_MAX {
+        if !(ZOOM_MIN..=ZOOM_MAX).contains(&current_zoom) {
             let clamped_zoom = current_zoom.clamp(ZOOM_MIN, ZOOM_MAX);
             ctx.set_zoom_factor(clamped_zoom);
             self.zoom_factor = clamped_zoom;
@@ -109,7 +109,7 @@ impl FosrApp {
         let has_hosts = self.config_file_state
             .config_model
             .as_ref()
-            .map_or(false, |m| m.count_hosts() > 0);
+            .is_some_and(|m| m.count_hosts() > 0);
 
         // Render top bar and get updated state
         let top_bar_state = TopBarState {

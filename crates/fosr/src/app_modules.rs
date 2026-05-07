@@ -1,4 +1,4 @@
-/// Shared module declarations for both native and WASM builds.
+// Shared module declarations for both native and WASM builds.
 
 mod about_tab;
 mod app;

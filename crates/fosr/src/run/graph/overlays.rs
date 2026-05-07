@@ -213,9 +213,8 @@ fn render_speed_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
         .button(ICON_REMOVE)
         .on_hover_text("Slow down")
         .clicked()
-    {
-        if let Some(idx) = current_idx {
-            if idx > 0 {
+        && let Some(idx) = current_idx
+            && idx > 0 {
                 speed_value = PLAYBACK_SPEED_STEPS[idx - 1];
                 *state
                     .flow
@@ -223,8 +222,6 @@ fn render_speed_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
                     .write()
                     .unwrap_or_else(|e| e.into_inner()) = speed_value;
             }
-        }
-    }
 
     ui.label(format!("{:.1}x", speed_value))
         .on_hover_text("Playback speed - controls how fast network flows are simulated");
@@ -233,9 +230,8 @@ fn render_speed_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
         .button(ICON_ADD)
         .on_hover_text("Speed up")
         .clicked()
-    {
-        if let Some(idx) = current_idx {
-            if idx < PLAYBACK_SPEED_STEPS.len() - 1 {
+        && let Some(idx) = current_idx
+            && idx < PLAYBACK_SPEED_STEPS.len() - 1 {
                 speed_value = PLAYBACK_SPEED_STEPS[idx + 1];
                 *state
                     .flow
@@ -243,8 +239,6 @@ fn render_speed_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
                     .write()
                     .unwrap_or_else(|e| e.into_inner()) = speed_value;
             }
-        }
-    }
 }
 
 /// Find the index of the current speed in the predefined steps.

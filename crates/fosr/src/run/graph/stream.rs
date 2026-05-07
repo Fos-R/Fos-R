@@ -186,7 +186,7 @@ impl FlowStreamingState {
     fn needs_more_flows(&self) -> bool {
         self.pending_flows
             .peek()
-            .map_or(true, |f| f.scheduled_time < self.virtual_elapsed() + self.buffer_ahead)
+            .is_none_or(|f| f.scheduled_time < self.virtual_elapsed() + self.buffer_ahead)
     }
 }
 
@@ -204,7 +204,7 @@ fn generate_flows_to_buffer(
         if let Ok(flows) = s1.generate_flows(timestamp) {
             for seeded_flow in flows {
                 let flow_data = seeded_flow.data.get_data();
-                let scheduled = ScheduledFlow::from_flow_data(&flow_data, initial_timestamp);
+                let scheduled = ScheduledFlow::from_flow_data(flow_data, initial_timestamp);
                 state.pending_flows.push(scheduled);
                 state.flow_count += 1;
             }

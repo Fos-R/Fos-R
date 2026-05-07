@@ -58,8 +58,8 @@ pub fn handle_config_changes(
         _ => false,
     };
 
-    if needs_update {
-        if let Some(config_content) = &configuration_file_state.config_file_content {
+    if needs_update &&
+     let Some(config_content) = &configuration_file_state.config_file_content {
             // Stop visualization if running before updating config
             let was_running = state.flow.running;
             if was_running {
@@ -90,6 +90,5 @@ pub fn handle_config_changes(
                     state.view.fit_to_screen_requested = true;
                 }
             }
-        }
     }
 }

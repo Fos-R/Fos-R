@@ -85,8 +85,8 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
             if startup_card(
                 &mut cols[0],
                 ICON_EDIT,
-                "Empty configuration",
-                "Start from scratch with a blank configuration",
+                "Empty network",
+                "Start from scratch with an empty network",
                 STARTUP_CARD_INITIAL_HEIGHT,
             ) {
                 load_empty_config(state);
@@ -96,7 +96,7 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
             if startup_card(
                 &mut cols[1],
                 ICON_LAN,
-                "Default configuration",
+                "Default network",
                 "Choose from preset templates for different network types",
                 STARTUP_CARD_INITIAL_HEIGHT,
             ) {

@@ -69,7 +69,7 @@ pub fn validate_host(
         let has_service = host
             .interfaces
             .iter()
-            .any(|i| i.services.as_ref().map_or(false, |s| !s.is_empty()));
+            .any(|i| i.services.as_ref().is_some_and(|s| !s.is_empty()));
         if !has_service {
             errors.push("Server missing service".to_string());
         }
@@ -79,14 +79,14 @@ pub fn validate_host(
         let has_uses = host
             .interfaces
             .iter()
-            .any(|i| i.uses.as_ref().map_or(false, |u| !u.is_empty()));
+            .any(|i| i.uses.as_ref().is_some_and(|u| !u.is_empty()));
         if !has_uses {
             errors.push("Client missing protocols".to_string());
         }
         let has_service = host
             .interfaces
             .iter()
-            .any(|i| i.services.as_ref().map_or(false, |s| !s.is_empty()));
+            .any(|i| i.services.as_ref().is_some_and(|s| !s.is_empty()));
         if has_service {
             errors.push("User host should not have services (use type: server)".to_string());
         }

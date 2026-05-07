@@ -229,8 +229,8 @@ fn render_wireshark_button(ui: &mut egui::Ui, state: &mut RunTabState) {
         response.on_disabled_hover_text("Wireshark not found in PATH")
     };
 
-    if response.clicked() {
-        if let Some(ref pcap_bytes) = state.generation.pcap_bytes {
+    if response.clicked() &&
+        let Some(ref pcap_bytes) = state.generation.pcap_bytes {
             match open_in_wireshark(pcap_bytes, &mut state.generation.temp_pcap_files) {
                 Ok(_) => log::info!("Opened PCAP in Wireshark"),
                 Err(e) => {
@@ -239,7 +239,6 @@ fn render_wireshark_button(ui: &mut egui::Ui, state: &mut RunTabState) {
                 }
             }
         }
-    }
 }
 
 /// Options toggle button to show/hide the options panel.
