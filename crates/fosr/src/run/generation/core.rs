@@ -171,7 +171,7 @@ fn execute_generation_pipeline(
 
     let start = Instant::now();
 
-    log::info!("Stage 0 generation");
+    log::info!("Stage 1 generation");
     let stage1_output = stage1::run_vec(s0);
     if is_cancelled() {
         log::info!("Generation cancelled after stage 0");
@@ -179,7 +179,7 @@ fn execute_generation_pipeline(
     }
     send_progress(0.2);
 
-    log::info!("Stage 1 generation");
+    log::info!("Stage 2 generation");
     let stage2_output =
         stage2::run_vec(s1, stage1_output).map_err(|e| format!("Stage 1 failed: {}", e))?;
     if is_cancelled() {
@@ -188,7 +188,7 @@ fn execute_generation_pipeline(
     }
     send_progress(0.4);
 
-    log::info!("Stage 2 generation");
+    log::info!("Stage 3 generation");
     let stage3_output = stage3::run_vec(s2, stage2_output);
     if is_cancelled() {
         log::info!("Generation cancelled after stage 2");
@@ -196,7 +196,7 @@ fn execute_generation_pipeline(
     }
     send_progress(0.6);
 
-    log::info!("Stage 3 generation");
+    log::info!("Stage 4 generation");
     let stage4_packets = generate_stage4_packets(&s3, stage3_output, &is_cancelled);
     let mut all_packets = match stage4_packets {
         Some(p) => p,

@@ -10,7 +10,6 @@
 /// - **Linux**: Uses `open::with_in_background()` which spawns Wireshark directly.
 ///   The thread stays alive while Wireshark is running.
 /// - **macOS**: Uses `open -n -W -a Wireshark` which waits for the app to close.
-#[cfg(not(target_arch = "wasm32"))]
 pub fn open_in_wireshark(
     pcap_bytes: &[u8],
     temp_files: &mut Vec<(
