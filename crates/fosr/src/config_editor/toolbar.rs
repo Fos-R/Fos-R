@@ -1,8 +1,7 @@
 //! Configuration toolbar UI: file picker, template menu, save button, and mode toggle.
 
-use egui_material_icons::icons::{ICON_CODE, ICON_DELETE, ICON_DESCRIPTION, ICON_EDIT, ICON_FOLDER_OPEN, ICON_SAVE_AS, ICON_WARNING};
 use crate::config_editor::state::ConfigurationTabState;
-use crate::config_templates::{load_empty_config, load_template, TEMPLATES};
+use crate::config_templates::{TEMPLATES, load_empty_config, load_template};
 use crate::shared::config::file_ops::{enforce_metadata_defaults, trigger_file_import};
 use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::COLOR_WARNING;
@@ -13,6 +12,10 @@ use crate::shared::file_io::save_file_desktop;
 use crate::shared::file_io::save_file_wasm;
 use crate::shared::widgets::helpers::labeled_toggle;
 use eframe::egui;
+use egui_material_icons::icons::{
+    ICON_CODE, ICON_DELETE, ICON_DESCRIPTION, ICON_EDIT, ICON_FOLDER_OPEN, ICON_SAVE_AS,
+    ICON_WARNING,
+};
 
 #[cfg(target_arch = "wasm32")]
 use crate::shared::config::file_ops::poll_file_import;
@@ -47,11 +50,7 @@ fn render_file_import_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
         ("Open", "Open a configuration file from disk")
     };
     let button_text = format!("{} {label}", ICON_FOLDER_OPEN);
-    if ui
-        .button(&button_text)
-        .on_hover_text(tooltip)
-        .clicked()
-    {
+    if ui.button(&button_text).on_hover_text(tooltip).clicked() {
         trigger_file_import(state, ui.ctx());
     }
 
@@ -65,19 +64,20 @@ fn render_file_import_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
 /// Clicking a template loads it into the editor.
 fn render_template_menu_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
     let label = format!("{} Template", ICON_DESCRIPTION);
-    let template_menu =
-        ui.menu_button(&label, |menu_ui| {
-            for template in TEMPLATES {
-                if menu_ui
-                    .button(format!("{} {}", template.icon, template.title))
-                    .clicked()
-                {
-                    menu_ui.close();
-                    load_template(state, template);
-                }
+    let template_menu = ui.menu_button(&label, |menu_ui| {
+        for template in TEMPLATES {
+            if menu_ui
+                .button(format!("{} {}", template.icon, template.title))
+                .clicked()
+            {
+                menu_ui.close();
+                load_template(state, template);
             }
-        });
-    template_menu.response.on_hover_text("Choose a template configuration to open");
+        }
+    });
+    template_menu
+        .response
+        .on_hover_text("Choose a template configuration to open");
 }
 
 /// Clear all button to reset the configuration to an empty state.
@@ -111,11 +111,7 @@ fn render_file_save_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
         ("Save as", "Save the current configuration as a file")
     };
     let button_text = format!("{} {label}", ICON_SAVE_AS);
-    if ui
-        .button(&button_text)
-        .on_hover_text(tooltip)
-        .clicked()
-    {
+    if ui.button(&button_text).on_hover_text(tooltip).clicked() {
         if let Some(model) = state.config_model.as_mut() {
             enforce_metadata_defaults(model);
         }
@@ -192,7 +188,12 @@ fn render_filename(ui: &mut egui::Ui, state: &ConfigFileState) {
 }
 
 /// Render filename label with optional dirty indicator and hover text.
-fn render_filename_with_status(ui: &mut egui::Ui, filename: &str, is_dirty: bool, hover_text: &str) {
+fn render_filename_with_status(
+    ui: &mut egui::Ui,
+    filename: &str,
+    is_dirty: bool,
+    hover_text: &str,
+) {
     if is_dirty {
         ui.colored_label(COLOR_WARNING, ICON_WARNING)
             .on_hover_text("Unsaved changes detected - download the file to avoid losing them.");

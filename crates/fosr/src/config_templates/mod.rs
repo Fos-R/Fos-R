@@ -1,8 +1,8 @@
 //! Predefined configuration templates: Home, Enterprise, Datacenter.
 
-use fosr_lib::network::{ConfigurationYaml, Metadata};
 use crate::shared::config::state::ConfigFileState;
 use egui_material_icons::icons;
+use fosr_lib::network::{ConfigurationYaml, Metadata};
 
 /// A predefined configuration template.
 #[derive(Clone, Copy)]

@@ -2,7 +2,12 @@
 //! Initializes eframe and starts the app in the browser canvas.
 
 #![cfg(target_arch = "wasm32")]
-include!("app_modules.rs");
+mod about_tab;
+mod app;
+mod config_editor;
+mod config_templates;
+mod run;
+mod shared;
 
 use app::FosrApp;
 use eframe::wasm_bindgen::JsCast;

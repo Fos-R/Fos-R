@@ -48,11 +48,7 @@ pub fn multi_select_picker(
             }
 
             if !any_shown {
-                ui.label(
-                    egui::RichText::new("No matching items")
-                        .italics()
-                        .weak(),
-                );
+                ui.label(egui::RichText::new("No matching items").italics().weak());
             }
         });
 }

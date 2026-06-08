@@ -1,10 +1,6 @@
 use core::mem;
 
-use aya_ebpf::{
-    bindings::xdp_action,
-    macros::xdp,
-    programs::XdpContext,
-};
+use aya_ebpf::{bindings::xdp_action, macros::xdp, programs::XdpContext};
 use network_types::{eth::EthHdr, ip::Ipv4Hdr};
 
 #[xdp]
@@ -97,7 +93,6 @@ fn try_fosr_ebpf_drop(ctx: XdpContext) -> Result<u32, ()> {
     // Otherwise, we accept the packet
     Ok(xdp_action::XDP_PASS)
 }
-
 
 #[unsafe(link_section = "license")]
 #[unsafe(no_mangle)]

@@ -44,7 +44,7 @@
 - Split `augment-dataset` and `create-pcap` subcommands
 - Bugfixes
 
-#### fosr
+#### fosr-cli
 
 - No network injection by default
 - Pcap files are now sorted by default

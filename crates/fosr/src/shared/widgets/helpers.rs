@@ -29,11 +29,11 @@ pub fn info_icon_with_tooltip(ui: &mut egui::Ui, tooltip: &str) {
             .color(COLOR_TEXT_MUTED)
             .size(INFO_ICON_SIZE),
     )
-        .on_hover_cursor(egui::CursorIcon::Help)
-        .on_hover_ui(|ui| {
-            ui.set_max_width(INFO_TOOLTIP_MAX_WIDTH);
-            ui.label(tooltip);
-        });
+    .on_hover_cursor(egui::CursorIcon::Help)
+    .on_hover_ui(|ui| {
+        ui.set_max_width(INFO_TOOLTIP_MAX_WIDTH);
+        ui.label(tooltip);
+    });
 }
 
 /// Displays a single-line editor for an `Option<String>`.
@@ -71,11 +71,7 @@ pub fn render_optional_string_input(
         }
 
         // Explicit clear button
-        if ui
-            .button(ICON_CLEAR)
-            .on_hover_text("Clear")
-            .clicked()
-        {
+        if ui.button(ICON_CLEAR).on_hover_text("Clear").clicked() {
             *value = None;
         }
     });
@@ -150,11 +146,7 @@ pub fn render_optional_text_area(
         }
     }
 
-    if ui
-        .button(ICON_CLEAR)
-        .on_hover_text("Clear")
-        .clicked()
-    {
+    if ui.button(ICON_CLEAR).on_hover_text("Clear").clicked() {
         *value = None;
     }
 }
@@ -200,9 +192,10 @@ pub fn parse_error_lines(err: &str) -> Vec<usize> {
         // Read consecutive digits as the line number (stops at " column", end of word, etc.)
         let num: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
         if let Ok(n) = num.parse::<usize>()
-            && !found.contains(&n) {
-                found.push(n);
-            }
+            && !found.contains(&n)
+        {
+            found.push(n);
+        }
         // Advance past this match to continue scanning
         search = &search[pos + 5..];
     }

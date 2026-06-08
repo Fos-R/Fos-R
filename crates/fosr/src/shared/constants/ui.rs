@@ -317,7 +317,6 @@ pub const ZONE_COLOR_LIGHTNESS_LIGHT: f32 = 0.70;
 /// Alpha for subnet zone fills (0-255)
 pub const ZONE_COLOR_ALPHA: u8 = 45;
 
-
 /// Base timeout for active links display (ms), adjusted by speed.
 /// Controls how long links stay in active state.
 pub const ACTIVE_LINK_BASE_TIMEOUT_MS: f32 = 500.0;

@@ -4,14 +4,14 @@ use crate::shared::constants::colors::COLOR_ERROR;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::constants::ui::SPACING_SM;
 use crate::shared::constants::ui::{
-    SPACING_XS, TAB_BUTTON_PADDING, PANEL_INNER_MARGIN, TEXT_SIZE_DEFAULT, ZOOM_MAX, ZOOM_MIN,
+    PANEL_INNER_MARGIN, SPACING_XS, TAB_BUTTON_PADDING, TEXT_SIZE_DEFAULT, ZOOM_MAX, ZOOM_MIN,
     ZOOM_OFFSET, ZOOM_STEP,
 };
 use eframe::egui;
+use eframe::egui::global_theme_preference_switch;
 use egui_material_icons::icons::{ICON_ADD, ICON_REMOVE};
 #[cfg(target_arch = "wasm32")]
-use egui_material_icons::icons::{ICON_FULLSCREEN_EXIT, ICON_FULLSCREEN};
-use eframe::egui::global_theme_preference_switch;
+use egui_material_icons::icons::{ICON_FULLSCREEN, ICON_FULLSCREEN_EXIT};
 
 /// Available tabs in the Fos-R application.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
@@ -45,7 +45,8 @@ fn render_tab_button(
     tooltip: &str,
     disabled_tooltip: &str,
 ) -> Option<AppTab> {
-    let button = egui::Button::new(egui::RichText::new(label).size(text_size)).selected(is_selected);
+    let button =
+        egui::Button::new(egui::RichText::new(label).size(text_size)).selected(is_selected);
     let response = ui.add_enabled(is_enabled, button);
 
     let response = if is_enabled {
@@ -90,10 +91,7 @@ fn render_config_tab_button(
 }
 
 /// Renders all tab buttons and returns the newly selected tab if changed.
-fn render_tab_buttons(
-    ui: &mut egui::Ui,
-    state: &TopBarState,
-) -> Option<AppTab> {
+fn render_tab_buttons(ui: &mut egui::Ui, state: &TopBarState) -> Option<AppTab> {
     let text_size = TEXT_SIZE_DEFAULT;
     let has_errors = state.has_errors;
 
@@ -117,7 +115,12 @@ fn render_tab_buttons(
     }
 
     // Configuration tab (always enabled, shows warning icon on errors)
-    if let Some(tab) = render_config_tab_button(ui, text_size, has_errors, state.current_tab == AppTab::Configuration) {
+    if let Some(tab) = render_config_tab_button(
+        ui,
+        text_size,
+        has_errors,
+        state.current_tab == AppTab::Configuration,
+    ) {
         return Some(tab);
     }
 
@@ -145,22 +148,14 @@ fn render_zoom_controls(ui: &mut egui::Ui, ctx: &egui::Context) -> f32 {
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = SPACING_XS;
 
-        if ui
-            .button(ICON_ADD)
-            .on_hover_text("Zoom in")
-            .clicked()
-        {
+        if ui.button(ICON_ADD).on_hover_text("Zoom in").clicked() {
             new_zoom = (new_zoom + ZOOM_STEP).min(ZOOM_MAX);
             ctx.set_zoom_factor(new_zoom);
         }
 
         ui.label(format!("{:.0}%", (new_zoom - ZOOM_OFFSET) * 100.0));
 
-        if ui
-            .button(ICON_REMOVE)
-            .on_hover_text("Zoom out")
-            .clicked()
-        {
+        if ui.button(ICON_REMOVE).on_hover_text("Zoom out").clicked() {
             new_zoom = (new_zoom - ZOOM_STEP).max(ZOOM_MIN);
             ctx.set_zoom_factor(new_zoom);
         }
@@ -181,8 +176,12 @@ fn is_fullscreen() -> bool {
 /// Toggles browser fullscreen mode on or off.
 #[cfg(target_arch = "wasm32")]
 fn toggle_fullscreen(is_fullscreen: bool) {
-    let Some(window) = web_sys::window() else { return };
-    let Some(document) = window.document() else { return };
+    let Some(window) = web_sys::window() else {
+        return;
+    };
+    let Some(document) = window.document() else {
+        return;
+    };
 
     if is_fullscreen {
         document.exit_fullscreen();
@@ -225,14 +224,17 @@ pub fn render_top_bar(ctx: &egui::Context, state: TopBarState) -> TopBarState {
 
     egui::TopBottomPanel::top("top_panel")
         .frame(
-            egui::Frame::side_top_panel(&ctx.style())
-                .inner_margin(egui::Margin::symmetric(PANEL_INNER_MARGIN.0, PANEL_INNER_MARGIN.1)),
+            egui::Frame::side_top_panel(&ctx.style()).inner_margin(egui::Margin::symmetric(
+                PANEL_INNER_MARGIN.0,
+                PANEL_INNER_MARGIN.1,
+            )),
         )
         .show(ctx, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
                 // Scoped padding for tab buttons only
                 ui.scope(|ui| {
-                    ui.spacing_mut().button_padding = egui::vec2(TAB_BUTTON_PADDING.0, TAB_BUTTON_PADDING.1);
+                    ui.spacing_mut().button_padding =
+                        egui::vec2(TAB_BUTTON_PADDING.0, TAB_BUTTON_PADDING.1);
                     if let Some(tab) = render_tab_buttons(ui, &state) {
                         new_state.current_tab = tab;
                     }

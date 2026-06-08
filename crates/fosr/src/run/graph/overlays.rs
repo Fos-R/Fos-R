@@ -6,14 +6,17 @@ use crate::shared::constants::colors::{
     COLOR_EDGE_INACTIVE, COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT, COLOR_STOP,
     color_for_protocol,
 };
-use fosr_lib::structs::L7Proto;
-use strum::IntoEnumIterator;
 use crate::shared::constants::ui::{
     LEGEND_ICON_SIZE, LEGEND_MARKER_RADIUS, OVERLAY_MARGIN, PLAYBACK_SPEED_EPSILON,
     PLAYBACK_SPEED_STEPS, SPACING_NEGATIVE_XS,
 };
 use eframe::egui;
-use egui_material_icons::icons::{ICON_ADD, ICON_AUTORENEW, ICON_FIT_SCREEN, ICON_IMAGE, ICON_LAN, ICON_PLAY_ARROW, ICON_REMOVE, ICON_RESTART_ALT, ICON_STOP};
+use egui_material_icons::icons::{
+    ICON_ADD, ICON_AUTORENEW, ICON_FIT_SCREEN, ICON_IMAGE, ICON_LAN, ICON_PLAY_ARROW, ICON_REMOVE,
+    ICON_RESTART_ALT, ICON_STOP,
+};
+use fosr_lib::structs::L7Proto;
+use strum::IntoEnumIterator;
 
 /// Render a legend item with a colored circle (for edge protocols).
 fn legend_item_inline(ui: &mut egui::Ui, label: &str, color: egui::Color32) {
@@ -85,17 +88,19 @@ fn render_playback_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
 /// initially, then "Continue" after the user has started at least once.
 fn render_play_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
     let (play_text, play_tooltip) = if state.user_has_started {
-        ("Continue", "Generate new flows, keeping statistics and edge history")
+        (
+            "Continue",
+            "Generate new flows, keeping statistics and edge history",
+        )
     } else {
         ("Start", "Start the network simulation")
     };
     let accent = ui.visuals().selection.bg_fill;
     let play_button = egui::Button::new(egui::RichText::new(format!(
         "{} {}",
-        ICON_PLAY_ARROW,
-        play_text
+        ICON_PLAY_ARROW, play_text
     )))
-        .fill(accent);
+    .fill(accent);
 
     if ui.add(play_button).on_hover_text(play_tooltip).clicked() {
         state.user_has_started = true;
@@ -127,11 +132,8 @@ fn render_restart_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
 
 /// Render the Stop button.
 fn render_stop_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
-    let stop_button = egui::Button::new(egui::RichText::new(format!(
-        "{} Stop",
-        ICON_STOP
-    )))
-        .fill(COLOR_STOP);
+    let stop_button =
+        egui::Button::new(egui::RichText::new(format!("{} Stop", ICON_STOP))).fill(COLOR_STOP);
 
     if ui.add(stop_button).clicked() {
         state.stop_visualization();
@@ -174,11 +176,7 @@ fn render_subnet_mode_menu(ui: &mut egui::Ui, state: &mut VisualizationState) {
         for mode in SubnetDisplayMode::iter() {
             let is_selected = mode == current;
             let btn = egui::Button::new(mode.label()).selected(is_selected);
-            if menu_ui
-                .add(btn)
-                .on_hover_text(mode.tooltip())
-                .clicked()
-            {
+            if menu_ui.add(btn).on_hover_text(mode.tooltip()).clicked() {
                 let was_flat = state.subnet_mode == SubnetDisplayMode::Flat;
                 state.subnet_mode = mode;
                 state.network.set_subnet_mode(mode);
@@ -202,43 +200,27 @@ fn render_speed_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
     // Use into_inner() on poison to recover the value anyway.
     // Lock poisoning only happens if another thread panicked while holding the lock,
     // and for a simple f32 speed value, there's no risk of data corruption.
-    let mut speed_value = *state
-        .flow
-        .speed
-        .read()
-        .unwrap_or_else(|e| e.into_inner());
+    let mut speed_value = *state.flow.speed.read().unwrap_or_else(|e| e.into_inner());
     let current_idx = find_speed_step_index(speed_value);
 
-    if ui
-        .button(ICON_REMOVE)
-        .on_hover_text("Slow down")
-        .clicked()
+    if ui.button(ICON_REMOVE).on_hover_text("Slow down").clicked()
         && let Some(idx) = current_idx
-            && idx > 0 {
-                speed_value = PLAYBACK_SPEED_STEPS[idx - 1];
-                *state
-                    .flow
-                    .speed
-                    .write()
-                    .unwrap_or_else(|e| e.into_inner()) = speed_value;
-            }
+        && idx > 0
+    {
+        speed_value = PLAYBACK_SPEED_STEPS[idx - 1];
+        *state.flow.speed.write().unwrap_or_else(|e| e.into_inner()) = speed_value;
+    }
 
     ui.label(format!("{:.1}x", speed_value))
         .on_hover_text("Playback speed - controls how fast network flows are simulated");
 
-    if ui
-        .button(ICON_ADD)
-        .on_hover_text("Speed up")
-        .clicked()
+    if ui.button(ICON_ADD).on_hover_text("Speed up").clicked()
         && let Some(idx) = current_idx
-            && idx < PLAYBACK_SPEED_STEPS.len() - 1 {
-                speed_value = PLAYBACK_SPEED_STEPS[idx + 1];
-                *state
-                    .flow
-                    .speed
-                    .write()
-                    .unwrap_or_else(|e| e.into_inner()) = speed_value;
-            }
+        && idx < PLAYBACK_SPEED_STEPS.len() - 1
+    {
+        speed_value = PLAYBACK_SPEED_STEPS[idx + 1];
+        *state.flow.speed.write().unwrap_or_else(|e| e.into_inner()) = speed_value;
+    }
 }
 
 /// Find the index of the current speed in the predefined steps.

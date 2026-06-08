@@ -1,8 +1,8 @@
 //! Host validation: IP/MAC format, conflicts, subnet placement, and type/service consistency.
 
-use fosr_lib::network::{ConfigurationYaml, HostYaml, NetworkYaml};
 use crate::shared::constants::network::{MAC_ADDRESS_PARTS, MAC_PART_LENGTH};
 use fosr_lib::network::HostType;
+use fosr_lib::network::{ConfigurationYaml, HostYaml, NetworkYaml};
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
 
@@ -170,10 +170,7 @@ fn subnets_overlap(a: Ipv4Addr, mask_a: u8, b: Ipv4Addr, mask_b: u8) -> bool {
 
 /// Collect all `(subnet, mask)` pairs defined in the configuration,
 /// excluding a specific network index (used when checking a network against *others*).
-pub fn collect_other_subnets(
-    networks: &[NetworkYaml],
-    exclude_idx: usize,
-) -> Vec<(Ipv4Addr, u8)> {
+pub fn collect_other_subnets(networks: &[NetworkYaml], exclude_idx: usize) -> Vec<(Ipv4Addr, u8)> {
     networks
         .iter()
         .enumerate()
@@ -192,9 +189,7 @@ pub fn validate_network_subnet_overlap(
     let mut warnings = Vec::new();
     for &(other_subnet, other_mask) in other_subnets {
         if subnets_overlap(network.subnet, network.mask, other_subnet, other_mask) {
-            warnings.push(format!(
-                "Subnet overlaps with {other_subnet}/{other_mask}"
-            ));
+            warnings.push(format!("Subnet overlaps with {other_subnet}/{other_mask}"));
         }
     }
     warnings

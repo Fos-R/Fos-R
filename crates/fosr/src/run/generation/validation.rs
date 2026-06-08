@@ -43,10 +43,13 @@ pub fn first_invalid_param(state: &GenerationState) -> Option<(&'static str, &'s
         ("Duration", SPEC_DURATION, &state.duration_validation),
         ("Timezone", SPEC_TIMEZONE, &state.timezone_validation),
     ]
-        .into_iter()
-        .find_map(|(name, spec, validation)| {
-            validation.error.as_ref().map(|err| (name, spec, err.as_str()))
-        })
+    .into_iter()
+    .find_map(|(name, spec, validation)| {
+        validation
+            .error
+            .as_ref()
+            .map(|err| (name, spec, err.as_str()))
+    })
 }
 
 /// Validates a human-readable duration string and checks bounds.

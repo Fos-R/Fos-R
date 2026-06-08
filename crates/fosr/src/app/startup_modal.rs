@@ -1,12 +1,16 @@
 //! Startup modal for choosing configuration source (templates or import).
 
-use crate::config_templates::{load_empty_config, load_template, TEMPLATES};
+use crate::config_templates::{TEMPLATES, load_empty_config, load_template};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::config::file_ops::poll_file_import;
 use crate::shared::config::file_ops::trigger_file_import;
 use crate::shared::config::state::{ConfigFileState, StartupModalStep};
 use crate::shared::constants::colors::COLOR_TEXT_MUTED;
-use crate::shared::constants::ui::{ICON_SIZE_LG, MODAL_WIDTH_MD, SPACING_LG, SPACING_SM, SPACING_XL, SPACING_XS, STARTUP_CARD_INITIAL_HEIGHT, STARTUP_CARD_TEMPLATE_HEIGHT, STARTUP_COLUMNS_INITIAL, STARTUP_COLUMNS_TEMPLATES, TEXT_SIZE_LG, TEXT_SIZE_SM};
+use crate::shared::constants::ui::{
+    ICON_SIZE_LG, MODAL_WIDTH_MD, SPACING_LG, SPACING_SM, SPACING_XL, SPACING_XS,
+    STARTUP_CARD_INITIAL_HEIGHT, STARTUP_CARD_TEMPLATE_HEIGHT, STARTUP_COLUMNS_INITIAL,
+    STARTUP_COLUMNS_TEMPLATES, TEXT_SIZE_LG, TEXT_SIZE_SM,
+};
 use eframe::egui;
 use egui_material_icons::icons::{ICON_ARROW_BACK, ICON_EDIT, ICON_LAN, ICON_UPLOAD_FILE};
 
@@ -44,7 +48,13 @@ fn render_card_content(ui: &mut egui::Ui, icon: &str, title: &str, description: 
 
 /// A clickable card with icon, title and description.
 /// Returns true if the card was clicked.
-fn startup_card(ui: &mut egui::Ui, icon: &str, title: &str, description: &str, min_height: f32) -> bool {
+fn startup_card(
+    ui: &mut egui::Ui,
+    icon: &str,
+    title: &str,
+    description: &str,
+    min_height: f32,
+) -> bool {
     let desired_size = egui::vec2(ui.available_width(), min_height);
     let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::click());
 
@@ -77,7 +87,7 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
         ui.set_width(MODAL_WIDTH_MD);
         ui.heading("Welcome to Fos-R");
         ui.add_space(SPACING_SM);
-        ui.label("Choose a configuration to get started:");
+        ui.label("Select a network to get started");
         ui.add_space(SPACING_XL);
 
         ui.columns(STARTUP_COLUMNS_INITIAL, |cols| {
@@ -97,7 +107,7 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
                 &mut cols[1],
                 ICON_LAN,
                 "Default network",
-                "Choose from preset templates for different network types",
+                "Choose from presets of different network types",
                 STARTUP_CARD_INITIAL_HEIGHT,
             ) {
                 state.modal_state = StartupModalStep::TemplateSelection;
@@ -108,7 +118,7 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
                 &mut cols[2],
                 ICON_UPLOAD_FILE,
                 "Import YAML file",
-                "Load your own network configuration from a file",
+                "Load a network configuration from a file",
                 STARTUP_CARD_INITIAL_HEIGHT,
             ) {
                 trigger_file_import(state, cols[2].ctx());
@@ -128,11 +138,7 @@ fn render_template_selection_modal(ctx: &egui::Context, state: &mut ConfigFileSt
 
         // Header with back button
         ui.horizontal(|ui| {
-            if ui
-                .button(ICON_ARROW_BACK)
-                .on_hover_text("Back")
-                .clicked()
-            {
+            if ui.button(ICON_ARROW_BACK).on_hover_text("Back").clicked() {
                 state.modal_state = StartupModalStep::Initial;
             }
             ui.heading("Choose a template");

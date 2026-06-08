@@ -5,12 +5,12 @@
 // Copyright (c) 2025 Tilen Pintarič
 // Licensed under the MIT License (see mod.rs for full text).
 
-use std::fmt::Display;
 use chrono::{NaiveTime, Timelike};
 use eframe::egui::{
     self, Align2, Color32, DragValue, FontId, Id, Layout, Painter, Pos2, Response, RichText, Sense,
     Ui, Vec2,
 };
+use std::fmt::Display;
 
 use super::button::TimePickerButtonState;
 
@@ -137,12 +137,12 @@ impl TimePickerPopup<'_> {
                 && ui
                     .button(RichText::new(popup_state.am_pm.to_string()).size(18.))
                     .clicked()
-                {
-                    popup_state.am_pm = match popup_state.am_pm {
-                        AmPm::Am => AmPm::Pm,
-                        AmPm::Pm => AmPm::Am,
-                    };
-                }
+            {
+                popup_state.am_pm = match popup_state.am_pm {
+                    AmPm::Am => AmPm::Pm,
+                    AmPm::Pm => AmPm::Am,
+                };
+            }
 
             // Highlight the active drag value with a border
             let active_rect = match popup_state.timeframe {

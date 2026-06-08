@@ -6,8 +6,7 @@
 use crate::run::state::RunTabState;
 
 use super::validation::{
-    first_invalid_param, render_field_error, validate_duration,
-    validate_timezone,
+    first_invalid_param, render_field_error, validate_duration, validate_timezone,
 };
 use crate::shared::constants::colors::{COLOR_ERROR, COLOR_TEXT_MUTED};
 use crate::shared::constants::ui::{
@@ -146,8 +145,7 @@ fn render_utc_preview(ui: &mut egui::Ui, state: &mut RunTabState) {
 
     if let Some(text) = utc_text {
         ui.label(
-            egui::RichText::new(format!("Start time (UTC): {}", text))
-                .color(COLOR_TEXT_MUTED),
+            egui::RichText::new(format!("Start time (UTC): {}", text)).color(COLOR_TEXT_MUTED),
         );
     }
 }
@@ -159,7 +157,10 @@ fn compute_utc_text(state: &RunTabState) -> Option<String> {
         return Some(chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string());
     }
 
-    let local_dt = state.generation.start_date.and_time(state.generation.start_time);
+    let local_dt = state
+        .generation
+        .start_date
+        .and_time(state.generation.start_time);
 
     let utc = if state.generation.use_local_timezone {
         Local::now()
@@ -168,7 +169,9 @@ fn compute_utc_text(state: &RunTabState) -> Option<String> {
             .earliest()
             .map(|dt| dt.with_timezone(&chrono::Utc))
     } else {
-        state.generation.timezone_input
+        state
+            .generation
+            .timezone_input
             .parse::<Tz>()
             .ok()
             .and_then(|tz| local_dt.and_local_timezone(tz).earliest())
@@ -218,7 +221,10 @@ fn render_seed_input(ui: &mut egui::Ui, state: &mut RunTabState) {
 fn render_advanced_options(ui: &mut egui::Ui, state: &mut RunTabState) {
     ui.horizontal(|ui| {
         ui.checkbox(&mut state.generation.taint, "Taint the packets");
-        info_icon_with_tooltip(ui, "Taint the packets with special markers for identification.");
+        info_icon_with_tooltip(
+            ui,
+            "Taint the packets with special markers for identification.",
+        );
     });
     ui.horizontal(|ui| {
         ui.checkbox(&mut state.generation.order_pcap, "Order temporally");

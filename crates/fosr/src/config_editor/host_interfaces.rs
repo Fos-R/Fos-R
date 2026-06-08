@@ -1,17 +1,17 @@
 //! Network interface editing UI: IP, MAC address, associated services, and uses.
 
 use crate::config_editor::host_services;
+use crate::shared::constants::colors::COLOR_ERROR;
+use crate::shared::constants::network::{MAC_ADDRESS_BYTES, MAC_LOCAL_BIT, MAC_LOCAL_MASK};
+use crate::shared::constants::ui::{MULTI_SELECT_PICKER_WIDTH, SPACING_MD, SPACING_SM};
+use crate::shared::widgets::helpers::{
+    info_icon_with_tooltip, render_optional_string_input, required_label,
+};
+use crate::shared::widgets::multi_select_picker::multi_select_picker;
+use eframe::egui;
 use egui_material_icons::icons::{ICON_ADD, ICON_DELETE};
 use fosr_lib::network::{HostYaml, InterfaceYaml};
 use fosr_lib::structs::L7Proto;
-use crate::shared::constants::colors::COLOR_ERROR;
-use crate::shared::constants::network::{
-    MAC_ADDRESS_BYTES, MAC_LOCAL_BIT, MAC_LOCAL_MASK,
-};
-use crate::shared::constants::ui::{MULTI_SELECT_PICKER_WIDTH, SPACING_MD, SPACING_SM};
-use crate::shared::widgets::helpers::{info_icon_with_tooltip, render_optional_string_input, required_label};
-use crate::shared::widgets::multi_select_picker::multi_select_picker;
-use eframe::egui;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
 
@@ -62,31 +62,33 @@ pub fn render_interfaces_section(
 ) {
     ui.horizontal(|ui| {
         ui.label("Interfaces");
-        if ui
-            .button(ICON_ADD)
-            .on_hover_text("Add interface")
-            .clicked()
-        {
+        if ui.button(ICON_ADD).on_hover_text("Add interface").clicked() {
             let ip = subnet_ctx
                 .and_then(|(subnet, mask)| find_available_ip_in_subnet(subnet, mask, ip_counts));
 
             match (ip, subnet_ctx) {
                 (Some(ip), _) => {
-                    host.interfaces.insert(0, InterfaceYaml {
-                        ip_addr: ip,
-                        mac_addr: Some(generate_mac_until_unique(mac_counts)),
-                        services: Some(Vec::new()),
-                        uses: None,
-                    });
+                    host.interfaces.insert(
+                        0,
+                        InterfaceYaml {
+                            ip_addr: ip,
+                            mac_addr: Some(generate_mac_until_unique(mac_counts)),
+                            services: Some(Vec::new()),
+                            uses: None,
+                        },
+                    );
                 }
                 (None, None) => {
                     // Internet host: no subnet context, create interface with empty IP
-                    host.interfaces.insert(0, InterfaceYaml {
-                        ip_addr: String::new(),
-                        mac_addr: Some(generate_mac_until_unique(mac_counts)),
-                        services: Some(Vec::new()),
-                        uses: None,
-                    });
+                    host.interfaces.insert(
+                        0,
+                        InterfaceYaml {
+                            ip_addr: String::new(),
+                            mac_addr: Some(generate_mac_until_unique(mac_counts)),
+                            services: Some(Vec::new()),
+                            uses: None,
+                        },
+                    );
                 }
                 (None, Some(_)) => {
                     ui.colored_label(COLOR_ERROR, "No free IP available in this subnet");
@@ -135,23 +137,34 @@ fn render_interface_card(
     let ip_label = interface.ip_addr.clone();
     let id = ui.make_persistent_id(("interface", host_idx, interface_idx));
 
-    egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, interface_idx == 0)
-        .show_header(ui, |ui| {
-            ui.label(format!("Interface - {ip_label}"));
+    egui::collapsing_header::CollapsingState::load_with_default_open(
+        ui.ctx(),
+        id,
+        interface_idx == 0,
+    )
+    .show_header(ui, |ui| {
+        ui.label(format!("Interface - {ip_label}"));
 
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui
-                    .button(ICON_DELETE)
-                    .on_hover_text("Remove interface")
-                    .clicked()
-                {
-                    *remove_request = Some(interface_idx);
-                }
-            });
-        })
-        .body(|ui| {
-            render_interface_fields(ui, host_idx, interface_idx, interface, ip_counts, mac_counts);
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            if ui
+                .button(ICON_DELETE)
+                .on_hover_text("Remove interface")
+                .clicked()
+            {
+                *remove_request = Some(interface_idx);
+            }
         });
+    })
+    .body(|ui| {
+        render_interface_fields(
+            ui,
+            host_idx,
+            interface_idx,
+            interface,
+            ip_counts,
+            mac_counts,
+        );
+    });
 }
 
 /// Render the editable fields for an interface: IP, MAC, and services.
@@ -176,10 +189,11 @@ fn render_interface_fields(
 
     // MAC address field with duplicate warning
     render_optional_string_input(ui, "MAC", &mut interface.mac_addr, "00:14:2A:3F:47:D8");
-    if let Some(mac) = &interface.mac_addr &&
-        mac_counts.get(mac).copied().unwrap_or(0) > 1 {
-            ui.colored_label(COLOR_ERROR, "MAC already in use");
-        }
+    if let Some(mac) = &interface.mac_addr
+        && mac_counts.get(mac).copied().unwrap_or(0) > 1
+    {
+        ui.colored_label(COLOR_ERROR, "MAC already in use");
+    }
 
     // Services section
     host_services::render_services_section(ui, host_idx, interface_idx, interface);
@@ -193,7 +207,10 @@ fn render_interface_fields(
 
         ui.horizontal(|ui| {
             ui.label("Uses");
-            info_icon_with_tooltip(ui, "Specify what protocols the host can use through this interface.");
+            info_icon_with_tooltip(
+                ui,
+                "Specify what protocols the host can use through this interface.",
+            );
 
             let picker_id = ui.make_persistent_id(("uses_picker", host_idx, interface_idx));
             multi_select_picker(

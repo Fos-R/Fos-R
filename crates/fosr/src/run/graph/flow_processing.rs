@@ -50,8 +50,16 @@ pub fn process_flow_events(state: &mut VisualizationState) {
         state.flow.total_flows += 1;
 
         // Map unknown IPs to the Internet node for display
-        let display_src = if src_known { event.src_ip } else { INTERNET_NODE_IP };
-        let display_dst = if dst_known { event.dst_ip } else { INTERNET_NODE_IP };
+        let display_src = if src_known {
+            event.src_ip
+        } else {
+            INTERNET_NODE_IP
+        };
+        let display_dst = if dst_known {
+            event.dst_ip
+        } else {
+            INTERNET_NODE_IP
+        };
 
         log::debug!(
             "  -> Displayed as: {} -> {} ({:?})",

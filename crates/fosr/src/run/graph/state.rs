@@ -1,14 +1,15 @@
 //! Visualization state: graph data, active links, flow processing, and export.
 
+use super::graph_layout::{arrange_nodes_in_circle, arrange_nodes_in_clusters};
 use super::shapes::{NetworkEdgeShape, NetworkNodeShape};
 use super::stream::{FlowEvent, FlowStreamer};
-use super::graph_layout::{arrange_nodes_in_circle, arrange_nodes_in_clusters};
-use crate::shared::constants::ui::{DELAY_FRAMES_QUICK, ZONE_PAD_BASE, ZONE_PAD_LABEL, ZONE_PAD_TOP_INSET};
-use fosr_lib::network::HostYaml;
+use crate::shared::constants::ui::{
+    DELAY_FRAMES_QUICK, ZONE_PAD_BASE, ZONE_PAD_LABEL, ZONE_PAD_TOP_INSET,
+};
 use eframe::egui;
 use egui_graphs::events::Event;
+use fosr_lib::network::HostYaml;
 use fosr_lib::{L7Proto, OS, network, network::HostType, network::INTERNET_NETWORK_NAME};
-use strum::EnumIter;
 use petgraph::graph::NodeIndex;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -17,6 +18,7 @@ use std::net::Ipv4Addr;
 use std::rc::Rc;
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, RwLock};
+use strum::EnumIter;
 use web_time::Instant;
 
 /// Special IP address representing "The Internet" node
@@ -352,7 +354,9 @@ impl NetworkData {
                 };
 
                 // Nodes are initially inserted at position (0, 0). They are distributed in the available zone afterward.
-                let idx = self.graph.add_node_with_location(node_data, egui::pos2(0.0, 0.0));
+                let idx = self
+                    .graph
+                    .add_node_with_location(node_data, egui::pos2(0.0, 0.0));
 
                 // Use sentinel for Internet hosts so the modal looks in model.internet
                 let host_key = if network.name == INTERNET_NETWORK_NAME {
@@ -422,16 +426,20 @@ impl NetworkData {
     /// the synthetic Internet node is placed inside that zone.
     /// Otherwise it gets its own standalone cluster.
     pub fn distribute_layout(&mut self, mode: SubnetDisplayMode) {
-        let inet_zone_idx = self.subnet_zones.iter().position(|z| z.name == INTERNET_NETWORK_NAME);
+        let inet_zone_idx = self
+            .subnet_zones
+            .iter()
+            .position(|z| z.name == INTERNET_NETWORK_NAME);
 
         // Add synthetic Internet node into the Internet subnet zone when it exists
         if let Some(zone_idx) = inet_zone_idx
-            && let Some(&inet_idx) = self.ip_to_node.get(&INTERNET_NODE_IP) {
-                // Avoid duplicates on repeated calls (e.g. layout reset)
-                if !self.subnet_zones[zone_idx].host_indices.contains(&inet_idx) {
-                    self.subnet_zones[zone_idx].host_indices.push(inet_idx);
-                }
+            && let Some(&inet_idx) = self.ip_to_node.get(&INTERNET_NODE_IP)
+        {
+            // Avoid duplicates on repeated calls (e.g. layout reset)
+            if !self.subnet_zones[zone_idx].host_indices.contains(&inet_idx) {
+                self.subnet_zones[zone_idx].host_indices.push(inet_idx);
             }
+        }
 
         if mode == SubnetDisplayMode::Flat {
             arrange_nodes_in_circle(&mut self.graph);
@@ -445,9 +453,10 @@ impl NetworkData {
 
         // When no Internet hosts, give the synthetic node its own cluster
         if inet_zone_idx.is_none()
-            && let Some(&inet_idx) = self.ip_to_node.get(&INTERNET_NODE_IP) {
-                hosts_by_subnet.insert(FALLBACK_INTERNET_CLUSTER.to_string(), vec![inet_idx]);
-            }
+            && let Some(&inet_idx) = self.ip_to_node.get(&INTERNET_NODE_IP)
+        {
+            hosts_by_subnet.insert(FALLBACK_INTERNET_CLUSTER.to_string(), vec![inet_idx]);
+        }
 
         arrange_nodes_in_clusters(&mut self.graph, &hosts_by_subnet);
 
@@ -511,7 +520,9 @@ impl NetworkData {
         if rename {
             node.hostname = Some("Rest of Internet".to_string());
         }
-        let internet_idx = self.graph.add_node_with_location(node, egui::pos2(0.0, 0.0));
+        let internet_idx = self
+            .graph
+            .add_node_with_location(node, egui::pos2(0.0, 0.0));
         self.ip_to_node.insert(INTERNET_NODE_IP, internet_idx);
     }
 
@@ -527,7 +538,8 @@ impl NetworkData {
     pub fn set_subnet_mode(&mut self, mode: SubnetDisplayMode) {
         // Collect zone drawer nodes once
         let zone_drawers: HashSet<NodeIndex> = if mode != SubnetDisplayMode::Flat {
-            self.subnet_zones.iter()
+            self.subnet_zones
+                .iter()
                 .filter_map(|z| z.host_indices.first().copied())
                 .collect()
         } else {
@@ -549,7 +561,10 @@ impl NetworkData {
 
     /// Add edges between users and servers per service, plus edges to Internet.
     fn add_edges(&mut self, config: &network::Configuration) {
-        let internet_idx = self.ip_to_node.get(&INTERNET_NODE_IP).expect("Internet node must exist");
+        let internet_idx = self
+            .ip_to_node
+            .get(&INTERNET_NODE_IP)
+            .expect("Internet node must exist");
 
         for service in &config.services {
             let users = config.get_users_per_service(service);
@@ -559,7 +574,8 @@ impl NetworkData {
                 if let Some(&user_idx) = self.ip_to_node.get(&user_ip) {
                     for &server_ip in &servers {
                         if let Some(&server_idx) = self.ip_to_node.get(&server_ip) {
-                            self.graph.add_edge(user_idx, server_idx, NetworkEdge::default());
+                            self.graph
+                                .add_edge(user_idx, server_idx, NetworkEdge::default());
                         }
                     }
                 }
@@ -570,9 +586,11 @@ impl NetworkData {
         let mut connected_to_internet: HashSet<NodeIndex> = HashSet::new();
         for &ip in config.users.iter().chain(config.servers.iter()) {
             if let Some(&idx) = self.ip_to_node.get(&ip)
-                && connected_to_internet.insert(idx) {
-                    self.graph.add_edge(idx, *internet_idx, NetworkEdge::default());
-                }
+                && connected_to_internet.insert(idx)
+            {
+                self.graph
+                    .add_edge(idx, *internet_idx, NetworkEdge::default());
+            }
         }
     }
 }
@@ -667,7 +685,6 @@ pub struct VisualizationState {
     /// Current subnet display mode
     pub subnet_mode: SubnetDisplayMode,
 }
-
 
 impl VisualizationState {
     /// Update state from a configuration (preserves some state).

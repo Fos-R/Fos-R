@@ -167,7 +167,8 @@ fn render_gutter(
 
         // Error icon for lines with parse errors
         if is_error {
-            let num_col_right = gutter_rect.left() + metrics.digit_width * metrics.digits as f32 + 4.0;
+            let num_col_right =
+                gutter_rect.left() + metrics.digit_width * metrics.digits as f32 + 4.0;
             let icon_rect = egui::Rect::from_min_size(
                 egui::pos2(num_col_right, y),
                 egui::vec2(YAML_ICON_COL_WIDTH, metrics.line_height),

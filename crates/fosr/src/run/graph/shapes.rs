@@ -6,26 +6,25 @@
 //! - `closest_boundary_point`: where edges connect to the node boundary
 //! - `is_inside`: hit-testing for clicking and dragging
 
-use super::state::{NetworkEdge, EdgeState, LinkDirection, NetworkNode, NodeType, SubnetDisplayMode, ZoneDisplay};
+use super::state::{
+    EdgeState, LinkDirection, NetworkEdge, NetworkNode, NodeType, SubnetDisplayMode, ZoneDisplay,
+};
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
 use crate::shared::constants::colors::{
-    COLOR_EDGE_INACTIVE,
-    COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT,
-    COLOR_TEXT_MUTED,
-    ZONE_ACCENT_ALPHA_DARK, ZONE_ACCENT_ALPHA_LIGHT, ZONE_ACCENT_BRIGHTEN,
-    ZONE_UNIFORM_RGB,
+    COLOR_EDGE_INACTIVE, COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT, COLOR_TEXT_MUTED,
+    ZONE_ACCENT_ALPHA_DARK, ZONE_ACCENT_ALPHA_LIGHT, ZONE_ACCENT_BRIGHTEN, ZONE_UNIFORM_RGB,
     color_for_protocol,
 };
 use crate::shared::constants::ui::{
     EDGE_ARROW_ANGLE_RAD, EDGE_ARROW_SIZE, EDGE_FLOW_SCALE, EDGE_WIDTH_MAX, EDGE_WIDTH_MIN,
-    GOLDEN_RATIO_CONJUGATE, NODE_FLOW_SCALE_FACTOR, NODE_RADIUS_MAX, NODE_RADIUS_MIN,
-    SPACING_XS, TEXT_SIZE_DEFAULT, TEXT_SIZE_SM,
-    ZONE_BORDER_STROKE_WIDTH, ZONE_COLOR_ALPHA,
-    ZONE_COLOR_LIGHTNESS_DARK, ZONE_COLOR_LIGHTNESS_LIGHT,
-    ZONE_COLOR_SATURATION_DARK, ZONE_COLOR_SATURATION_LIGHT,
-    ZONE_RECT_ROUNDING,
+    GOLDEN_RATIO_CONJUGATE, NODE_FLOW_SCALE_FACTOR, NODE_RADIUS_MAX, NODE_RADIUS_MIN, SPACING_XS,
+    TEXT_SIZE_DEFAULT, TEXT_SIZE_SM, ZONE_BORDER_STROKE_WIDTH, ZONE_COLOR_ALPHA,
+    ZONE_COLOR_LIGHTNESS_DARK, ZONE_COLOR_LIGHTNESS_LIGHT, ZONE_COLOR_SATURATION_DARK,
+    ZONE_COLOR_SATURATION_LIGHT, ZONE_RECT_ROUNDING,
 };
-use eframe::egui::{self, Color32, Pos2, Rect, Shape, StrokeKind, TextureOptions, Vec2, load::SizeHint};
+use eframe::egui::{
+    self, Color32, Pos2, Rect, Shape, StrokeKind, TextureOptions, Vec2, load::SizeHint,
+};
 use eframe::epaint::FontsView;
 use egui_graphs::{DisplayEdge, DisplayNode, DrawContext, Node, NodeProps};
 
@@ -38,13 +37,7 @@ use egui_graphs::{DisplayEdge, DisplayNode, DrawContext, Node, NodeProps};
 ///    ratio-based scaling so the most active item is always at max.
 ///
 /// This ensures smooth growth at low traffic and comparability at high traffic.
-fn hybrid_scale(
-    count: u32,
-    max_count: u32,
-    min_val: f32,
-    scale: f32,
-    max_val: f32,
-) -> f32 {
+fn hybrid_scale(count: u32, max_count: u32, min_val: f32, scale: f32, max_val: f32) -> f32 {
     let max_linear = min_val + max_count as f32 * scale;
 
     if max_linear < max_val {
@@ -62,11 +55,23 @@ fn hybrid_scale(
 }
 
 fn calculate_node_radius(flow_count: u32, max_flow_count: u32) -> f32 {
-    hybrid_scale(flow_count, max_flow_count, NODE_RADIUS_MIN, NODE_FLOW_SCALE_FACTOR, NODE_RADIUS_MAX)
+    hybrid_scale(
+        flow_count,
+        max_flow_count,
+        NODE_RADIUS_MIN,
+        NODE_FLOW_SCALE_FACTOR,
+        NODE_RADIUS_MAX,
+    )
 }
 
 fn calculate_edge_width(flow_count: u32, max_flow_count: u32) -> f32 {
-    hybrid_scale(flow_count, max_flow_count, EDGE_WIDTH_MIN, EDGE_FLOW_SCALE, EDGE_WIDTH_MAX)
+    hybrid_scale(
+        flow_count,
+        max_flow_count,
+        EDGE_WIDTH_MIN,
+        EDGE_FLOW_SCALE,
+        EDGE_WIDTH_MAX,
+    )
 }
 
 /// Generate a subnet zone color based on the display mode.
@@ -83,9 +88,19 @@ fn subnet_zone_color(idx: usize, dark_mode: bool, mode: SubnetDisplayMode) -> Co
         SubnetDisplayMode::ColoredSubnets => {
             let hue = ((idx as f32 * GOLDEN_RATIO_CONJUGATE) % 1.0) * 360.0;
             if dark_mode {
-                hsl_to_color32(hue, ZONE_COLOR_SATURATION_DARK, ZONE_COLOR_LIGHTNESS_DARK, ZONE_COLOR_ALPHA)
+                hsl_to_color32(
+                    hue,
+                    ZONE_COLOR_SATURATION_DARK,
+                    ZONE_COLOR_LIGHTNESS_DARK,
+                    ZONE_COLOR_ALPHA,
+                )
             } else {
-                hsl_to_color32(hue, ZONE_COLOR_SATURATION_LIGHT, ZONE_COLOR_LIGHTNESS_LIGHT, ZONE_COLOR_ALPHA)
+                hsl_to_color32(
+                    hue,
+                    ZONE_COLOR_SATURATION_LIGHT,
+                    ZONE_COLOR_LIGHTNESS_LIGHT,
+                    ZONE_COLOR_ALPHA,
+                )
             }
         }
     }
@@ -172,12 +187,7 @@ impl NetworkNodeShape {
     fn style_from_payload(payload: &NetworkNode) -> (f32, NodeType, Option<String>, Vec<String>) {
         let radius = calculate_node_radius(payload.flow_count, payload.max_flow_count);
         let ips: Vec<String> = payload.ip_addrs.iter().map(|ip| ip.to_string()).collect();
-        (
-            radius,
-            payload.node_type,
-            payload.hostname.clone(),
-            ips,
-        )
+        (radius, payload.node_type, payload.hostname.clone(), ips)
     }
 
     /// Sync zone rendering fields from the node payload.
@@ -263,7 +273,13 @@ impl NetworkNodeShape {
         shapes.push(Shape::rect_filled(rect, rounding, color));
 
         // Accent color: brighten in dark mode, keep original in light mode
-        let accent_color = zone_accent_color(color, dark_mode, ZONE_ACCENT_BRIGHTEN, ZONE_ACCENT_ALPHA_DARK, ZONE_ACCENT_ALPHA_LIGHT);
+        let accent_color = zone_accent_color(
+            color,
+            dark_mode,
+            ZONE_ACCENT_BRIGHTEN,
+            ZONE_ACCENT_ALPHA_DARK,
+            ZONE_ACCENT_ALPHA_LIGHT,
+        );
         shapes.push(Shape::rect_stroke(
             rect,
             rounding,
@@ -306,7 +322,7 @@ impl From<NodeProps<NetworkNode>> for NetworkNodeShape {
 }
 
 impl DisplayNode<NetworkNode, NetworkEdge, petgraph::Undirected, petgraph::stable_graph::DefaultIx>
-for NetworkNodeShape
+    for NetworkNodeShape
 {
     /// Determines where edges should connect to the node shape
     fn closest_boundary_point(&self, dir: Vec2) -> Pos2 {
@@ -410,13 +426,13 @@ fn arrow_head(from: Pos2, to: Pos2, size: f32, angle: f32, color: Color32) -> Sh
 }
 
 impl
-DisplayEdge<
-    NetworkNode,
-    NetworkEdge,
-    petgraph::Undirected,
-    petgraph::stable_graph::DefaultIx,
-    NetworkNodeShape,
-> for NetworkEdgeShape
+    DisplayEdge<
+        NetworkNode,
+        NetworkEdge,
+        petgraph::Undirected,
+        petgraph::stable_graph::DefaultIx,
+        NetworkNodeShape,
+    > for NetworkEdgeShape
 {
     fn shapes(
         &mut self,
@@ -451,10 +467,7 @@ DisplayEdge<
         let start_pos = ctx.meta.canvas_to_screen_pos(start_boundary);
         let end_pos = ctx.meta.canvas_to_screen_pos(end_boundary);
 
-        let stroke = egui::Stroke::new(
-            ctx.meta.canvas_to_screen_size(self.width),
-            self.color,
-        );
+        let stroke = egui::Stroke::new(ctx.meta.canvas_to_screen_size(self.width), self.color);
 
         let mut shapes = vec![Shape::line_segment([start_pos, end_pos], stroke)];
 

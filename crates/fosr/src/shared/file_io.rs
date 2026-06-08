@@ -25,8 +25,7 @@ pub async fn show_file_picker_wasm() -> Option<FileHandle> {
 /// Reads file content synchronously from the given file handle (desktop only).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn read_file_desktop(file_handle: &FileHandle) -> Result<String, String> {
-    std::fs::read_to_string(file_handle.path())
-        .map_err(|e| format!("Failed to read file: {}", e))
+    std::fs::read_to_string(file_handle.path()).map_err(|e| format!("Failed to read file: {}", e))
 }
 
 /// Reads file content asynchronously from the given file handle (WASM only).
