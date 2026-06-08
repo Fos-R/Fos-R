@@ -1,6 +1,6 @@
 //! Startup modal for choosing configuration source (templates or import).
 
-use crate::config_templates::{TEMPLATES, load_empty_config, load_template};
+use crate::config_templates::{load_empty_config, load_template, get_default_templates};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::config::file_ops::poll_file_import;
 use crate::shared::config::file_ops::trigger_file_import;
@@ -25,7 +25,7 @@ fn card_frame_for_hover(ui: &egui::Ui, is_hovered: bool) -> egui::Frame {
 }
 
 /// Renders the centered content inside a startup card (icon, title, description).
-fn render_card_content(ui: &mut egui::Ui, icon: &str, title: &str, description: &str) {
+fn render_card_content(ui: &mut egui::Ui, icon: Option<&str>, title: &str, description: &str) {
     // Disable text selection so the whole card acts as a single clickable area
     ui.style_mut().interaction.selectable_labels = false;
     ui.set_width(ui.available_width());
@@ -33,8 +33,10 @@ fn render_card_content(ui: &mut egui::Ui, icon: &str, title: &str, description: 
 
     ui.vertical_centered(|ui| {
         ui.add_space(SPACING_LG);
-        ui.label(egui::RichText::new(icon).size(ICON_SIZE_LG));
-        ui.add_space(SPACING_SM);
+        if let Some(icon) = icon {
+            ui.label(egui::RichText::new(icon).size(ICON_SIZE_LG));
+            ui.add_space(SPACING_SM);
+        }
         ui.strong(egui::RichText::new(title).size(TEXT_SIZE_LG));
         ui.add_space(SPACING_XS);
         ui.label(
@@ -50,7 +52,7 @@ fn render_card_content(ui: &mut egui::Ui, icon: &str, title: &str, description: 
 /// Returns true if the card was clicked.
 fn startup_card(
     ui: &mut egui::Ui,
-    icon: &str,
+    icon: Option<&str>,
     title: &str,
     description: &str,
     min_height: f32,
@@ -94,7 +96,7 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
             // Left: empty config
             if startup_card(
                 &mut cols[0],
-                ICON_EDIT,
+                Some(ICON_EDIT),
                 "Empty network",
                 "Start from scratch with an empty network",
                 STARTUP_CARD_INITIAL_HEIGHT,
@@ -105,7 +107,7 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
             // Middle: default config (templates)
             if startup_card(
                 &mut cols[1],
-                ICON_LAN,
+                Some(ICON_LAN),
                 "Default network",
                 "Choose from presets of different network types",
                 STARTUP_CARD_INITIAL_HEIGHT,
@@ -116,7 +118,7 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
             // Right: import file
             if startup_card(
                 &mut cols[2],
-                ICON_UPLOAD_FILE,
+                Some(ICON_UPLOAD_FILE),
                 "Import YAML file",
                 "Load a network configuration from a file",
                 STARTUP_CARD_INITIAL_HEIGHT,
@@ -148,12 +150,12 @@ fn render_template_selection_modal(ctx: &egui::Context, state: &mut ConfigFileSt
 
         // Grid of template cards
         ui.columns(STARTUP_COLUMNS_TEMPLATES, |cols| {
-            for (i, template) in TEMPLATES.iter().enumerate() {
+            for (i, template) in get_default_templates().iter().enumerate() {
                 if startup_card(
                     &mut cols[i % STARTUP_COLUMNS_TEMPLATES],
-                    template.icon,
-                    template.title,
-                    template.description,
+                    None,
+                    &template.metadata.title,
+                    &template.metadata.desc.clone().unwrap_or("No description".to_string()),
                     STARTUP_CARD_TEMPLATE_HEIGHT,
                 ) {
                     load_template(state, template);

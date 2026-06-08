@@ -527,6 +527,16 @@ pub fn import_network(config_string: &str) -> Configuration {
     config
 }
 
+/// Import a configuration from a string.
+pub fn reversibly_import_network(config_string: &str) -> ConfigurationYaml {
+    let config: ConfigurationYaml = serde_yaml::from_str::<ConfigurationYaml>(config_string)
+        .expect("Cannot parse the configuration file");
+    log::info!("\"{}\" successfully loaded", config.metadata.title);
+    log::trace!("Configuration: {config:?}");
+    config
+}
+
+
 // #[cfg(test)]
 // mod tests {
 //     use super::*;

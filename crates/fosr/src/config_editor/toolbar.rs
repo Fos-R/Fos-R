@@ -1,7 +1,7 @@
 //! Configuration toolbar UI: file picker, template menu, save button, and mode toggle.
 
 use crate::config_editor::state::ConfigurationTabState;
-use crate::config_templates::{TEMPLATES, load_empty_config, load_template};
+use crate::config_templates::{load_empty_config, load_template};
 use crate::shared::config::file_ops::{enforce_metadata_defaults, trigger_file_import};
 use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::COLOR_WARNING;
@@ -65,14 +65,18 @@ fn render_file_import_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
 fn render_template_menu_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
     let label = format!("{} Template", ICON_DESCRIPTION);
     let template_menu = ui.menu_button(&label, |menu_ui| {
-        for template in TEMPLATES {
+        let mut template_to_load = None;
+        for template in state.all_templates.iter() {
             if menu_ui
-                .button(format!("{} {}", template.icon, template.title))
+                .button(format!("{}", template.metadata.title))
                 .clicked()
             {
                 menu_ui.close();
-                load_template(state, template);
+                template_to_load = Some(template.clone());
             }
+        }
+        if let Some(template_to_load) = template_to_load {
+            load_template(state, &template_to_load);
         }
     });
     template_menu
