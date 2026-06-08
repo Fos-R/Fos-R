@@ -223,7 +223,7 @@ analyze-dataset:
   image: zeek/zeek
   tags:
     - ci.inria.fr
-    - large_more_disk
+    - fosr
   stage: analyze
   variables:
     GIT_STRATEGY: clone
@@ -260,7 +260,7 @@ evaluate-dataset:
   image: python
   tags:
     - ci.inria.fr
-    - large_more_disk
+    - fosr
   stage: evaluate
   variables:
     GIT_STRATEGY: clone
