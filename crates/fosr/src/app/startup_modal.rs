@@ -6,11 +6,7 @@ use crate::shared::config::file_ops::poll_file_import;
 use crate::shared::config::file_ops::trigger_file_import;
 use crate::shared::config::state::{ConfigFileState, StartupModalStep};
 use crate::shared::constants::colors::COLOR_TEXT_MUTED;
-use crate::shared::constants::ui::{
-    ICON_SIZE_LG, MODAL_WIDTH_MD, SPACING_LG, SPACING_SM, SPACING_XL, SPACING_XS,
-    STARTUP_CARD_INITIAL_HEIGHT, STARTUP_CARD_TEMPLATE_HEIGHT, STARTUP_COLUMNS_INITIAL,
-    STARTUP_COLUMNS_TEMPLATES, TEXT_SIZE_LG, TEXT_SIZE_SM,
-};
+use crate::shared::constants::ui::*;
 use eframe::egui;
 use egui_material_icons::icons::{ICON_ARROW_BACK, ICON_EDIT, ICON_LAN, ICON_UPLOAD_FILE};
 
@@ -136,7 +132,7 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
 fn render_template_selection_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
     // Use the same modal ID as initial modal to avoid flicker when transitioning
     egui::Modal::new(egui::Id::new("startup_modal")).show(ctx, |ui| {
-        ui.set_width(MODAL_WIDTH_MD);
+        ui.set_width(MODAL_WIDTH_MD_TEMPLATE_SELECTION);
 
         // Header with back button
         ui.horizontal(|ui| {

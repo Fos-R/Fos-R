@@ -73,8 +73,11 @@ pub const TAB_BUTTON_PADDING: (f32, f32) = (40.0, 2.0);
 #[cfg(not(target_arch = "wasm32"))]
 pub const MODAL_WIDTH_SM: f32 = 370.0;
 
-/// Default modal width (px) - startup, template selection
+/// Default modal width (px) - startup
 pub const MODAL_WIDTH_MD: f32 = 400.0;
+
+/// Default modal width (px) - template selection
+pub const MODAL_WIDTH_MD_TEMPLATE_SELECTION: f32 = 670.0;
 
 /// Node info modal width (px)
 pub const NODE_MODAL_WIDTH: f32 = 250.0;
@@ -156,7 +159,7 @@ pub const STARTUP_CARD_TEMPLATE_HEIGHT: f32 = 125.0;
 pub const STARTUP_COLUMNS_INITIAL: usize = 3;
 
 /// Number of columns in template selection modal
-pub const STARTUP_COLUMNS_TEMPLATES: usize = 3;
+pub const STARTUP_COLUMNS_TEMPLATES: usize = 5;
 
 // ============================================================================
 // ABOUT TAB
