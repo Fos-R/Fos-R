@@ -28,10 +28,10 @@ pub fn timezone_picker(ui: &mut egui::Ui, timezone_input: &mut String) {
                     && ui
                         .selectable_label(*timezone_input == tz_str, &tz_str)
                         .clicked()
-                    {
-                        *timezone_input = tz_str;
-                        ui.close();
-                    }
+                {
+                    *timezone_input = tz_str;
+                    ui.close();
+                }
             }
         });
 }

@@ -21,15 +21,16 @@ pub fn handle_screenshot_export(ui: &mut egui::Ui, state: &mut VisualizationStat
     ui.input(|i| {
         for event in &i.raw.events {
             if let egui::Event::Screenshot { image, .. } = event
-                && state.screenshot_export == ScreenshotStateMachine::WaitingForScreenshot {
-                    if let Some(graph_rect) = state.view.graph_rect {
-                        let graph_image = image.region(&graph_rect, Some(i.pixels_per_point()));
-                        save_screenshot_as_png(&graph_image);
-                    } else {
-                        log::error!("No graph rect stored for screenshot export");
-                    }
-                    state.screenshot_export = ScreenshotStateMachine::Idle;
+                && state.screenshot_export == ScreenshotStateMachine::WaitingForScreenshot
+            {
+                if let Some(graph_rect) = state.view.graph_rect {
+                    let graph_image = image.region(&graph_rect, Some(i.pixels_per_point()));
+                    save_screenshot_as_png(&graph_image);
+                } else {
+                    log::error!("No graph rect stored for screenshot export");
                 }
+                state.screenshot_export = ScreenshotStateMachine::Idle;
+            }
         }
     });
 }

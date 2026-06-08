@@ -106,7 +106,8 @@ impl FosrApp {
 
     /// Render the top bar and update internal state from user interactions.
     fn render_top_bar(&mut self, ctx: &egui::Context) {
-        let has_hosts = self.config_file_state
+        let has_hosts = self
+            .config_file_state
             .config_model
             .as_ref()
             .is_some_and(|m| m.count_hosts() > 0);
@@ -122,7 +123,9 @@ impl FosrApp {
 
         // If Run tab is not accessible (only possible on initial load after choosing empty config),
         // force switch to Configuration to avoid rendering the graph with no hosts.
-        if updated_state.current_tab == AppTab::Run && (!has_hosts || self.config_file_state.has_errors) {
+        if updated_state.current_tab == AppTab::Run
+            && (!has_hosts || self.config_file_state.has_errors)
+        {
             self.current_tab = AppTab::Configuration;
         } else {
             self.current_tab = updated_state.current_tab;
@@ -138,11 +141,7 @@ impl FosrApp {
             // Note: Run tab doesn't use ScrollArea as it has its own layout
             match self.current_tab {
                 AppTab::Run => {
-                    render_run_tab(
-                        ui,
-                        &mut self.run_tab_state,
-                        &mut self.config_file_state,
-                    );
+                    render_run_tab(ui, &mut self.run_tab_state, &mut self.config_file_state);
                 }
                 AppTab::Configuration => {
                     // Wrap in ScrollArea for vertical scrolling

@@ -1,6 +1,5 @@
 //! Configuration file operations: loading and saving config files.
 
-use fosr_lib::network::ConfigurationYaml;
 use crate::shared::config::parser::parse_config_yaml;
 use crate::shared::config::state::ConfigFileState;
 #[cfg(not(target_arch = "wasm32"))]
@@ -9,6 +8,7 @@ use crate::shared::file_io::{read_file_desktop, show_file_picker_desktop};
 use crate::shared::file_io::{read_file_wasm, show_file_picker_wasm};
 use chrono::{DateTime, Local};
 use eframe::egui;
+use fosr_lib::network::ConfigurationYaml;
 #[cfg(target_arch = "wasm32")]
 use std::sync::mpsc::channel;
 

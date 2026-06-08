@@ -2,11 +2,11 @@
 
 pub mod config_handling;
 pub mod flow_processing;
+pub mod graph_layout;
 pub mod node_modal;
 pub mod overlays;
 pub mod screenshot;
 pub mod shapes;
 pub mod state;
 pub mod stream;
-pub mod graph_layout;
 pub mod view;

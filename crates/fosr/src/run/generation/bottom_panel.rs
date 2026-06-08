@@ -8,11 +8,6 @@ use super::process::start_generation;
 use super::validation::first_invalid_param;
 #[cfg(not(target_arch = "wasm32"))]
 use super::wireshark::open_in_wireshark;
-use egui_material_icons::icons::{ICON_KEYBOARD_ARROW_DOWN, ICON_KEYBOARD_ARROW_UP, ICON_PLAY_ARROW, ICON_STOP};
-#[cfg(not(target_arch = "wasm32"))]
-use egui_material_icons::icons::{ICON_LAN, ICON_SAVE};
-#[cfg(target_arch = "wasm32")]
-use egui_material_icons::icons::{ICON_DOWNLOAD};
 use crate::run::state::RunTabState;
 use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::{COLOR_ERROR, COLOR_STOP, COLOR_SUCCESS};
@@ -25,6 +20,13 @@ use crate::shared::file_io::save_file_desktop;
 #[cfg(target_arch = "wasm32")]
 use crate::shared::file_io::save_file_wasm;
 use eframe::egui;
+#[cfg(target_arch = "wasm32")]
+use egui_material_icons::icons::ICON_DOWNLOAD;
+use egui_material_icons::icons::{
+    ICON_KEYBOARD_ARROW_DOWN, ICON_KEYBOARD_ARROW_UP, ICON_PLAY_ARROW, ICON_STOP,
+};
+#[cfg(not(target_arch = "wasm32"))]
+use egui_material_icons::icons::{ICON_LAN, ICON_SAVE};
 use std::sync::atomic::Ordering;
 
 /// Show the bottom panel with action bar and expandable options.
@@ -118,16 +120,16 @@ fn render_generate_button(
     ui.add_enabled_ui(can_generate, |ui| {
         let accent = ui.visuals().selection.bg_fill;
         let button = egui::Button::new(
-            egui::RichText::new(format!(
-                "{} Generate",
-                ICON_PLAY_ARROW
-            ))
-                .size(TEXT_SIZE_MD),
+            egui::RichText::new(format!("{} Generate", ICON_PLAY_ARROW)).size(TEXT_SIZE_MD),
         )
-            .fill(accent)
-            .min_size(egui::vec2(BUTTON_MIN_WIDTH_LG, BUTTON_HEIGHT));
+        .fill(accent)
+        .min_size(egui::vec2(BUTTON_MIN_WIDTH_LG, BUTTON_HEIGHT));
 
-        if ui.add(button).on_hover_text("Generate PCAP from configuration").clicked() {
+        if ui
+            .add(button)
+            .on_hover_text("Generate PCAP from configuration")
+            .clicked()
+        {
             start_generation(state, configuration_file_state, ctx);
         }
     });
@@ -135,12 +137,10 @@ fn render_generate_button(
 
 /// Stop button to cancel ongoing generation.
 fn render_stop_button(ui: &mut egui::Ui, state: &mut RunTabState) {
-    let button = egui::Button::new(
-        egui::RichText::new(format!("{} Stop", ICON_STOP))
-            .size(TEXT_SIZE_MD),
-    )
-        .fill(COLOR_STOP)
-        .min_size(egui::vec2(BUTTON_MIN_WIDTH_SM, BUTTON_HEIGHT));
+    let button =
+        egui::Button::new(egui::RichText::new(format!("{} Stop", ICON_STOP)).size(TEXT_SIZE_MD))
+            .fill(COLOR_STOP)
+            .min_size(egui::vec2(BUTTON_MIN_WIDTH_SM, BUTTON_HEIGHT));
 
     if ui.add(button).on_hover_text("Cancel generation").clicked() {
         state.generation.cancelled.store(true, Ordering::Relaxed);
@@ -188,7 +188,10 @@ fn save_pcap_desktop(pcap_bytes: Option<Vec<u8>>, state: &mut RunTabState) {
     };
     match save_file_desktop(&data, &state.generation.output_file_name) {
         Ok(file_handle) => {
-            log::info!("Successfully wrote to file: {}", file_handle.path().to_string_lossy());
+            log::info!(
+                "Successfully wrote to file: {}",
+                file_handle.path().to_string_lossy()
+            );
         }
         Err(e) => {
             log::error!("Failed to save file: {:?}", e);
@@ -216,11 +219,9 @@ fn save_pcap_wasm(pcap_bytes: Option<Vec<u8>>, file_name: &str) {
 /// Wireshark button (native only) to open PCAP in external tool.
 #[cfg(not(target_arch = "wasm32"))]
 fn render_wireshark_button(ui: &mut egui::Ui, state: &mut RunTabState) {
-    let button = egui::Button::new(
-        egui::RichText::new(format!("{} Open", ICON_LAN))
-            .size(TEXT_SIZE_MD),
-    )
-        .min_size(egui::vec2(BUTTON_MIN_WIDTH_SM, BUTTON_HEIGHT));
+    let button =
+        egui::Button::new(egui::RichText::new(format!("{} Open", ICON_LAN)).size(TEXT_SIZE_MD))
+            .min_size(egui::vec2(BUTTON_MIN_WIDTH_SM, BUTTON_HEIGHT));
 
     let response = ui.add_enabled(state.generation.wireshark_available, button);
     let response = if state.generation.wireshark_available {
@@ -229,16 +230,17 @@ fn render_wireshark_button(ui: &mut egui::Ui, state: &mut RunTabState) {
         response.on_disabled_hover_text("Wireshark not found in PATH")
     };
 
-    if response.clicked() &&
-        let Some(ref pcap_bytes) = state.generation.pcap_bytes {
-            match open_in_wireshark(pcap_bytes, &mut state.generation.temp_pcap_files) {
-                Ok(_) => log::info!("Opened PCAP in Wireshark"),
-                Err(e) => {
-                    log::error!("Failed to open in Wireshark: {:?}", e);
-                    state.generation.error = Some(format!("Failed to open in Wireshark: {e}"));
-                }
+    if response.clicked()
+        && let Some(ref pcap_bytes) = state.generation.pcap_bytes
+    {
+        match open_in_wireshark(pcap_bytes, &mut state.generation.temp_pcap_files) {
+            Ok(_) => log::info!("Opened PCAP in Wireshark"),
+            Err(e) => {
+                log::error!("Failed to open in Wireshark: {:?}", e);
+                state.generation.error = Some(format!("Failed to open in Wireshark: {e}"));
             }
         }
+    }
 }
 
 /// Options toggle button to show/hide the options panel.
@@ -248,9 +250,17 @@ fn render_options_toggle(ui: &mut egui::Ui, state: &mut RunTabState) {
     } else {
         ICON_KEYBOARD_ARROW_UP
     };
-    let tooltip = if state.panel_open { "Hide options" } else { "Show options" };
+    let tooltip = if state.panel_open {
+        "Hide options"
+    } else {
+        "Show options"
+    };
 
-    if ui.button(format!("{} Options", icon)).on_hover_text(tooltip).clicked() {
+    if ui
+        .button(format!("{} Options", icon))
+        .on_hover_text(tooltip)
+        .clicked()
+    {
         state.panel_open = !state.panel_open;
         state.visualization.view.delayed_fit_countdown = Some(DELAY_FRAMES_QUICK);
     }

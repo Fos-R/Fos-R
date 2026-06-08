@@ -185,27 +185,30 @@ fn poll_progress(ctx: &egui::Context, state: &mut RunTabState) {
 
 /// Polls for PCAP data when generation completes.
 fn poll_pcap(state: &mut RunTabState) {
-    if let Some(receiver) = &state.generation.pcap_receiver &&
-         let Ok(pcap_bytes) = receiver.try_recv() {
-            state.generation.pcap_bytes = Some(pcap_bytes);
-        }
+    if let Some(receiver) = &state.generation.pcap_receiver
+        && let Ok(pcap_bytes) = receiver.try_recv()
+    {
+        state.generation.pcap_bytes = Some(pcap_bytes);
+    }
 }
 
 /// Polls for throughput metrics when generation completes.
 fn poll_throughput(state: &mut RunTabState) {
-    if let Some(receiver) = &state.generation.throughput_receiver &&
-        let Ok(throughput) = receiver.try_recv() {
-            state.generation.throughput = Some(throughput);
-            state.generation.throughput_receiver = None;
-        }
+    if let Some(receiver) = &state.generation.throughput_receiver
+        && let Ok(throughput) = receiver.try_recv()
+    {
+        state.generation.throughput = Some(throughput);
+        state.generation.throughput_receiver = None;
+    }
 }
 
 /// Polls for error messages from the generation thread.
 fn poll_error(state: &mut RunTabState) {
-    if let Some(receiver) = &state.generation.error_receiver &&
-        let Ok(error) = receiver.try_recv() {
-            state.generation.error = Some(error);
-            state.generation.error_receiver = None;
-            state.generation.progress_receiver = None; // Stop progress polling
-        }
+    if let Some(receiver) = &state.generation.error_receiver
+        && let Ok(error) = receiver.try_recv()
+    {
+        state.generation.error = Some(error);
+        state.generation.error_receiver = None;
+        state.generation.progress_receiver = None; // Stop progress polling
+    }
 }

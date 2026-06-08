@@ -9,7 +9,9 @@ use super::overlays::{
 };
 use super::screenshot::handle_screenshot_export;
 use super::shapes::{NetworkEdgeShape, NetworkNodeShape};
-use super::state::{NetworkEdge, NetworkNode, ScreenshotStateMachine, GraphViewState, SubnetDisplayMode};
+use super::state::{
+    GraphViewState, NetworkEdge, NetworkNode, ScreenshotStateMachine, SubnetDisplayMode,
+};
 use crate::run::state::RunTabState;
 use crate::shared::constants::ui::{FIT_TO_SCREEN_PADDING_FLAT, FIT_TO_SCREEN_PADDING_WITH_ZONES};
 use eframe::egui;
@@ -31,8 +33,14 @@ pub fn render_graph_view(ui: &mut egui::Ui, state: &mut RunTabState) {
             // Handle layout reset: redistribute nodes and fit to screen
             if state.visualization.view.layout_reset_requested {
                 state.visualization.view.layout_reset_requested = false;
-                state.visualization.network.distribute_layout(state.visualization.subnet_mode);
-                state.visualization.network.set_subnet_mode(state.visualization.subnet_mode);
+                state
+                    .visualization
+                    .network
+                    .distribute_layout(state.visualization.subnet_mode);
+                state
+                    .visualization
+                    .network
+                    .set_subnet_mode(state.visualization.subnet_mode);
                 state.visualization.view.fit_to_screen_requested = true;
             }
 
@@ -55,18 +63,20 @@ pub fn render_graph_view(ui: &mut egui::Ui, state: &mut RunTabState) {
                 egui_graphs::FruchtermanReingoldWithCenterGravityState,
                 egui_graphs::LayoutForceDirected<egui_graphs::FruchtermanReingoldWithCenterGravity>,
             >::new(&mut state.visualization.network.graph)
-                .with_interactions(&egui_graphs::SettingsInteraction::new()
+            .with_interactions(
+                &egui_graphs::SettingsInteraction::new()
                     .with_node_clicking_enabled(true)
-                    .with_dragging_enabled(true))
-                .with_event_sink(&state.visualization.modal.events_buffer)
-                .with_styles(&egui_graphs::SettingsStyle::new().with_labels_always(true))
-                .with_navigations(
-                    &egui_graphs::SettingsNavigation::new()
-                        .with_fit_to_screen_enabled(fit_to_screen)
-                        // padding to avoid cropping with labels and overlays
-                        .with_fit_to_screen_padding(padding)
-                        .with_zoom_and_pan_enabled(true),
-                );
+                    .with_dragging_enabled(true),
+            )
+            .with_event_sink(&state.visualization.modal.events_buffer)
+            .with_styles(&egui_graphs::SettingsStyle::new().with_labels_always(true))
+            .with_navigations(
+                &egui_graphs::SettingsNavigation::new()
+                    .with_fit_to_screen_enabled(fit_to_screen)
+                    // padding to avoid cropping with labels and overlays
+                    .with_fit_to_screen_padding(padding)
+                    .with_zoom_and_pan_enabled(true),
+            );
 
             // TODO: handle layout properly instead of just deactivating auto-layout
             disable_force_directed_layout(ui, &mut state.visualization.view);

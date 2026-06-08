@@ -1,19 +1,20 @@
 //! Service editing UI: HTTP, SSH, DNS, etc. with custom port support.
 
-use fosr_lib::network::InterfaceYaml;
-use fosr_lib::structs::L7Proto;
 use crate::shared::constants::network::{PORT_MAX, PORT_MIN, PORT_UNSPECIFIED};
 use crate::shared::constants::ui::{MULTI_SELECT_PICKER_WIDTH, SPACING_XS};
 use crate::shared::widgets::helpers::info_icon_with_tooltip;
 use crate::shared::widgets::multi_select_picker::multi_select_picker;
 use eframe::egui;
+use fosr_lib::network::InterfaceYaml;
+use fosr_lib::structs::L7Proto;
 
 /// Splits "name:port" into ("name", Some(port))
 fn parse_service(s: &str) -> (String, Option<u16>) {
-    if let Some((name, port)) = s.split_once(':') &&
-         let Ok(p) = port.parse::<u16>() {
-            return (name.to_string(), Some(p));
-        }
+    if let Some((name, port)) = s.split_once(':')
+        && let Ok(p) = port.parse::<u16>()
+    {
+        return (name.to_string(), Some(p));
+    }
     (s.to_string(), None)
 }
 
@@ -72,7 +73,10 @@ pub fn render_services_section(
         } else {
             ui.label(header_label);
         }
-        info_icon_with_tooltip(ui, "The list of services provided by the host on this interface.");
+        info_icon_with_tooltip(
+            ui,
+            "The list of services provided by the host on this interface.",
+        );
 
         let picker_id = ui.make_persistent_id(("service_picker", host_idx, interface_idx));
         multi_select_picker(
@@ -191,9 +195,9 @@ fn render_port_editor(
         );
         Some(port_val)
     } else {
-        ui.add(
-            egui::Label::new(egui::RichText::new(format!("(default: {default_port})")).weak()),
-        );
+        ui.add(egui::Label::new(
+            egui::RichText::new(format!("(default: {default_port})")).weak(),
+        ));
         if default_port == PORT_UNSPECIFIED {
             None
         } else {

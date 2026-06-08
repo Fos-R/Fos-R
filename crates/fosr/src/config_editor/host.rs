@@ -4,6 +4,9 @@
 //! Each network is displayed as a collapsible section with editable subnet/mask/name
 //! fields, a nested list of hosts, and an "Add host" button.
 
+use crate::config_editor::host_validation::{
+    collect_other_subnets, count_addresses, find_available_subnet, validate_network_subnet_overlap,
+};
 use crate::config_editor::{host_interfaces, host_validation};
 use crate::shared::constants::colors::COLOR_ERROR;
 use crate::shared::constants::ui::{SPACING_MD, SPACING_SM};
@@ -11,13 +14,12 @@ use crate::shared::widgets::helpers::{
     info_icon_with_tooltip, os_display_name, render_optional_string_input,
 };
 use eframe::egui;
-use fosr_lib::network::{next_ui_id, HostType, InterfaceYaml};
+use egui_material_icons::icons::{ICON_ADD, ICON_CLEAR, ICON_DELETE, ICON_WARNING};
 use fosr_lib::network::{ConfigurationYaml, HostYaml, NetworkYaml};
+use fosr_lib::network::{HostType, InterfaceYaml, next_ui_id};
 use fosr_lib::structs::OS;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
-use egui_material_icons::icons::{ICON_ADD, ICON_CLEAR, ICON_DELETE, ICON_WARNING};
-use crate::config_editor::host_validation::{count_addresses, find_available_subnet, validate_network_subnet_overlap, collect_other_subnets};
 
 /// Render the full networks section with per-network collapsible sections,
 /// an "Add network" button, and an "Internet" section at the bottom.
@@ -27,16 +29,15 @@ pub fn render_hosts_section(ui: &mut egui::Ui, model: &mut ConfigurationYaml) {
     let mut network_to_remove: Option<usize> = None;
 
     if ui
-        .button(format!(
-            "{} Add network",
-            ICON_ADD
-        ))
+        .button(format!("{} Add network", ICON_ADD))
         .on_hover_text("Add a new network")
         .clicked()
     {
         let net_count = model.networks.len();
         let Some(subnet) = find_available_subnet(&model.networks) else {
-            log::warn!("No available /24 subnet in 192.168.0.0/16 range - all 254 slots overlap with existing networks");
+            log::warn!(
+                "No available /24 subnet in 192.168.0.0/16 range - all 254 slots overlap with existing networks"
+            );
             return;
         };
 
@@ -50,10 +51,15 @@ pub fn render_hosts_section(ui: &mut egui::Ui, model: &mut ConfigurationYaml) {
     }
 
     // Compute subnet overlap warnings once for all networks
-    let overlap_warnings: Vec<Vec<String>> = model.networks.iter().enumerate().map(|(i, _)| {
-        let others = collect_other_subnets(&model.networks, i);
-        validate_network_subnet_overlap(&model.networks[i], &others)
-    }).collect();
+    let overlap_warnings: Vec<Vec<String>> = model
+        .networks
+        .iter()
+        .enumerate()
+        .map(|(i, _)| {
+            let others = collect_other_subnets(&model.networks, i);
+            validate_network_subnet_overlap(&model.networks[i], &others)
+        })
+        .collect();
 
     // Render each network as a collapsible section
     for (net_idx, network) in model.networks.iter_mut().enumerate() {
@@ -109,16 +115,17 @@ fn render_network_section(
             if overlap_warnings.is_empty() {
                 ui.strong(&header_text);
             } else {
-                let error_text = format!("{} {}\n{}", ICON_WARNING, header_text, overlap_warnings.join("\n"));
+                let error_text = format!(
+                    "{} {}\n{}",
+                    ICON_WARNING,
+                    header_text,
+                    overlap_warnings.join("\n")
+                );
                 ui.colored_label(COLOR_ERROR, error_text);
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 let hover_text = format!("Remove network '{}' and all its hosts", network.name);
-                if ui
-                    .button(ICON_DELETE)
-                    .on_hover_text(hover_text)
-                    .clicked()
-                {
+                if ui.button(ICON_DELETE).on_hover_text(hover_text).clicked() {
                     *network_to_remove = Some(net_idx);
                 }
             });
@@ -168,10 +175,10 @@ fn render_network_fields(ui: &mut egui::Ui, network: &mut NetworkYaml) {
         if ui
             .add(egui::TextEdit::singleline(&mut subnet_str).desired_width(120.0))
             .changed()
-        &&
-            let Ok(ip) = subnet_str.parse() {
-                network.subnet = ip;
-            }
+            && let Ok(ip) = subnet_str.parse()
+        {
+            network.subnet = ip;
+        }
 
         ui.label("/");
         let mut mask_val = network.mask as u32;
@@ -254,12 +261,11 @@ fn render_host_card(
     let mut errors = host_validation::validate_host(host, ip_counts, mac_counts);
 
     // Verify that the host has at least one interface in the subnet
-    if let Some((subnet, mask)) = subnet_ctx 
+    if let Some((subnet, mask)) = subnet_ctx
         && let Some(warning) = host_validation::validate_host_network_placement(host, subnet, mask)
-        {
-            errors.push(warning);
-        }
-    
+    {
+        errors.push(warning);
+    }
 
     // Use a unique ID to properly identify a section's state to a specific host.
     // This ensures, for instance, that an opened section stays open if a new host is added.
@@ -271,11 +277,7 @@ fn render_host_card(
             render_host_header(ui, &display_name, &errors, host);
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 let hover_text = format!("Remove host '{}'", display_name);
-                if ui
-                    .button(ICON_DELETE)
-                    .on_hover_text(hover_text)
-                    .clicked()
-                {
+                if ui.button(ICON_DELETE).on_hover_text(hover_text).clicked() {
                     *remove_request = Some(key.1);
                 }
             });
@@ -283,7 +285,9 @@ fn render_host_card(
         .body(|ui| {
             render_host_basic_fields(ui, key, host);
             ui.separator();
-            host_interfaces::render_interfaces_section(ui, key.1, host, ip_counts, mac_counts, subnet_ctx);
+            host_interfaces::render_interfaces_section(
+                ui, key.1, host, ip_counts, mac_counts, subnet_ctx,
+            );
         });
 }
 
@@ -371,7 +375,10 @@ fn render_os_dropdown(ui: &mut egui::Ui, key: (usize, usize), host: &mut HostYam
         egui::ComboBox::from_id_salt((key, "host_os_combo"))
             .selected_text(selected_text)
             .show_ui(ui, |ui| {
-                if ui.selectable_label(host.os.is_none(), os_display_name(None)).clicked() {
+                if ui
+                    .selectable_label(host.os.is_none(), os_display_name(None))
+                    .clicked()
+                {
                     host.os = None;
                 }
 
@@ -384,19 +391,17 @@ fn render_os_dropdown(ui: &mut egui::Ui, key: (usize, usize), host: &mut HostYam
                     host.os = Some(OS::Linux);
                 }
                 if ui
-                    .selectable_label(host.os == Some(OS::Windows), os_display_name(Some(OS::Windows)))
+                    .selectable_label(
+                        host.os == Some(OS::Windows),
+                        os_display_name(Some(OS::Windows)),
+                    )
                     .clicked()
                 {
                     host.os = Some(OS::Windows);
                 }
             });
 
-        if host.os.is_some()
-            && ui
-            .button(ICON_CLEAR)
-            .on_hover_text("Clear OS")
-            .clicked()
-        {
+        if host.os.is_some() && ui.button(ICON_CLEAR).on_hover_text("Clear OS").clicked() {
             host.os = None;
         }
     });
@@ -441,11 +446,7 @@ fn render_type_dropdown(ui: &mut egui::Ui, key: (usize, usize), host: &mut HostY
                 }
             });
 
-        if ui
-            .button(ICON_CLEAR)
-            .on_hover_text("Clear")
-            .clicked()
-        {
+        if ui.button(ICON_CLEAR).on_hover_text("Clear").clicked() {
             host.host_type = None;
         }
     });
@@ -453,14 +454,17 @@ fn render_type_dropdown(ui: &mut egui::Ui, key: (usize, usize), host: &mut HostY
 
 /// Determine the display name for a host.
 fn host_display_name(host: &HostYaml) -> String {
-    if let Some(name) = host.hostname.as_deref() &&
-         !name.trim().is_empty() {
-            return name.to_string();
-        }
+    if let Some(name) = host.hostname.as_deref()
+        && !name.trim().is_empty()
+    {
+        return name.to_string();
+    }
 
-    if let Some(interface) = host.interfaces.first() && !interface.ip_addr.trim().is_empty() {
-            return interface.ip_addr.clone();
-        }
+    if let Some(interface) = host.interfaces.first()
+        && !interface.ip_addr.trim().is_empty()
+    {
+        return interface.ip_addr.clone();
+    }
 
     "Unconfigured host".to_string()
 }

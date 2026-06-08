@@ -4,8 +4,10 @@
 //! a search field and scrollable item list. Inspired by egui's ComboBox
 //! (MIT OR Apache-2.0, Copyright (c) 2018-2021 Emil Ernerfeldt).
 
+use crate::shared::constants::ui::{
+    DEFAULT_COMBO_LIST_MAX_HEIGHT, DEFAULT_COMBO_POPUP_MAX_HEIGHT, DEFAULT_COMBO_WIDTH,
+};
 use eframe::egui::{self, epaint};
-use crate::shared::constants::ui::{DEFAULT_COMBO_LIST_MAX_HEIGHT, DEFAULT_COMBO_POPUP_MAX_HEIGHT, DEFAULT_COMBO_WIDTH};
 
 /// Custom ComboBox with built-in search functionality.
 ///
@@ -125,12 +127,7 @@ fn render_search_field(ui: &mut egui::Ui, search_id: egui::Id) -> String {
 /// Paint a ComboBox-style button with dropdown arrow.
 ///
 /// Returns the button response for popup triggering and hover text.
-fn paint_combo_button(
-    ui: &mut egui::Ui,
-    text: &str,
-    width: f32,
-    is_open: bool,
-) -> egui::Response {
+fn paint_combo_button(ui: &mut egui::Ui, text: &str, width: f32, is_open: bool) -> egui::Response {
     let margin = ui.spacing().button_padding;
     let icon_spacing = ui.spacing().icon_spacing;
     let icon_size = egui::Vec2::splat(ui.spacing().icon_width);

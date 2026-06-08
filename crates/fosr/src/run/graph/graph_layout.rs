@@ -6,20 +6,17 @@
 //!
 //! Flat mode: all nodes are evenly distributed on a single circle.
 
-use crate::shared::constants::ui::{
-    CLUSTER_GAP_RAD,
-    GRAPH_LAYOUT_CLUSTER_RADIUS_MULTIPLIER, GRAPH_LAYOUT_CLUSTER_RADIUS_BASE,
-    GRAPH_LAYOUT_FLAT_RADIUS_MULTIPLIER, GRAPH_LAYOUT_FLAT_RADIUS_BASE,
-};
 use super::state::VisualizationGraph;
+use crate::shared::constants::ui::{
+    CLUSTER_GAP_RAD, GRAPH_LAYOUT_CLUSTER_RADIUS_BASE, GRAPH_LAYOUT_CLUSTER_RADIUS_MULTIPLIER,
+    GRAPH_LAYOUT_FLAT_RADIUS_BASE, GRAPH_LAYOUT_FLAT_RADIUS_MULTIPLIER,
+};
 use eframe::egui;
-use std::collections::HashMap;
 use petgraph::graph::NodeIndex;
+use std::collections::HashMap;
 
 /// Distribute all nodes evenly on a single circle (flat layout).
-pub fn arrange_nodes_in_circle(
-    graph: &mut VisualizationGraph,
-) {
+pub fn arrange_nodes_in_circle(graph: &mut VisualizationGraph) {
     let node_indices: Vec<NodeIndex> = graph.g().node_indices().collect();
     let n = node_indices.len();
     if n == 0 {
@@ -27,7 +24,8 @@ pub fn arrange_nodes_in_circle(
     }
 
     let node_count = n.max(1) as f32;
-    let radius = node_count.sqrt() * GRAPH_LAYOUT_FLAT_RADIUS_MULTIPLIER + GRAPH_LAYOUT_FLAT_RADIUS_BASE;
+    let radius =
+        node_count.sqrt() * GRAPH_LAYOUT_FLAT_RADIUS_MULTIPLIER + GRAPH_LAYOUT_FLAT_RADIUS_BASE;
 
     for (i, &idx) in node_indices.iter().enumerate() {
         let angle = (i as f32 / node_count) * std::f32::consts::TAU;
@@ -47,7 +45,8 @@ pub fn arrange_nodes_in_clusters(
     hosts_by_subnet: &HashMap<String, Vec<NodeIndex>>,
 ) {
     let subnet_count = hosts_by_subnet.len().max(1) as f32;
-    let radius = subnet_count.sqrt() * GRAPH_LAYOUT_CLUSTER_RADIUS_MULTIPLIER + GRAPH_LAYOUT_CLUSTER_RADIUS_BASE;
+    let radius = subnet_count.sqrt() * GRAPH_LAYOUT_CLUSTER_RADIUS_MULTIPLIER
+        + GRAPH_LAYOUT_CLUSTER_RADIUS_BASE;
 
     // Stable ordering: sort subnets alphabetically by name
     let subnet_order: Vec<String> = {
@@ -57,14 +56,16 @@ pub fn arrange_nodes_in_clusters(
     };
 
     // Compute total nodes for proportional sector allocation
-    let total_nodes: usize = subnet_order.iter()
+    let total_nodes: usize = subnet_order
+        .iter()
         .filter_map(|name| hosts_by_subnet.get(name))
         .map(|hosts| hosts.len())
         .sum();
     let total_nodes = total_nodes.max(1) as f32;
 
     // Reserve a fraction of the circle for inter-cluster gaps
-    let num_clusters = subnet_order.iter()
+    let num_clusters = subnet_order
+        .iter()
         .filter(|name| hosts_by_subnet.get(*name).is_some_and(|h| !h.is_empty()))
         .count()
         .max(1);
@@ -75,7 +76,9 @@ pub fn arrange_nodes_in_clusters(
     // Position hosts on arc within their sector
     let mut sector_start = 0.0;
     for name in &subnet_order {
-        let Some(hosts) = hosts_by_subnet.get(name) else { continue };
+        let Some(hosts) = hosts_by_subnet.get(name) else {
+            continue;
+        };
         let host_count = hosts.len();
         if host_count == 0 {
             continue;
@@ -89,10 +92,7 @@ pub fn arrange_nodes_in_clusters(
             let angle = sector_start + t * sector_span;
 
             if let Some(node) = graph.g_mut().node_weight_mut(host_idx) {
-                node.set_location(egui::pos2(
-                    radius * angle.cos(),
-                    radius * angle.sin(),
-                ));
+                node.set_location(egui::pos2(radius * angle.cos(), radius * angle.sin()));
             }
         }
 

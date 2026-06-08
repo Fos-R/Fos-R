@@ -1,12 +1,12 @@
 use crate::structs::*;
 
 use pnet::util::MacAddr;
+use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::net::Ipv4Addr;
 use std::sync::atomic::{AtomicU64, Ordering};
-use rand::prelude::*;
 
 /// Name of the synthetic Internet network.
 pub const INTERNET_NETWORK_NAME: &str = "Internet";
@@ -20,7 +20,6 @@ pub struct Configuration {
 
     // /// The list of hosts
     // pub hosts: Vec<Host>,
-
     /// The list of networks
     pub networks: Vec<Network>,
 
@@ -32,7 +31,6 @@ pub struct Configuration {
 
     // /// The usages of each IP address
     // pub usages_map: HashMap<Ipv4Addr, f64>,
-
     /// The list of "users" IPs
     pub users: Vec<Ipv4Addr>,
 
@@ -139,7 +137,6 @@ pub struct Host {
     // client: Option<Vec<L7Proto>>, // we keep the option here, because there is a difference
     // between an empty list (no service is used) and nothing
     // (default services are used)
-
     /// The type of host (server or user)
     pub host_type: HostType,
 
@@ -196,8 +193,7 @@ pub struct ConfigurationYaml {
 impl ConfigurationYaml {
     /// Get total number of hosts across all networks and internet.
     pub fn count_hosts(&self) -> usize {
-        self.networks.iter().map(|n| n.hosts.len()).sum::<usize>()
-            + self.internet.len()
+        self.networks.iter().map(|n| n.hosts.len()).sum::<usize>() + self.internet.len()
     }
 
     /// Add a new network to the configuration.
@@ -249,7 +245,6 @@ pub struct HostYaml {
 
     // usage: Option<f64>,
     // client: Option<Vec<L7Proto>>,
-
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub host_type: Option<HostType>,
 
@@ -329,20 +324,26 @@ impl From<ConfigurationYaml> for Configuration {
             .collect();
         let mut os_map: HashMap<Ipv4Addr, OS> = HashMap::new();
         // let mut usages_map: HashMap<Ipv4Addr, f64> = HashMap::new();
-        for host in networks.iter().flat_map(|n| n.hosts.iter()).chain(&internet) {
+        for host in networks
+            .iter()
+            .flat_map(|n| n.hosts.iter())
+            .chain(&internet)
+        {
             for interface in host.interfaces.iter() {
                 os_map.insert(interface.ip_addr, host.os);
                 // usages_map.insert(interface.ip_addr, host.usage);
             }
         }
-        
+
         // let mut mac_addr_map: HashMap<Ipv4Addr, MacAddr> = HashMap::new();
         let mut services: HashSet<L7Proto> = HashSet::new();
         let mut servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
         let mut users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
         let mut open_ports: HashMap<(Ipv4Addr, L7Proto), u16> = HashMap::new();
 
-        let all_hosts = internet.iter().chain(networks.iter().flat_map(|n| n.hosts.iter()));
+        let all_hosts = internet
+            .iter()
+            .chain(networks.iter().flat_map(|n| n.hosts.iter()));
         for interface in all_hosts.flat_map(|h| &h.interfaces) {
             // if let Some(mac_addr) = interface.mac_addr {
             //     mac_addr_map.insert(interface.ip_addr, mac_addr);
@@ -360,7 +361,9 @@ impl From<ConfigurationYaml> for Configuration {
             }
         }
 
-        let all_hosts = internet.iter().chain(networks.iter().flat_map(|n| n.hosts.iter()));
+        let all_hosts = internet
+            .iter()
+            .chain(networks.iter().flat_map(|n| n.hosts.iter()));
         for host in all_hosts {
             for i in &host.interfaces {
                 if let Some(client) = &i.uses {
@@ -401,7 +404,12 @@ impl From<ConfigurationYaml> for Configuration {
         // let hosts = c.internet.into_iter().chain(c.networks.into_iter().map(|n| n.hosts.into_iter()).flatten()).collect();
 
         let mut all_networks = networks;
-        all_networks.push(Network { subnet: Ipv4Addr::new(0, 0, 0, 0), mask: 0, name: INTERNET_NETWORK_NAME.to_string(), hosts: internet });
+        all_networks.push(Network {
+            subnet: Ipv4Addr::new(0, 0, 0, 0),
+            mask: 0,
+            name: INTERNET_NETWORK_NAME.to_string(),
+            hosts: internet,
+        });
 
         Configuration {
             metadata: c.metadata,
@@ -423,7 +431,10 @@ impl From<HostYaml> for Host {
     fn from(h: HostYaml) -> Self {
         let host_type = h.host_type.unwrap_or(
             // if there is at least one service, the type is "server"
-            if h.interfaces.iter().any(|i| i.services.as_ref().is_some_and(|s| !s.is_empty())) {
+            if h.interfaces
+                .iter()
+                .any(|i| i.services.as_ref().is_some_and(|s| !s.is_empty()))
+            {
                 HostType::Server
             } else {
                 HostType::User
@@ -434,9 +445,14 @@ impl From<HostYaml> for Host {
             os: h.os.unwrap_or(OS::Linux),
             // usage: h.usage.unwrap_or(1.0),
             host_type,
-            interfaces: h.interfaces.into_iter().map(Interface::try_from)
+            interfaces: h
+                .interfaces
+                .into_iter()
+                .map(Interface::try_from)
                 .filter_map(|r| {
-                    if let Err(e) = &r { log::warn!("Skipping interface: {e}"); }
+                    if let Err(e) = &r {
+                        log::warn!("Skipping interface: {e}");
+                    }
                     r.ok()
                 })
                 .collect(),
@@ -480,8 +496,13 @@ impl TryFrom<InterfaceYaml> for Interface {
         let mut rng = rand::rng();
         let ip_addr = match i.ip_addr.as_str() {
             "auto" => Ipv4Addr::new(0, 0, 0, 0),
-            "internet" => Ipv4Addr::new(rng.random::<u8>(), rng.random::<u8>(), rng.random::<u8>(), rng.random::<u8>()), // TODO: ne pas générer complètement au hasard pour éviter les collisions et permettre d'utiliser une seed
-            _ => i.ip_addr.parse().expect("Cannot parse IP address")
+            "internet" => Ipv4Addr::new(
+                rng.random::<u8>(),
+                rng.random::<u8>(),
+                rng.random::<u8>(),
+                rng.random::<u8>(),
+            ), // TODO: ne pas générer complètement au hasard pour éviter les collisions et permettre d'utiliser une seed
+            _ => i.ip_addr.parse().expect("Cannot parse IP address"),
         };
         Ok(Interface {
             uses,

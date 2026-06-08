@@ -1,4 +1,4 @@
-use crate::{stage1, stage2, stage3, network};
+use crate::{network, stage1, stage2, stage3};
 #[allow(unused_imports)]
 use include_dir::include_dir;
 #[allow(unused_imports)]

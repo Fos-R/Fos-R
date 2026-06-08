@@ -180,7 +180,8 @@ fn execute_generation_pipeline(
     send_progress(0.2);
 
     log::info!("Stage 1 generation");
-    let stage2_output = stage2::run_vec(s1, stage1_output).map_err(|e| format!("Stage 1 failed: {}", e))?;
+    let stage2_output =
+        stage2::run_vec(s1, stage1_output).map_err(|e| format!("Stage 1 failed: {}", e))?;
     if is_cancelled() {
         log::info!("Generation cancelled after stage 1");
         return Ok(());
@@ -244,7 +245,7 @@ fn generate_stage4_packets(
 ) -> Option<Vec<fosr_lib::Packet>> {
     let mut all_packets = vec![];
     let stats = Arc::new(fosr_lib::stats::Stats::new(fosr_lib::stats::Target::None));
-    { 
+    {
         let stats = stats.clone();
 
         all_packets.extend(stage4::run_vec(
@@ -257,27 +258,27 @@ fn generate_stage4_packets(
         log::info!("Generation cancelled during stage 3");
         return None;
     }
-    { 
+    {
         let stats = stats.clone();
 
-    all_packets.extend(stage4::run_vec(
-        |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
-        vec.tcp,
-        stats,
-    ));
+        all_packets.extend(stage4::run_vec(
+            |f, p, v, a| s3.generate_tcp_packets(f, p, v, a),
+            vec.tcp,
+            stats,
+        ));
     }
     if is_cancelled() {
         log::info!("Generation cancelled during stage 3");
         return None;
     }
-    { 
+    {
         let stats = stats.clone();
 
-    all_packets.extend(stage4::run_vec(
-        |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
-        vec.icmp,
-        stats,
-    ));
+        all_packets.extend(stage4::run_vec(
+            |f, p, v, a| s3.generate_icmp_packets(f, p, v, a),
+            vec.icmp,
+            stats,
+        ));
     }
     if is_cancelled() {
         log::info!("Generation cancelled during stage 3");

@@ -1,6 +1,6 @@
 //! Node click handling and info/edit modal for the visualization graph.
 
-use super::state::{NetworkNode, NodeType, VisualizationState, INTERNET_HOST_SENTINEL};
+use super::state::{INTERNET_HOST_SENTINEL, NetworkNode, NodeType, VisualizationState};
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
 use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::{COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT};
@@ -9,8 +9,8 @@ use crate::shared::constants::ui::{
 };
 use crate::shared::widgets::helpers::os_display_name;
 use eframe::egui;
-use egui_material_icons::icons::{ICON_CLOSE, ICON_SAVE};
 use egui_graphs::events::{Event, PayloadNodeClick};
+use egui_material_icons::icons::{ICON_CLOSE, ICON_SAVE};
 use fosr_lib::network::{ConfigurationYaml, HostYaml};
 use fosr_lib::structs::OS;
 
@@ -25,12 +25,18 @@ fn get_host_by_pos(model: &ConfigurationYaml, pos: (usize, usize)) -> Option<&Ho
 }
 
 /// Look up a host by `(net_idx, host_idx)` position, mutably.
-fn get_host_by_pos_mut(model: &mut ConfigurationYaml, pos: (usize, usize)) -> Option<&mut HostYaml> {
+fn get_host_by_pos_mut(
+    model: &mut ConfigurationYaml,
+    pos: (usize, usize),
+) -> Option<&mut HostYaml> {
     let (net_idx, h_idx) = pos;
     if net_idx == INTERNET_HOST_SENTINEL {
         model.internet.get_mut(h_idx)
     } else {
-        model.networks.get_mut(net_idx).and_then(|n| n.hosts.get_mut(h_idx))
+        model
+            .networks
+            .get_mut(net_idx)
+            .and_then(|n| n.hosts.get_mut(h_idx))
     }
 }
 
@@ -178,13 +184,25 @@ fn render_os_dropdown(ui: &mut egui::Ui, host: &mut HostYaml) {
         egui::ComboBox::from_id_salt("modal_os")
             .selected_text(selected)
             .show_ui(ui, |ui| {
-                if ui.selectable_label(host.os.is_none(), os_display_name(None)).clicked() {
+                if ui
+                    .selectable_label(host.os.is_none(), os_display_name(None))
+                    .clicked()
+                {
                     host.os = None;
                 }
-                if ui.selectable_label(host.os == Some(OS::Linux), os_display_name(Some(OS::Linux))).clicked() {
+                if ui
+                    .selectable_label(host.os == Some(OS::Linux), os_display_name(Some(OS::Linux)))
+                    .clicked()
+                {
                     host.os = Some(OS::Linux);
                 }
-                if ui.selectable_label(host.os == Some(OS::Windows), os_display_name(Some(OS::Windows))).clicked() {
+                if ui
+                    .selectable_label(
+                        host.os == Some(OS::Windows),
+                        os_display_name(Some(OS::Windows)),
+                    )
+                    .clicked()
+                {
                     host.os = Some(OS::Windows);
                 }
             });
@@ -215,9 +233,7 @@ fn render_readonly_fields(ui: &mut egui::Ui, node_data: &NetworkNode) {
     if node_data.node_type != NodeType::Internet {
         ui.horizontal(|ui| {
             ui.label("OS:");
-            ui.label(egui::RichText::new(
-                node_data.os.to_string()
-            ).monospace());
+            ui.label(egui::RichText::new(node_data.os.to_string()).monospace());
         });
         ui.label("IP Addresses:");
         for ip in &node_data.ip_addrs {
@@ -233,28 +249,16 @@ fn render_readonly_fields(ui: &mut egui::Ui, node_data: &NetworkNode) {
 fn render_modal_footer(ui: &mut egui::Ui, has_edit_buffer: bool, save_clicked: &mut bool) {
     if has_edit_buffer {
         ui.horizontal(|ui| {
-            if ui
-                .button(ICON_CLOSE)
-                .on_hover_text("Cancel")
-                .clicked()
-            {
+            if ui.button(ICON_CLOSE).on_hover_text("Cancel").clicked() {
                 ui.close();
             }
-            if ui
-                .button(ICON_SAVE)
-                .on_hover_text("Save")
-                .clicked()
-            {
+            if ui.button(ICON_SAVE).on_hover_text("Save").clicked() {
                 *save_clicked = true;
                 ui.close();
             }
         });
     } else {
-        if ui
-            .button(ICON_CLOSE)
-            .on_hover_text("Close")
-            .clicked()
-        {
+        if ui.button(ICON_CLOSE).on_hover_text("Close").clicked() {
             ui.close();
         }
     }

@@ -12,12 +12,7 @@ use crate::shared::constants::network::STREAM_MAX_PER_CYCLE_WASM;
 use crate::shared::constants::network::STREAM_RATE_LIMIT_MS;
 use crate::shared::constants::network::{STREAM_BUFFER_AHEAD_SECS, STREAM_CHECK_INTERVAL_MS};
 use chrono::{DateTime, Offset, TimeZone};
-use fosr_lib::{
-    L7Proto, models,
-    stage1,
-    stage2::Stage2,
-    stage2::bayesian_networks::BNGenerator,
-};
+use fosr_lib::{L7Proto, models, stage1, stage2::Stage2, stage2::bayesian_networks::BNGenerator};
 use std::collections::BinaryHeap;
 use std::net::Ipv4Addr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -116,10 +111,7 @@ impl Ord for ScheduledFlow {
 
 impl ScheduledFlow {
     /// Create a scheduled flow from flow data, relative to the initial timestamp.
-    fn from_flow_data(
-        flow_data: &fosr_lib::FlowData,
-        initial_timestamp: Duration,
-    ) -> Self {
+    fn from_flow_data(flow_data: &fosr_lib::FlowData, initial_timestamp: Duration) -> Self {
         let scheduled_time = if flow_data.timestamp >= initial_timestamp {
             flow_data.timestamp - initial_timestamp
         } else {
@@ -244,10 +236,7 @@ fn generate_flows_to_buffer_wasm(
 
 /// Emit flows whose scheduled time has passed (in virtual time).
 #[cfg(not(target_arch = "wasm32"))]
-fn emit_scheduled_flows(
-    state: &mut FlowStreamingState,
-    sender: &Sender<FlowEvent>,
-) {
+fn emit_scheduled_flows(state: &mut FlowStreamingState, sender: &Sender<FlowEvent>) {
     let virtual_elapsed = state.virtual_elapsed();
 
     while let Some(scheduled) = state.pending_flows.peek() {
@@ -274,10 +263,7 @@ fn emit_scheduled_flows(
 
 /// Emit flows for WASM (simplified, no debug logging).
 #[cfg(target_arch = "wasm32")]
-fn emit_scheduled_flows_wasm(
-    state: &mut FlowStreamingState,
-    sender: &Sender<FlowEvent>,
-) {
+fn emit_scheduled_flows_wasm(state: &mut FlowStreamingState, sender: &Sender<FlowEvent>) {
     let virtual_elapsed = state.virtual_elapsed();
 
     while let Some(scheduled) = state.pending_flows.peek() {
@@ -425,8 +411,7 @@ impl FlowStreamer {
             while state.needs_more_flows() && running.load(Ordering::SeqCst) {
                 // Rate limit: exit inner loop so virtual time can advance
                 if !state.pending_flows.is_empty()
-                    && state.last_generation.elapsed()
-                    < Duration::from_millis(STREAM_RATE_LIMIT_MS)
+                    && state.last_generation.elapsed() < Duration::from_millis(STREAM_RATE_LIMIT_MS)
                 {
                     break;
                 }
