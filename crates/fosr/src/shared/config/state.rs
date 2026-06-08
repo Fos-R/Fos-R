@@ -36,6 +36,7 @@ pub struct ConfigFileState {
     pub modal_state: StartupModalStep,
     /// The ID of the currently loaded template, if any.
     pub loaded_template_id: Option<String>,
+    pub all_templates: Vec<ConfigurationYaml>,
 }
 
 impl Default for ConfigFileState {
@@ -55,6 +56,7 @@ impl Default for ConfigFileState {
             has_errors: false,
             modal_state: StartupModalStep::Initial,
             loaded_template_id: None,
+            all_templates: crate::config_templates::get_default_templates(),
         }
     }
 }

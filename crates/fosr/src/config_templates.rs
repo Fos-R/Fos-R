@@ -1,87 +1,54 @@
 //! Predefined configuration templates: Home, Enterprise, Datacenter.
 
 use crate::shared::config::state::ConfigFileState;
-use egui_material_icons::icons;
 use fosr_lib::network::{ConfigurationYaml, Metadata};
+use include_dir::include_dir;
+use include_dir::Dir;
 
-/// A predefined configuration template.
-#[derive(Clone, Copy)]
-pub struct Template {
-    pub id: &'static str,
-    pub title: &'static str,
-    pub description: &'static str,
-    pub icon: &'static str,
-    pub yaml: &'static str,
+pub fn get_default_templates() -> Vec<ConfigurationYaml> {
+    let d: Dir =
+        include_dir!("$CARGO_MANIFEST_DIR/default_templates");
+    d.files()
+        .inspect(|e| {
+            log::debug!("Loading default template {:?}", e.path());
+        })
+        .map(|f: &include_dir::File| fosr_lib::network::reversibly_import_network(f.contents_utf8().unwrap()))
+        .collect()
 }
-
-/// All available templates.
-pub static TEMPLATES: &[Template] = &[
-    Template {
-        id: "home",
-        title: "Home Network",
-        description: "2-3 hosts, simple setup",
-        icon: icons::ICON_HOME,
-        yaml: include_str!("home.yaml"),
-    },
-    Template {
-        id: "enterprise",
-        title: "Enterprise",
-        description: "DMZ + App + DB + Users",
-        icon: icons::ICON_BUSINESS,
-        yaml: include_str!("enterprise.yaml"),
-    },
-    Template {
-        id: "datacenter",
-        title: "Datacenter",
-        description: "Many servers, no users",
-        icon: icons::ICON_DNS,
-        yaml: include_str!("datacenter.yaml"),
-    },
-];
 
 /// Load a template into the configuration file state.
 ///
 /// Parses the template YAML first, then applies state changes only on success.
 /// On parse failure, sets the error without modifying the existing model.
-pub fn load_template(state: &mut ConfigFileState, template: &Template) {
-    // Parse first, fail-fast if invalid
-    let model = match serde_yaml::from_str::<ConfigurationYaml>(template.yaml) {
-        Ok(model) => model,
-        Err(e) => {
-            state.config_error = Some(e.to_string());
-            return;
-        }
-    };
-
+pub fn load_template(state: &mut ConfigFileState, template: &ConfigurationYaml) {
     // Normalize snapshot through serde_yaml so dirty comparison is consistent
-    let snapshot = serde_yaml::to_string(&model).unwrap_or_default();
+    let snapshot = serde_yaml::to_string(&template).unwrap_or_default();
 
     // Apply state changes only after successful parse
-    apply_template_to_state(state, template.id, model, snapshot);
+    apply_template_to_state(state, template, snapshot);
 }
 
 /// Reset state and apply a successfully-parsed template.
 fn apply_template_to_state(
     state: &mut ConfigFileState,
-    template_id: &'static str,
-    model: ConfigurationYaml,
+    model: &ConfigurationYaml,
     snapshot: String,
 ) {
     state.picked_config_file = None;
     state.config_file_content = Some(snapshot.clone());
-    state.config_model = Some(model);
+    state.loaded_template_id = Some(model.metadata.title.clone());
+    state.config_model = Some(model.clone());
     state.clean_snapshot = Some(snapshot);
     state.config_error = None;
     state.config_chosen = true;
     state.is_dirty = false;
-    state.loaded_template_id = Some(template_id.to_string());
 }
 
 /// Load an empty configuration with only metadata.
 pub fn load_empty_config(state: &mut ConfigFileState) {
     let model = ConfigurationYaml {
         metadata: Metadata {
-            title: String::new(),
+            title: "New network".to_string(),
             desc: None,
             author: None,
             date: None,
