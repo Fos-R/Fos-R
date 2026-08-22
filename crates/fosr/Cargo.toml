@@ -34,37 +34,37 @@ models = ["fosr-lib/models_cupid", "fosr-lib/models_cicids17"]
 native = []
 
 [dependencies]
-chrono = "0.4.44"
+chrono = "0.4.45"
 chrono-tz = "0.10.4"
 eframe = "0.33.3"
 egui_extras = { version = "0.33.3", features = ["chrono", "all_loaders", "syntect", "serde"] }
-log = "0.4.30"
-wasm-bindgen = "0.2.122"
+log = "0.4.34"
+wasm-bindgen = "0.2.127"
 fosr-lib = { version = "1.0.0-dev", path = "../fosr-lib", features = ["models_cupid"] }
 rfd = "0.17.2"
-humantime = "2.3.0"
+humantime = "2.4.0"
 serde = { version = "1", features = ["derive"] }
-indicatif = "0.18.4"
+indicatif = "0.18.6"
 web-time = "1.1.0"
 petgraph = "0.8.3"
 egui_graphs = { version = "0.29.0", features = ["events"] }
 serde_yaml = "0.9"
 strum = { version = "0.28", features = ["derive"] }
 egui_material_icons = "0.5.0"
-rand = "0.10.1"
+rand = "0.10.2"
 image = { version = "0.25", default-features = false, features = ["png"] }
 sha2 = "0.11.0"
 include_dir = "0.7.4"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = "0.2.122"
+wasm-bindgen = "0.2.127"
 gloo-timers = { version = "0.3", features = ["futures"] }
-wasm-bindgen-futures = "0.4.72"
-web-sys = { version = "0.3.99", features = ["Element", "Document", "Window"] }
+wasm-bindgen-futures = "0.4.77"
+web-sys = { version = "0.3.104", features = ["Element", "Document", "Window"] }
 getrandom = { version = "0.3.4", features = ["wasm_js"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = { version = "0.11.10", default-features = false, features = ["auto-color", "humantime"] }
+env_logger = { version = "0.11.11", default-features = false, features = ["auto-color", "humantime"] }
 tempfile = "3.27.0"
-open = "5.3.5"
-which = "8.0.2"
+open = "5.4.1"
+which = "8.0.5"

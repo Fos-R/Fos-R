@@ -12,17 +12,17 @@ categories = ["network-programming","security","science"]
 keywords = ["cli", "networking", "ai", "security"]
 
 [dependencies]
-chrono = "0.4.44"
+chrono = "0.4.45"
 chrono-tz = "0.10.4"
-clap = { version = "4.6.1", features = ["derive"] }
-crossbeam-channel = "0.5.15"
+clap = { version = "4.6.6", features = ["derive"] }
+crossbeam-channel = "0.5.16"
 ctrlc = "3.5.2"
-env_logger = { version = "0.11.10", default-features = false, features = ["auto-color", "humantime"] }
+env_logger = { version = "0.11.11", default-features = false, features = ["auto-color", "humantime"] }
 fosr-lib = { version = "1.0.0-dev", path = "../fosr-lib" }
-humantime = "2.3.0"
-indicatif = "0.18.4"
+humantime = "2.4.0"
+indicatif = "0.18.6"
 itertools = "0.14.0"
-log = "0.4.30"
+log = "0.4.34"
 num_cpus = "1.17.0"
 pcap-file = "2.0.0"
 pnet = { version = "0.35.0", default-features = false }
