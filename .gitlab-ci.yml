@@ -24,7 +24,8 @@ build-linux-x86-64:
     # - cargo build --features iptables -p fosr
     # version with ebpf
     - rustup toolchain install nightly --component rust-src
-    - cargo install bpf-linker
+    - cargo install cargo-binstall --locked
+    - cargo binstall bpf-linker
     - cargo install cargo-deb
     # - cargo build --features ebpf # version with ebpf only
     # - cargo build --features "iptables,ebpf" --release # version with ebpf + iptables
@@ -52,7 +53,8 @@ build-linux-crosscompile:
   script:
     - git checkout $CI_COMMIT_REF_NAME
     - rustup toolchain install nightly --component rust-src
-    - cargo install bpf-linker
+    - cargo install cargo-binstall --locked
+    - cargo binstall bpf-linker
     - cargo install cargo-deb
     - apt update
     - apt install -y $DEPENDENCIES
@@ -166,7 +168,8 @@ test-publish:
   script:
     - git checkout $CI_COMMIT_REF_NAME
     - rustup toolchain install nightly --component rust-src
-    - cargo install bpf-linker
+    - cargo install cargo-binstall --locked
+    - cargo binstall bpf-linker
     - cargo build --release
     - cargo publish --dry-run
   allow_failure: true # it can fail on new version update
