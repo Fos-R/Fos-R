@@ -13,24 +13,24 @@ keywords = ["networking", "ai", "security"]
 
 [dependencies]
 base64 = "0.22.1"
-chrono = "0.4.44"
-crossbeam-channel = "0.5.15"
+chrono = "0.4.45"
+crossbeam-channel = "0.5.16"
 derivative = "2.2.0"
 fosr-ebpf = { version = "0.1.1", path = "../fosr-ebpf", optional = true }
 include-bytes-zstd = "0.1.0"
 include_dir = { version = "0.7.4", features = ["glob"] }
-indicatif = "0.18.4"
-log = "0.4.30"
+indicatif = "0.18.6"
+log = "0.4.34"
 log-once = "0.4.1"
 nalgebra = "0.33.3"
 pcap-file = "2.0.0"
 pnet = { version = "0.35.0", default-features = false }
 pnet_packet = "0.35.0"
-rand = "0.10.1"
+rand = "0.10.2"
 rand_core = "0.10.1"
 rand_distr = "0.6.0"
 rand_pcg = "0.10.2"
-serde = { version = "1.0.228", features = ["derive"] }
+serde = { version = "1.0.229", features = ["derive"] }
 serde-xml-rs = "0.8.2"
 serde_json = "1.0"
 serde_yaml = "0.9.34"
@@ -61,4 +61,4 @@ fosr-ebpf = { path = "../fosr-ebpf", optional = true }
 
 # auto-detect WASM target and add the feature to getrandom
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.4.2", features=["wasm_js"] }
+getrandom = { version = "0.4.3", features=["wasm_js"] }
