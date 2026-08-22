@@ -15,27 +15,16 @@ import time
 
 pd.options.mode.copy_on_write = True
 
-local_net = ['192.168.', '10.', '0.', '127.', '192.0.0', '198.18', '198.19']
-for i in range(16,32):
-    # TODO: use "local_orig" et "local_resp" plutôt
-    local_net.append("172."+str(i)+".")
-
-def group_ip_dst(value):
-    value = str(value)
-    for ip in local_net:
-        if value.startswith(ip):
-            return 'Local'
-    return 'Internet'
-
 def reorder_services(value):
     l = value.split(",")
     l.sort()
     return ",".join(l)
 
-def remove_public_ip(value):
-    if group_ip_dst(value) == "Internet":
+def remove_public_ip(value, local_ips):
+    if value in local_ips:
+        return value
+    else:
         return "Internet"
-    return value
 
 def get_network_role(ip, clients, servers):
     if ip in clients:
@@ -45,15 +34,13 @@ def get_network_role(ip, clients, servers):
     else:
         return "Internet"
 
-rare_ports = None
-
 def ttl_to_string(n):
     if n == "":
         return ""
     n = int(n)
     return "ttl-"+f'{n:03}'
 
-def port_to_string(n):
+def port_to_string(n, rare_ports):
     if n in rare_ports:
         return "unique"
     return "port-"+f'{n:05}'
@@ -223,18 +210,17 @@ if __name__ == '__main__':
     flow["Pkts count"] = flow["orig_pkts"] + flow["resp_pkts"]
     flow = flow[flow["Pkts count"] <= 200]
 
+    # get all the local IP addresses
+    ips = list(set(flow[flow["local_orig"] == "T"]["id.orig_h"].tolist()).union(set(flow[flow["local_resp"] == "T"]["id.resp_h"].tolist())))
+    ips.sort()
+
     # anonymise public IP
-    flow['Src IP Addr'] = flow['id.orig_h'].apply(remove_public_ip)
-    flow['Dst IP Addr'] = flow['id.resp_h'].apply(remove_public_ip)
+    flow['Src IP Addr'] = flow['id.orig_h'].apply(remove_public_ip, local_ips=ips)
+    flow['Dst IP Addr'] = flow['id.resp_h'].apply(remove_public_ip, local_ips=ips)
 
     # Modify destination ports that only appears once in their own category
     rare_ports = flow["id.resp_p"].value_counts()[flow["id.resp_p"].value_counts() == 1]
-    flow['Dst Pt'] = flow['id.resp_p'].apply(port_to_string)
-
-    # get all the local IP addresses
-    ips = list(set(flow["Src IP Addr"].tolist()).union(set(flow["Dst IP Addr"].tolist())))
-    ips.sort()
-    ips = [ip for ip in ips if group_ip_dst(ip) == "Local"]
+    flow['Dst Pt'] = flow['id.resp_p'].apply(port_to_string, rare_ports=rare_ports)
 
     clients = []
     servers = []
