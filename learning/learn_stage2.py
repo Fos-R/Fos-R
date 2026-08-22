@@ -303,23 +303,19 @@ if __name__ == '__main__':
 
     flow["Connection State"] = flow["Connection State"].fillna("none")
 
-    all_vars = ["Time", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Connection State", "Src TTL", "Dst TTL", "Src MAC", "Dst MAC", "Cat Packet"]
+    all_vars = ["Time", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Connection State", "Src TTL", "Dst TTL", "Src MAC", "Dst MAC", "Cat Packet", "Src IP Role", "Dst IP Role"]
     # Extract domains
     for c in all_vars:
         full_domains[c] = [str(s) for s in pd.unique(flow[c])]
         full_domains[c].sort()
     full_domains["Time"] = ["bin-"+f'{n:03}' for n in range(bin_count)] # use all theoretical values
 
+    print("Model learning (for transfer learning)")
+    all_vars = ["Time", "Applicative Proto", "Proto", "Connection State", "Cat Packet", "Src IP Role", "Dst IP Role"]
     common_data = flow[all_vars]
     for c in all_vars:
         common_data[c] = common_data[c].astype('category')
         common_data[c] = common_data[c].cat.set_categories(full_domains[c])
-
-    # Vars without children are useful for transferring the knowledge to other network topologies
-    # vars_without_children = ["Src IP Addr", "Dst IP Addr", "Dst Pt", "Src TTL", "Dst TTL", "Src MAC", "Dst MAC"]
-    vars_without_children = []
-
-    print("Model learning")
 
     learner = gum.BNLearner(common_data)
     # Time must have no parent because it will be sampled from the stage 1
@@ -329,14 +325,58 @@ if __name__ == '__main__':
     learner.addMandatoryArc("Applicative Proto", "Cat Packet")
     learner.addMandatoryArc("Connection State", "Cat Packet")
 
-    # Some variables must have no children because we want to modify their CPT with the configuration file
-    for var in vars_without_children:
-        learner.addNoChildrenNode(var) # variable with no children
+    # After some experimentations, the impact of the method and score is negligible
+    learner.useMIIC()
+
+    bn = learner.learnBN()
+
+    # we recreate the bayesian network with the same structure but the full domain
+    bn_full = gum.BayesNet('Fos-R model (TL)')
+    for i in bn.nodes():
+        var = bn.variable(i).name()
+        bn_full.add(gum.LabelizedVariable(var, var, full_domains[var]))
+
+    for i in bn.nodes():
+        parents = bn.parents(i)
+        for p in parents:
+            bn_full.addArc(p, i)
+
+    parameters_learning(bn_full, common_data)
+    bn = bn_full
+
+    print("Learning time:", time.time() - start)
+    print("Model export")
+
+    gumimage.export(bn, os.path.join(args.output, "bn/bn_tl.png"))
+    gumimage.export(bn, os.path.join(args.output, "bn/bn_tl.ps"))
+    bn.saveBIFXML(os.path.join(args.output, "bn/bn_tl.bifxml"))
+
+    try:
+        out_file = open(os.path.join(args.output, "pkt_count_clusters_tl.json"), "w")
+        json.dump(output, out_file, indent=1)
+        print("JSON file successfully created")
+    except Exception as e:
+        print("Error during json save:",e)
+
+
+    print("Model learning")
+
+    all_vars = ["Time", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Connection State", "Src TTL", "Dst TTL", "Src MAC", "Dst MAC", "Cat Packet"]
+    common_data = flow[all_vars]
+    for c in all_vars:
+        common_data[c] = common_data[c].astype('category')
+        common_data[c] = common_data[c].cat.set_categories(full_domains[c])
+
+    learner = gum.BNLearner(common_data)
+    # Time must have no parent because it will be sampled from the stage 1
+    learner.addNoParentNode("Time")
+
+    # The categories of packet number depend on the applicative protocol and the connection state, so we ensure that both "Applicative Proto" and "Connection State" are parents of Cat Packet
+    learner.addMandatoryArc("Applicative Proto", "Cat Packet")
+    learner.addMandatoryArc("Connection State", "Cat Packet")
 
     # After some experimentations, the impact of the method and score is negligible
     learner.useMIIC()
-    learner.useScoreBIC()
-    learner.useSmoothingPrior()
 
     bn = learner.learnBN()
 
