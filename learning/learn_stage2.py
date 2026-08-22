@@ -96,39 +96,75 @@ def complete_proto(l, port):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Learn a Bayesian network for Fos-R.')
-    parser.add_argument('--input', required=True, help="Select the input folder.")
+    parser.add_argument('--input', required=True, help="Select the input folder.", action='append')
     parser.add_argument('--output', help="Select the output directory.")
     parser.add_argument('--offset', help="Offset from UTC (in hours).", type=float)
     args = parser.parse_args()
     args.offset = args.offset or 0 # default: consider it’s UTC
-
-    conn_input = os.path.join(args.input, "conn.log")
-
-    tcp_input = os.path.join(args.input, "fosr_tcp.log")
-    udp_input = os.path.join(args.input, "fosr_udp.log")
-
     random.seed(0)
     gum.initRandom(seed=42)
 
-    print("Loading files")
+    unique_dataset = len(args.input) == 1
+    # Learn from only one dataset
+    if unique_dataset:
+        args.input = args.input[0]
+        conn_input = os.path.join(args.input, "conn.log")
 
-    csv.field_size_limit(sys.maxsize) # payload is too long
-    try:
-        flow = pd.read_csv(conn_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
-    except Exception as e:
-        print(f"Cannot find conn.log in {args.input}!",e)
-        exit(1)
+        tcp_input = os.path.join(args.input, "fosr_tcp.log")
+        udp_input = os.path.join(args.input, "fosr_udp.log")
 
-    tcp_fosr = None
-    try:
-        tcp_fosr = pd.read_csv(tcp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service", "flags", "conn_state"])
-    except Exception as e:
-        print("No TCP data:",e)
-    udp_fosr = None
-    try:
-        udp_fosr = pd.read_csv(udp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service"])
-    except Exception as e:
-        print("No UDP data", e)
+        print("Loading files")
+
+        csv.field_size_limit(sys.maxsize) # payload is too long
+        try:
+            flow = pd.read_csv(conn_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
+            flow["weight"] = 1.
+        except Exception as e:
+            print(f"Cannot find conn.log in {args.input}!",e)
+            exit(1)
+
+        tcp_fosr = None
+        try:
+            tcp_fosr = pd.read_csv(tcp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service", "flags", "conn_state"])
+        except Exception as e:
+            print("No TCP data:",e)
+        udp_fosr = None
+        try:
+            udp_fosr = pd.read_csv(udp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service"])
+        except Exception as e:
+            print("No UDP data", e)
+
+    else:
+        conn_input = [os.path.join(i, "conn.log") for i in args.input]
+
+        tcp_input = [os.path.join(i, "fosr_tcp.log") for i in args.input]
+        udp_input = [os.path.join(i, "fosr_udp.log") for i in args.input]
+
+        print("Loading files")
+
+        csv.field_size_limit(sys.maxsize) # payload is too long
+        try:
+            flow = [pd.read_csv(i, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"]) for i in conn_input]
+            for f in flow: # all input should have the same weight, no matter their size
+                f["weight"] = 1000000. / len(f)
+            flow = pd.concat(flow, ignore_index=True)
+        except Exception as e:
+            print(f"Cannot find conn.log in {args.input}!",e)
+            exit(1)
+
+        tcp_fosr = None
+        try:
+            tcp_fosr = [pd.read_csv(i, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service", "flags", "conn_state"]) for i in tcp_input]
+            tcp_fosr = pd.concat(tcp_fosr, ignore_index=True)
+        except Exception as e:
+            print("No TCP data:",e)
+        udp_fosr = None
+        try:
+            udp_fosr = [pd.read_csv(i, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service"]) for i in udp_input]
+            udp_fosr = pd.concat(udp_fosr, ignore_index=True)
+        except Exception as e:
+            print("No UDP data", e)
+
 
     print("Services in the TCP file:\n",tcp_fosr["service"].value_counts())
     print("Services in the UDP file:\n",udp_fosr["service"].value_counts())
@@ -318,6 +354,10 @@ if __name__ == '__main__':
         common_data[c] = common_data[c].cat.set_categories(full_domains[c])
 
     learner = gum.BNLearner(common_data)
+    # add the weight of each record (=row)
+    for (i,(_,r)) in enumerate(flow.iterrows()):
+        learner.setRecordWeight(i,r["weight"])
+
     # Time must have no parent because it will be sampled from the stage 1
     learner.addNoParentNode("Time")
 
@@ -358,53 +398,55 @@ if __name__ == '__main__':
     except Exception as e:
         print("Error during json save:",e)
 
+    if unique_dataset:
+        print("Model learning")
 
-    print("Model learning")
+        all_vars = ["Time", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Connection State", "Src TTL", "Dst TTL", "Src MAC", "Dst MAC", "Cat Packet"]
+        common_data = flow[all_vars]
+        for c in all_vars:
+            common_data[c] = common_data[c].astype('category')
+            common_data[c] = common_data[c].cat.set_categories(full_domains[c])
 
-    all_vars = ["Time", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Connection State", "Src TTL", "Dst TTL", "Src MAC", "Dst MAC", "Cat Packet"]
-    common_data = flow[all_vars]
-    for c in all_vars:
-        common_data[c] = common_data[c].astype('category')
-        common_data[c] = common_data[c].cat.set_categories(full_domains[c])
+        learner = gum.BNLearner(common_data)
 
-    learner = gum.BNLearner(common_data)
-    # Time must have no parent because it will be sampled from the stage 1
-    learner.addNoParentNode("Time")
+        # Time must have no parent because it will be sampled from the stage 1
+        learner.addNoParentNode("Time")
 
-    # The categories of packet number depend on the applicative protocol and the connection state, so we ensure that both "Applicative Proto" and "Connection State" are parents of Cat Packet
-    learner.addMandatoryArc("Applicative Proto", "Cat Packet")
-    learner.addMandatoryArc("Connection State", "Cat Packet")
+        # The categories of packet number depend on the applicative protocol and the connection state, so we ensure that both "Applicative Proto" and "Connection State" are parents of Cat Packet
+        learner.addMandatoryArc("Applicative Proto", "Cat Packet")
+        learner.addMandatoryArc("Connection State", "Cat Packet")
 
-    # After some experimentations, the impact of the method and score is negligible
-    learner.useMIIC()
+        # After some experimentations, the impact of the method and score is negligible
+        learner.useMIIC()
 
-    bn = learner.learnBN()
+        bn = learner.learnBN()
 
-    # we recreate the bayesian network with the same structure but the full domain
-    bn_full = gum.BayesNet('Fos-R model')
-    for i in bn.nodes():
-        var = bn.variable(i).name()
-        bn_full.add(gum.LabelizedVariable(var, var, full_domains[var]))
+        # we recreate the bayesian network with the same structure but the full domain
+        bn_full = gum.BayesNet('Fos-R model')
+        for i in bn.nodes():
+            var = bn.variable(i).name()
+            bn_full.add(gum.LabelizedVariable(var, var, full_domains[var]))
 
-    for i in bn.nodes():
-        parents = bn.parents(i)
-        for p in parents:
-            bn_full.addArc(p, i)
+        for i in bn.nodes():
+            parents = bn.parents(i)
+            for p in parents:
+                bn_full.addArc(p, i)
 
-    parameters_learning(bn_full, common_data)
-    bn = bn_full
+        parameters_learning(bn_full, common_data)
+        bn = bn_full
 
-    print("Learning time:", time.time() - start)
-    print("Model export")
+        print("Learning time:", time.time() - start)
+        print("Model export")
 
-    gumimage.export(bn, os.path.join(args.output, "bn/bn.png"))
-    gumimage.export(bn, os.path.join(args.output, "bn/bn.ps"))
-    bn.saveBIFXML(os.path.join(args.output, "bn/bn.bifxml"))
+        gumimage.export(bn, os.path.join(args.output, "bn/bn.png"))
+        gumimage.export(bn, os.path.join(args.output, "bn/bn.ps"))
+        bn.saveBIFXML(os.path.join(args.output, "bn/bn.bifxml"))
 
-    try:
-        out_file = open(os.path.join(args.output, "pkt_count_clusters.json"), "w")
-        json.dump(output, out_file, indent=1)
-        print("JSON file successfully created")
-    except Exception as e:
-        print("Error during json save:",e)
-
+        try:
+            out_file = open(os.path.join(args.output, "pkt_count_clusters.json"), "w")
+            json.dump(output, out_file, indent=1)
+            print("JSON file successfully created")
+        except Exception as e:
+            print("Error during json save:",e)
+    else:
+        print("Multiple input datasets have been selected, so only the transfer-learning model has been learned.")
