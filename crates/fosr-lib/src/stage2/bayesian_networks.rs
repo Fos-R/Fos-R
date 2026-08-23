@@ -835,7 +835,11 @@ fn bn_from_bif(
                 v.outcome.clone().into_iter().map(|s| &*s.leak()).collect(),
             )),
             "Proto" => Some(Feature::L4Proto(
-                v.outcome.clone().into_iter().map(|s| L4Proto::from_str(&s).unwrap()).collect(),
+                v.outcome
+                    .clone()
+                    .into_iter()
+                    .map(|s| L4Proto::from_str(&s).unwrap())
+                    .collect(),
             )),
             "Src TTL" => Some(Feature::SrcTTL(
                 v.outcome

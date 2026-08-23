@@ -68,7 +68,7 @@ fn render_template_menu_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
         let mut template_to_load = None;
         for template in state.all_templates.iter() {
             if menu_ui
-                .button(format!("{}", template.metadata.title))
+                .button(template.metadata.title.to_string())
                 .clicked()
             {
                 menu_ui.close();

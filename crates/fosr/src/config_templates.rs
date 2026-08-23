@@ -2,17 +2,18 @@
 
 use crate::shared::config::state::ConfigFileState;
 use fosr_lib::network::{ConfigurationYaml, Metadata};
-use include_dir::include_dir;
 use include_dir::Dir;
+use include_dir::include_dir;
 
 pub fn get_default_templates() -> Vec<ConfigurationYaml> {
-    let d: Dir =
-        include_dir!("$CARGO_MANIFEST_DIR/default_templates");
+    let d: Dir = include_dir!("$CARGO_MANIFEST_DIR/default_templates");
     d.files()
         .inspect(|e| {
             log::debug!("Loading default template {:?}", e.path());
         })
-        .map(|f: &include_dir::File| fosr_lib::network::reversibly_import_network(f.contents_utf8().unwrap()))
+        .map(|f: &include_dir::File| {
+            fosr_lib::network::reversibly_import_network(f.contents_utf8().unwrap())
+        })
         .collect()
 }
 

@@ -8,7 +8,7 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
 use std::net::Ipv4Addr;
 use std::time::Duration;
-use strum::{Display, EnumIter, IntoEnumIterator, EnumString};
+use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 use thingbuf::Recycle;
 
 /// A general wrapper to pass a seed along with actual data
@@ -106,7 +106,9 @@ impl L4Proto {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq, Display, EnumIter, EnumString)]
+#[derive(
+    Serialize, Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq, Display, EnumIter, EnumString,
+)]
 #[allow(clippy::upper_case_acronyms)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
