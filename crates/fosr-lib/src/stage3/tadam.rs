@@ -3,7 +3,7 @@ use crate::stage3::*;
 
 // use indicatif::{ProgressBar, ProgressStyle};
 use nalgebra::{matrix, vector};
-use rand_core::*;
+use rand_core::{SeedableRng, Rng};
 use rand_pcg::Pcg32;
 use serde::Deserialize;
 use statrs::distribution::MultivariateNormal;
@@ -42,7 +42,7 @@ impl AutomataLibrary {
         for s in strings {
             match lib.import_from_str(&s, &clusters) {
                 Ok(()) => nb += 1,
-                Err(s) => log::error!("Could not load automaton ({})", s),
+                Err(s) => log::error!("Could not load automaton ({s})"),
             }
             // pb.inc(1);
         }
@@ -66,7 +66,7 @@ impl AutomataLibrary {
                 assert!(conn_state.is_some());
                 let automata_clusters = clusters
                     .iter()
-                    .filter_map(|p| {
+                    .find_map(|p| {
                         if let PacketDistr::TCP {
                             conn_state,
                             service,
@@ -80,7 +80,6 @@ impl AutomataLibrary {
                             None
                         }
                     })
-                    .next()
                     .unwrap_or_else(|| {
                         panic!(
                             "No cluster found for {l7proto} and {:?}",
@@ -105,7 +104,7 @@ impl AutomataLibrary {
             L4Proto::UDP => {
                 let automata_clusters = clusters
                     .iter()
-                    .filter_map(|p| {
+                    .find_map(|p| {
                         if let PacketDistr::UDP { service, distr } = p
                             && service == l7proto
                         {
@@ -114,7 +113,6 @@ impl AutomataLibrary {
                             None
                         }
                     })
-                    .next()
                     .expect("No cluster found for {l7proto}");
 
                 assert!(!automata_clusters.is_empty());
@@ -171,7 +169,7 @@ impl From<PacketDistrJson> for PacketDistr {
                         // Sometimes the covariance from sklearn’s GaussianMixture is not
                         // symmetric!
                         let c: Vec<f64> = c.into_iter().flatten().collect();
-                        let mean = (c[1] + c[2]) / 2.;
+                        let mean = f64::midpoint(c[1], c[2]);
                         MultivariateNormal::new_from_nalgebra(
                             vector![m[0], m[1]],
                             matrix![c[0],mean;mean,c[3]],
@@ -187,7 +185,7 @@ impl From<PacketDistrJson> for PacketDistr {
                     .zip(cov)
                     .map(|(m, c)| {
                         let c: Vec<f64> = c.into_iter().flatten().collect();
-                        let mean = (c[1] + c[2]) / 2.;
+                        let mean = f64::midpoint(c[1], c[2]);
                         MultivariateNormal::new_from_nalgebra(
                             vector![m[0], m[1]],
                             matrix![c[0],mean;mean,c[3]],

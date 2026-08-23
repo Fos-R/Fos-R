@@ -138,14 +138,13 @@ impl Feature {
             // Feature::SrcIpRole(v) | Feature::DstIpRole(v) => v.len(),
             Feature::SrcIp(v) | Feature::DstIp(v) => v.len(),
             Feature::DstPt(v) => v.len(),
-            Feature::PktCount(card) => *card,
+            Feature::PktCount(card) | Feature::TimeBin(card) => *card,
             Feature::SrcTTL(v) | Feature::DstTTL(v) => v.len(),
             Feature::SrcMac(v) | Feature::DstMac(v) => v.len(),
             Feature::SrcIpRole(v) | Feature::DstIpRole(v) => v.len(),
             Feature::L4Proto(v) => v.len(),
             Feature::L7Proto(v) => v.len(),
             Feature::EndFlags(v) => v.len(),
-            Feature::TimeBin(card) => *card,
         }
     }
 }
@@ -167,7 +166,7 @@ impl BayesianNetworkNode {
             //     current[*index],
             //     self.cpt.as_ref().unwrap().len()
             // );
-            parents_index = parents_index * card + current[*index]
+            parents_index = parents_index * card + current[*index];
         }
         // println!("CPT: {:?}", self.cpt);
         match &self.cpt {
@@ -230,7 +229,7 @@ impl BayesianNetwork {
         let mut new_discrete_vector = discrete_vector.clone();
         while try_again {
             try_again = false;
-            new_discrete_vector = discrete_vector.clone();
+            new_discrete_vector.clone_from(discrete_vector);
             domain_vector = IntermediateVector::default();
             for v in self.nodes.iter() {
                 // log::info!("Sampling {:?} (index: {index})", v.feature);
@@ -252,13 +251,13 @@ impl BayesianNetwork {
                             Feature::SrcIp(v) => match v[i] {
                                 AnonymizedIpv4Addr::Local(p) => domain_vector.src_ip = Some(p),
                                 AnonymizedIpv4Addr::Public => {
-                                    domain_vector.src_ip = Some(sample_random_global_ip(rng))
+                                    domain_vector.src_ip = Some(sample_random_global_ip(rng));
                                 }
                             },
                             Feature::DstIp(v) => match v[i] {
                                 AnonymizedIpv4Addr::Local(p) => domain_vector.dst_ip = Some(p),
                                 AnonymizedIpv4Addr::Public => {
-                                    domain_vector.dst_ip = Some(sample_random_global_ip(rng))
+                                    domain_vector.dst_ip = Some(sample_random_global_ip(rng));
                                 }
                             },
                             Feature::DstPt(v) => match v[i] {
@@ -407,7 +406,7 @@ impl BayesianModel {
                     if self
                         .condition_cpt(index, index_parent, v)
                         .iter()
-                        .all(|w| w.is_none())
+                        .all(Option::is_none)
                     // is there only None? Then we delete that value
                     {
                         // removed.push(self.bn.nodes[*parent].feature.get_value_string(v));
@@ -677,7 +676,7 @@ fn bn_from_bif(
 
     // convert def to TopologicalNode
     for (i, def) in network.definition.iter().enumerate() {
-        assert!(def.variable == network.variable[i].name);
+        assert_eq!(def.variable, network.variable[i].name);
         nodes.insert(
             def.variable.clone(),
             TopologicalNode {
@@ -746,7 +745,7 @@ fn bn_from_bif(
             if var.name == v {
                 variable.push(var.clone());
                 definition.push(network.definition[index].clone());
-                continue;
+                break;
             }
         }
     }

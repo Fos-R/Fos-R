@@ -193,7 +193,7 @@ fn main() -> Result<(), String> {
                 default_models.unwrap().get_source() // we are sure it contains something
             };
 
-            let model = models::Models::from_source(source)?;
+            let model = models::Models::from_source(&source)?;
 
             generate_pcap(
                 duration,
@@ -643,7 +643,7 @@ fn run_efficient<T: inject::NetEnabler>(
                                 .spawn(move || {
                                     let _ = stage4::run_channel(
                                         |f, p, v, a| s4.generate_tcp_packets(f, p, v, a),
-                                        local_interfaces,
+                                        &local_interfaces,
                                         rx_s4_tcp,
                                         tx,
                                         tx_s4_to_pcap,
@@ -661,7 +661,7 @@ fn run_efficient<T: inject::NetEnabler>(
                                 .spawn(move || {
                                     let _ = stage4::run_channel(
                                         |f, p, v, a| s4.generate_udp_packets(f, p, v, a),
-                                        local_interfaces,
+                                        &local_interfaces,
                                         rx_s4_udp,
                                         tx,
                                         tx_s4_to_pcap,
@@ -679,7 +679,7 @@ fn run_efficient<T: inject::NetEnabler>(
                                 .spawn(move || {
                                     let _ = stage4::run_channel(
                                         |f, p, v, a| s4.generate_icmp_packets(f, p, v, a),
-                                        local_interfaces,
+                                        &local_interfaces,
                                         rx_s4_icmp,
                                         tx,
                                         tx_s4_to_pcap,

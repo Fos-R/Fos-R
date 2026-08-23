@@ -32,7 +32,7 @@ impl PacketInfo for TCPPacketInfo {
         self.ts
     }
     fn set_ts(&mut self, ts: Duration) {
-        self.ts = ts
+        self.ts = ts;
     }
 }
 
@@ -58,7 +58,7 @@ impl EdgeType for TCPEdgeTuple {
 }
 
 pub fn parse_tcp_symbol(symbol: String, p: PayloadType) -> TCPEdgeTuple {
-    let strings: Vec<&str> = symbol.split("_").collect();
+    let strings: Vec<&str> = symbol.split('_').collect();
     TCPEdgeTuple {
         direction: match strings[1] {
             ">" => PacketDirection::Forward,

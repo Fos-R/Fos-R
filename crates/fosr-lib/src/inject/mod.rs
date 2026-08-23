@@ -1,4 +1,4 @@
-use crate::structs::*;
+use crate::structs::FlowId;
 
 #[cfg(feature = "net_injection")]
 /// Fast injection, that does not wait for packet response

@@ -1,4 +1,4 @@
-use crate::structs::*;
+use crate::structs::{Payload, PacketDirection, PacketInfo, PayloadType, EdgeType};
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
@@ -20,7 +20,7 @@ impl PacketInfo for UDPPacketInfo {
         self.ts
     }
     fn set_ts(&mut self, ts: Duration) {
-        self.ts = ts
+        self.ts = ts;
     }
 }
 
@@ -40,7 +40,7 @@ impl EdgeType for UDPEdgeTuple {
 }
 
 pub fn parse_udp_symbol(symbol: String, p: PayloadType) -> UDPEdgeTuple {
-    let strings: Vec<&str> = symbol.split("_").collect();
+    let strings: Vec<&str> = symbol.split('_').collect();
     UDPEdgeTuple {
         direction: match strings[0] {
             ">" => PacketDirection::Forward,

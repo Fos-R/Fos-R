@@ -1,4 +1,4 @@
-use crate::structs::*;
+use crate::structs::{L4Proto, PacketDirection, FlowId};
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
 use pcap_file::pcap;
@@ -180,11 +180,11 @@ impl FlowStats {
     fn process_packets<T: PacketInfoTrait>(flow_id: FlowId, packets: Vec<T>) -> FlowStats {
         let first_packet = packets.first().unwrap(); // we know there is a least one packet
         let timestamp = first_packet.ts();
-        let duration = packets.last().unwrap().ts() - first_packet.ts();
+        let duration = packets.last().unwrap().ts().checked_sub(first_packet.ts()).unwrap();
 
         let iat: Vec<Duration> = packets
             .windows(2)
-            .map(|packets| packets[1].ts() - packets[0].ts())
+            .map(|packets| packets[1].ts().checked_sub(packets[0].ts()).unwrap())
             .collect();
 
         let fwd_bytes: usize = packets
@@ -201,10 +201,10 @@ impl FlowStats {
         let bwd_bytes: usize = packets
             .iter()
             .filter_map(|p| {
-                if p.src_ip() != flow_id.src_ip {
-                    Some(p.payload_size())
-                } else {
+                if p.src_ip() == flow_id.src_ip {
                     None
+                } else {
+                    Some(p.payload_size())
                 }
             })
             .sum();
@@ -214,14 +214,12 @@ impl FlowStats {
         let ttl_client = packets
             .iter()
             .find(|p| p.src_ip() == flow_id.src_ip)
-            .map(|p| p.ttl())
-            .unwrap_or(0);
+            .map_or(0, PacketInfoTrait::ttl);
 
         let ttl_server = packets
             .iter()
             .find(|p| p.src_ip() != flow_id.src_ip)
-            .map(|p| p.ttl())
-            .unwrap_or(0);
+            .map_or(0, PacketInfoTrait::ttl);
 
         let directions: Vec<PacketDirection> = packets
             .iter()
@@ -244,7 +242,7 @@ impl FlowStats {
             .filter(|&d| *d == PacketDirection::Backward)
             .count();
 
-        let payloads: Vec<Vec<u8>> = packets.into_iter().map(|p| p.payload()).collect();
+        let payloads: Vec<Vec<u8>> = packets.into_iter().map(PacketInfoTrait::payload).collect();
 
         FlowStats {
             timestamp,
@@ -333,7 +331,7 @@ pub fn export_stats(file: &str, stats: Vec<FlowStats>, include_payloads: bool) {
     };
     writeln!(output, "{header}").expect("Error during CSV writing");
     for f in stats.into_iter() {
-        let iat: Vec<u128> = f.iat.iter().map(|d| d.as_millis()).collect();
+        let iat: Vec<u128> = f.iat.iter().map(Duration::as_millis).collect();
         if include_payloads {
             writeln!(
                 output,

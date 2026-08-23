@@ -1,4 +1,4 @@
-use crate::icmp::*;
+use crate::icmp::ICMPPacketInfo;
 use crate::stats::Stats;
 use crate::structs::*;
 use crate::tcp::*;

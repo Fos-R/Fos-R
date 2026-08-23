@@ -1,4 +1,4 @@
-use crate::structs::*;
+use crate::structs::{Packets, PacketsRecycler, Packet};
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use pcap_file::pcap::{PcapPacket, PcapWriter};
 use std::fmt::Write;
@@ -78,7 +78,7 @@ use std::io::BufWriter;
 /// appended to an existing pcap file; otherwise, a new file is created.
 pub fn run_export(
     rx_pcap: thingbuf::mpsc::blocking::Receiver<Packets, PacketsRecycler>,
-    outfile: String,
+    outfile: &str,
     order_pcap: bool,
 ) {
     log::trace!("Start pcap export thread");
@@ -89,7 +89,7 @@ pub fn run_export(
         .open(&outfile)
         .expect("Error opening or creating file");
     let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
-    log::trace!("Saving into {}", outfile);
+    log::trace!("Saving into {outfile}");
 
     if order_pcap {
         let mut all_packets: Vec<Packet> = vec![];
@@ -107,7 +107,7 @@ pub fn run_export(
             ProgressStyle::with_template("{spinner:.green} PCAP export [{wide_bar}] ({eta})")
                 .unwrap()
                 .with_key("eta", |state: &ProgressState, w: &mut dyn Write| {
-                    write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap()
+                    write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap();
                 }),
         );
 

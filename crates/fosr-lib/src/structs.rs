@@ -223,17 +223,13 @@ pub enum Flow {
 impl Flow {
     pub fn get_data(&self) -> &FlowData {
         match &self {
-            Flow::TCP(data, _) => data,
-            Flow::UDP(data) => data,
-            Flow::ICMP(data) => data,
+            Flow::TCP(data, _) | Flow::UDP(data) | Flow::ICMP(data) => data,
         }
     }
 
     pub fn get_data_mut(&mut self) -> &mut FlowData {
         match self {
-            Flow::TCP(data, _) => data,
-            Flow::UDP(data) => data,
-            Flow::ICMP(data) => data,
+            Flow::TCP(data, _) | Flow::UDP(data) | Flow::ICMP(data) => data,
         }
     }
 
@@ -279,9 +275,7 @@ pub struct FlowData {
 impl From<Flow> for FlowData {
     fn from(f: Flow) -> FlowData {
         match f {
-            Flow::TCP(data, _) => data,
-            Flow::UDP(data) => data,
-            Flow::ICMP(data) => data,
+            Flow::TCP(data, _) | Flow::UDP(data) | Flow::ICMP(data) => data,
         }
     }
 }

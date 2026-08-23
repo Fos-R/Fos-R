@@ -1,4 +1,4 @@
-use crate::structs::*;
+use crate::structs::Packets;
 
 use indicatif::HumanBytes;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
