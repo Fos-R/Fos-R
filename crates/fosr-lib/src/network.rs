@@ -22,7 +22,7 @@ pub struct Configuration {
     // /// The list of hosts
     // pub hosts: Vec<Host>,
     /// The list of networks
-    pub networks: Vec<Network>,
+    pub networks: Vec<SubNetwork>,
 
     /// A hashmap that maps an IP to a MAC address (if it is defined in the config file)
     // pub mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
@@ -77,7 +77,7 @@ impl Configuration {
 
 /// A network in the simulation, containing resolved hosts.
 #[derive(Debug)]
-pub struct Network {
+pub struct SubNetwork {
     pub subnet: Ipv4Addr,
     pub mask: u8,
     pub name: String,
@@ -293,9 +293,9 @@ impl From<ConfigurationYaml> for Configuration {
         // Convert YAML structs to runtime structs
         let internet: Vec<Host> = c.internet.into_iter().map(Host::from).collect();
         let networks_yaml = c.networks;
-        let networks: Vec<Network> = networks_yaml
+        let networks: Vec<SubNetwork> = networks_yaml
             .into_iter()
-            .map(|n| Network {
+            .map(|n| SubNetwork {
                 subnet: n.subnet,
                 mask: n.mask,
                 name: n.name,
@@ -405,7 +405,7 @@ impl From<ConfigurationYaml> for Configuration {
         // let hosts = c.internet.into_iter().chain(c.networks.into_iter().map(|n| n.hosts.into_iter()).flatten()).collect();
 
         let mut all_networks = networks;
-        all_networks.push(Network {
+        all_networks.push(SubNetwork {
             subnet: Ipv4Addr::new(0, 0, 0, 0),
             mask: 0,
             name: INTERNET_NETWORK_NAME.to_string(),
