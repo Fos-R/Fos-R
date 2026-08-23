@@ -11,11 +11,11 @@ use crate::shared::widgets::helpers::os_display_name;
 use eframe::egui;
 use egui_graphs::events::{Event, PayloadNodeClick};
 use egui_material_icons::icons::{ICON_CLOSE, ICON_SAVE};
-use fosr_lib::network::{ConfigurationYaml, HostYaml};
+use fosr_lib::network::{NetworkYaml, HostYaml};
 use fosr_lib::structs::OS;
 
 /// Look up a host by `(net_idx, host_idx)` position.
-fn get_host_by_pos(model: &ConfigurationYaml, pos: (usize, usize)) -> Option<&HostYaml> {
+fn get_host_by_pos(model: &NetworkYaml, pos: (usize, usize)) -> Option<&HostYaml> {
     let (net_idx, h_idx) = pos;
     if net_idx == INTERNET_HOST_SENTINEL {
         model.internet.get(h_idx)
@@ -26,7 +26,7 @@ fn get_host_by_pos(model: &ConfigurationYaml, pos: (usize, usize)) -> Option<&Ho
 
 /// Look up a host by `(net_idx, host_idx)` position, mutably.
 fn get_host_by_pos_mut(
-    model: &mut ConfigurationYaml,
+    model: &mut NetworkYaml,
     pos: (usize, usize),
 ) -> Option<&mut HostYaml> {
     let (net_idx, h_idx) = pos;
@@ -267,7 +267,7 @@ fn render_modal_footer(ui: &mut egui::Ui, has_edit_buffer: bool, save_clicked: &
 /// Apply changes from edit buffer back to the config model.
 ///
 /// Uses the `(net_idx, host_idx)` pair from `node_to_host` to find the host
-/// in `ConfigurationYaml`.
+/// in `NetworkYaml`.
 fn apply_changes_to_config(
     state: &mut VisualizationState,
     config_file_state: &mut ConfigFileState,

@@ -1,11 +1,11 @@
 //! Predefined configuration templates: Home, Enterprise, Datacenter.
 
 use crate::shared::config::state::ConfigFileState;
-use fosr_lib::network::{ConfigurationYaml, Metadata};
+use fosr_lib::network::{NetworkYaml, Metadata};
 use include_dir::Dir;
 use include_dir::include_dir;
 
-pub fn get_default_templates() -> Vec<ConfigurationYaml> {
+pub fn get_default_templates() -> Vec<NetworkYaml> {
     let d: Dir = include_dir!("$CARGO_MANIFEST_DIR/default_templates");
     d.files()
         .inspect(|e| {
@@ -21,7 +21,7 @@ pub fn get_default_templates() -> Vec<ConfigurationYaml> {
 ///
 /// Parses the template YAML first, then applies state changes only on success.
 /// On parse failure, sets the error without modifying the existing model.
-pub fn load_template(state: &mut ConfigFileState, template: &ConfigurationYaml) {
+pub fn load_template(state: &mut ConfigFileState, template: &NetworkYaml) {
     // Normalize snapshot through serde_yaml so dirty comparison is consistent
     let snapshot = serde_yaml::to_string(&template).unwrap_or_default();
 
@@ -32,7 +32,7 @@ pub fn load_template(state: &mut ConfigFileState, template: &ConfigurationYaml) 
 /// Reset state and apply a successfully-parsed template.
 fn apply_template_to_state(
     state: &mut ConfigFileState,
-    model: &ConfigurationYaml,
+    model: &NetworkYaml,
     snapshot: String,
 ) {
     state.picked_config_file = None;
@@ -47,7 +47,7 @@ fn apply_template_to_state(
 
 /// Load an empty configuration with only metadata.
 pub fn load_empty_config(state: &mut ConfigFileState) {
-    let model = ConfigurationYaml {
+    let model = NetworkYaml {
         metadata: Metadata {
             title: "New network".to_string(),
             desc: None,

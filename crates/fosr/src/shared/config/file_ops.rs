@@ -8,7 +8,7 @@ use crate::shared::file_io::{read_file_desktop, show_file_picker_desktop};
 use crate::shared::file_io::{read_file_wasm, show_file_picker_wasm};
 use chrono::{DateTime, Local};
 use eframe::egui;
-use fosr_lib::network::ConfigurationYaml;
+use fosr_lib::network::NetworkYaml;
 #[cfg(target_arch = "wasm32")]
 use std::sync::mpsc::channel;
 
@@ -137,7 +137,7 @@ fn clear_loaded_config(configuration_file_state: &mut ConfigFileState) {
 /// Enforce date and format in metadata before saving.
 ///
 /// Sets the date to today and format version to 1.
-pub fn enforce_metadata_defaults(config: &mut ConfigurationYaml) {
+pub fn enforce_metadata_defaults(config: &mut NetworkYaml) {
     let now: DateTime<Local> = Local::now();
     config.metadata.date = Some(now.format("%Y/%m/%d").to_string());
     config.metadata.format = Some(1);

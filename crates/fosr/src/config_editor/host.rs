@@ -15,7 +15,7 @@ use crate::shared::widgets::helpers::{
 };
 use eframe::egui;
 use egui_material_icons::icons::{ICON_ADD, ICON_CLEAR, ICON_DELETE, ICON_WARNING};
-use fosr_lib::network::{ConfigurationYaml, HostYaml, NetworkYaml};
+use fosr_lib::network::{NetworkYaml, HostYaml, SubNetworkYaml};
 use fosr_lib::network::{HostType, InterfaceYaml, next_ui_id};
 use fosr_lib::structs::OS;
 use std::collections::HashMap;
@@ -23,7 +23,7 @@ use std::net::Ipv4Addr;
 
 /// Render the full networks section with per-network collapsible sections,
 /// an "Add network" button, and an "Internet" section at the bottom.
-pub fn render_hosts_section(ui: &mut egui::Ui, model: &mut ConfigurationYaml) {
+pub fn render_hosts_section(ui: &mut egui::Ui, model: &mut NetworkYaml) {
     let (ip_counts, mac_counts) = count_addresses(model);
 
     let mut network_to_remove: Option<usize> = None;
@@ -41,7 +41,7 @@ pub fn render_hosts_section(ui: &mut egui::Ui, model: &mut ConfigurationYaml) {
             return;
         };
 
-        model.add_network(NetworkYaml {
+        model.add_network(SubNetworkYaml {
             ui_id: next_ui_id(),
             subnet,
             mask: 24,
@@ -90,7 +90,7 @@ pub fn render_hosts_section(ui: &mut egui::Ui, model: &mut ConfigurationYaml) {
 fn render_network_section(
     ui: &mut egui::Ui,
     net_idx: usize,
-    network: &mut NetworkYaml,
+    network: &mut SubNetworkYaml,
     ip_counts: &HashMap<String, usize>,
     mac_counts: &HashMap<String, usize>,
     overlap_warnings: &[String],
@@ -168,7 +168,7 @@ fn render_network_section(
 }
 
 /// Render editable subnet, mask, and name fields for a network.
-fn render_network_fields(ui: &mut egui::Ui, network: &mut NetworkYaml) {
+fn render_network_fields(ui: &mut egui::Ui, network: &mut SubNetworkYaml) {
     ui.horizontal(|ui| {
         ui.label("Subnet");
         let mut subnet_str = network.subnet.to_string();
@@ -197,7 +197,7 @@ fn render_network_fields(ui: &mut egui::Ui, network: &mut NetworkYaml) {
 /// Render the Internet section - similar to a network section but without subnet/mask/name.
 fn render_internet_section(
     ui: &mut egui::Ui,
-    model: &mut ConfigurationYaml,
+    model: &mut NetworkYaml,
     ip_counts: &HashMap<String, usize>,
     mac_counts: &HashMap<String, usize>,
 ) {
@@ -471,7 +471,7 @@ fn host_display_name(host: &HostYaml) -> String {
 
 /// Create a new host with one interface whose IP is auto-assigned from the network's subnet.
 fn create_host_with_network_ip(
-    network: &NetworkYaml,
+    network: &SubNetworkYaml,
     ip_counts: &HashMap<String, usize>,
     mac_counts: &HashMap<String, usize>,
 ) -> HostYaml {

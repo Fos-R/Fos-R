@@ -2,7 +2,7 @@
 
 use crate::shared::constants::network::{MAC_ADDRESS_PARTS, MAC_PART_LENGTH};
 use fosr_lib::network::HostType;
-use fosr_lib::network::{ConfigurationYaml, HostYaml, NetworkYaml};
+use fosr_lib::network::{NetworkYaml, HostYaml, SubNetworkYaml};
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
 
@@ -12,7 +12,7 @@ pub type AddressCounts = (HashMap<String, usize>, HashMap<String, usize>);
 /// Count IP and MAC addresses across all hosts in the configuration.
 ///
 /// Returns a tuple of (ip_counts, mac_counts) used for duplicate detection.
-pub fn count_addresses(config: &ConfigurationYaml) -> AddressCounts {
+pub fn count_addresses(config: &NetworkYaml) -> AddressCounts {
     let mut ip_counts: HashMap<String, usize> = HashMap::new();
     let mut mac_counts: HashMap<String, usize> = HashMap::new();
 
@@ -97,7 +97,7 @@ pub fn validate_host(
 }
 
 /// Returns true if any host in the model has validation errors.
-pub fn has_model_errors(model: &ConfigurationYaml) -> bool {
+pub fn has_model_errors(model: &NetworkYaml) -> bool {
     let (ip_counts, mac_counts) = count_addresses(model);
     model
         .networks
@@ -170,7 +170,7 @@ fn subnets_overlap(a: Ipv4Addr, mask_a: u8, b: Ipv4Addr, mask_b: u8) -> bool {
 
 /// Collect all `(subnet, mask)` pairs defined in the configuration,
 /// excluding a specific network index (used when checking a network against *others*).
-pub fn collect_other_subnets(networks: &[NetworkYaml], exclude_idx: usize) -> Vec<(Ipv4Addr, u8)> {
+pub fn collect_other_subnets(networks: &[SubNetworkYaml], exclude_idx: usize) -> Vec<(Ipv4Addr, u8)> {
     networks
         .iter()
         .enumerate()
@@ -183,7 +183,7 @@ pub fn collect_other_subnets(networks: &[NetworkYaml], exclude_idx: usize) -> Ve
 ///
 /// Returns a list of human-readable warnings (empty if no overlaps found).
 pub fn validate_network_subnet_overlap(
-    network: &NetworkYaml,
+    network: &SubNetworkYaml,
     other_subnets: &[(Ipv4Addr, u8)],
 ) -> Vec<String> {
     let mut warnings = Vec::new();
@@ -199,7 +199,7 @@ pub fn validate_network_subnet_overlap(
 ///
 /// Scans X from 1 to 254 and returns the first `192.168.X.0` that does not
 /// overlap with any existing subnet in the configuration.
-pub fn find_available_subnet(networks: &[NetworkYaml]) -> Option<Ipv4Addr> {
+pub fn find_available_subnet(networks: &[SubNetworkYaml]) -> Option<Ipv4Addr> {
     let existing: Vec<(Ipv4Addr, u8)> = networks.iter().map(|n| (n.subnet, n.mask)).collect();
 
     for x in 1u8..=254 {

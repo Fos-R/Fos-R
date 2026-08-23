@@ -1,9 +1,9 @@
 //! Configuration YAML parsing.
 
 use crate::shared::config::state::ConfigFileState;
-use fosr_lib::network::ConfigurationYaml;
+use fosr_lib::network::NetworkYaml;
 
-/// Parse the YAML content into a ConfigurationYaml model.
+/// Parse the YAML content into a NetworkYaml model.
 /// Updates the state with the parsed model or an error message.
 /// Handles change detection using a snapshot of the "clean" configuration.
 pub fn parse_config_yaml(configuration_file_state: &mut ConfigFileState) {
@@ -14,7 +14,7 @@ pub fn parse_config_yaml(configuration_file_state: &mut ConfigFileState) {
         return;
     };
 
-    match serde_yaml::from_str::<ConfigurationYaml>(yaml) {
+    match serde_yaml::from_str::<NetworkYaml>(yaml) {
         Ok(model) => {
             if configuration_file_state.clean_snapshot.is_none() {
                 configuration_file_state.clean_snapshot =
