@@ -88,7 +88,7 @@ pub fn generate(
 /// Loads ML models from bundled assets, optionally applying a config profile.
 fn load_models(profile: &Option<String>) -> Result<models::Models, String> {
     let source = models::ModelsSource::CUPID;
-    let mut model = models::Models::from_source(source)
+    let mut model = models::Models::from_source(&source)
         .map_err(|e| format!("Failed to load ML models: {}", e))?;
     if let Some(config) = profile {
         model = model

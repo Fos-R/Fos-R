@@ -24,7 +24,7 @@ use strum::EnumString;
 struct IntermediateVector {
     src_ip_role: Option<IpRole>,
     dst_ip_role: Option<IpRole>,
-    l7_proto: Option<&'static str>,
+    l7_proto: Option<L7Proto>,
     dst_port: Option<u16>,
     src_port: Option<u16>,
     ttl_client: Option<u8>,
@@ -111,7 +111,7 @@ enum Feature {
     DstTTL(Vec<u8>),
     SrcMac(Vec<MacAddr>),
     DstMac(Vec<MacAddr>),
-    L7Proto(Vec<&'static str>),
+    L7Proto(Vec<L7Proto>),
     L4Proto(Vec<L4Proto>),
     EndFlags(Vec<TCPConnState>),
 }
@@ -297,7 +297,7 @@ pub struct BayesianModel {
     bn: BayesianNetwork,
     bin_count: usize,
     // bn_additional_data: AdditionalData,
-    open_ports: HashMap<(Ipv4Addr, &'static str), u16>,
+    open_ports: HashMap<(Ipv4Addr, L7Proto), u16>,
 }
 
 /// Stage 1: generates flow descriptions
@@ -833,7 +833,7 @@ fn bn_from_bif(
                     .collect(),
             )),
             "Applicative Proto" => Some(Feature::L7Proto(
-                v.outcome.clone().into_iter().map(|s| &*s.leak()).collect(),
+                v.outcome.clone().into_iter().map(|s| L7Proto::from_str(&s).unwrap()).collect(),
             )),
             "Proto" => Some(Feature::L4Proto(
                 v.outcome

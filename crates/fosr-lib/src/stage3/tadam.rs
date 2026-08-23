@@ -9,6 +9,7 @@ use serde::Deserialize;
 use statrs::distribution::MultivariateNormal;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::str::FromStr;
 
 struct AutomataSet<T: EdgeType> {
     cons_a: automaton::CrossProductTimedAutomaton<T>,
@@ -16,8 +17,8 @@ struct AutomataSet<T: EdgeType> {
 }
 
 pub struct AutomataLibrary {
-    tcp_automata: HashMap<(&'static str, TCPConnState), AutomataSet<TCPEdgeTuple>>,
-    udp_automata: HashMap<&'static str, AutomataSet<UDPEdgeTuple>>,
+    tcp_automata: HashMap<(L7Proto, TCPConnState), AutomataSet<TCPEdgeTuple>>,
+    udp_automata: HashMap<L7Proto, AutomataSet<UDPEdgeTuple>>,
 }
 
 impl AutomataLibrary {
@@ -94,7 +95,7 @@ impl AutomataLibrary {
                 )?;
                 log::debug!("Import TCP {a}");
                 self.tcp_automata.insert(
-                    (l7proto, conn_state.unwrap()),
+                    (L7Proto::from_str(l7proto).unwrap(), conn_state.unwrap()),
                     AutomataSet {
                         uncons_a: a.clone(),
                         cons_a: a.into(),
@@ -123,7 +124,7 @@ impl AutomataLibrary {
                 )?;
                 log::debug!("Import UDP {a}");
                 self.udp_automata.insert(
-                    l7proto,
+                    L7Proto::from_str(l7proto).unwrap(),
                     AutomataSet {
                         uncons_a: a.clone(),
                         cons_a: a.into(),
