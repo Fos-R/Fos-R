@@ -88,6 +88,9 @@ pub const COLOR_PROTOCOL_MDNS: Color32 = Color32::from_rgb(240, 98, 146);
 /// NTP protocol color (cyan)
 pub const COLOR_PROTOCOL_NTP: Color32 = Color32::from_rgb(0, 229, 255);
 
+/// Unknown protocol color (green)
+pub const COLOR_PROTOCOL_UNKNOWN: Color32 = Color32::from_rgb(0, 205, 154);
+
 // ============================================================================
 // VISUALIZATION: SUBNET ZONE COLORS
 // ============================================================================
@@ -119,5 +122,6 @@ pub fn color_for_protocol(proto: &L7Proto) -> Color32 {
         L7Proto::KMS => COLOR_PROTOCOL_KMS,
         L7Proto::MulticastDNS => COLOR_PROTOCOL_MDNS,
         L7Proto::NTP => COLOR_PROTOCOL_NTP,
+        L7Proto::Unknown(_) => COLOR_PROTOCOL_UNKNOWN,
     }
 }

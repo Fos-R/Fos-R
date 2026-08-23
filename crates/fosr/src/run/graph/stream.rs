@@ -298,7 +298,7 @@ impl FlowStreamer {
         sender: Sender<FlowEvent>,
     ) -> Result<Self, String> {
         let source = models::ModelsSource::CUPID;
-        let mut model = models::Models::from_source(source)
+        let mut model = models::Models::from_source(&source)
             .map_err(|e| format!("Failed to load models: {}", e))?;
 
         if let Some(config) = config_content {

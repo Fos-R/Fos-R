@@ -10,6 +10,7 @@ use std::net::Ipv4Addr;
 use std::time::Duration;
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 use thingbuf::Recycle;
+use std::str::FromStr;
 
 /// A general wrapper to pass a seed along with actual data
 #[derive(Debug, Clone)]
@@ -108,17 +109,13 @@ impl L4Proto {
 }
 
 #[derive(
-    Serialize, Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq, Display, EnumIter, EnumString,
+    Serialize, Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq, Display, EnumIter,
 )]
 #[allow(clippy::upper_case_acronyms)]
 #[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
-#[strum(
-    parse_err_fn = String::from,
-    parse_err_ty = String
-)]
 /// A list of application layer protocol
 pub enum L7Proto {
+    // Dedicated variants for well-known protocols
     HTTP,
     HTTPS,
     SSH,
@@ -130,7 +127,32 @@ pub enum L7Proto {
     MQTT,
     KMS,
     MulticastDNS,
-    NTP, // TODO complete properly
+    NTP, // TODO complete
+    // Joker variant for everything else
+    Unknown(&'static str), // &'static str costs a little leak (a few bytes) but make this enum
+                           // Copy, which is very convenient
+}
+
+impl FromStr for L7Proto {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, String> {
+        Ok(match s.to_uppercase().replace(" ", "").as_str().trim() {
+            "HTTP" => L7Proto::HTTP,
+            "HTTPS" => L7Proto::HTTPS,
+            "SSH" => L7Proto::SSH,
+            "DNS" => L7Proto::DNS,
+            "DHCP" => L7Proto::DHCP,
+            "SMTP" => L7Proto::SMTP,
+            "TELNET" => L7Proto::Telnet,
+            "IMAPS" => L7Proto::IMAPS,
+            "MQTT" => L7Proto::MQTT,
+            "KMS" => L7Proto::KMS,
+            "MULTICASTDNS" => L7Proto::MulticastDNS,
+            "NTP" => L7Proto::NTP,
+            _ => L7Proto::Unknown(String::from(s).leak()),
+        })
+    }
 }
 
 impl L7Proto {
@@ -155,6 +177,7 @@ impl L7Proto {
             L7Proto::KMS => "KMS",
             L7Proto::MulticastDNS => "mDNS",
             L7Proto::NTP => "NTP",
+            L7Proto::Unknown(s) => s,
         }
     }
 
@@ -173,7 +196,7 @@ impl L7Proto {
             L7Proto::KMS => 1688,
             L7Proto::MulticastDNS => 5353,
             L7Proto::NTP => 123,
-            // _ => todo!()
+            L7Proto::Unknown(_) => todo!(), // TODO: should return an Option
         }
     }
 }
@@ -270,7 +293,7 @@ pub struct FlowData {
     pub fwd_packets_count: usize,
     pub bwd_packets_count: usize,
     pub timestamp: Duration,
-    pub l7_proto: &'static str,
+    pub l7_proto: L7Proto,
 }
 
 impl From<Flow> for FlowData {
@@ -430,8 +453,8 @@ impl Default for Packets {
             directions: Vec::with_capacity(150),
             timestamps: Vec::with_capacity(150),
             flow: Flow::UDP(FlowData {
-                src_ip: Ipv4Addr::new(1, 2, 3, 4),
-                dst_ip: Ipv4Addr::new(5, 6, 7, 8),
+                src_ip: Ipv4Addr::UNSPECIFIED,
+                dst_ip: Ipv4Addr::UNSPECIFIED,
                 src_mac: MacAddr::zero(),
                 dst_mac: MacAddr::zero(),
                 src_port: 0,
@@ -442,7 +465,7 @@ impl Default for Packets {
                 fwd_packets_count: 0,
                 bwd_packets_count: 0,
                 timestamp: Duration::new(0, 0),
-                l7_proto: "(empty)",
+                l7_proto: L7Proto::HTTP,
             }),
         }
     }
