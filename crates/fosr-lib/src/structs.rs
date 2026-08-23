@@ -64,6 +64,7 @@ pub enum TCPConnState {
     /// Connection attempt rejected
     REJ,
     /// For non-TCP communication
+    #[strum(serialize="none")]
     NoState,
 }
 

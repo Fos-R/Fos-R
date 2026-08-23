@@ -334,6 +334,7 @@ fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), Stri
 
 impl BayesianModel {
     pub fn from_source(m: &models::ModelsSource) -> Result<Self, String> {
+
         let bn_string: String = m
             .get_bn()
             .map_err(|e| format!("Cannot find the Bayesian networks: {e}"))?;
@@ -341,6 +342,7 @@ impl BayesianModel {
         log::trace!("Loading Bayesian network");
         let bif_common = bifxml::from_str(&bn_string)?;
 
+        log::trace!("Converting from BIF");
         let (bn, bin_count) = bn_from_bif(bif_common)?;
 
         log::info!("Bayesian network has been loaded");
