@@ -22,39 +22,82 @@ use eframe::egui;
 use startup_modal::render_startup_modal;
 use top_bar::{AppTab, TopBarState, render_top_bar};
 
-/// Main application state managing tabs, configuration, and PCAP generation.
-#[derive(Default)]
-pub struct FosrApp {
-    current_tab: AppTab,
-    style_initialized: bool,
-    images_preloaded: bool,
+pub enum ViewState {
+    Welcome,
+    TemplateSelection,
+    GraphTab,
+    ConfigTab(ConfigTabSubstate),
+    Exit,
+}
+
+pub enum ConfigTabSubstate {
+    Visual,
+    Code,
+}
+
+pub struct ViewOptions {
     zoom_factor: f32,
+
+
+}
+
+#[derive(Default)]
+pub struct ExtraModals {
+    #[cfg(not(target_arch = "wasm32"))]
+    show_close_confirmation: bool,
+    about: bool,
+}
+
+/// Main application state managing tabs, configuration, and PCAP generation.
+/// // TODO: découpler la vue (machine à état) et le modèle
+pub struct FosrApp {
+    // View
+    view_state: ViewState,
+    extra_modals: ExtraModals,
+    view_options: ViewOptions,
+    // Model
+    // current_tab: AppTab,
+    // style_initialized: bool,
+    // images_preloaded: bool,
+    // zoom_factor: f32,
     config_file_state: ConfigFileState,
     configuration_tab_state: ConfigurationTabState,
     run_tab_state: RunTabState,
-    /// Whether to show the close confirmation dialog
-    #[cfg(not(target_arch = "wasm32"))]
-    show_close_confirmation: bool,
-    /// Whether the user has confirmed they want to close
-    #[cfg(not(target_arch = "wasm32"))]
-    allowed_to_close: bool,
+    // /// Whether to show the close confirmation dialog
+    // /// Whether the user has confirmed they want to close
+    // #[cfg(not(target_arch = "wasm32"))]
+    // allowed_to_close: bool,
 }
 
+// TODO: ajouter un constructeur qui initialise tout ce qu’il faut
+
 impl FosrApp {
-    /// Initialize style and zoom settings once on first frame.
-    fn init_style_once(&mut self, ctx: &egui::Context) {
+
+    fn new(ctx: &egui::Context) -> Self {
+        let app = FosrApp {
+            view_state: ViewState::Welcome,
+            view_options: ViewOptions { zoom_factor: ZOOM_DEFAULT },
+            extra_modals: ExtraModals::default(),
+            config_file_state: ConfigFileState::default(),
+            configuration_tab_state: ConfigurationTabState::default(),
+            run_tab_state: RunTabState::default(),
+        };
+
         // Set default zoom once
-        if !self.style_initialized {
-            self.zoom_factor = ZOOM_DEFAULT;
-            ctx.options_mut(|option| option.zoom_factor = self.zoom_factor);
-            ctx.style_mut(|s| s.interaction.tooltip_delay = TOOLTIP_DELAY);
+        ctx.options_mut(|option| option.zoom_factor = app.view_options.zoom_factor);
+        ctx.style_mut(|s| s.interaction.tooltip_delay = TOOLTIP_DELAY);
 
-            // On web, use dark theme to match with the Fos-R website's theme
-            #[cfg(target_arch = "wasm32")]
-            ctx.set_theme(egui::Theme::Dark);
+        // On web, use dark theme to match with the Fos-R website's theme
+        #[cfg(target_arch = "wasm32")]
+        ctx.set_theme(egui::Theme::Dark);
 
-            self.style_initialized = true;
-        }
+        // Preload all images to avoid spinners/fallbacks on first visit
+        let _ = IMG_SERVER.load(ctx, Default::default(), Default::default());
+        let _ = IMG_COMPUTER.load(ctx, Default::default(), Default::default());
+        let _ = IMG_INTERNET.load(ctx, Default::default(), Default::default());
+        let _ = IMG_LOGO.load(ctx, Default::default(), Default::default());
+
+        app
     }
 
     /// Clamp zoom to min/max bounds (prevents Ctrl+/- from exceeding limits).
@@ -64,19 +107,7 @@ impl FosrApp {
         if !(ZOOM_MIN..=ZOOM_MAX).contains(&current_zoom) {
             let clamped_zoom = current_zoom.clamp(ZOOM_MIN, ZOOM_MAX);
             ctx.set_zoom_factor(clamped_zoom);
-            self.zoom_factor = clamped_zoom;
-        }
-    }
-
-    /// Preload images once to avoid spinners/fallbacks on first visit.
-    fn preload_images_once(&mut self, ctx: &egui::Context) {
-        // Preload all images to avoid spinners/fallbacks on first visit
-        if !self.images_preloaded {
-            let _ = IMG_SERVER.load(ctx, Default::default(), Default::default());
-            let _ = IMG_COMPUTER.load(ctx, Default::default(), Default::default());
-            let _ = IMG_INTERNET.load(ctx, Default::default(), Default::default());
-            let _ = IMG_LOGO.load(ctx, Default::default(), Default::default());
-            self.images_preloaded = true;
+            self.view_options.zoom_factor = clamped_zoom;
         }
     }
 
@@ -99,7 +130,7 @@ impl FosrApp {
             } else if self.has_active_wireshark_sessions() {
                 // Active sessions: cancel close and show confirmation dialog
                 ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-                self.show_close_confirmation = true;
+                self.extra_modals.show_close_confirmation = true;
             }
         }
     }
