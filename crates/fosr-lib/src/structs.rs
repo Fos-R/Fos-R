@@ -8,7 +8,7 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
 use std::net::Ipv4Addr;
 use std::time::Duration;
-use strum::{Display, EnumIter, IntoEnumIterator};
+use strum::{Display, EnumIter, IntoEnumIterator, EnumString};
 use thingbuf::Recycle;
 
 /// A general wrapper to pass a seed along with actual data
@@ -29,8 +29,12 @@ pub struct TimePoint {
 
 /// A transport protocol
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString)]
 #[serde(rename_all_fields = "UPPERCASE")]
+#[strum(
+    parse_err_fn = String::from,
+    parse_err_ty = String
+)]
 pub enum L4Proto {
     #[serde(alias = "tcp")]
     TCP,
@@ -43,7 +47,11 @@ pub enum L4Proto {
 /// Connection states, adapted from Zeek
 /// <https://docs.zeek.org/en/master/scripts/base/protocols/conn/main.zeek.html#field-Conn::Info$conn_state>
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString)]
+#[strum(
+    parse_err_fn = String::from,
+    parse_err_ty = String
+)]
 pub enum TCPConnState {
     /// Normal establishment and termination
     SF,
@@ -57,47 +65,6 @@ pub enum TCPConnState {
     REJ,
     /// For non-TCP communication
     NoState,
-}
-
-// impl TCPConnState {
-//     pub fn iter() -> [TCPConnState; 5] {
-//         [
-//             TCPConnState::SF,
-//             TCPConnState::SH,
-//             TCPConnState::RST,
-//             TCPConnState::S0,
-//             TCPConnState::REJ,
-//         ]
-//     }
-// }
-
-// TODO: refaire proprement
-impl TryFrom<String> for TCPConnState {
-    type Error = String;
-
-    fn try_from(s: String) -> Result<TCPConnState, String> {
-        match s.to_uppercase().replace(" ", "").as_str().trim() {
-            "SF" => Ok(TCPConnState::SF),
-            "SH" => Ok(TCPConnState::SH),
-            "RST" => Ok(TCPConnState::RST),
-            "S0" => Ok(TCPConnState::S0),
-            "REJ" => Ok(TCPConnState::REJ),
-            "NONE" => Ok(TCPConnState::NoState),
-            _ => Err(format!("Unknown connection state: {s}")),
-        }
-    }
-}
-
-// TODO: refaire proprement
-impl From<String> for L4Proto {
-    fn from(s: String) -> L4Proto {
-        match s.as_str() {
-            "TCP" => L4Proto::TCP,
-            "UDP" => L4Proto::UDP,
-            "ICMP" => L4Proto::ICMP,
-            _ => todo!(),
-        }
-    }
 }
 
 impl Display for L4Proto {
@@ -139,10 +106,14 @@ impl L4Proto {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq, Display, EnumIter)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq, Display, EnumIter, EnumString)]
 #[allow(clippy::upper_case_acronyms)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
+#[strum(
+    parse_err_fn = String::from,
+    parse_err_ty = String
+)]
 /// A list of application layer protocol
 pub enum L7Proto {
     HTTP,
@@ -200,29 +171,6 @@ impl L7Proto {
             L7Proto::MulticastDNS => 5353,
             L7Proto::NTP => 123,
             // _ => todo!()
-        }
-    }
-}
-
-// TODO: refaire proprement
-impl TryFrom<String> for L7Proto {
-    type Error = String;
-
-    fn try_from(s: String) -> Result<L7Proto, String> {
-        match s.to_uppercase().replace(" ", "").as_str().trim() {
-            "HTTP" => Ok(L7Proto::HTTP),
-            "HTTPS" => Ok(L7Proto::HTTPS),
-            "SSH" => Ok(L7Proto::SSH),
-            "DNS" => Ok(L7Proto::DNS),
-            "DHCP" => Ok(L7Proto::DHCP),
-            "SMTP" => Ok(L7Proto::SMTP),
-            "TELNET" => Ok(L7Proto::Telnet),
-            "IMAPS" => Ok(L7Proto::IMAPS),
-            "MQTT" => Ok(L7Proto::MQTT),
-            "KMS" => Ok(L7Proto::KMS),
-            "MULTICAST DNS" => Ok(L7Proto::MulticastDNS),
-            "NTP" => Ok(L7Proto::NTP),
-            _ => Err(format!("Unknown protocol: {s}")),
         }
     }
 }

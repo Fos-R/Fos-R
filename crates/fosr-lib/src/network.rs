@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::net::Ipv4Addr;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::str::FromStr;
 
 /// Name of the synthetic Internet network.
 pub const INTERNET_NETWORK_NAME: &str = "Internet";
@@ -470,7 +471,7 @@ impl TryFrom<InterfaceYaml> for Interface {
         for s in i.services.unwrap_or_default() {
             let v: Vec<String> = s.as_str().split(':').map(|s| s.to_string()).collect();
             assert!(!v.is_empty() && v.len() <= 2);
-            let service: L7Proto = v[0].clone().try_into()?;
+            let service: L7Proto = L7Proto::from_str(&v[0])?;
             if v.len() == 2 {
                 open_ports.insert(
                     service,
@@ -486,7 +487,7 @@ impl TryFrom<InterfaceYaml> for Interface {
                 for s in l {
                     let v: Vec<String> = s.as_str().split(':').map(|s| s.to_string()).collect();
                     assert!(!v.is_empty() && v.len() <= 2);
-                    let service: L7Proto = v[0].clone().try_into()?;
+                    let service: L7Proto = L7Proto::from_str(&v[0])?;
                     uses.push(service);
                 }
                 Some(uses)
