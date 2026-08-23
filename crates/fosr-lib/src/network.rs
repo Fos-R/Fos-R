@@ -1,4 +1,4 @@
-use crate::structs::*;
+use crate::structs::{OS, L7Proto};
 
 use pnet::util::MacAddr;
 use rand::prelude::*;
@@ -375,7 +375,7 @@ impl From<NetworkYaml> for Network {
                                 users_per_service
                                     .entry(*s)
                                     .or_default()
-                                    .push(interface.ip_addr)
+                                    .push(interface.ip_addr);
                             }
                         } else {
                             log::warn!(
@@ -406,7 +406,7 @@ impl From<NetworkYaml> for Network {
 
         let mut all_networks = networks;
         all_networks.push(SubNetwork {
-            subnet: Ipv4Addr::new(0, 0, 0, 0),
+            subnet: Ipv4Addr::UNSPECIFIED, // 0.0.0.0
             mask: 0,
             name: INTERNET_NETWORK_NAME.to_string(),
             hosts: internet,
@@ -469,7 +469,7 @@ impl TryFrom<InterfaceYaml> for Interface {
         let mut open_ports: HashMap<L7Proto, u16> = HashMap::new();
         let mut services = vec![];
         for s in i.services.unwrap_or_default() {
-            let v: Vec<String> = s.as_str().split(':').map(|s| s.to_string()).collect();
+            let v: Vec<String> = s.as_str().split(':').map(ToString::to_string).collect();
             assert!(!v.is_empty() && v.len() <= 2);
             let service: L7Proto = L7Proto::from_str(&v[0])?;
             if v.len() == 2 {
@@ -485,7 +485,7 @@ impl TryFrom<InterfaceYaml> for Interface {
             Some(l) => {
                 let mut uses = vec![];
                 for s in l {
-                    let v: Vec<String> = s.as_str().split(':').map(|s| s.to_string()).collect();
+                    let v: Vec<String> = s.as_str().split(':').map(ToString::to_string).collect();
                     assert!(!v.is_empty() && v.len() <= 2);
                     let service: L7Proto = L7Proto::from_str(&v[0])?;
                     uses.push(service);

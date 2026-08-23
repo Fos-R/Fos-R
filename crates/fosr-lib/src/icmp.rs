@@ -1,4 +1,4 @@
-use crate::structs::*;
+use crate::structs::{PacketDirection, PacketInfo, EdgeType, PayloadType, Payload};
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
@@ -20,7 +20,7 @@ impl PacketInfo for ICMPPacketInfo {
         self.ts
     }
     fn set_ts(&mut self, ts: Duration) {
-        self.ts = ts
+        self.ts = ts;
     }
 }
 

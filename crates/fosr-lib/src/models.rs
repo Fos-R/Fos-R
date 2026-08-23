@@ -33,7 +33,7 @@ pub struct Models {
 }
 
 impl Models {
-    pub fn from_source(source: ModelsSource) -> Result<Self, String> {
+    pub fn from_source(source: &ModelsSource) -> Result<Self, String> {
         Ok(Models {
             automata: stage3::tadam::AutomataLibrary::from_source(&source)?,
             bn: stage2::bayesian_networks::BayesianModel::from_source(&source)?,

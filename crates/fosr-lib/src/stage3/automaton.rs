@@ -3,7 +3,7 @@ use base64::Engine;
 use derivative::Derivative;
 use nalgebra::OVector;
 use nalgebra::Vector2;
-use rand_core::*;
+use rand_core::Rng;
 use rand_distr::weighted::WeightedIndex;
 use rand_distr::weighted::WeightedTreeIndex;
 use rand_distr::{Distribution, Gamma};
@@ -113,9 +113,9 @@ pub struct CrossProductTimedAutomaton<T: EdgeType> {
 
 impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
     fn from(automaton: TimedAutomaton<T>) -> Self {
+        const MAX_FWD_BWD: u32 = 200;
         let mut max_fwd: u32 = 1;
         let mut max_bwd: u32 = 1;
-        const MAX_FWD_BWD: u32 = 200;
         let mut available_clusters: Vec<bool> = vec![];
 
         for c in automaton.clusters.iter() {
@@ -136,7 +136,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
         }
 
         // dbg!(&max_fwd, &max_bwd);
-        assert!(available_clusters.len() == automaton.clusters.len());
+        assert_eq!(available_clusters.len(), automaton.clusters.len());
 
         #[derive(Derivative)]
         #[derivative(Hash, PartialEq)]
@@ -476,7 +476,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
                     output.push(data);
                 } else {
                     // We arrived at the accepting state
-                    assert!(e.dst_node == self.accepting_state);
+                    assert_eq!(e.dst_node, self.accepting_state);
 
                     // Finalize the timestamps
                     let mut current_ts = fd.timestamp;

@@ -1,9 +1,9 @@
 // use crate::config::Hosts;
-use crate::icmp::*;
+use crate::icmp::ICMPPacketInfo;
 use crate::stats::Stats;
-use crate::structs::*;
+use crate::structs::{PacketInfo, Flow, PacketDirection, FlowData, Payload, SeededData, PacketsIR, Packets, Packet, PacketsRecycler};
 use crate::tcp::TCPPacketInfo;
-use crate::udp::*;
+use crate::udp::UDPPacketInfo;
 
 use crossbeam_channel::{Receiver, Sender};
 use pcap_file::PcapError;
@@ -14,7 +14,7 @@ use pnet_packet::ip::IpNextHeaderProtocol;
 use pnet_packet::ipv4::{self, MutableIpv4Packet};
 use pnet_packet::tcp::{self, MutableTcpPacket, TcpFlags};
 use pnet_packet::udp::MutableUdpPacket;
-use rand_core::*;
+use rand_core::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
 use std::io::BufWriter;
 use std::net::Ipv4Addr;
@@ -58,12 +58,12 @@ impl TcpPacketData {
 impl Stage4 {
     /// Configures the Ethernet frame by setting the source, destination MAC addresses,
     /// and setting the EtherType to IPv4.
-    fn setup_ethernet_frame(&self, packet: &mut [u8], src_mac: &MacAddr, dst_mac: &MacAddr) {
+    fn setup_ethernet_frame(&self, packet: &mut [u8], src_mac: MacAddr, dst_mac: MacAddr) {
         // the size is already computed, it cannot fail
         let mut eth_packet = MutableEthernetPacket::new(packet).unwrap();
         eth_packet.set_ethertype(EtherTypes::Ipv4);
-        eth_packet.set_source(*src_mac);
-        eth_packet.set_destination(*dst_mac);
+        eth_packet.set_source(src_mac);
+        eth_packet.set_destination(dst_mac);
     }
 
     /// Sets up the IPv4 packet inside a given buffer.
@@ -127,7 +127,7 @@ impl Stage4 {
         flow: &FlowData,
         packet_info: &TCPPacketInfo,
         tcp_data: &mut TcpPacketData, // TODO Change to take ownership of tcp_data
-        payload_array: &mut [u8; 65536],
+        payload_array: &mut Box<[u8]>,
     ) {
         // Return TcpPacketData and an empty tuple
         let mut tcp_packet = MutableTcpPacket::new(packet).unwrap();
@@ -247,12 +247,12 @@ impl Stage4 {
     /// It sets source/destination ports, assigns the payload (either random or replayed),
     /// adjusts the UDP length field, and computes/checks the UDP checksum.
     fn setup_udp_packet(
-        &self,
+        &self, // TODO: self inutile, retirer de la structure
         rng: &mut Pcg32,
         packet: &mut [u8],
         flow: &FlowData,
         packet_info: &UDPPacketInfo,
-        payload_array: &mut [u8; 65536],
+        payload_array: &mut Box<[u8]>,
     ) {
         let mut udp_packet = MutableUdpPacket::new(packet).unwrap();
 
@@ -314,8 +314,8 @@ impl Stage4 {
         &self,
         input: &SeededData<PacketsIR<TCPPacketInfo>>,
         packets: &mut Packets,
-        packet: &mut [u8; 65536],
-        payload_array: &mut [u8; 65536],
+        packet: &mut Box<[u8]>,
+        payload_array: &mut Box<[u8]>,
     ) {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
@@ -329,8 +329,8 @@ impl Stage4 {
                 + MutableTcpPacket::minimum_packet_size()
                 + packet_info.payload.get_payload_size();
 
-            let mut mac_src = &input.data.flow.get_data().src_mac;
-            let mut mac_dst = &input.data.flow.get_data().dst_mac;
+            let mut mac_src = input.data.flow.get_data().src_mac;
+            let mut mac_dst = input.data.flow.get_data().dst_mac;
             // let mut mac_src = self.config.get_mac(&flow.src_ip).unwrap_or(&self.zero);
             // let mut mac_dst = self.config.get_mac(&flow.dst_ip).unwrap_or(&self.zero);
             if matches!(packet_info.get_direction(), PacketDirection::Backward) {
@@ -375,8 +375,8 @@ impl Stage4 {
         &self,
         input: &SeededData<PacketsIR<UDPPacketInfo>>,
         packets: &mut Packets,
-        packet: &mut [u8; 65536],
-        payload_array: &mut [u8; 65536],
+        packet: &mut Box<[u8]>,
+        payload_array: &mut Box<[u8]>,
     ) {
         let mut rng = Pcg32::seed_from_u64(input.seed);
         let ip_start = MutableEthernetPacket::minimum_packet_size();
@@ -389,8 +389,8 @@ impl Stage4 {
                 + MutableUdpPacket::minimum_packet_size()
                 + packet_info.payload.get_payload_size();
 
-            let mut mac_src = &input.data.flow.get_data().src_mac;
-            let mut mac_dst = &input.data.flow.get_data().dst_mac;
+            let mut mac_src = input.data.flow.get_data().src_mac;
+            let mut mac_dst = input.data.flow.get_data().dst_mac;
             if matches!(packet_info.get_direction(), PacketDirection::Backward) {
                 (mac_src, mac_dst) = (mac_dst, mac_src);
             }
@@ -433,8 +433,8 @@ impl Stage4 {
         &self,
         input: &SeededData<PacketsIR<ICMPPacketInfo>>,
         packets: &mut Packets,
-        packet: &mut [u8; 65536],
-        payload_array: &mut [u8; 65536],
+        packet: &mut Box<[u8]>,
+        payload_array: &mut Box<[u8]>,
     ) {
         // let mut rng = Pcg32::seed_from_u64(input.seed);
         todo!()
@@ -490,8 +490,8 @@ fn send_pcap(flow_packets: thingbuf::mpsc::blocking::SendRef<Packets>) {
 /// packets using the provided generator function, and then sends the generated flows
 /// to appropriate channels based on the configuration (online transmission and/or pcap export).
 pub fn run_channel<T: PacketInfo>(
-    generator: impl Fn(&SeededData<PacketsIR<T>>, &mut Packets, &mut [u8; 65536], &mut [u8; 65536]),
-    local_interfaces: Vec<Ipv4Addr>,
+    generator: impl Fn(&SeededData<PacketsIR<T>>, &mut Packets, &mut Box<[u8]>, &mut Box<[u8]>),
+    local_interfaces: &[Ipv4Addr],
     rx_s4: Receiver<SeededData<PacketsIR<T>>>,
     tx_s4: Option<Sender<Packets>>,
     tx_s4_to_pcap: thingbuf::mpsc::blocking::Sender<Packets, PacketsRecycler>, // TODO: Option
@@ -500,11 +500,8 @@ pub fn run_channel<T: PacketInfo>(
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Prepare stage 4
     log::trace!("Start S4 (channel)");
-
-    let mut payload_array: [u8; 65536] = [0; 65536]; // to avoid allocating Vec for payloads
-    // everytime. 65536 is the maximum payload
-    // size.
-    let mut packet: [u8; 65536] = [0; 65536]; // used to avoid initializing the packet to 0
+    let mut payload_array: Box<[u8]> = vec![0; 65536].into_boxed_slice(); // to avoid allocating Vec for payloads
+    let mut packet: Box<[u8]> = vec![0; 65536].into_boxed_slice();
 
     for headers in rx_s4 {
         // log::trace!("Creating packets");
@@ -516,7 +513,7 @@ pub fn run_channel<T: PacketInfo>(
 
         // only copy the flows if we need to send it to online and pcap
         if let Some(ref tx_s4) = tx_s4 {
-            send_online(&local_interfaces, flow_packets.clone(), tx_s4);
+            send_online(local_interfaces, flow_packets.clone(), tx_s4);
         }
         if pcap_export {
             send_pcap(flow_packets);
@@ -531,13 +528,13 @@ pub fn run_channel<T: PacketInfo>(
 
 /// Complete the packets and collect them into a vector
 pub fn run_vec<T: PacketInfo>(
-    generator: impl Fn(&SeededData<PacketsIR<T>>, &mut Packets, &mut [u8; 65536], &mut [u8; 65536]),
+    generator: impl Fn(&SeededData<PacketsIR<T>>, &mut Packets, &mut Box<[u8]>, &mut Box<[u8]>),
     vec_s4: Vec<SeededData<PacketsIR<T>>>,
     stats: Arc<Stats>,
 ) -> Vec<Packet> {
     log::trace!("Start S4 (vec)");
-    let mut payload_array: [u8; 65536] = [0; 65536]; // to avoid allocating Vec for payloads
-    let mut packet: [u8; 65536] = [0; 65536];
+    let mut payload_array: Box<[u8]> = vec![0; 65536].into_boxed_slice(); // to avoid allocating Vec for payloads
+    let mut packet: Box<[u8]> = vec![0; 65536].into_boxed_slice();
     let mut all_packets: Vec<Packet> =
         Vec::with_capacity(vec_s4.iter().map(|h| h.data.packets_info.len()).sum());
     let mut initial_ts: Option<Duration> = None;
@@ -546,10 +543,10 @@ pub fn run_vec<T: PacketInfo>(
         let new_ts = headers.data.flow.get_data().timestamp;
         if let Some(ts) = initial_ts {
             if new_ts < ts {
-                initial_ts = Some(new_ts)
+                initial_ts = Some(new_ts);
             }
         } else {
-            initial_ts = Some(new_ts)
+            initial_ts = Some(new_ts);
         }
         let mut flow_packets = Packets::default();
         stats.set_current_duration(new_ts.as_secs() - initial_ts.unwrap().as_secs());
@@ -557,7 +554,7 @@ pub fn run_vec<T: PacketInfo>(
         generator(&headers, &mut flow_packets, &mut packet, &mut payload_array);
         stats.increase(&flow_packets);
 
-        for packet in flow_packets.packets.into_iter() {
+        for packet in flow_packets.packets {
             all_packets.push(packet);
         }
     }

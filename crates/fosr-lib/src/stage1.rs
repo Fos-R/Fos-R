@@ -1,6 +1,6 @@
 use crate::models;
 use crate::stats::Stats;
-use crate::structs::*;
+use crate::structs::{SeededData, TimePoint};
 
 use chrono::FixedOffset;
 use chrono::{DateTime, Timelike};
@@ -238,7 +238,7 @@ impl BinBasedGenerator {
         self.current_distrib = get_poisson(&self.lambdas, self.dest_tz_offset, self.next_ts);
 
         if self.current_distrib.is_none() {
-            log_once::warn_once!("Time window without any flow according to the time model")
+            log_once::warn_once!("Time window without any flow according to the time model");
         }
 
         self.remaining_flows = self
