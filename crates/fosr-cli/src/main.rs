@@ -18,6 +18,7 @@ use std::io::BufWriter;
 use std::net::Ipv4Addr;
 use std::process;
 use std::sync::Arc;
+use std::sync::mpsc::channel;
 use std::thread;
 use std::time::Instant;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -33,7 +34,6 @@ use itertools::kmerge;
 use pcap_file::pcap::{PcapPacket, PcapWriter};
 #[cfg(feature = "net_injection")]
 use pnet::{datalink, ipnetwork::IpNetwork};
-use std::sync::mpsc::channel;
 
 const CHANNEL_SIZE: usize = 50;
 
@@ -52,7 +52,7 @@ struct InjectParam<T: inject::NetEnabler> {
 /// The entry point of the application.
 ///
 /// This function prepare the parameter for the function "run" according to the command line
-fn main() {
+fn main() -> Result<(), String> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args = cmd::Args::parse();
 
@@ -78,7 +78,7 @@ fn main() {
             let source = if let Some(custom_models) = custom_models {
                 models::ModelsSource::UserDefined(custom_models)
             } else {
-                default_models.unwrap().get_source() // we are sure it contains something
+                default_models?.get_source() // we are sure it contains something
             };
             let duration = duration
                 .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed."));
@@ -115,7 +115,7 @@ fn main() {
             let source = if let Some(custom_models) = custom_models {
                 models::ModelsSource::UserDefined(custom_models)
             } else {
-                default_models.unwrap().get_source() // we are sure it contains something
+                default_models?.get_source() // we are sure it contains something
             };
             let duration = duration
                 .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed."));
@@ -154,13 +154,10 @@ fn main() {
             let source = if let Some(custom_models) = custom_models {
                 models::ModelsSource::UserDefined(custom_models)
             } else {
-                default_models.unwrap().get_source() // we are sure it contains something
+                default_models?.get_source() // we are sure it contains something
             };
 
-            let model = models::Models::from_source(source)
-                .unwrap()
-                .with_network(&network)
-                .unwrap();
+            let model = models::Models::from_source(source)?.with_network(&network)?;
 
             generate_pcap(
                 duration,
@@ -174,7 +171,7 @@ fn main() {
                 jobs,
                 taint,
                 model,
-            )
+            )?
         }
         cmd::Command::AugmentDataset {
             seed,
@@ -196,7 +193,7 @@ fn main() {
                 default_models.unwrap().get_source() // we are sure it contains something
             };
 
-            let model = models::Models::from_source(source).unwrap();
+            let model = models::Models::from_source(source)?;
 
             generate_pcap(
                 duration,
@@ -210,13 +207,14 @@ fn main() {
                 jobs,
                 taint,
                 model,
-            )
+            )?
         }
 
         cmd::Command::Untaint { input, output } => {
             utils::untaint_file(&input, &output);
         }
     };
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -232,7 +230,7 @@ fn generate_pcap(
     jobs: Option<usize>,
     taint: bool,
     model: models::Models,
-) {
+) -> Result<(), String> {
     let automata_library = Arc::new(model.automata);
     let bn = Arc::new(model.bn);
     let duration = humantime::parse_duration(&duration).expect("Duration could not be parsed.");
@@ -246,14 +244,22 @@ fn generate_pcap(
         if let Some(start_time) = start_time {
             // try to parse a date
             if let Ok(d) = humantime::parse_rfc3339_weak(&start_time) {
-                (d.duration_since(UNIX_EPOCH).unwrap(), true)
+                (
+                    d.duration_since(UNIX_EPOCH).map_err(|e| e.to_string())?,
+                    true,
+                )
             } else if let Ok(n) = start_time.parse::<u64>() {
                 (Duration::from_secs(n), false)
             } else {
                 panic!("Could not parse start time");
             }
         } else {
-            (SystemTime::now().duration_since(UNIX_EPOCH).unwrap(), false)
+            (
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .map_err(|e| e.to_string())?,
+                false,
+            )
         };
 
     let tz_offset = match tz {
@@ -357,7 +363,8 @@ fn generate_pcap(
                 None::<InjectParam<inject::DummyNetEnabler>>,
             );
         }
-    }
+    };
+    Ok(())
 }
 
 #[cfg(feature = "net_injection")]
@@ -374,7 +381,7 @@ fn net_injection(
     deterministic: bool,
     injection_algo: cmd::InjectionAlgo,
     source: models::ModelsSource,
-) {
+) -> Result<(), String> {
     // Extract all IPv4 local interfaces (except loopback)
     let extract_addr = |iface: datalink::NetworkInterface| {
         iface
@@ -401,7 +408,7 @@ fn net_injection(
         .collect();
     log::debug!("IPv4 interfaces: {:?}", &local_ips);
 
-    let model = models::Models::from_source(source).unwrap(); //.with_network(&network).unwrap(); // FIXME
+    let model = models::Models::from_source(source)?; //.with_network(&network).unwrap(); // FIXME
     let automata_library = Arc::new(model.automata);
     let bn = Arc::new(model.bn);
 
@@ -479,6 +486,7 @@ fn net_injection(
             );
         }
     };
+    Ok(())
 }
 
 struct ExportParams {
@@ -692,7 +700,7 @@ fn run_efficient<T: inject::NetEnabler>(
         export_threads.push(if let Some(export) = export {
             builder
                 .spawn(move || {
-                    export::run_export(rx_pcap, export.outfile, export.order_pcap);
+                    export::run_export(rx_pcap, &export.outfile, export.order_pcap);
                 })
                 .unwrap()
         } else {
