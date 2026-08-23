@@ -290,15 +290,12 @@ fn flow_id_from_packet(data: &[u8]) -> Option<FlowId> {
 
     let (protocol, src_port, dst_port) = match ip_packet.get_next_level_protocol() {
         IpNextHeaderProtocols::Tcp => {
-            if let Some(tcp_packet) = tcp::TcpPacket::new(ip_packet.payload()) {
-                (
-                    L4Proto::TCP,
-                    tcp_packet.get_source(),
-                    tcp_packet.get_destination(),
-                )
-            } else {
-                return None;
-            }
+            let tcp_packet = tcp::TcpPacket::new(ip_packet.payload())?;
+            (
+                L4Proto::TCP,
+                tcp_packet.get_source(),
+                tcp_packet.get_destination(),
+            )
         }
         IpNextHeaderProtocols::Udp => {
             let udp_packet = udp::UdpPacket::new(ip_packet.payload()).unwrap();

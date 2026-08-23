@@ -1,6 +1,6 @@
 //! Startup modal for choosing configuration source (templates or import).
 
-use crate::config_templates::{load_empty_config, load_template, get_default_templates};
+use crate::config_templates::{get_default_templates, load_empty_config, load_template};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::config::file_ops::poll_file_import;
 use crate::shared::config::file_ops::trigger_file_import;
@@ -151,7 +151,11 @@ fn render_template_selection_modal(ctx: &egui::Context, state: &mut ConfigFileSt
                     &mut cols[i % STARTUP_COLUMNS_TEMPLATES],
                     None,
                     &template.metadata.title,
-                    &template.metadata.desc.clone().unwrap_or("No description".to_string()),
+                    &template
+                        .metadata
+                        .desc
+                        .clone()
+                        .unwrap_or("No description".to_string()),
                     STARTUP_CARD_TEMPLATE_HEIGHT,
                 ) {
                     load_template(state, template);

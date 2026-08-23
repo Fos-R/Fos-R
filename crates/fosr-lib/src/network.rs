@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::net::Ipv4Addr;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::str::FromStr;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Name of the synthetic Internet network.
 pub const INTERNET_NETWORK_NAME: &str = "Internet";
@@ -536,7 +536,6 @@ pub fn reversibly_import_network(config_string: &str) -> ConfigurationYaml {
     log::trace!("Configuration: {config:?}");
     config
 }
-
 
 // #[cfg(test)]
 // mod tests {

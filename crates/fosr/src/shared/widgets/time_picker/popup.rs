@@ -151,7 +151,7 @@ impl TimePickerPopup<'_> {
                 TimeFrame::Second => second_rect,
             };
             if let Some(rect) = active_rect {
-                let stroke = egui::Stroke::new(1.5, ui.visuals().selection.stroke.color);
+                let stroke = egui::Stroke::new(1.5_f32, ui.visuals().selection.stroke.color);
                 ui.painter()
                     .rect_stroke(rect.expand(1.0), 2.0, stroke, egui::StrokeKind::Outside);
             }

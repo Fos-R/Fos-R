@@ -89,7 +89,7 @@ pub fn run_export(
         .open(&outfile)
         .expect("Error opening or creating file");
     let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
-    log::trace!("Saving into {}", &outfile);
+    log::trace!("Saving into {}", outfile);
 
     if order_pcap {
         let mut all_packets: Vec<Packet> = vec![];
