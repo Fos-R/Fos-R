@@ -327,7 +327,7 @@ fn generate_pcap(
                 s4,
                 jobs,
                 Arc::new(stats::Stats::new(target)),
-            );
+            )?;
         }
         cmd::GenerationProfile::Auto if duration <= Duration::from_secs(24 * 60 * 60) => {
             run_fast(
@@ -341,7 +341,7 @@ fn generate_pcap(
                 s4,
                 jobs,
                 Arc::new(stats::Stats::new(target)),
-            );
+            )?;
         }
         cmd::GenerationProfile::Efficient | cmd::GenerationProfile::Auto => {
             let (s2_count, s3_count, s4_count) = (
@@ -361,7 +361,7 @@ fn generate_pcap(
                 (s4, s4_count),
                 Arc::new(stats::Stats::new(target)),
                 None::<InjectParam<inject::DummyNetEnabler>>,
-            );
+            )?;
         }
     };
     Ok(())
@@ -525,7 +525,7 @@ fn run_efficient<T: inject::NetEnabler>(
     s4: (stage4::Stage4, usize),
     stats: Arc<stats::Stats>,
     #[allow(unused)] s5net: Option<InjectParam<T>>,
-) {
+) -> Result<(), String> {
     log::debug!("Generation with \"efficient\" profile");
     let (s2, s2_count) = s2;
     let (s3, s3_count) = s3;
@@ -583,7 +583,7 @@ fn run_efficient<T: inject::NetEnabler>(
                 .spawn(move || {
                     let _ = stage1::run_channel(s1, tx_s1, stats_s1);
                 })
-                .unwrap(),
+                .map_err(|e| e.to_string())?,
         );
 
         // STAGE 1
@@ -599,7 +599,7 @@ fn run_efficient<T: inject::NetEnabler>(
                     .spawn(move || {
                         let _ = stage2::run_channel(s2, rx_s2, tx_s2, stats);
                     })
-                    .unwrap(),
+                    .map_err(|e| e.to_string())?,
             );
         }
 
@@ -616,7 +616,7 @@ fn run_efficient<T: inject::NetEnabler>(
                     .spawn(move || {
                         let _ = stage3::run_channel(s3, rx_s3, tx_s3, stats);
                     })
-                    .unwrap(),
+                    .map_err(|e| e.to_string())?,
             );
         }
 
@@ -651,7 +651,7 @@ fn run_efficient<T: inject::NetEnabler>(
                                         do_export,
                                     );
                                 })
-                                .unwrap(),
+                                .map_err(|e| e.to_string())?,
                         );
                     }
                     L4Proto::UDP => {
@@ -669,7 +669,7 @@ fn run_efficient<T: inject::NetEnabler>(
                                         do_export,
                                     );
                                 })
-                                .unwrap(),
+                                .map_err(|e| e.to_string())?,
                         );
                     }
                     L4Proto::ICMP => {
@@ -687,7 +687,7 @@ fn run_efficient<T: inject::NetEnabler>(
                                         do_export,
                                     );
                                 })
-                                .unwrap(),
+                                .map_err(|e| e.to_string())?,
                         );
                     }
                 }
@@ -702,14 +702,14 @@ fn run_efficient<T: inject::NetEnabler>(
                 .spawn(move || {
                     export::run_export(rx_pcap, &export.outfile, export.order_pcap);
                 })
-                .unwrap()
+                .map_err(|e| e.to_string())?
         } else {
             // if there is no export, we still need to consume the packets
             builder
                 .spawn(move || {
                     export::run_dummy_export(rx_pcap);
                 })
-                .unwrap()
+                .map_err(|e| e.to_string())?
         });
 
         // STAGE 4 (injection mode only)
@@ -727,7 +727,7 @@ fn run_efficient<T: inject::NetEnabler>(
                             inject::start_reliable(s5net.net_enabler, rx_s5, stats)
                         }
                     })
-                    .unwrap(),
+                    .map_err(|e| e.to_string())?,
             );
         }
     }
@@ -738,7 +738,7 @@ fn run_efficient<T: inject::NetEnabler>(
         threads.push(
             builder
                 .spawn(move || stats::show_progression(stats))
-                .unwrap(),
+                .map_err(|e| e.to_string())?,
         );
     }
 
@@ -761,6 +761,7 @@ fn run_efficient<T: inject::NetEnabler>(
     for thread in threads {
         thread.join().unwrap();
     }
+    Ok(())
 }
 
 /// Run the generation with very little contention, but the generated dataset must fit in RAM.
@@ -773,7 +774,7 @@ fn run_fast(
     s4: stage4::Stage4,
     jobs: usize,
     stats: Arc<stats::Stats>,
-) {
+) -> Result<(), String> {
     log::debug!("Generation with \"fast\" profile");
     // TODO: remettre "stats", ctrlc, etc.
     let start = Instant::now();
@@ -872,7 +873,7 @@ fn run_fast(
             pkt_number += 1;
             pcap_writer
                 .write_packet(&PcapPacket::new(packet.timestamp, len as u32, &packet.data))
-                .unwrap();
+                .map_err(|e| e.to_string())?;
         }
         log::info!(
             "Generation throughput: {}/s, {:.3}/MPPS",
@@ -880,4 +881,5 @@ fn run_fast(
             ((pkt_number as f64) / (1_000_000f64 * gen_duration))
         );
     }
+    Ok(())
 }
