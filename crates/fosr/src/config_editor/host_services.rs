@@ -7,6 +7,7 @@ use crate::shared::widgets::multi_select_picker::multi_select_picker;
 use eframe::egui;
 use fosr_lib::network::InterfaceYaml;
 use fosr_lib::structs::L7Proto;
+use std::str::FromStr;
 
 /// Splits "name:port" into ("name", Some(port))
 fn parse_service(s: &str) -> (String, Option<u16>) {
@@ -28,7 +29,7 @@ fn format_service(name: &str, port: Option<u16>) -> String {
 
 /// Look up the default port for a known service name via L7Proto.
 fn default_port_for_service(name: &str) -> u16 {
-    L7Proto::try_from(name.to_string())
+    L7Proto::from_str(name)
         .map(|p| p.get_default_port())
         .unwrap_or(PORT_UNSPECIFIED)
 }
