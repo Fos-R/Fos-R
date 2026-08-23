@@ -25,7 +25,7 @@ use web_time::Instant;
 pub const INTERNET_NODE_IP: Ipv4Addr = Ipv4Addr::new(0, 0, 0, 1);
 
 /// Sentinel `net_idx` in `node_to_host` indicating the host lives in
-/// `ConfigurationYaml.internet` rather than `ConfigurationYaml.networks[i]`.
+/// `NetworkYaml.internet` rather than `NetworkYaml.networks[i]`.
 pub const INTERNET_HOST_SENTINEL: usize = usize::MAX;
 
 /// Synthetic cluster key for the fallback Internet node when no Internet subnet exists.
@@ -306,7 +306,7 @@ impl NetworkData {
     /// Creates nodes for each host (including Internet subnet hosts),
     /// adds a synthetic Internet node for fallback communications,
     /// lays them out according to `mode`, and connects edges.
-    pub fn from_config(config: &network::Configuration, mode: SubnetDisplayMode) -> Self {
+    pub fn from_config(config: &network::Network, mode: SubnetDisplayMode) -> Self {
         let mut data = Self::default();
         let has_internet_hosts = data.add_host_nodes(config);
         data.add_internet_node(has_internet_hosts);
@@ -322,8 +322,8 @@ impl NetworkData {
     /// Hosts are identified by a `(net_idx, host_idx)` tuple stored in `node_to_host`,
     /// so the node modal can look up the corresponding `HostYaml` later.
     /// Internet hosts use [`INTERNET_HOST_SENTINEL`] as `net_idx` so the modal knows
-    /// to look in `ConfigurationYaml.internet` instead of `networks`.
-    fn add_host_nodes(&mut self, config: &network::Configuration) -> bool {
+    /// to look in `NetworkYaml.internet` instead of `networks`.
+    fn add_host_nodes(&mut self, config: &network::Network) -> bool {
         let mut has_internet_hosts = false;
 
         for (net_idx, network) in config.networks.iter().enumerate() {
@@ -560,7 +560,7 @@ impl NetworkData {
     }
 
     /// Add edges between users and servers per service, plus edges to Internet.
-    fn add_edges(&mut self, config: &network::Configuration) {
+    fn add_edges(&mut self, config: &network::Network) {
         let internet_idx = self
             .ip_to_node
             .get(&INTERNET_NODE_IP)
@@ -689,7 +689,7 @@ pub struct VisualizationState {
 impl VisualizationState {
     /// Update state from a configuration (preserves some state).
     /// Note: caller should stop visualization before calling this if running.
-    pub fn update_from_config(&mut self, config: &network::Configuration) {
+    pub fn update_from_config(&mut self, config: &network::Network) {
         let mode = self.subnet_mode;
         self.network = NetworkData::from_config(config, mode);
         self.network.set_subnet_mode(mode);

@@ -15,7 +15,7 @@ pub const INTERNET_NETWORK_NAME: &str = "Internet";
 /// The configuration file of the network and the hosts
 /// TODO: clean useless attributes
 #[derive(Debug)]
-pub struct Configuration {
+pub struct Network {
     /// The metadata of the configuration
     pub metadata: Metadata,
 
@@ -51,7 +51,7 @@ pub struct Configuration {
     users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
 }
 
-impl Configuration {
+impl Network {
     /// Get all hosts in the configuration.
     pub fn get_hosts(&self) -> Vec<&Host> {
         let out: Vec<&Host> = self.networks.iter().flat_map(|n| n.hosts.iter()).collect();
@@ -181,24 +181,24 @@ pub fn next_ui_id() -> u64 {
 /// This is the shared model used for both parsing and serializing config files.
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigurationYaml {
+pub struct NetworkYaml {
     pub metadata: Metadata,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub networks: Vec<NetworkYaml>,
+    pub networks: Vec<SubNetworkYaml>,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub internet: Vec<HostYaml>,
 }
 
-impl ConfigurationYaml {
+impl NetworkYaml {
     /// Get total number of hosts across all networks and internet.
     pub fn count_hosts(&self) -> usize {
         self.networks.iter().map(|n| n.hosts.len()).sum::<usize>() + self.internet.len()
     }
 
     /// Add a new network to the configuration.
-    pub fn add_network(&mut self, network: NetworkYaml) {
+    pub fn add_network(&mut self, network: SubNetworkYaml) {
         self.networks.insert(0, network);
     }
 
@@ -212,7 +212,7 @@ impl ConfigurationYaml {
 
 /// YAML-level network representation.
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct NetworkYaml {
+pub struct SubNetworkYaml {
     // This is not serialized in YAML, but created on deserialization as a
     // unique ID to be used in the GUI to uniquely identify UI elements.
     #[serde(skip, default = "next_ui_id")]
@@ -288,8 +288,8 @@ pub struct InterfaceYaml {
     pub uses: Option<Vec<String>>,
 }
 
-impl From<ConfigurationYaml> for Configuration {
-    fn from(c: ConfigurationYaml) -> Self {
+impl From<NetworkYaml> for Network {
+    fn from(c: NetworkYaml) -> Self {
         // Convert YAML structs to runtime structs
         let internet: Vec<Host> = c.internet.into_iter().map(Host::from).collect();
         let networks_yaml = c.networks;
@@ -412,7 +412,7 @@ impl From<ConfigurationYaml> for Configuration {
             hosts: internet,
         });
 
-        Configuration {
+        Network {
             metadata: c.metadata,
             networks: all_networks,
             os_map,
@@ -519,21 +519,21 @@ impl TryFrom<InterfaceYaml> for Interface {
 
 /// Import a configuration from a string. The string can be either in JSON or YAML format (the
 /// truth is that YAML is a superset of JSON).
-pub fn import_network(config_string: &str) -> Configuration {
-    let config: Configuration = serde_yaml::from_str::<ConfigurationYaml>(config_string)
+pub fn import_network(config_string: &str) -> Network {
+    let config: Network = serde_yaml::from_str::<NetworkYaml>(config_string)
         .expect("Cannot parse the configuration file")
         .into();
     log::info!("\"{}\" successfully loaded", config.metadata.title);
-    log::trace!("Configuration: {config:?}");
+    log::trace!("Network: {config:?}");
     config
 }
 
 /// Import a configuration from a string.
-pub fn reversibly_import_network(config_string: &str) -> ConfigurationYaml {
-    let config: ConfigurationYaml = serde_yaml::from_str::<ConfigurationYaml>(config_string)
+pub fn reversibly_import_network(config_string: &str) -> NetworkYaml {
+    let config: NetworkYaml = serde_yaml::from_str::<NetworkYaml>(config_string)
         .expect("Cannot parse the configuration file");
     log::info!("\"{}\" successfully loaded", config.metadata.title);
-    log::trace!("Configuration: {config:?}");
+    log::trace!("Network: {config:?}");
     config
 }
 

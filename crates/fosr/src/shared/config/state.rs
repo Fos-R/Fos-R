@@ -1,6 +1,6 @@
 //! Configuration file state management.
 
-use fosr_lib::network::ConfigurationYaml;
+use fosr_lib::network::NetworkYaml;
 use rfd::FileHandle;
 #[cfg(target_arch = "wasm32")]
 use std::sync::mpsc::Receiver;
@@ -21,7 +21,7 @@ pub struct ConfigFileState {
     pub config_file_content: Option<String>,
     #[cfg(target_arch = "wasm32")]
     pub config_file_content_receiver: Option<Receiver<Result<String, String>>>,
-    pub config_model: Option<ConfigurationYaml>,
+    pub config_model: Option<NetworkYaml>,
     pub config_error: Option<String>,
     /// Whether the user has chosen a configuration (default or imported).
     /// When false, the startup modal is shown.
@@ -36,7 +36,7 @@ pub struct ConfigFileState {
     pub modal_state: StartupModalStep,
     /// The ID of the currently loaded template, if any.
     pub loaded_template_id: Option<String>,
-    pub all_templates: Vec<ConfigurationYaml>,
+    pub all_templates: Vec<NetworkYaml>,
 }
 
 impl Default for ConfigFileState {

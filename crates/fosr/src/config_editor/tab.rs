@@ -1,4 +1,4 @@
-//! Configuration tab: toggles between visual mode and YAML editor.
+//! Network tab: toggles between visual mode and YAML editor.
 
 use crate::config_editor::state::ConfigurationTabState;
 use crate::config_editor::toolbar::render_configuration_toolbar;
@@ -12,7 +12,7 @@ use crate::shared::widgets::helpers::{
 };
 use eframe::egui;
 use egui_material_icons::icons::ICON_WARNING;
-use fosr_lib::network::ConfigurationYaml;
+use fosr_lib::network::NetworkYaml;
 
 /// The main tab component
 pub fn render_configuration_tab(
@@ -94,7 +94,7 @@ fn render_parse_error_banner(ui: &mut egui::Ui, state: &ConfigFileState) {
 }
 
 /// Metadata rendering
-fn render_metadata_section(ui: &mut egui::Ui, model: &mut ConfigurationYaml) {
+fn render_metadata_section(ui: &mut egui::Ui, model: &mut NetworkYaml) {
     ui.add_space(SPACING_MD);
 
     // Title
