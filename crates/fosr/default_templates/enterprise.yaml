@@ -20,9 +20,6 @@ networks:
             services:
               - https:443
               - http:80
-            uses:
-              - https
-              - ssh
           - ip_addr: 10.0.0.10
             mac_addr: 00:14:2A:3F:10:02
 
@@ -43,8 +40,6 @@ networks:
             mac_addr: 00:14:2A:3F:10:04
             services:
               - smtp:587
-            uses:
-              - smtp
 
   # ==================== APPLICATION SUBNET ====================
   - subnet: 192.168.20.0
@@ -60,8 +55,6 @@ networks:
             services:
               - https:443
               - http:80
-            uses:
-              - https
 
       - hostname: app-api-backend
         os: Linux
@@ -71,8 +64,6 @@ networks:
             mac_addr: 00:14:2A:3F:20:03
             services:
               - https:8443
-            uses:
-              - https
 
   # ==================== DATABASE SUBNET ====================
   - subnet: 192.168.30.0
@@ -87,8 +78,6 @@ networks:
             mac_addr: 00:14:2A:3F:30:01
             services:
               - https:5432
-            uses:
-              - https
           - ip_addr: 10.0.20.10
             mac_addr: 00:14:2A:3F:30:02
             services:
@@ -102,8 +91,6 @@ networks:
             mac_addr: 00:14:2A:3F:30:03
             services:
               - https:5432
-            uses:
-              - https
 
   # ==================== USER SUBNET ====================
   - subnet: 192.168.50.0
@@ -116,11 +103,6 @@ networks:
         interfaces:
           - ip_addr: 192.168.50.100
             mac_addr: AA:BB:CC:DD:EE:01
-            uses:
-              - ssh
-              - https
-              - smtp
-              - dns
 
       - hostname: dev-workstation-01
         os: Linux
@@ -128,11 +110,6 @@ networks:
         interfaces:
           - ip_addr: 192.168.50.101
             mac_addr: AA:BB:CC:DD:EE:02
-            uses:
-              - ssh
-              - https
-              - http
-              - dns
 
       - hostname: dev-workstation-02
         os: Linux
@@ -140,8 +117,3 @@ networks:
         interfaces:
           - ip_addr: 192.168.50.102
             mac_addr: AA:BB:CC:DD:EE:03
-            uses:
-              - ssh
-              - https
-              - http
-              - dns

@@ -20,10 +20,6 @@ networks:
             services:
               - https:443
               - http:80
-            uses:
-              - https
-              - http
-              - dns
 
       - hostname: lb-secondary
         os: Linux
@@ -34,10 +30,6 @@ networks:
             services:
               - https:443
               - http:80
-            uses:
-              - https
-              - http
-              - dns
 
   # ==================== WEB SERVER TIER ====================
   - subnet: 10.0.2.0
@@ -53,9 +45,6 @@ networks:
             services:
               - https:443
               - http:80
-            uses:
-              - https
-              - http
 
       - hostname: web-server-02
         os: Linux
@@ -66,9 +55,6 @@ networks:
             services:
               - https:443
               - http:80
-            uses:
-              - https
-              - http
 
       - hostname: web-server-03
         os: Linux
@@ -79,9 +65,6 @@ networks:
             services:
               - https:443
               - http:80
-            uses:
-              - https
-              - http
 
   # ==================== APPLICATION TIER ====================
   - subnet: 10.0.3.0
@@ -97,9 +80,6 @@ networks:
             services:
               - https:8443
               - ssh:22
-            uses:
-              - https
-              - ssh
 
       - hostname: app-server-02
         os: Linux
@@ -110,9 +90,6 @@ networks:
             services:
               - https:8443
               - ssh:22
-            uses:
-              - https
-              - ssh
 
   # ==================== DATABASE TIER ====================
   - subnet: 10.0.4.0
@@ -128,9 +105,6 @@ networks:
             services:
               - https:5432
               - ssh:22
-            uses:
-              - https
-              - ssh
 
       - hostname: db-replica-01
         os: Linux
@@ -140,8 +114,6 @@ networks:
             mac_addr: 00:14:2A:3F:04:02
             services:
               - https:5432
-            uses:
-              - https
 
       - hostname: db-replica-02
         os: Linux
@@ -151,8 +123,6 @@ networks:
             mac_addr: 00:14:2A:3F:04:03
             services:
               - https:5432
-            uses:
-              - https
 
   # ==================== CACHE TIER ====================
   - subnet: 10.0.5.0
@@ -167,8 +137,6 @@ networks:
             mac_addr: 00:14:2A:3F:05:01
             services:
               - https:6379
-            uses:
-              - https
 
   # ==================== MONITORING ====================
   - subnet: 10.0.6.0
@@ -184,10 +152,6 @@ networks:
             services:
               - https:9090
               - ssh:22
-            uses:
-              - https
-              - ssh
-              - dns
 
   # ==================== DNS ====================
   - subnet: 10.0.7.0
@@ -202,6 +166,3 @@ networks:
             mac_addr: 00:14:2A:3F:07:01
             services:
               - dns:53
-            uses:
-              - https
-              - dns
