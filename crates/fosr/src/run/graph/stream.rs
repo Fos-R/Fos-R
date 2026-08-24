@@ -298,17 +298,14 @@ impl FlowStreamer {
         sender: Sender<FlowEvent>,
     ) -> Result<Self, String> {
         let source = models::ModelsSource::CUPID;
-        let mut model = models::Models::from_source(&source)
-            .map_err(|e| format!("Failed to load models: {}", e))?;
-
-        if let Some(config) = config_content {
-            model = model
-                .with_string_network(config)
-                .map_err(|e| format!("Failed to apply config: {}", e))?;
-            log::info!("FlowStreamer: config applied");
-        } else {
-            log::info!("FlowStreamer: using default BN model (no config)");
-        }
+        let model =
+            if let Some(config) = config_content {
+                models::Models::from_source_with_string_network(&source, config)
+                    .map_err(|e| format!("Failed to load ML models: {}", e))?
+            } else {
+                models::Models::from_source(&source)
+                    .map_err(|e| format!("Failed to load ML models: {}", e))?
+            };
 
         let _automata_library = Arc::new(model.automata);
         let bn = Arc::new(model.bn);
