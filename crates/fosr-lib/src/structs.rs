@@ -210,6 +210,7 @@ pub enum OS {
 }
 
 impl Display for OS {
+    // TODO: strum
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             OS::Linux => write!(f, "Linux"),

@@ -30,8 +30,6 @@ pub struct Network {
     /// A hashmap that maps an IP to an OS (if it is defined in the config file)
     pub os_map: HashMap<Ipv4Addr, OS>,
 
-    // /// The usages of each IP address
-    // pub usages_map: HashMap<Ipv4Addr, f64>,
     /// The list of "users" IPs
     pub users: Vec<Ipv4Addr>,
 
@@ -131,9 +129,6 @@ pub struct Host {
 
     /// Its OS
     pub os: OS,
-
-    // /// Its usage. 1 is standard, less than 1 is less usage than standard, more than 1 is more usage than standrad
-    // pub usage: f64,
 
     // client: Option<Vec<L7Proto>>, // we keep the option here, because there is a difference
     // between an empty list (no service is used) and nothing
@@ -244,7 +239,6 @@ pub struct HostYaml {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub os: Option<OS>,
 
-    // usage: Option<f64>,
     // client: Option<Vec<L7Proto>>,
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub host_type: Option<HostType>,
@@ -324,7 +318,6 @@ impl From<NetworkYaml> for Network {
             .flatten()
             .collect();
         let mut os_map: HashMap<Ipv4Addr, OS> = HashMap::new();
-        // let mut usages_map: HashMap<Ipv4Addr, f64> = HashMap::new();
         for host in networks
             .iter()
             .flat_map(|n| n.hosts.iter())
@@ -332,7 +325,6 @@ impl From<NetworkYaml> for Network {
         {
             for interface in host.interfaces.iter() {
                 os_map.insert(interface.ip_addr, host.os);
-                // usages_map.insert(interface.ip_addr, host.usage);
             }
         }
 
@@ -416,7 +408,6 @@ impl From<NetworkYaml> for Network {
             metadata: c.metadata,
             networks: all_networks,
             os_map,
-            // usages_map,
             // mac_addr_map,
             users,
             servers,
@@ -444,7 +435,6 @@ impl From<HostYaml> for Host {
         Host {
             hostname: h.hostname,
             os: h.os.unwrap_or(OS::Linux),
-            // usage: h.usage.unwrap_or(1.0),
             host_type,
             interfaces: h
                 .interfaces
@@ -575,7 +565,6 @@ pub fn reversibly_import_network(config_string: &str) -> NetworkYaml {
 // hosts:
 //   - hostname: host1 # Optional. The hostname of the host.
 //     os: Linux # Optional (default value: Linux). The OS of the host
-//     usage: 0.8 # Optional (default value: 1.0). The usage intensity of the host. 1 is the baseline, < 1 means less usage than usual, and > 1 means higher usage
 //     type: server  # Optional (default value: "server" if there is at least one service, "user" otherwise). Whether this host is used by a user and is a server. Can be either "server" or "user"
 //     client: # Optional (default value: all available services if type is "user", none otherwise). Specify what services the host is a client of.
 //         - http
@@ -613,7 +602,6 @@ pub fn reversibly_import_network(config_string: &str) -> NetworkYaml {
 //         {
 //             "hostname": "host1",
 //             "os": "Linux",
-//             "usage": 0.8,
 //             "type": "server",
 //             "client": [
 //                 "http",

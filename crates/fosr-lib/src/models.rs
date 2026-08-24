@@ -41,21 +41,27 @@ impl Models {
         })
     }
 
-    pub fn with_network(mut self, path: &str) -> Result<Self, String> {
+    pub fn from_source_with_network(source: &ModelsSource, path: &str) -> Result<Self, String> {
         let network = network::import_network(
             &fs::read_to_string(Path::new(path))
                 .map_err(|e| format!("Cannot open the network file: {e}"))?,
         );
-        // FIXME
-        // self.bn.apply_network(&network)?;
-        Ok(self)
+        let m = Models {
+            automata: stage3::tadam::AutomataLibrary::from_source(&source)?,
+            bn: stage2::bayesian_networks::BayesianModel::from_source_with_network(&source, &network)?,
+            time_bins: stage1::TimeModel::from_source(&source)?,
+        };
+        Ok(m)
     }
 
-    pub fn with_string_network(mut self, network: &str) -> Result<Self, String> {
+    pub fn from_source_with_string_network(source: &ModelsSource, network: &str) -> Result<Self, String> {
         let network = network::import_network(network);
-        // FIXME
-        // self.bn.apply_network(&network)?;
-        Ok(self)
+        let m = Models {
+            automata: stage3::tadam::AutomataLibrary::from_source(&source)?,
+            bn: stage2::bayesian_networks::BayesianModel::from_source_with_network(&source, &network)?,
+            time_bins: stage1::TimeModel::from_source(&source)?,
+        };
+        Ok(m)
     }
 }
 
@@ -456,6 +462,60 @@ impl ModelsSource {
             }
         }
     }
+
+    pub(crate) fn get_tl_bn(&self) -> std::io::Result<String> {
+        match &self {
+            #[cfg(feature = "models_cicids17")]
+            ModelsSource::CICIDS17 => Ok(
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/cicids17/bn/bn_tl.bifxml").to_string(),
+                #[cfg(not(debug_assertions))]
+                {
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/cicids17/bn/bn_tl.bifxml",
+                        1
+                    ))
+                    .unwrap()
+                },
+            ),
+
+            #[cfg(feature = "models_cupid")]
+            ModelsSource::CUPID => Ok(
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/cupid/bn/bn_tl.bifxml").to_string(),
+                #[cfg(not(debug_assertions))]
+                {
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/cupid/bn/bn_tl.bifxml",
+                        1
+                    ))
+                    .unwrap()
+                },
+            ),
+
+            #[cfg(feature = "models_dedale")]
+            ModelsSource::DEDALE => Ok(
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/dedale/bn/bn_tl.bifxml").to_string(),
+                #[cfg(not(debug_assertions))]
+                {
+                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                        "default_models/dedale/bn/bn_tl.bifxml",
+                        1
+                    ))
+                    .unwrap()
+                },
+            ),
+
+            ModelsSource::UserDefined(path) => {
+                let p = Path::new(path);
+                Ok(fs::read_to_string(
+                    p.join("bn/bn_tl.bifxml").to_str().unwrap(),
+                )?)
+            }
+        }
+    }
+
 
     pub(crate) fn get_bn(&self) -> std::io::Result<String> {
         match &self {
