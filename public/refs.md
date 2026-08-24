@@ -22,7 +22,7 @@ The following software have been created for Fos-R:
 
 # Contributors
 
-- Inria: Pierre-François Gimenez, Adrien Schoen
+- Inria: Pierre-François Gimenez, Adrien Schoen, Pol Jaouen
 - CISPA: Lénaïg Cornanguer, Joscha Cüppers
 - CentraleSupélec: Dorian Bachelot, Evan Morin, Florentin Labelle, Samuel Cordon, Quentin Blin
 
