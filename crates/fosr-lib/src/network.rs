@@ -25,7 +25,7 @@ pub struct Network {
     pub networks: Vec<SubNetwork>,
 
     /// A hashmap that maps an IP to a MAC address (if it is defined in the config file)
-    // pub mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
+    pub mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
 
     /// A hashmap that maps an IP to an OS (if it is defined in the config file)
     pub os_map: HashMap<Ipv4Addr, OS>,
@@ -45,8 +45,8 @@ pub struct Network {
     /// The list of servers that provide each service
     servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
 
-    /// The list of users that use each service
-    users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
+    // /// The list of users that use each service
+    // users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
 }
 
 impl Network {
@@ -64,13 +64,13 @@ impl Network {
             .clone()
     }
 
-    /// Get the list of users that use a service
-    pub fn get_users_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
-        self.users_per_service
-            .get(service)
-            .unwrap_or(&vec![])
-            .clone()
-    }
+    // /// Get the list of users that use a service
+    // pub fn get_users_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
+    //     self.users_per_service
+    //         .get(service)
+    //         .unwrap_or(&vec![])
+    //         .clone()
+    // }
 }
 
 /// A network in the simulation, containing resolved hosts.
@@ -160,8 +160,8 @@ pub struct Interface {
     pub ip_addr: Ipv4Addr,
     /// The open ports of services, if they are not the default one
     pub open_ports: HashMap<L7Proto, u16>,
-    /// The services it uses (may be empty)
-    pub uses: Option<Vec<L7Proto>>,
+    // /// The services it uses (may be empty)
+    // pub uses: Option<Vec<L7Proto>>,
 }
 
 /// Global counter for stable UI identifiers (not serialized to YAML).
@@ -278,8 +278,8 @@ pub struct InterfaceYaml {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub services: Option<Vec<String>>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub uses: Option<Vec<String>>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub uses: Option<Vec<String>>,
 }
 
 impl From<NetworkYaml> for Network {
@@ -328,7 +328,7 @@ impl From<NetworkYaml> for Network {
             }
         }
 
-        // let mut mac_addr_map: HashMap<Ipv4Addr, MacAddr> = HashMap::new();
+        let mut mac_addr_map: HashMap<Ipv4Addr, MacAddr> = HashMap::new();
         let mut services: HashSet<L7Proto> = HashSet::new();
         let mut servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
         let mut users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
@@ -338,9 +338,9 @@ impl From<NetworkYaml> for Network {
             .iter()
             .chain(networks.iter().flat_map(|n| n.hosts.iter()));
         for interface in all_hosts.flat_map(|h| &h.interfaces) {
-            // if let Some(mac_addr) = interface.mac_addr {
-            //     mac_addr_map.insert(interface.ip_addr, mac_addr);
-            // }
+            if let Some(mac_addr) = interface.mac_addr {
+                mac_addr_map.insert(interface.ip_addr, mac_addr);
+            }
             for k in interface.open_ports.keys() {
                 open_ports.insert(
                     (interface.ip_addr, *k),
@@ -358,24 +358,24 @@ impl From<NetworkYaml> for Network {
             .iter()
             .chain(networks.iter().flat_map(|n| n.hosts.iter()));
         for host in all_hosts {
-            for i in &host.interfaces {
-                if let Some(client) = &i.uses {
-                    // if a list is defined, then this host will only use these services
-                    for s in client {
-                        if services.contains(s) {
-                            for interface in host.interfaces.iter() {
-                                users_per_service
-                                    .entry(*s)
-                                    .or_default()
-                                    .push(interface.ip_addr);
-                            }
-                        } else {
-                            log::warn!(
-                                "There is a client of {s:?}, but that service is not proposed by any server"
-                            );
-                        }
-                    }
-                } else {
+            // for i in &host.interfaces {
+                // if let Some(client) = &i.uses {
+                //     // if a list is defined, then this host will only use these services
+                //     for s in client {
+                //         if services.contains(s) {
+                //             for interface in host.interfaces.iter() {
+                //                 users_per_service
+                //                     .entry(*s)
+                //                     .or_default()
+                //                     .push(interface.ip_addr);
+                //             }
+                //         } else {
+                //             log::warn!(
+                //                 "There is a client of {s:?}, but that service is not proposed by any server"
+                //             );
+                //         }
+                //     }
+                // } else {
                     // otherwise, use all available services
                     for s in services.iter() {
                         for interface in host.interfaces.iter() {
@@ -385,8 +385,8 @@ impl From<NetworkYaml> for Network {
                                 .push(interface.ip_addr)
                         }
                     }
-                }
-            }
+                // }
+            // }
         }
 
         for service in services.iter() {
@@ -408,12 +408,12 @@ impl From<NetworkYaml> for Network {
             metadata: c.metadata,
             networks: all_networks,
             os_map,
-            // mac_addr_map,
+            mac_addr_map,
             users,
             servers,
             services: services.into_iter().collect(),
             servers_per_service,
-            users_per_service,
+            // users_per_service,
             open_ports,
         }
     }
@@ -470,19 +470,19 @@ impl TryFrom<InterfaceYaml> for Interface {
             }
             services.push(service);
         }
-        let uses = match i.uses {
-            None => None,
-            Some(l) => {
-                let mut uses = vec![];
-                for s in l {
-                    let v: Vec<String> = s.as_str().split(':').map(ToString::to_string).collect();
-                    assert!(!v.is_empty() && v.len() <= 2);
-                    let service: L7Proto = L7Proto::from_str(&v[0])?;
-                    uses.push(service);
-                }
-                Some(uses)
-            }
-        };
+        // let uses = match i.uses {
+        //     None => None,
+        //     Some(l) => {
+        //         let mut uses = vec![];
+        //         for s in l {
+        //             let v: Vec<String> = s.as_str().split(':').map(ToString::to_string).collect();
+        //             assert!(!v.is_empty() && v.len() <= 2);
+        //             let service: L7Proto = L7Proto::from_str(&v[0])?;
+        //             uses.push(service);
+        //         }
+        //         Some(uses)
+        //     }
+        // };
 
         let mut rng = rand::rng();
         let ip_addr = match i.ip_addr.as_str() {
@@ -496,7 +496,7 @@ impl TryFrom<InterfaceYaml> for Interface {
             _ => i.ip_addr.parse().expect("Cannot parse IP address"),
         };
         Ok(Interface {
-            uses,
+            // uses,
             mac_addr: i
                 .mac_addr
                 .map(|s| s.parse().expect("Cannot parse MAC address")),
