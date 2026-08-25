@@ -1,0 +1,38 @@
+mask: 24
+name: st69
+nodes:
+- ip: 192.168.68.1
+  name: r69_1
+  type: router
+- ip: 192.168.68.2
+  name: n69_2
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.68.3
+  name: n69_3
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.68.4
+  name: n69_4
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.68.5
+  name: n69_5
+  os: linux
+  type: machine
+- ip: 192.168.68.6
+  name: n69_6
+  os: linux
+  type: machine
+- ip: 192.168.68.7
+  name: n69_7
+  os: windows
+  type: machine
+- ip: 192.168.68.8
+  name: n69_8
+  os: windows
+  type: machine
+subnet: 192.168.68.0

@@ -1,0 +1,29 @@
+mask: 24
+name: st21
+nodes:
+- ip: 192.168.20.1
+  name: r21_1
+  type: router
+- ip: 192.168.20.2
+  name: n21_2
+  os: linux
+  services: ftp_server
+  type: machine
+- ip: 192.168.20.3
+  name: n21_3
+  os: windows
+  type: machine
+- ip: 192.168.20.4
+  name: n21_4
+  os: windows
+  type: machine
+- ip: 192.168.20.5
+  name: n21_5
+  os: linux
+  type: machine
+- ip: 192.168.20.6
+  name: n21_6
+  os: windows
+  services: log_server
+  type: machine
+subnet: 192.168.20.0

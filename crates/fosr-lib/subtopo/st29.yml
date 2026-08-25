@@ -1,0 +1,42 @@
+mask: 24
+name: st29
+nodes:
+- ip: 192.168.28.1
+  name: r29_1
+  type: router
+- ip: 192.168.28.2
+  name: n29_2
+  os: linux
+  type: machine
+- ip: 192.168.28.3
+  name: n29_3
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.28.4
+  name: n29_4
+  os: windows
+  type: machine
+- ip: 192.168.28.5
+  name: n29_5
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.28.6
+  name: n29_6
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.28.7
+  name: n29_7
+  os: windows
+  type: machine
+- ip: 192.168.28.8
+  name: n29_8
+  os: windows
+  type: machine
+- ip: 192.168.28.9
+  name: n29_9
+  os: windows
+  type: machine
+subnet: 192.168.28.0

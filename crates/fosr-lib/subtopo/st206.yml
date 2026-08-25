@@ -1,0 +1,33 @@
+mask: 24
+name: st206
+nodes:
+- ip: 192.168.205.1
+  name: r206_1
+  type: router
+- ip: 192.168.205.2
+  name: n206_2
+  os: windows
+  type: machine
+- ip: 192.168.205.3
+  name: n206_3
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.205.4
+  name: n206_4
+  os: linux
+  type: machine
+- ip: 192.168.205.5
+  name: n206_5
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.205.6
+  name: n206_6
+  os: linux
+  type: machine
+- ip: 192.168.205.7
+  name: n206_7
+  os: windows
+  type: machine
+subnet: 192.168.205.0

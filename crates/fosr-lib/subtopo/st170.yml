@@ -1,0 +1,29 @@
+mask: 24
+name: st170
+nodes:
+- ip: 192.168.169.1
+  name: r170_1
+  type: router
+- ip: 192.168.169.2
+  name: n170_2
+  os: linux
+  type: machine
+- ip: 192.168.169.3
+  name: n170_3
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.169.4
+  name: n170_4
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.169.5
+  name: n170_5
+  os: windows
+  type: machine
+- ip: 192.168.169.6
+  name: n170_6
+  os: windows
+  type: machine
+subnet: 192.168.169.0

@@ -1,0 +1,25 @@
+mask: 24
+name: st197
+nodes:
+- ip: 192.168.196.1
+  name: r197_1
+  type: router
+- ip: 192.168.196.2
+  name: n197_2
+  os: windows
+  type: machine
+- ip: 192.168.196.3
+  name: n197_3
+  os: windows
+  type: machine
+- ip: 192.168.196.4
+  name: n197_4
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.196.5
+  name: n197_5
+  os: windows
+  services: log_server
+  type: machine
+subnet: 192.168.196.0

@@ -1,0 +1,25 @@
+mask: 24
+name: st6
+nodes:
+- ip: 192.168.5.1
+  name: r6_1
+  type: router
+- ip: 192.168.5.2
+  name: n6_2
+  os: linux
+  type: machine
+- ip: 192.168.5.3
+  name: n6_3
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.5.4
+  name: n6_4
+  os: linux
+  type: machine
+- ip: 192.168.5.5
+  name: n6_5
+  os: linux
+  services: ftp_server
+  type: machine
+subnet: 192.168.5.0

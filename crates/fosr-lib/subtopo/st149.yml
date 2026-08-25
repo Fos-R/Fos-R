@@ -1,0 +1,42 @@
+mask: 24
+name: st149
+nodes:
+- ip: 192.168.148.1
+  name: r149_1
+  type: router
+- ip: 192.168.148.2
+  name: n149_2
+  os: linux
+  type: machine
+- ip: 192.168.148.3
+  name: n149_3
+  os: windows
+  type: machine
+- ip: 192.168.148.4
+  name: n149_4
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.148.5
+  name: n149_5
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.148.6
+  name: n149_6
+  os: linux
+  type: machine
+- ip: 192.168.148.7
+  name: n149_7
+  os: windows
+  services: cms_server
+  type: machine
+- ip: 192.168.148.8
+  name: n149_8
+  os: linux
+  type: machine
+- ip: 192.168.148.9
+  name: n149_9
+  os: linux
+  type: machine
+subnet: 192.168.148.0

@@ -1,0 +1,29 @@
+mask: 24
+name: st46
+nodes:
+- ip: 192.168.45.1
+  name: r46_1
+  type: router
+- ip: 192.168.45.2
+  name: n46_2
+  os: linux
+  type: machine
+- ip: 192.168.45.3
+  name: n46_3
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.45.4
+  name: n46_4
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.45.5
+  name: n46_5
+  os: linux
+  type: machine
+- ip: 192.168.45.6
+  name: n46_6
+  os: linux
+  type: machine
+subnet: 192.168.45.0

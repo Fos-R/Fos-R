@@ -1,0 +1,39 @@
+mask: 24
+name: st76
+nodes:
+- ip: 192.168.75.1
+  name: r76_1
+  type: router
+- ip: 192.168.75.2
+  name: n76_2
+  os: linux
+  type: machine
+- ip: 192.168.75.3
+  name: n76_3
+  os: linux
+  type: machine
+- ip: 192.168.75.4
+  name: n76_4
+  os: windows
+  type: machine
+- ip: 192.168.75.5
+  name: n76_5
+  os: windows
+  type: machine
+- ip: 192.168.75.6
+  name: n76_6
+  os: linux
+  type: machine
+- ip: 192.168.75.7
+  name: n76_7
+  os: linux
+  type: machine
+- ip: 192.168.75.8
+  name: n76_8
+  os: windows
+  type: machine
+- ip: 192.168.75.9
+  name: n76_9
+  os: linux
+  type: machine
+subnet: 192.168.75.0

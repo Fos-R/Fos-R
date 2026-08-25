@@ -1,0 +1,30 @@
+mask: 24
+name: st55
+nodes:
+- ip: 192.168.54.1
+  name: r55_1
+  type: router
+- ip: 192.168.54.2
+  name: n55_2
+  os: windows
+  type: machine
+- ip: 192.168.54.3
+  name: n55_3
+  os: windows
+  services: cms_server
+  type: machine
+- ip: 192.168.54.4
+  name: n55_4
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.54.5
+  name: n55_5
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.54.6
+  name: n55_6
+  os: windows
+  type: machine
+subnet: 192.168.54.0

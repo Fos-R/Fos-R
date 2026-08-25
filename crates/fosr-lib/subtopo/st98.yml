@@ -1,0 +1,19 @@
+mask: 24
+name: st98
+nodes:
+- ip: 192.168.97.1
+  name: r98_1
+  type: router
+- ip: 192.168.97.2
+  name: n98_2
+  os: linux
+  type: machine
+- ip: 192.168.97.3
+  name: n98_3
+  os: windows
+  type: machine
+- ip: 192.168.97.4
+  name: n98_4
+  os: windows
+  type: machine
+subnet: 192.168.97.0

@@ -1,0 +1,28 @@
+mask: 24
+name: st12
+nodes:
+- ip: 192.168.11.1
+  name: r12_1
+  type: router
+- ip: 192.168.11.2
+  name: n12_2
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.11.3
+  name: n12_3
+  os: linux
+  type: machine
+- ip: 192.168.11.4
+  name: n12_4
+  os: linux
+  type: machine
+- ip: 192.168.11.5
+  name: n12_5
+  os: linux
+  type: machine
+- ip: 192.168.11.6
+  name: n12_6
+  os: windows
+  type: machine
+subnet: 192.168.11.0

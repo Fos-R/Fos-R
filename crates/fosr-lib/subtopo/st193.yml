@@ -1,0 +1,30 @@
+mask: 24
+name: st193
+nodes:
+- ip: 192.168.192.1
+  name: r193_1
+  type: router
+- ip: 192.168.192.2
+  name: n193_2
+  os: linux
+  type: machine
+- ip: 192.168.192.3
+  name: n193_3
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.192.4
+  name: n193_4
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.192.5
+  name: n193_5
+  os: linux
+  type: machine
+- ip: 192.168.192.6
+  name: n193_6
+  os: windows
+  services: ldap_server
+  type: machine
+subnet: 192.168.192.0

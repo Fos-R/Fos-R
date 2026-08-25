@@ -1,0 +1,42 @@
+mask: 24
+name: st80
+nodes:
+- ip: 192.168.79.1
+  name: r80_1
+  type: router
+- ip: 192.168.79.2
+  name: n80_2
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.79.3
+  name: n80_3
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.79.4
+  name: n80_4
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.79.5
+  name: n80_5
+  os: windows
+  type: machine
+- ip: 192.168.79.6
+  name: n80_6
+  os: linux
+  type: machine
+- ip: 192.168.79.7
+  name: n80_7
+  os: linux
+  type: machine
+- ip: 192.168.79.8
+  name: n80_8
+  os: linux
+  type: machine
+- ip: 192.168.79.9
+  name: n80_9
+  os: linux
+  type: machine
+subnet: 192.168.79.0

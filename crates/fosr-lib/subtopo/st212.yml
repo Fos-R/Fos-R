@@ -1,0 +1,44 @@
+mask: 24
+name: st212
+nodes:
+- ip: 192.168.211.1
+  name: r212_1
+  type: router
+- ip: 192.168.211.2
+  name: n212_2
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.211.3
+  name: n212_3
+  os: linux
+  type: machine
+- ip: 192.168.211.4
+  name: n212_4
+  os: windows
+  type: machine
+- ip: 192.168.211.5
+  name: n212_5
+  os: linux
+  type: machine
+- ip: 192.168.211.6
+  name: n212_6
+  os: linux
+  type: machine
+- ip: 192.168.211.7
+  name: n212_7
+  os: windows
+  type: machine
+- ip: 192.168.211.8
+  name: n212_8
+  os: linux
+  type: machine
+- ip: 192.168.211.9
+  name: n212_9
+  os: linux
+  type: machine
+- ip: 192.168.211.10
+  name: n212_10
+  os: linux
+  type: machine
+subnet: 192.168.211.0

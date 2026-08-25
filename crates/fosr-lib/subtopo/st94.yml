@@ -1,0 +1,42 @@
+mask: 24
+name: st94
+nodes:
+- ip: 192.168.93.1
+  name: r94_1
+  type: router
+- ip: 192.168.93.2
+  name: n94_2
+  os: windows
+  type: machine
+- ip: 192.168.93.3
+  name: n94_3
+  os: windows
+  type: machine
+- ip: 192.168.93.4
+  name: n94_4
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.93.5
+  name: n94_5
+  os: windows
+  type: machine
+- ip: 192.168.93.6
+  name: n94_6
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.93.7
+  name: n94_7
+  os: linux
+  type: machine
+- ip: 192.168.93.8
+  name: n94_8
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.93.9
+  name: n94_9
+  os: windows
+  type: machine
+subnet: 192.168.93.0

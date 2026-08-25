@@ -1,0 +1,25 @@
+mask: 24
+name: st66
+nodes:
+- ip: 192.168.65.1
+  name: r66_1
+  type: router
+- ip: 192.168.65.2
+  name: n66_2
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.65.3
+  name: n66_3
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.65.4
+  name: n66_4
+  os: windows
+  type: machine
+- ip: 192.168.65.5
+  name: n66_5
+  os: windows
+  type: machine
+subnet: 192.168.65.0

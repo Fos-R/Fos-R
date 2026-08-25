@@ -1,0 +1,25 @@
+mask: 24
+name: st150
+nodes:
+- ip: 192.168.149.1
+  name: r150_1
+  type: router
+- ip: 192.168.149.2
+  name: n150_2
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.149.3
+  name: n150_3
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.149.4
+  name: n150_4
+  os: windows
+  type: machine
+- ip: 192.168.149.5
+  name: n150_5
+  os: linux
+  type: machine
+subnet: 192.168.149.0

@@ -1,0 +1,20 @@
+mask: 24
+name: st127
+nodes:
+- ip: 192.168.126.1
+  name: r127_1
+  type: router
+- ip: 192.168.126.2
+  name: n127_2
+  os: linux
+  type: machine
+- ip: 192.168.126.3
+  name: n127_3
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.126.4
+  name: n127_4
+  os: linux
+  type: machine
+subnet: 192.168.126.0

@@ -1,0 +1,42 @@
+mask: 24
+name: st91
+nodes:
+- ip: 192.168.90.1
+  name: r91_1
+  type: router
+- ip: 192.168.90.2
+  name: n91_2
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.90.3
+  name: n91_3
+  os: linux
+  type: machine
+- ip: 192.168.90.4
+  name: n91_4
+  os: windows
+  type: machine
+- ip: 192.168.90.5
+  name: n91_5
+  os: linux
+  type: machine
+- ip: 192.168.90.6
+  name: n91_6
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.90.7
+  name: n91_7
+  os: windows
+  type: machine
+- ip: 192.168.90.8
+  name: n91_8
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.90.9
+  name: n91_9
+  os: linux
+  type: machine
+subnet: 192.168.90.0

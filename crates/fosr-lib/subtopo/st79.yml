@@ -1,0 +1,33 @@
+mask: 24
+name: st79
+nodes:
+- ip: 192.168.78.1
+  name: r79_1
+  type: router
+- ip: 192.168.78.2
+  name: n79_2
+  os: windows
+  type: machine
+- ip: 192.168.78.3
+  name: n79_3
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.78.4
+  name: n79_4
+  os: windows
+  type: machine
+- ip: 192.168.78.5
+  name: n79_5
+  os: windows
+  type: machine
+- ip: 192.168.78.6
+  name: n79_6
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.78.7
+  name: n79_7
+  os: linux
+  type: machine
+subnet: 192.168.78.0

@@ -1,0 +1,23 @@
+mask: 24
+name: st57
+nodes:
+- ip: 192.168.56.1
+  name: r57_1
+  type: router
+- ip: 192.168.56.2
+  name: n57_2
+  os: linux
+  type: machine
+- ip: 192.168.56.3
+  name: n57_3
+  os: linux
+  type: machine
+- ip: 192.168.56.4
+  name: n57_4
+  os: linux
+  type: machine
+- ip: 192.168.56.5
+  name: n57_5
+  os: linux
+  type: machine
+subnet: 192.168.56.0

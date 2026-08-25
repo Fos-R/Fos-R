@@ -1,0 +1,25 @@
+mask: 24
+name: st52
+nodes:
+- ip: 192.168.51.1
+  name: r52_1
+  type: router
+- ip: 192.168.51.2
+  name: n52_2
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.51.3
+  name: n52_3
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.51.4
+  name: n52_4
+  os: linux
+  type: machine
+- ip: 192.168.51.5
+  name: n52_5
+  os: windows
+  type: machine
+subnet: 192.168.51.0

@@ -1,0 +1,30 @@
+mask: 24
+name: st23
+nodes:
+- ip: 192.168.22.1
+  name: r23_1
+  type: router
+- ip: 192.168.22.2
+  name: n23_2
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.22.3
+  name: n23_3
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.22.4
+  name: n23_4
+  os: windows
+  type: machine
+- ip: 192.168.22.5
+  name: n23_5
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.22.6
+  name: n23_6
+  os: windows
+  type: machine
+subnet: 192.168.22.0

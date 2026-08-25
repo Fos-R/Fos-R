@@ -1,0 +1,46 @@
+mask: 24
+name: st231
+nodes:
+- ip: 192.168.230.1
+  name: r231_1
+  type: router
+- ip: 192.168.230.2
+  name: n231_2
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.230.3
+  name: n231_3
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.230.4
+  name: n231_4
+  os: linux
+  type: machine
+- ip: 192.168.230.5
+  name: n231_5
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.230.6
+  name: n231_6
+  os: linux
+  type: machine
+- ip: 192.168.230.7
+  name: n231_7
+  os: windows
+  type: machine
+- ip: 192.168.230.8
+  name: n231_8
+  os: windows
+  type: machine
+- ip: 192.168.230.9
+  name: n231_9
+  os: linux
+  type: machine
+- ip: 192.168.230.10
+  name: n231_10
+  os: linux
+  type: machine
+subnet: 192.168.230.0

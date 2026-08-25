@@ -1,0 +1,24 @@
+mask: 24
+name: st105
+nodes:
+- ip: 192.168.104.1
+  name: r105_1
+  type: router
+- ip: 192.168.104.2
+  name: n105_2
+  os: linux
+  type: machine
+- ip: 192.168.104.3
+  name: n105_3
+  os: linux
+  type: machine
+- ip: 192.168.104.4
+  name: n105_4
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.104.5
+  name: n105_5
+  os: windows
+  type: machine
+subnet: 192.168.104.0

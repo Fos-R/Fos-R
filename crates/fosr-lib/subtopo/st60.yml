@@ -1,0 +1,46 @@
+mask: 24
+name: st60
+nodes:
+- ip: 192.168.59.1
+  name: r60_1
+  type: router
+- ip: 192.168.59.2
+  name: n60_2
+  os: linux
+  type: machine
+- ip: 192.168.59.3
+  name: n60_3
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.59.4
+  name: n60_4
+  os: windows
+  type: machine
+- ip: 192.168.59.5
+  name: n60_5
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.59.6
+  name: n60_6
+  os: linux
+  type: machine
+- ip: 192.168.59.7
+  name: n60_7
+  os: windows
+  type: machine
+- ip: 192.168.59.8
+  name: n60_8
+  os: linux
+  type: machine
+- ip: 192.168.59.9
+  name: n60_9
+  os: linux
+  type: machine
+- ip: 192.168.59.10
+  name: n60_10
+  os: windows
+  services: dbms_server
+  type: machine
+subnet: 192.168.59.0

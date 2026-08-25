@@ -1,0 +1,37 @@
+mask: 24
+name: st194
+nodes:
+- ip: 192.168.193.1
+  name: r194_1
+  type: router
+- ip: 192.168.193.2
+  name: n194_2
+  os: linux
+  type: machine
+- ip: 192.168.193.3
+  name: n194_3
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.193.4
+  name: n194_4
+  os: windows
+  type: machine
+- ip: 192.168.193.5
+  name: n194_5
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.193.6
+  name: n194_6
+  os: windows
+  type: machine
+- ip: 192.168.193.7
+  name: n194_7
+  os: windows
+  type: machine
+- ip: 192.168.193.8
+  name: n194_8
+  os: windows
+  type: machine
+subnet: 192.168.193.0

@@ -1,0 +1,24 @@
+mask: 24
+name: st83
+nodes:
+- ip: 192.168.82.1
+  name: r83_1
+  type: router
+- ip: 192.168.82.2
+  name: n83_2
+  os: linux
+  type: machine
+- ip: 192.168.82.3
+  name: n83_3
+  os: windows
+  type: machine
+- ip: 192.168.82.4
+  name: n83_4
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.82.5
+  name: n83_5
+  os: linux
+  type: machine
+subnet: 192.168.82.0

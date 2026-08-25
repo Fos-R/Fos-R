@@ -1,0 +1,37 @@
+mask: 24
+name: st82
+nodes:
+- ip: 192.168.81.1
+  name: r82_1
+  type: router
+- ip: 192.168.81.2
+  name: n82_2
+  os: windows
+  type: machine
+- ip: 192.168.81.3
+  name: n82_3
+  os: linux
+  type: machine
+- ip: 192.168.81.4
+  name: n82_4
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.81.5
+  name: n82_5
+  os: windows
+  type: machine
+- ip: 192.168.81.6
+  name: n82_6
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.81.7
+  name: n82_7
+  os: linux
+  type: machine
+- ip: 192.168.81.8
+  name: n82_8
+  os: linux
+  type: machine
+subnet: 192.168.81.0

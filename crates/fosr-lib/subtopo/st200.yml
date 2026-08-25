@@ -1,0 +1,41 @@
+mask: 24
+name: st200
+nodes:
+- ip: 192.168.199.1
+  name: r200_1
+  type: router
+- ip: 192.168.199.2
+  name: n200_2
+  os: linux
+  type: machine
+- ip: 192.168.199.3
+  name: n200_3
+  os: linux
+  type: machine
+- ip: 192.168.199.4
+  name: n200_4
+  os: windows
+  type: machine
+- ip: 192.168.199.5
+  name: n200_5
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.199.6
+  name: n200_6
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.199.7
+  name: n200_7
+  os: windows
+  type: machine
+- ip: 192.168.199.8
+  name: n200_8
+  os: windows
+  type: machine
+- ip: 192.168.199.9
+  name: n200_9
+  os: linux
+  type: machine
+subnet: 192.168.199.0

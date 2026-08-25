@@ -1,0 +1,28 @@
+mask: 24
+name: st246
+nodes:
+- ip: 192.168.245.1
+  name: r246_1
+  type: router
+- ip: 192.168.245.2
+  name: n246_2
+  os: windows
+  type: machine
+- ip: 192.168.245.3
+  name: n246_3
+  os: windows
+  type: machine
+- ip: 192.168.245.4
+  name: n246_4
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.245.5
+  name: n246_5
+  os: windows
+  type: machine
+- ip: 192.168.245.6
+  name: n246_6
+  os: windows
+  type: machine
+subnet: 192.168.245.0

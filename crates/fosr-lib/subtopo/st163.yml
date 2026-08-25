@@ -1,0 +1,29 @@
+mask: 24
+name: st163
+nodes:
+- ip: 192.168.162.1
+  name: r163_1
+  type: router
+- ip: 192.168.162.2
+  name: n163_2
+  os: windows
+  type: machine
+- ip: 192.168.162.3
+  name: n163_3
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.162.4
+  name: n163_4
+  os: linux
+  type: machine
+- ip: 192.168.162.5
+  name: n163_5
+  os: windows
+  type: machine
+- ip: 192.168.162.6
+  name: n163_6
+  os: windows
+  services: dbms_server
+  type: machine
+subnet: 192.168.162.0

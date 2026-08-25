@@ -1,0 +1,42 @@
+mask: 24
+name: st209
+nodes:
+- ip: 192.168.208.1
+  name: r209_1
+  type: router
+- ip: 192.168.208.2
+  name: n209_2
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.208.3
+  name: n209_3
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.208.4
+  name: n209_4
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.208.5
+  name: n209_5
+  os: linux
+  type: machine
+- ip: 192.168.208.6
+  name: n209_6
+  os: linux
+  type: machine
+- ip: 192.168.208.7
+  name: n209_7
+  os: windows
+  type: machine
+- ip: 192.168.208.8
+  name: n209_8
+  os: linux
+  type: machine
+- ip: 192.168.208.9
+  name: n209_9
+  os: linux
+  type: machine
+subnet: 192.168.208.0

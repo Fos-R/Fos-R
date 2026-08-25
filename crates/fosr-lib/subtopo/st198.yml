@@ -1,0 +1,29 @@
+mask: 24
+name: st198
+nodes:
+- ip: 192.168.197.1
+  name: r198_1
+  type: router
+- ip: 192.168.197.2
+  name: n198_2
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.197.3
+  name: n198_3
+  os: windows
+  type: machine
+- ip: 192.168.197.4
+  name: n198_4
+  os: linux
+  type: machine
+- ip: 192.168.197.5
+  name: n198_5
+  os: windows
+  type: machine
+- ip: 192.168.197.6
+  name: n198_6
+  os: linux
+  services: mail_server
+  type: machine
+subnet: 192.168.197.0

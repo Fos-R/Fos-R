@@ -1,0 +1,42 @@
+mask: 24
+name: st182
+nodes:
+- ip: 192.168.181.1
+  name: r182_1
+  type: router
+- ip: 192.168.181.2
+  name: n182_2
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.181.3
+  name: n182_3
+  os: linux
+  type: machine
+- ip: 192.168.181.4
+  name: n182_4
+  os: windows
+  type: machine
+- ip: 192.168.181.5
+  name: n182_5
+  os: linux
+  type: machine
+- ip: 192.168.181.6
+  name: n182_6
+  os: linux
+  type: machine
+- ip: 192.168.181.7
+  name: n182_7
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.181.8
+  name: n182_8
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.181.9
+  name: n182_9
+  os: linux
+  type: machine
+subnet: 192.168.181.0

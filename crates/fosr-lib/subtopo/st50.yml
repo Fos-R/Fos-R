@@ -1,0 +1,21 @@
+mask: 24
+name: st50
+nodes:
+- ip: 192.168.49.1
+  name: r50_1
+  type: router
+- ip: 192.168.49.2
+  name: n50_2
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.49.3
+  name: n50_3
+  os: linux
+  type: machine
+- ip: 192.168.49.4
+  name: n50_4
+  os: linux
+  services: dbms_server
+  type: machine
+subnet: 192.168.49.0

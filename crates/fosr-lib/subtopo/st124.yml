@@ -1,0 +1,38 @@
+mask: 24
+name: st124
+nodes:
+- ip: 192.168.123.1
+  name: r124_1
+  type: router
+- ip: 192.168.123.2
+  name: n124_2
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.123.3
+  name: n124_3
+  os: windows
+  type: machine
+- ip: 192.168.123.4
+  name: n124_4
+  os: linux
+  type: machine
+- ip: 192.168.123.5
+  name: n124_5
+  os: linux
+  services: ftp_server
+  type: machine
+- ip: 192.168.123.6
+  name: n124_6
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.123.7
+  name: n124_7
+  os: linux
+  type: machine
+- ip: 192.168.123.8
+  name: n124_8
+  os: linux
+  type: machine
+subnet: 192.168.123.0

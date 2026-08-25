@@ -1,0 +1,28 @@
+mask: 24
+name: st146
+nodes:
+- ip: 192.168.145.1
+  name: r146_1
+  type: router
+- ip: 192.168.145.2
+  name: n146_2
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.145.3
+  name: n146_3
+  os: windows
+  type: machine
+- ip: 192.168.145.4
+  name: n146_4
+  os: linux
+  type: machine
+- ip: 192.168.145.5
+  name: n146_5
+  os: windows
+  type: machine
+- ip: 192.168.145.6
+  name: n146_6
+  os: linux
+  type: machine
+subnet: 192.168.145.0

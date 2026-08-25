@@ -1,0 +1,34 @@
+mask: 24
+name: st56
+nodes:
+- ip: 192.168.55.1
+  name: r56_1
+  type: router
+- ip: 192.168.55.2
+  name: n56_2
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.55.3
+  name: n56_3
+  os: windows
+  type: machine
+- ip: 192.168.55.4
+  name: n56_4
+  os: linux
+  services: ftp_server
+  type: machine
+- ip: 192.168.55.5
+  name: n56_5
+  os: linux
+  type: machine
+- ip: 192.168.55.6
+  name: n56_6
+  os: windows
+  type: machine
+- ip: 192.168.55.7
+  name: n56_7
+  os: linux
+  services: dbms_server
+  type: machine
+subnet: 192.168.55.0

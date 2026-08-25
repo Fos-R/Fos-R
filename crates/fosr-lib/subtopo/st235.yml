@@ -1,0 +1,46 @@
+mask: 24
+name: st235
+nodes:
+- ip: 192.168.234.1
+  name: r235_1
+  type: router
+- ip: 192.168.234.2
+  name: n235_2
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.234.3
+  name: n235_3
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.234.4
+  name: n235_4
+  os: windows
+  type: machine
+- ip: 192.168.234.5
+  name: n235_5
+  os: windows
+  type: machine
+- ip: 192.168.234.6
+  name: n235_6
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.234.7
+  name: n235_7
+  os: linux
+  type: machine
+- ip: 192.168.234.8
+  name: n235_8
+  os: windows
+  type: machine
+- ip: 192.168.234.9
+  name: n235_9
+  os: windows
+  type: machine
+- ip: 192.168.234.10
+  name: n235_10
+  os: linux
+  type: machine
+subnet: 192.168.234.0

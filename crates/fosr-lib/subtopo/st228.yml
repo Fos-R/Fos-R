@@ -1,0 +1,46 @@
+mask: 24
+name: st228
+nodes:
+- ip: 192.168.227.1
+  name: r228_1
+  type: router
+- ip: 192.168.227.2
+  name: n228_2
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.227.3
+  name: n228_3
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.227.4
+  name: n228_4
+  os: windows
+  type: machine
+- ip: 192.168.227.5
+  name: n228_5
+  os: windows
+  type: machine
+- ip: 192.168.227.6
+  name: n228_6
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.227.7
+  name: n228_7
+  os: windows
+  type: machine
+- ip: 192.168.227.8
+  name: n228_8
+  os: windows
+  type: machine
+- ip: 192.168.227.9
+  name: n228_9
+  os: windows
+  type: machine
+- ip: 192.168.227.10
+  name: n228_10
+  os: linux
+  type: machine
+subnet: 192.168.227.0

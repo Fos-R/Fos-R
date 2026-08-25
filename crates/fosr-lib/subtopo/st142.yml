@@ -1,0 +1,21 @@
+mask: 24
+name: st142
+nodes:
+- ip: 192.168.141.1
+  name: r142_1
+  type: router
+- ip: 192.168.141.2
+  name: n142_2
+  os: linux
+  services: ldap_server
+  type: machine
+- ip: 192.168.141.3
+  name: n142_3
+  os: windows
+  type: machine
+- ip: 192.168.141.4
+  name: n142_4
+  os: linux
+  services: mail_server
+  type: machine
+subnet: 192.168.141.0

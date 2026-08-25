@@ -1,0 +1,42 @@
+mask: 24
+name: st139
+nodes:
+- ip: 192.168.138.1
+  name: r139_1
+  type: router
+- ip: 192.168.138.2
+  name: n139_2
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.138.3
+  name: n139_3
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.138.4
+  name: n139_4
+  os: linux
+  type: machine
+- ip: 192.168.138.5
+  name: n139_5
+  os: windows
+  type: machine
+- ip: 192.168.138.6
+  name: n139_6
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.138.7
+  name: n139_7
+  os: windows
+  type: machine
+- ip: 192.168.138.8
+  name: n139_8
+  os: windows
+  type: machine
+- ip: 192.168.138.9
+  name: n139_9
+  os: windows
+  type: machine
+subnet: 192.168.138.0

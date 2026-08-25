@@ -1,0 +1,42 @@
+mask: 24
+name: st187
+nodes:
+- ip: 192.168.186.1
+  name: r187_1
+  type: router
+- ip: 192.168.186.2
+  name: n187_2
+  os: windows
+  type: machine
+- ip: 192.168.186.3
+  name: n187_3
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.186.4
+  name: n187_4
+  os: windows
+  type: machine
+- ip: 192.168.186.5
+  name: n187_5
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.186.6
+  name: n187_6
+  os: linux
+  type: machine
+- ip: 192.168.186.7
+  name: n187_7
+  os: windows
+  type: machine
+- ip: 192.168.186.8
+  name: n187_8
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.186.9
+  name: n187_9
+  os: linux
+  type: machine
+subnet: 192.168.186.0

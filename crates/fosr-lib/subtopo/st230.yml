@@ -1,0 +1,25 @@
+mask: 24
+name: st230
+nodes:
+- ip: 192.168.229.1
+  name: r230_1
+  type: router
+- ip: 192.168.229.2
+  name: n230_2
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.229.3
+  name: n230_3
+  os: linux
+  type: machine
+- ip: 192.168.229.4
+  name: n230_4
+  os: linux
+  type: machine
+- ip: 192.168.229.5
+  name: n230_5
+  os: linux
+  services: mail_server
+  type: machine
+subnet: 192.168.229.0

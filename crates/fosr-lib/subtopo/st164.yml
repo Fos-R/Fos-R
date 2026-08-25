@@ -1,0 +1,22 @@
+mask: 24
+name: st164
+nodes:
+- ip: 192.168.163.1
+  name: r164_1
+  type: router
+- ip: 192.168.163.2
+  name: n164_2
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.163.3
+  name: n164_3
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.163.4
+  name: n164_4
+  os: linux
+  services: mail_server
+  type: machine
+subnet: 192.168.163.0

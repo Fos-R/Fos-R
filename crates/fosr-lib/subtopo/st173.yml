@@ -1,0 +1,32 @@
+mask: 24
+name: st173
+nodes:
+- ip: 192.168.172.1
+  name: r173_1
+  type: router
+- ip: 192.168.172.2
+  name: n173_2
+  os: linux
+  type: machine
+- ip: 192.168.172.3
+  name: n173_3
+  os: windows
+  type: machine
+- ip: 192.168.172.4
+  name: n173_4
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.172.5
+  name: n173_5
+  os: windows
+  type: machine
+- ip: 192.168.172.6
+  name: n173_6
+  os: windows
+  type: machine
+- ip: 192.168.172.7
+  name: n173_7
+  os: linux
+  type: machine
+subnet: 192.168.172.0

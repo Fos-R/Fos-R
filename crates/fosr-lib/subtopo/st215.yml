@@ -1,0 +1,29 @@
+mask: 24
+name: st215
+nodes:
+- ip: 192.168.214.1
+  name: r215_1
+  type: router
+- ip: 192.168.214.2
+  name: n215_2
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.214.3
+  name: n215_3
+  os: linux
+  type: machine
+- ip: 192.168.214.4
+  name: n215_4
+  os: windows
+  type: machine
+- ip: 192.168.214.5
+  name: n215_5
+  os: windows
+  type: machine
+- ip: 192.168.214.6
+  name: n215_6
+  os: linux
+  services: proxy_server
+  type: machine
+subnet: 192.168.214.0

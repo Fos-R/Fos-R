@@ -1,0 +1,46 @@
+mask: 24
+name: st140
+nodes:
+- ip: 192.168.139.1
+  name: r140_1
+  type: router
+- ip: 192.168.139.2
+  name: n140_2
+  os: windows
+  services: cms_server
+  type: machine
+- ip: 192.168.139.3
+  name: n140_3
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.139.4
+  name: n140_4
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.139.5
+  name: n140_5
+  os: linux
+  type: machine
+- ip: 192.168.139.6
+  name: n140_6
+  os: linux
+  type: machine
+- ip: 192.168.139.7
+  name: n140_7
+  os: linux
+  type: machine
+- ip: 192.168.139.8
+  name: n140_8
+  os: windows
+  type: machine
+- ip: 192.168.139.9
+  name: n140_9
+  os: windows
+  type: machine
+- ip: 192.168.139.10
+  name: n140_10
+  os: linux
+  type: machine
+subnet: 192.168.139.0

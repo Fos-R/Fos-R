@@ -1,0 +1,22 @@
+mask: 24
+name: st190
+nodes:
+- ip: 192.168.189.1
+  name: r190_1
+  type: router
+- ip: 192.168.189.2
+  name: n190_2
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.189.3
+  name: n190_3
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.189.4
+  name: n190_4
+  os: linux
+  services: ftp_server
+  type: machine
+subnet: 192.168.189.0
