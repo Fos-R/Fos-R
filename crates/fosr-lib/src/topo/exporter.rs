@@ -22,14 +22,12 @@ impl From<Vec<SubTopology>> for NetworkYaml {
                     ip_addr: router.address.to_string(),
                     mac_addr: None,
                     services: None,
-                    uses: Some(vec![]),
                 }];
                 if router.interco_address != router.address {
                     interfaces.push(InterfaceYaml {
                         ip_addr: router.interco_address.to_string(),
                         mac_addr: None,
                         services: None,
-                        uses: Some(vec![]),
                     });
                 }
 
@@ -75,7 +73,6 @@ impl From<Vec<SubTopology>> for NetworkYaml {
                         } else {
                             Some(services)
                         },
-                        uses: if is_server { Some(vec![]) } else { None },
                     }],
                 });
             }
@@ -98,21 +95,16 @@ impl From<Vec<SubTopology>> for NetworkYaml {
                         .iter()
                         .any(|i| i.services.as_ref().is_some_and(|s| !s.is_empty()))
                 });
-            if let Some(host) = first_server {
-                if let Some(iface) = host.interfaces.first_mut() {
-                    iface.uses = None;
-                }
-            }
         }
 
         NetworkYaml {
             metadata: Metadata {
-                title: "Generated topology".to_string(),
-                desc: Some("Automatically generated from topology generator".to_string()),
-                author: None,
-                date: None,
-                version: None,
-                format: None,
+                title: format!("Synthetic topology with {} subnets", networks.len()),
+                desc: Some("Automatically generated with Fos-R topology generator".to_string()),
+                author: Some("Fos-R generator".to_string()),
+                date: Some(chrono::Local::now().format("%Y-%m-%d").to_string()),
+                version: Some("1.0".to_string()),
+                format: Some(1),
             },
             networks,
             internet: vec![],

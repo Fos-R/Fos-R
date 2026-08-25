@@ -9,6 +9,7 @@
 - New stage 1 with realistic time distribution
 - New stage 2 with Bayesian networks
 - New default models (CICIDS17, CUPID and DEDALE)
+- New topology generator
 
 #### fosr-cli
 
@@ -17,6 +18,7 @@
 - Added `--tz` option and timezone support more generally
 - Added `--jobs` option
 - Two generation profiles: "fast" or "efficient" (can be "auto")
+- New `generate-topology` command
 
 #### fosr
 
