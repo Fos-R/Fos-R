@@ -10,9 +10,6 @@ use crate::topo::sub_topology::{SubTopology, SubTopologyNode};
 
 impl From<Vec<SubTopology>> for NetworkYaml {
     fn from(topology: Vec<SubTopology>) -> Self {
-        let mut has_service = false;
-        let mut has_user = false;
-
         let mut networks = Vec::with_capacity(topology.len());
         for st in &topology {
             let mut hosts = Vec::with_capacity(st.nodes.len() + 1);
@@ -53,8 +50,6 @@ impl From<Vec<SubTopology>> for NetworkYaml {
                     .collect();
 
                 let is_server = !services.is_empty();
-                has_service |= is_server;
-                has_user |= !is_server;
 
                 hosts.push(HostYaml {
                     ui_id: next_ui_id(),
@@ -84,17 +79,6 @@ impl From<Vec<SubTopology>> for NetworkYaml {
                 name: st.name.clone(),
                 hosts,
             });
-        }
-
-        if has_service && !has_user {
-            let first_server = networks
-                .iter_mut()
-                .flat_map(|n| n.hosts.iter_mut())
-                .find(|h| {
-                    h.interfaces
-                        .iter()
-                        .any(|i| i.services.as_ref().is_some_and(|s| !s.is_empty()))
-                });
         }
 
         NetworkYaml {

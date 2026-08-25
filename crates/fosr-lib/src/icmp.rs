@@ -1,4 +1,4 @@
-use crate::structs::{PacketDirection, PacketInfo, EdgeType, PayloadType, Payload};
+use crate::structs::{EdgeType, PacketDirection, PacketInfo, Payload, PayloadType};
 use std::time::Duration;
 
 #[derive(Debug, Clone)]

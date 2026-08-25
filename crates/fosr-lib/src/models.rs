@@ -35,9 +35,9 @@ pub struct Models {
 impl Models {
     pub fn from_source(source: &ModelsSource) -> Result<Self, String> {
         Ok(Models {
-            automata: stage3::tadam::AutomataLibrary::from_source(&source)?,
-            bn: stage2::bayesian_networks::BayesianModel::from_source(&source)?,
-            time_bins: stage1::TimeModel::from_source(&source)?,
+            automata: stage3::tadam::AutomataLibrary::from_source(source)?,
+            bn: stage2::bayesian_networks::BayesianModel::from_source(source)?,
+            time_bins: stage1::TimeModel::from_source(source)?,
         })
     }
 
@@ -47,19 +47,26 @@ impl Models {
                 .map_err(|e| format!("Cannot open the network file: {e}"))?,
         );
         let m = Models {
-            automata: stage3::tadam::AutomataLibrary::from_source(&source)?,
-            bn: stage2::bayesian_networks::BayesianModel::from_source_with_network(&source, &network)?,
-            time_bins: stage1::TimeModel::from_source(&source)?,
+            automata: stage3::tadam::AutomataLibrary::from_source(source)?,
+            bn: stage2::bayesian_networks::BayesianModel::from_source_with_network(
+                source, &network,
+            )?,
+            time_bins: stage1::TimeModel::from_source(source)?,
         };
         Ok(m)
     }
 
-    pub fn from_source_with_string_network(source: &ModelsSource, network: &str) -> Result<Self, String> {
+    pub fn from_source_with_string_network(
+        source: &ModelsSource,
+        network: &str,
+    ) -> Result<Self, String> {
         let network = network::import_network(network);
         let m = Models {
-            automata: stage3::tadam::AutomataLibrary::from_source(&source)?,
-            bn: stage2::bayesian_networks::BayesianModel::from_source_with_network(&source, &network)?,
-            time_bins: stage1::TimeModel::from_source(&source)?,
+            automata: stage3::tadam::AutomataLibrary::from_source(source)?,
+            bn: stage2::bayesian_networks::BayesianModel::from_source_with_network(
+                source, &network,
+            )?,
+            time_bins: stage1::TimeModel::from_source(source)?,
         };
         Ok(m)
     }
@@ -515,7 +522,6 @@ impl ModelsSource {
             }
         }
     }
-
 
     pub(crate) fn get_bn(&self) -> std::io::Result<String> {
         match &self {

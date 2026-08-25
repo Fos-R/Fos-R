@@ -1,4 +1,4 @@
-use crate::structs::{L4Proto, PacketDirection, FlowId};
+use crate::structs::{FlowId, L4Proto, PacketDirection};
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
 use pcap_file::pcap;
@@ -180,7 +180,12 @@ impl FlowStats {
     fn process_packets<T: PacketInfoTrait>(flow_id: FlowId, packets: Vec<T>) -> FlowStats {
         let first_packet = packets.first().unwrap(); // we know there is a least one packet
         let timestamp = first_packet.ts();
-        let duration = packets.last().unwrap().ts().checked_sub(first_packet.ts()).unwrap();
+        let duration = packets
+            .last()
+            .unwrap()
+            .ts()
+            .checked_sub(first_packet.ts())
+            .unwrap();
 
         let iat: Vec<Duration> = packets
             .windows(2)

@@ -3,13 +3,13 @@ use crate::stage3::*;
 
 // use indicatif::{ProgressBar, ProgressStyle};
 use nalgebra::{matrix, vector};
-use rand_core::{SeedableRng, Rng};
+use rand_core::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
 use serde::Deserialize;
 use statrs::distribution::MultivariateNormal;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::str::FromStr;
+use std::sync::Arc;
 
 struct AutomataSet<T: EdgeType> {
     cons_a: automaton::CrossProductTimedAutomaton<T>,

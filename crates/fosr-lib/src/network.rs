@@ -1,4 +1,4 @@
-use crate::structs::{OS, L7Proto};
+use crate::structs::{L7Proto, OS};
 
 use pnet::util::MacAddr;
 use rand::prelude::*;
@@ -44,7 +44,6 @@ pub struct Network {
 
     /// The list of servers that provide each service
     servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
-
     // /// The list of users that use each service
     // users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
 }
@@ -277,7 +276,6 @@ pub struct InterfaceYaml {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub services: Option<Vec<String>>,
-
     // #[serde(skip_serializing_if = "Option::is_none")]
     // pub uses: Option<Vec<String>>,
 }
@@ -359,33 +357,33 @@ impl From<NetworkYaml> for Network {
             .chain(networks.iter().flat_map(|n| n.hosts.iter()));
         for host in all_hosts {
             // for i in &host.interfaces {
-                // if let Some(client) = &i.uses {
-                //     // if a list is defined, then this host will only use these services
-                //     for s in client {
-                //         if services.contains(s) {
-                //             for interface in host.interfaces.iter() {
-                //                 users_per_service
-                //                     .entry(*s)
-                //                     .or_default()
-                //                     .push(interface.ip_addr);
-                //             }
-                //         } else {
-                //             log::warn!(
-                //                 "There is a client of {s:?}, but that service is not proposed by any server"
-                //             );
-                //         }
-                //     }
-                // } else {
-                    // otherwise, use all available services
-                    for s in services.iter() {
-                        for interface in host.interfaces.iter() {
-                            users_per_service
-                                .entry(*s)
-                                .or_default()
-                                .push(interface.ip_addr)
-                        }
-                    }
-                // }
+            // if let Some(client) = &i.uses {
+            //     // if a list is defined, then this host will only use these services
+            //     for s in client {
+            //         if services.contains(s) {
+            //             for interface in host.interfaces.iter() {
+            //                 users_per_service
+            //                     .entry(*s)
+            //                     .or_default()
+            //                     .push(interface.ip_addr);
+            //             }
+            //         } else {
+            //             log::warn!(
+            //                 "There is a client of {s:?}, but that service is not proposed by any server"
+            //             );
+            //         }
+            //     }
+            // } else {
+            // otherwise, use all available services
+            for s in services.iter() {
+                for interface in host.interfaces.iter() {
+                    users_per_service
+                        .entry(*s)
+                        .or_default()
+                        .push(interface.ip_addr)
+                }
+            }
+            // }
             // }
         }
 

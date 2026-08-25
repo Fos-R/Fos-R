@@ -344,7 +344,10 @@ fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), Stri
 }
 
 impl BayesianModel {
-    pub fn from_source_with_network(m: &models::ModelsSource, network: &network::Network) -> Result<Self, String> {
+    pub fn from_source_with_network(
+        m: &models::ModelsSource,
+        network: &network::Network,
+    ) -> Result<Self, String> {
         let bn_string: String = m
             .get_tl_bn()
             .map_err(|e| format!("Cannot find the Bayesian networks: {e}"))?;
@@ -367,11 +370,9 @@ impl BayesianModel {
 
         model.apply_network(network)?;
         Ok(model)
-
     }
 
     pub fn from_source(m: &models::ModelsSource) -> Result<Self, String> {
-
         let bn_string: String = m
             .get_bn()
             .map_err(|e| format!("Cannot find the Bayesian networks: {e}"))?;
@@ -561,11 +562,11 @@ impl BayesianModel {
             }
         }
 
-
         // we replace the node by a new one
         // let mut all_src_ip = network.users.clone();
         // all_src_ip.append(&mut network.servers.clone());
-        let ip: Vec<AnonymizedIpv4Addr> = network.users
+        let ip: Vec<AnonymizedIpv4Addr> = network
+            .users
             .clone()
             .into_iter()
             .map(AnonymizedIpv4Addr::Local)
@@ -749,7 +750,11 @@ fn bn_from_bif(
                     .collect(),
             )),
             "Applicative Proto" => Some(Feature::L7Proto(
-                v.outcome.clone().into_iter().map(|s| L7Proto::from_str(&s).unwrap()).collect(),
+                v.outcome
+                    .clone()
+                    .into_iter()
+                    .map(|s| L7Proto::from_str(&s).unwrap())
+                    .collect(),
             )),
             "Proto" => Some(Feature::L4Proto(
                 v.outcome

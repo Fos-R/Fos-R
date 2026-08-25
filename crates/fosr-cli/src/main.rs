@@ -2,6 +2,7 @@ use fosr_lib::export;
 #[cfg(feature = "net_injection")]
 use fosr_lib::inject;
 use fosr_lib::models;
+use fosr_lib::network;
 use fosr_lib::stage1;
 use fosr_lib::stage2;
 use fosr_lib::stage3;
@@ -9,14 +10,15 @@ use fosr_lib::stage4;
 use fosr_lib::stats;
 use fosr_lib::topo;
 use fosr_lib::utils;
-use fosr_lib::network;
 use fosr_lib::*;
 mod cmd;
 
 use std::cmp::max;
 use std::collections::HashMap;
+use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::BufWriter;
+use std::io::Write;
 use std::net::Ipv4Addr;
 use std::process;
 use std::sync::Arc;
@@ -24,8 +26,6 @@ use std::sync::mpsc::channel;
 use std::thread;
 use std::time::Instant;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use std::fs::File;
-use std::io::Write;
 
 use chrono::DateTime;
 use chrono::Offset;
@@ -277,12 +277,20 @@ fn main() -> Result<(), String> {
                 tree_depth,
                 services,
             };
-            let mut generator = topo::generator::TopologyGenerator::new(topo::sub_topology::get_default_subtopos());
+            let mut generator =
+                topo::generator::TopologyGenerator::new(topo::sub_topology::get_default_subtopos());
+            log::info!("Starting the topology generation");
+            log::info!("Depending on the contraints, it can take up to 10 minutes");
             let topology = network::NetworkYaml::from(generator.generate_topologies(&gen_params)?);
-            let mut file = File::create(outfile)
-                .expect("Failed to create or open the topology file");
-            file.write_all(serde_yaml::to_string(&topology).expect("Serialization issue").as_bytes())
-                .expect("Failed to write to the file");
+            let mut file =
+                File::create(&outfile).expect("Failed to create or open the topology file");
+            file.write_all(
+                serde_yaml::to_string(&topology)
+                    .expect("Serialization issue")
+                    .as_bytes(),
+            )
+            .expect("Failed to write to the file");
+            log::info!("Topology has been successfully generated into {outfile}");
         }
     };
     Ok(())
