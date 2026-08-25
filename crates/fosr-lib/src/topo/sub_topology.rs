@@ -2,6 +2,7 @@
 
 use std::{collections::HashMap, net::Ipv4Addr};
 
+use include_dir::include_dir;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -106,8 +107,18 @@ impl From<super::config::SubTopologyNode> for SubTopologyNode {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+pub fn get_default_subtopos() -> Vec<SubTopology> {
+    include_dir!("$CARGO_MANIFEST_DIR/subtopo")
+        .files()
+        .map(|f: &include_dir::File| f.contents_utf8().unwrap().to_string())
+        .map(|s: String| {
+            SubTopology::new(serde_yaml::from_str(&s).expect("Failed to parse sub topology config"))
+                .unwrap()
+        })
+        .collect()
+}
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MachineNode {
     pub name: String,
     pub address: Ipv4Addr,
@@ -127,7 +138,6 @@ impl MachineNode {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-
 pub struct RouterNode {
     pub name: String,
     pub address: Ipv4Addr,
