@@ -259,7 +259,57 @@ pub enum Command {
         )]
         no_order_pcap: bool,
     },
-
+    /// Create a network topology description from constraints. A reimplementation of the
+    /// FedITN_Gen generator.
+    GenerateTopology {
+        #[arg(
+            short,
+            long,
+            default_value = "network.yml",
+            help = "Output network topology"
+        )]
+        outfile: String,
+        #[arg(
+            long,
+            default_value_t = 0,
+            help = "Minimum number of subnets in the topology"
+        )]
+        min_subnets: usize,
+        #[arg(
+            long,
+            default_value_t = 0,
+            help = "Minimum number of nodes in the topology"
+        )]
+        min_nodes: usize,
+        #[arg(
+            long,
+            default_value_t = 2,
+            help = "Target depth of the topology"
+        )]
+        tree_depth: usize,
+        #[arg(long, default_value_t = false, help = "At least one Web server")]
+        with_web_server: bool,
+        #[arg(long, default_value_t = false, help = "At least one FTP server")]
+        with_ftp_server: bool,
+        #[arg(long, default_value_t = false, help = "At least one mail server")]
+        with_mail_server: bool,
+        #[arg(long, default_value_t = false, help = "At least one cloud storage")]
+        with_cloud_storage: bool,
+        #[arg(long, default_value_t = false, help = "At least one log server")]
+        with_log_server: bool,
+        #[arg(long, default_value_t = false, help = "At least one DBMS server")]
+        with_dbms_server: bool,
+        #[arg(long, default_value_t = false, help = "At least one CMS server")]
+        with_cms_server: bool,
+        #[arg(long, default_value_t = false, help = "At least one proxy server")]
+        with_proxy_server: bool,
+        #[arg(long, default_value_t = false, help = "At least one LDAP server")]
+        with_ldap_server: bool,
+        #[arg(long, default_value_t = false, help = "At least one DNS server")]
+        with_dns_server: bool,
+        #[arg(long, default_value_t = false, help = "At least one SSH server")]
+        with_ssh_server: bool,
+    },
     #[cfg(feature = "unstable")]
     /// Create a pcap file for the described network. For deterministic generation,
     /// specify -t, --tz and --seed.

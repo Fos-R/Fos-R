@@ -27,6 +27,7 @@ num_cpus = "1.17.0"
 pcap-file = "2.0.0"
 pnet = { version = "0.35.0", default-features = false }
 pnet_packet = "0.35.0"
+serde_yaml = "0.9.34"
 thingbuf = "0.1.6"
 
 [target.'cfg(all(target_os = "linux", any(target_env = "", target_env = "gnu")))'.dependencies]
