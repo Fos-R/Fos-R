@@ -1,0 +1,46 @@
+mask: 24
+name: st152
+nodes:
+- ip: 192.168.151.1
+  name: r152_1
+  type: router
+- ip: 192.168.151.2
+  name: n152_2
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.151.3
+  name: n152_3
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.151.4
+  name: n152_4
+  os: windows
+  type: machine
+- ip: 192.168.151.5
+  name: n152_5
+  os: windows
+  type: machine
+- ip: 192.168.151.6
+  name: n152_6
+  os: windows
+  type: machine
+- ip: 192.168.151.7
+  name: n152_7
+  os: windows
+  type: machine
+- ip: 192.168.151.8
+  name: n152_8
+  os: windows
+  type: machine
+- ip: 192.168.151.9
+  name: n152_9
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.151.10
+  name: n152_10
+  os: windows
+  type: machine
+subnet: 192.168.151.0

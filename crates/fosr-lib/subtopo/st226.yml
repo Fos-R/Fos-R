@@ -1,0 +1,25 @@
+mask: 24
+name: st226
+nodes:
+- ip: 192.168.225.1
+  name: r226_1
+  type: router
+- ip: 192.168.225.2
+  name: n226_2
+  os: windows
+  type: machine
+- ip: 192.168.225.3
+  name: n226_3
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.225.4
+  name: n226_4
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.225.5
+  name: n226_5
+  os: linux
+  type: machine
+subnet: 192.168.225.0

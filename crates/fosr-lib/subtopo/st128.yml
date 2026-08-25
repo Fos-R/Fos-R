@@ -1,0 +1,26 @@
+mask: 24
+name: st128
+nodes:
+- ip: 192.168.127.1
+  name: r128_1
+  type: router
+- ip: 192.168.127.2
+  name: n128_2
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.127.3
+  name: n128_3
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.127.4
+  name: n128_4
+  os: windows
+  type: machine
+- ip: 192.168.127.5
+  name: n128_5
+  os: linux
+  services: web_server
+  type: machine
+subnet: 192.168.127.0

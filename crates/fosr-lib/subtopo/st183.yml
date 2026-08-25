@@ -1,0 +1,46 @@
+mask: 24
+name: st183
+nodes:
+- ip: 192.168.182.1
+  name: r183_1
+  type: router
+- ip: 192.168.182.2
+  name: n183_2
+  os: windows
+  type: machine
+- ip: 192.168.182.3
+  name: n183_3
+  os: windows
+  type: machine
+- ip: 192.168.182.4
+  name: n183_4
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.182.5
+  name: n183_5
+  os: windows
+  type: machine
+- ip: 192.168.182.6
+  name: n183_6
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.182.7
+  name: n183_7
+  os: linux
+  type: machine
+- ip: 192.168.182.8
+  name: n183_8
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.182.9
+  name: n183_9
+  os: windows
+  type: machine
+- ip: 192.168.182.10
+  name: n183_10
+  os: windows
+  type: machine
+subnet: 192.168.182.0

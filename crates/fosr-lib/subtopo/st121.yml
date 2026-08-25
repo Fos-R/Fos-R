@@ -1,0 +1,33 @@
+mask: 24
+name: st121
+nodes:
+- ip: 192.168.120.1
+  name: r121_1
+  type: router
+- ip: 192.168.120.2
+  name: n121_2
+  os: windows
+  type: machine
+- ip: 192.168.120.3
+  name: n121_3
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.120.4
+  name: n121_4
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.120.5
+  name: n121_5
+  os: linux
+  type: machine
+- ip: 192.168.120.6
+  name: n121_6
+  os: windows
+  type: machine
+- ip: 192.168.120.7
+  name: n121_7
+  os: linux
+  type: machine
+subnet: 192.168.120.0

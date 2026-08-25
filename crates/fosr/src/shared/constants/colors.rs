@@ -85,6 +85,14 @@ pub const COLOR_PROTOCOL_KMS: Color32 = Color32::from_rgb(255, 87, 34);
 /// MulticastDNS protocol color (pink)
 pub const COLOR_PROTOCOL_MDNS: Color32 = Color32::from_rgb(240, 98, 146);
 
+/// FTP protocol color (??)
+// TODO(pf): set the color, currently using cyan
+pub const COLOR_PROTOCOL_FTP: Color32 = Color32::from_rgb(0, 229, 255);
+
+/// FTP protocol color (??)
+// TODO(pf): set the color, currently using cyan
+pub const COLOR_PROTOCOL_LDAP: Color32 = Color32::from_rgb(0, 229, 255);
+
 /// NTP protocol color (cyan)
 pub const COLOR_PROTOCOL_NTP: Color32 = Color32::from_rgb(0, 229, 255);
 
@@ -121,6 +129,8 @@ pub fn color_for_protocol(proto: &L7Proto) -> Color32 {
         L7Proto::MQTT => COLOR_PROTOCOL_MQTT,
         L7Proto::KMS => COLOR_PROTOCOL_KMS,
         L7Proto::MulticastDNS => COLOR_PROTOCOL_MDNS,
+        L7Proto::FTP => COLOR_PROTOCOL_FTP,
+        L7Proto::LDAP => COLOR_PROTOCOL_LDAP,
         L7Proto::NTP => COLOR_PROTOCOL_NTP,
         L7Proto::Unknown(_) => COLOR_PROTOCOL_UNKNOWN,
     }

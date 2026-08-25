@@ -1,0 +1,33 @@
+mask: 24
+name: st208
+nodes:
+- ip: 192.168.207.1
+  name: r208_1
+  type: router
+- ip: 192.168.207.2
+  name: n208_2
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.207.3
+  name: n208_3
+  os: windows
+  type: machine
+- ip: 192.168.207.4
+  name: n208_4
+  os: windows
+  type: machine
+- ip: 192.168.207.5
+  name: n208_5
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.207.6
+  name: n208_6
+  os: linux
+  type: machine
+- ip: 192.168.207.7
+  name: n208_7
+  os: windows
+  type: machine
+subnet: 192.168.207.0

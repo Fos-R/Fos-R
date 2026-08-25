@@ -1,0 +1,35 @@
+mask: 24
+name: st204
+nodes:
+- ip: 192.168.203.1
+  name: r204_1
+  type: router
+- ip: 192.168.203.2
+  name: n204_2
+  os: windows
+  type: machine
+- ip: 192.168.203.3
+  name: n204_3
+  os: windows
+  type: machine
+- ip: 192.168.203.4
+  name: n204_4
+  os: windows
+  type: machine
+- ip: 192.168.203.5
+  name: n204_5
+  os: linux
+  type: machine
+- ip: 192.168.203.6
+  name: n204_6
+  os: windows
+  type: machine
+- ip: 192.168.203.7
+  name: n204_7
+  os: windows
+  type: machine
+- ip: 192.168.203.8
+  name: n204_8
+  os: windows
+  type: machine
+subnet: 192.168.203.0

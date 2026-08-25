@@ -1,0 +1,30 @@
+mask: 24
+name: st36
+nodes:
+- ip: 192.168.35.1
+  name: r36_1
+  type: router
+- ip: 192.168.35.2
+  name: n36_2
+  os: linux
+  type: machine
+- ip: 192.168.35.3
+  name: n36_3
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.35.4
+  name: n36_4
+  os: linux
+  services: ldap_server
+  type: machine
+- ip: 192.168.35.5
+  name: n36_5
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.35.6
+  name: n36_6
+  os: linux
+  type: machine
+subnet: 192.168.35.0

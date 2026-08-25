@@ -1,0 +1,21 @@
+mask: 24
+name: st93
+nodes:
+- ip: 192.168.92.1
+  name: r93_1
+  type: router
+- ip: 192.168.92.2
+  name: n93_2
+  os: linux
+  type: machine
+- ip: 192.168.92.3
+  name: n93_3
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.92.4
+  name: n93_4
+  os: windows
+  services: cms_server
+  type: machine
+subnet: 192.168.92.0

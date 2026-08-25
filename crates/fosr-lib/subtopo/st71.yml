@@ -1,0 +1,20 @@
+mask: 24
+name: st71
+nodes:
+- ip: 192.168.70.1
+  name: r71_1
+  type: router
+- ip: 192.168.70.2
+  name: n71_2
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.70.3
+  name: n71_3
+  os: windows
+  type: machine
+- ip: 192.168.70.4
+  name: n71_4
+  os: windows
+  type: machine
+subnet: 192.168.70.0

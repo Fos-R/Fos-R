@@ -1,0 +1,42 @@
+mask: 24
+name: st32
+nodes:
+- ip: 192.168.31.1
+  name: r32_1
+  type: router
+- ip: 192.168.31.2
+  name: n32_2
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.31.3
+  name: n32_3
+  os: linux
+  type: machine
+- ip: 192.168.31.4
+  name: n32_4
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.31.5
+  name: n32_5
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.31.6
+  name: n32_6
+  os: linux
+  type: machine
+- ip: 192.168.31.7
+  name: n32_7
+  os: windows
+  type: machine
+- ip: 192.168.31.8
+  name: n32_8
+  os: windows
+  type: machine
+- ip: 192.168.31.9
+  name: n32_9
+  os: windows
+  type: machine
+subnet: 192.168.31.0

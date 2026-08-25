@@ -1,0 +1,32 @@
+mask: 24
+name: st216
+nodes:
+- ip: 192.168.215.1
+  name: r216_1
+  type: router
+- ip: 192.168.215.2
+  name: n216_2
+  os: linux
+  type: machine
+- ip: 192.168.215.3
+  name: n216_3
+  os: linux
+  type: machine
+- ip: 192.168.215.4
+  name: n216_4
+  os: linux
+  type: machine
+- ip: 192.168.215.5
+  name: n216_5
+  os: windows
+  type: machine
+- ip: 192.168.215.6
+  name: n216_6
+  os: linux
+  services: ldap_server
+  type: machine
+- ip: 192.168.215.7
+  name: n216_7
+  os: linux
+  type: machine
+subnet: 192.168.215.0

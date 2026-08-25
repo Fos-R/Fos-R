@@ -1,0 +1,19 @@
+mask: 24
+name: st234
+nodes:
+- ip: 192.168.233.1
+  name: r234_1
+  type: router
+- ip: 192.168.233.2
+  name: n234_2
+  os: linux
+  type: machine
+- ip: 192.168.233.3
+  name: n234_3
+  os: windows
+  type: machine
+- ip: 192.168.233.4
+  name: n234_4
+  os: windows
+  type: machine
+subnet: 192.168.233.0

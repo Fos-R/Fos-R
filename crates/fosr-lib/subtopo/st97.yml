@@ -1,0 +1,38 @@
+mask: 24
+name: st97
+nodes:
+- ip: 192.168.96.1
+  name: r97_1
+  type: router
+- ip: 192.168.96.2
+  name: n97_2
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.96.3
+  name: n97_3
+  os: windows
+  type: machine
+- ip: 192.168.96.4
+  name: n97_4
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.96.5
+  name: n97_5
+  os: linux
+  type: machine
+- ip: 192.168.96.6
+  name: n97_6
+  os: windows
+  type: machine
+- ip: 192.168.96.7
+  name: n97_7
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.96.8
+  name: n97_8
+  os: linux
+  type: machine
+subnet: 192.168.96.0

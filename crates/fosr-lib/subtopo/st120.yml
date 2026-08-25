@@ -1,0 +1,46 @@
+mask: 24
+name: st120
+nodes:
+- ip: 192.168.119.1
+  name: r120_1
+  type: router
+- ip: 192.168.119.2
+  name: n120_2
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.119.3
+  name: n120_3
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.119.4
+  name: n120_4
+  os: linux
+  type: machine
+- ip: 192.168.119.5
+  name: n120_5
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.119.6
+  name: n120_6
+  os: windows
+  type: machine
+- ip: 192.168.119.7
+  name: n120_7
+  os: linux
+  type: machine
+- ip: 192.168.119.8
+  name: n120_8
+  os: windows
+  type: machine
+- ip: 192.168.119.9
+  name: n120_9
+  os: linux
+  type: machine
+- ip: 192.168.119.10
+  name: n120_10
+  os: linux
+  type: machine
+subnet: 192.168.119.0

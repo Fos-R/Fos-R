@@ -1,0 +1,46 @@
+mask: 24
+name: st112
+nodes:
+- ip: 192.168.111.1
+  name: r112_1
+  type: router
+- ip: 192.168.111.2
+  name: n112_2
+  os: windows
+  type: machine
+- ip: 192.168.111.3
+  name: n112_3
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.111.4
+  name: n112_4
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.111.5
+  name: n112_5
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.111.6
+  name: n112_6
+  os: windows
+  type: machine
+- ip: 192.168.111.7
+  name: n112_7
+  os: linux
+  type: machine
+- ip: 192.168.111.8
+  name: n112_8
+  os: windows
+  type: machine
+- ip: 192.168.111.9
+  name: n112_9
+  os: windows
+  type: machine
+- ip: 192.168.111.10
+  name: n112_10
+  os: windows
+  type: machine
+subnet: 192.168.111.0

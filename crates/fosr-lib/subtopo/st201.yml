@@ -1,0 +1,26 @@
+mask: 24
+name: st201
+nodes:
+- ip: 192.168.200.1
+  name: r201_1
+  type: router
+- ip: 192.168.200.2
+  name: n201_2
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.200.3
+  name: n201_3
+  os: linux
+  services: ftp_server
+  type: machine
+- ip: 192.168.200.4
+  name: n201_4
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.200.5
+  name: n201_5
+  os: linux
+  type: machine
+subnet: 192.168.200.0

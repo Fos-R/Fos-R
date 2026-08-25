@@ -1,0 +1,46 @@
+mask: 24
+name: st237
+nodes:
+- ip: 192.168.236.1
+  name: r237_1
+  type: router
+- ip: 192.168.236.2
+  name: n237_2
+  os: windows
+  type: machine
+- ip: 192.168.236.3
+  name: n237_3
+  os: windows
+  type: machine
+- ip: 192.168.236.4
+  name: n237_4
+  os: linux
+  type: machine
+- ip: 192.168.236.5
+  name: n237_5
+  os: linux
+  type: machine
+- ip: 192.168.236.6
+  name: n237_6
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.236.7
+  name: n237_7
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.236.8
+  name: n237_8
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.236.9
+  name: n237_9
+  os: linux
+  type: machine
+- ip: 192.168.236.10
+  name: n237_10
+  os: linux
+  type: machine
+subnet: 192.168.236.0

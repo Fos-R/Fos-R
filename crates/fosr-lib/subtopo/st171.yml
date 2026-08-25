@@ -1,0 +1,28 @@
+mask: 24
+name: st171
+nodes:
+- ip: 192.168.170.1
+  name: r171_1
+  type: router
+- ip: 192.168.170.2
+  name: n171_2
+  os: linux
+  type: machine
+- ip: 192.168.170.3
+  name: n171_3
+  os: windows
+  type: machine
+- ip: 192.168.170.4
+  name: n171_4
+  os: linux
+  type: machine
+- ip: 192.168.170.5
+  name: n171_5
+  os: windows
+  type: machine
+- ip: 192.168.170.6
+  name: n171_6
+  os: linux
+  services: ftp_server
+  type: machine
+subnet: 192.168.170.0

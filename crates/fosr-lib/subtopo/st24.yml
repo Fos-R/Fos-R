@@ -1,0 +1,25 @@
+mask: 24
+name: st24
+nodes:
+- ip: 192.168.23.1
+  name: r24_1
+  type: router
+- ip: 192.168.23.2
+  name: n24_2
+  os: windows
+  type: machine
+- ip: 192.168.23.3
+  name: n24_3
+  os: windows
+  type: machine
+- ip: 192.168.23.4
+  name: n24_4
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.23.5
+  name: n24_5
+  os: windows
+  services: log_server
+  type: machine
+subnet: 192.168.23.0

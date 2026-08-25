@@ -1,0 +1,42 @@
+mask: 24
+name: st158
+nodes:
+- ip: 192.168.157.1
+  name: r158_1
+  type: router
+- ip: 192.168.157.2
+  name: n158_2
+  os: windows
+  type: machine
+- ip: 192.168.157.3
+  name: n158_3
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.157.4
+  name: n158_4
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.157.5
+  name: n158_5
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.157.6
+  name: n158_6
+  os: windows
+  type: machine
+- ip: 192.168.157.7
+  name: n158_7
+  os: linux
+  type: machine
+- ip: 192.168.157.8
+  name: n158_8
+  os: linux
+  type: machine
+- ip: 192.168.157.9
+  name: n158_9
+  os: windows
+  type: machine
+subnet: 192.168.157.0

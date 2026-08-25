@@ -1,0 +1,30 @@
+mask: 24
+name: st192
+nodes:
+- ip: 192.168.191.1
+  name: r192_1
+  type: router
+- ip: 192.168.191.2
+  name: n192_2
+  os: linux
+  type: machine
+- ip: 192.168.191.3
+  name: n192_3
+  os: linux
+  type: machine
+- ip: 192.168.191.4
+  name: n192_4
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.191.5
+  name: n192_5
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.191.6
+  name: n192_6
+  os: linux
+  services: mail_server
+  type: machine
+subnet: 192.168.191.0

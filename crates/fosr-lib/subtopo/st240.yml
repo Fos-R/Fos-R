@@ -1,0 +1,33 @@
+mask: 24
+name: st240
+nodes:
+- ip: 192.168.239.1
+  name: r240_1
+  type: router
+- ip: 192.168.239.2
+  name: n240_2
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.239.3
+  name: n240_3
+  os: windows
+  type: machine
+- ip: 192.168.239.4
+  name: n240_4
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.239.5
+  name: n240_5
+  os: windows
+  type: machine
+- ip: 192.168.239.6
+  name: n240_6
+  os: linux
+  type: machine
+- ip: 192.168.239.7
+  name: n240_7
+  os: linux
+  type: machine
+subnet: 192.168.239.0

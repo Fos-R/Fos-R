@@ -1,0 +1,20 @@
+mask: 24
+name: st220
+nodes:
+- ip: 192.168.219.1
+  name: r220_1
+  type: router
+- ip: 192.168.219.2
+  name: n220_2
+  os: linux
+  type: machine
+- ip: 192.168.219.3
+  name: n220_3
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.219.4
+  name: n220_4
+  os: windows
+  type: machine
+subnet: 192.168.219.0

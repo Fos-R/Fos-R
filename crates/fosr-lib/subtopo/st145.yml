@@ -1,0 +1,20 @@
+mask: 24
+name: st145
+nodes:
+- ip: 192.168.144.1
+  name: r145_1
+  type: router
+- ip: 192.168.144.2
+  name: n145_2
+  os: linux
+  type: machine
+- ip: 192.168.144.3
+  name: n145_3
+  os: linux
+  type: machine
+- ip: 192.168.144.4
+  name: n145_4
+  os: linux
+  services: ftp_server
+  type: machine
+subnet: 192.168.144.0

@@ -1,0 +1,25 @@
+mask: 24
+name: st126
+nodes:
+- ip: 192.168.125.1
+  name: r126_1
+  type: router
+- ip: 192.168.125.2
+  name: n126_2
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.125.3
+  name: n126_3
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.125.4
+  name: n126_4
+  os: windows
+  type: machine
+- ip: 192.168.125.5
+  name: n126_5
+  os: windows
+  type: machine
+subnet: 192.168.125.0

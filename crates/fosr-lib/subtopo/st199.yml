@@ -1,0 +1,20 @@
+mask: 24
+name: st199
+nodes:
+- ip: 192.168.198.1
+  name: r199_1
+  type: router
+- ip: 192.168.198.2
+  name: n199_2
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.198.3
+  name: n199_3
+  os: windows
+  type: machine
+- ip: 192.168.198.4
+  name: n199_4
+  os: linux
+  type: machine
+subnet: 192.168.198.0

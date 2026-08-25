@@ -1,0 +1,23 @@
+mask: 24
+name: st156
+nodes:
+- ip: 192.168.155.1
+  name: r156_1
+  type: router
+- ip: 192.168.155.2
+  name: n156_2
+  os: windows
+  type: machine
+- ip: 192.168.155.3
+  name: n156_3
+  os: linux
+  type: machine
+- ip: 192.168.155.4
+  name: n156_4
+  os: windows
+  type: machine
+- ip: 192.168.155.5
+  name: n156_5
+  os: windows
+  type: machine
+subnet: 192.168.155.0

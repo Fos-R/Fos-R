@@ -1,0 +1,30 @@
+mask: 24
+name: st251
+nodes:
+- ip: 192.168.250.1
+  name: r251_1
+  type: router
+- ip: 192.168.250.2
+  name: n251_2
+  os: windows
+  type: machine
+- ip: 192.168.250.3
+  name: n251_3
+  os: windows
+  type: machine
+- ip: 192.168.250.4
+  name: n251_4
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.250.5
+  name: n251_5
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.250.6
+  name: n251_6
+  os: windows
+  services: cms_server
+  type: machine
+subnet: 192.168.250.0

@@ -7,10 +7,10 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
 use std::net::Ipv4Addr;
+use std::str::FromStr;
 use std::time::Duration;
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 use thingbuf::Recycle;
-use std::str::FromStr;
 
 /// A general wrapper to pass a seed along with actual data
 #[derive(Debug, Clone)]
@@ -65,7 +65,7 @@ pub enum TCPConnState {
     /// Connection attempt rejected
     REJ,
     /// For non-TCP communication
-    #[strum(serialize="none")]
+    #[strum(serialize = "none")]
     NoState,
 }
 
@@ -108,9 +108,7 @@ impl L4Proto {
     }
 }
 
-#[derive(
-    Serialize, Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq, Display, EnumIter,
-)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq, Display, EnumIter)]
 #[allow(clippy::upper_case_acronyms)]
 #[serde(rename_all = "lowercase")]
 /// A list of application layer protocol
@@ -127,6 +125,8 @@ pub enum L7Proto {
     MQTT,
     KMS,
     MulticastDNS,
+    FTP,
+    LDAP,
     NTP, // TODO complete
     // Joker variant for everything else
     Unknown(&'static str), // &'static str costs a little leak (a few bytes) but make this enum
@@ -149,6 +149,8 @@ impl FromStr for L7Proto {
             "MQTT" => L7Proto::MQTT,
             "KMS" => L7Proto::KMS,
             "MULTICASTDNS" => L7Proto::MulticastDNS,
+            "FTP" => L7Proto::FTP,
+            "LDAP" => L7Proto::LDAP,
             "NTP" => L7Proto::NTP,
             _ => L7Proto::Unknown(String::from(s).leak()),
         })
@@ -176,6 +178,8 @@ impl L7Proto {
             L7Proto::MQTT => "MQTT",
             L7Proto::KMS => "KMS",
             L7Proto::MulticastDNS => "mDNS",
+            L7Proto::FTP => "FTP",
+            L7Proto::LDAP => "LDAP",
             L7Proto::NTP => "NTP",
             L7Proto::Unknown(s) => s,
         }
@@ -195,13 +199,17 @@ impl L7Proto {
             L7Proto::MQTT => 1883,
             L7Proto::KMS => 1688,
             L7Proto::MulticastDNS => 5353,
+            L7Proto::FTP => 21,
+            L7Proto::LDAP => 389, // TODO(pf): this is non encrypted LDAP port
             L7Proto::NTP => 123,
             L7Proto::Unknown(_) => todo!(), // TODO: should return an Option
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default, EnumString, Hash)]
+#[strum(ascii_case_insensitive)]
+#[serde(rename_all = "lowercase")]
 /// The OS of an host. By default, assume Linux
 pub enum OS {
     #[default]

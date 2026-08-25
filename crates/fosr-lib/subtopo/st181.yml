@@ -1,0 +1,29 @@
+mask: 24
+name: st181
+nodes:
+- ip: 192.168.180.1
+  name: r181_1
+  type: router
+- ip: 192.168.180.2
+  name: n181_2
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.180.3
+  name: n181_3
+  os: windows
+  type: machine
+- ip: 192.168.180.4
+  name: n181_4
+  os: linux
+  services: ldap_server
+  type: machine
+- ip: 192.168.180.5
+  name: n181_5
+  os: windows
+  type: machine
+- ip: 192.168.180.6
+  name: n181_6
+  os: windows
+  type: machine
+subnet: 192.168.180.0

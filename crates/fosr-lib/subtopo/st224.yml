@@ -1,0 +1,38 @@
+mask: 24
+name: st224
+nodes:
+- ip: 192.168.223.1
+  name: r224_1
+  type: router
+- ip: 192.168.223.2
+  name: n224_2
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.223.3
+  name: n224_3
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.223.4
+  name: n224_4
+  os: linux
+  services: ftp_server
+  type: machine
+- ip: 192.168.223.5
+  name: n224_5
+  os: windows
+  type: machine
+- ip: 192.168.223.6
+  name: n224_6
+  os: linux
+  type: machine
+- ip: 192.168.223.7
+  name: n224_7
+  os: windows
+  type: machine
+- ip: 192.168.223.8
+  name: n224_8
+  os: windows
+  type: machine
+subnet: 192.168.223.0

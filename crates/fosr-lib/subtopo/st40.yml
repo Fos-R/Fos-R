@@ -1,0 +1,42 @@
+mask: 24
+name: st40
+nodes:
+- ip: 192.168.39.1
+  name: r40_1
+  type: router
+- ip: 192.168.39.2
+  name: n40_2
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.39.3
+  name: n40_3
+  os: windows
+  type: machine
+- ip: 192.168.39.4
+  name: n40_4
+  os: linux
+  type: machine
+- ip: 192.168.39.5
+  name: n40_5
+  os: windows
+  type: machine
+- ip: 192.168.39.6
+  name: n40_6
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.39.7
+  name: n40_7
+  os: windows
+  services: cms_server
+  type: machine
+- ip: 192.168.39.8
+  name: n40_8
+  os: windows
+  type: machine
+- ip: 192.168.39.9
+  name: n40_9
+  os: linux
+  type: machine
+subnet: 192.168.39.0

@@ -1,0 +1,38 @@
+mask: 24
+name: st7
+nodes:
+- ip: 192.168.6.1
+  name: r7_1
+  type: router
+- ip: 192.168.6.2
+  name: n7_2
+  os: linux
+  type: machine
+- ip: 192.168.6.3
+  name: n7_3
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.6.4
+  name: n7_4
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.6.5
+  name: n7_5
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.6.6
+  name: n7_6
+  os: linux
+  type: machine
+- ip: 192.168.6.7
+  name: n7_7
+  os: linux
+  type: machine
+- ip: 192.168.6.8
+  name: n7_8
+  os: linux
+  type: machine
+subnet: 192.168.6.0

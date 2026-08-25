@@ -1,0 +1,38 @@
+mask: 24
+name: st118
+nodes:
+- ip: 192.168.117.1
+  name: r118_1
+  type: router
+- ip: 192.168.117.2
+  name: n118_2
+  os: linux
+  type: machine
+- ip: 192.168.117.3
+  name: n118_3
+  os: windows
+  type: machine
+- ip: 192.168.117.4
+  name: n118_4
+  os: linux
+  services: ldap_server
+  type: machine
+- ip: 192.168.117.5
+  name: n118_5
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.117.6
+  name: n118_6
+  os: linux
+  type: machine
+- ip: 192.168.117.7
+  name: n118_7
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.117.8
+  name: n118_8
+  os: linux
+  type: machine
+subnet: 192.168.117.0

@@ -1,0 +1,46 @@
+mask: 24
+name: st165
+nodes:
+- ip: 192.168.164.1
+  name: r165_1
+  type: router
+- ip: 192.168.164.2
+  name: n165_2
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.164.3
+  name: n165_3
+  os: windows
+  type: machine
+- ip: 192.168.164.4
+  name: n165_4
+  os: linux
+  type: machine
+- ip: 192.168.164.5
+  name: n165_5
+  os: linux
+  type: machine
+- ip: 192.168.164.6
+  name: n165_6
+  os: linux
+  type: machine
+- ip: 192.168.164.7
+  name: n165_7
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.164.8
+  name: n165_8
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.164.9
+  name: n165_9
+  os: windows
+  type: machine
+- ip: 192.168.164.10
+  name: n165_10
+  os: linux
+  type: machine
+subnet: 192.168.164.0

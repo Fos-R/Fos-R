@@ -1,0 +1,46 @@
+mask: 24
+name: st77
+nodes:
+- ip: 192.168.76.1
+  name: r77_1
+  type: router
+- ip: 192.168.76.2
+  name: n77_2
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.76.3
+  name: n77_3
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.76.4
+  name: n77_4
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.76.5
+  name: n77_5
+  os: windows
+  type: machine
+- ip: 192.168.76.6
+  name: n77_6
+  os: linux
+  type: machine
+- ip: 192.168.76.7
+  name: n77_7
+  os: windows
+  type: machine
+- ip: 192.168.76.8
+  name: n77_8
+  os: linux
+  type: machine
+- ip: 192.168.76.9
+  name: n77_9
+  os: linux
+  type: machine
+- ip: 192.168.76.10
+  name: n77_10
+  os: windows
+  type: machine
+subnet: 192.168.76.0

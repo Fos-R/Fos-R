@@ -1,0 +1,42 @@
+mask: 24
+name: st15
+nodes:
+- ip: 192.168.14.1
+  name: r15_1
+  type: router
+- ip: 192.168.14.2
+  name: n15_2
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.14.3
+  name: n15_3
+  os: windows
+  type: machine
+- ip: 192.168.14.4
+  name: n15_4
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.14.5
+  name: n15_5
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.14.6
+  name: n15_6
+  os: windows
+  type: machine
+- ip: 192.168.14.7
+  name: n15_7
+  os: linux
+  type: machine
+- ip: 192.168.14.8
+  name: n15_8
+  os: linux
+  type: machine
+- ip: 192.168.14.9
+  name: n15_9
+  os: windows
+  type: machine
+subnet: 192.168.14.0

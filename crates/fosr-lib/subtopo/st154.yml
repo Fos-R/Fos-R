@@ -1,0 +1,30 @@
+mask: 24
+name: st154
+nodes:
+- ip: 192.168.153.1
+  name: r154_1
+  type: router
+- ip: 192.168.153.2
+  name: n154_2
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.153.3
+  name: n154_3
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.153.4
+  name: n154_4
+  os: windows
+  type: machine
+- ip: 192.168.153.5
+  name: n154_5
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.153.6
+  name: n154_6
+  os: linux
+  type: machine
+subnet: 192.168.153.0

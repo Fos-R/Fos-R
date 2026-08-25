@@ -1,0 +1,30 @@
+mask: 24
+name: st101
+nodes:
+- ip: 192.168.100.1
+  name: r101_1
+  type: router
+- ip: 192.168.100.2
+  name: n101_2
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.100.3
+  name: n101_3
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.100.4
+  name: n101_4
+  os: windows
+  type: machine
+- ip: 192.168.100.5
+  name: n101_5
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.100.6
+  name: n101_6
+  os: windows
+  type: machine
+subnet: 192.168.100.0

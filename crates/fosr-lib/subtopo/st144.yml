@@ -1,0 +1,38 @@
+mask: 24
+name: st144
+nodes:
+- ip: 192.168.143.1
+  name: r144_1
+  type: router
+- ip: 192.168.143.2
+  name: n144_2
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.143.3
+  name: n144_3
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.143.4
+  name: n144_4
+  os: linux
+  type: machine
+- ip: 192.168.143.5
+  name: n144_5
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.143.6
+  name: n144_6
+  os: windows
+  type: machine
+- ip: 192.168.143.7
+  name: n144_7
+  os: windows
+  type: machine
+- ip: 192.168.143.8
+  name: n144_8
+  os: windows
+  type: machine
+subnet: 192.168.143.0

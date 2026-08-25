@@ -1,0 +1,42 @@
+mask: 24
+name: st218
+nodes:
+- ip: 192.168.217.1
+  name: r218_1
+  type: router
+- ip: 192.168.217.2
+  name: n218_2
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.217.3
+  name: n218_3
+  os: linux
+  type: machine
+- ip: 192.168.217.4
+  name: n218_4
+  os: windows
+  type: machine
+- ip: 192.168.217.5
+  name: n218_5
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.217.6
+  name: n218_6
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.217.7
+  name: n218_7
+  os: windows
+  type: machine
+- ip: 192.168.217.8
+  name: n218_8
+  os: linux
+  type: machine
+- ip: 192.168.217.9
+  name: n218_9
+  os: linux
+  type: machine
+subnet: 192.168.217.0

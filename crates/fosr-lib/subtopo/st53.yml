@@ -1,0 +1,33 @@
+mask: 24
+name: st53
+nodes:
+- ip: 192.168.52.1
+  name: r53_1
+  type: router
+- ip: 192.168.52.2
+  name: n53_2
+  os: windows
+  type: machine
+- ip: 192.168.52.3
+  name: n53_3
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.52.4
+  name: n53_4
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.52.5
+  name: n53_5
+  os: windows
+  type: machine
+- ip: 192.168.52.6
+  name: n53_6
+  os: windows
+  type: machine
+- ip: 192.168.52.7
+  name: n53_7
+  os: linux
+  type: machine
+subnet: 192.168.52.0

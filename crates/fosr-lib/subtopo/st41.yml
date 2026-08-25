@@ -1,0 +1,36 @@
+mask: 24
+name: st41
+nodes:
+- ip: 192.168.40.1
+  name: r41_1
+  type: router
+- ip: 192.168.40.2
+  name: n41_2
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.40.3
+  name: n41_3
+  os: windows
+  type: machine
+- ip: 192.168.40.4
+  name: n41_4
+  os: windows
+  type: machine
+- ip: 192.168.40.5
+  name: n41_5
+  os: linux
+  type: machine
+- ip: 192.168.40.6
+  name: n41_6
+  os: windows
+  type: machine
+- ip: 192.168.40.7
+  name: n41_7
+  os: windows
+  type: machine
+- ip: 192.168.40.8
+  name: n41_8
+  os: linux
+  type: machine
+subnet: 192.168.40.0

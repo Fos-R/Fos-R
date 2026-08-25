@@ -1,0 +1,33 @@
+mask: 24
+name: st61
+nodes:
+- ip: 192.168.60.1
+  name: r61_1
+  type: router
+- ip: 192.168.60.2
+  name: n61_2
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.60.3
+  name: n61_3
+  os: windows
+  type: machine
+- ip: 192.168.60.4
+  name: n61_4
+  os: linux
+  type: machine
+- ip: 192.168.60.5
+  name: n61_5
+  os: linux
+  type: machine
+- ip: 192.168.60.6
+  name: n61_6
+  os: windows
+  type: machine
+- ip: 192.168.60.7
+  name: n61_7
+  os: windows
+  services: cms_server
+  type: machine
+subnet: 192.168.60.0

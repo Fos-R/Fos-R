@@ -1,0 +1,38 @@
+mask: 24
+name: st100
+nodes:
+- ip: 192.168.99.1
+  name: r100_1
+  type: router
+- ip: 192.168.99.2
+  name: n100_2
+  os: linux
+  type: machine
+- ip: 192.168.99.3
+  name: n100_3
+  os: linux
+  type: machine
+- ip: 192.168.99.4
+  name: n100_4
+  os: linux
+  type: machine
+- ip: 192.168.99.5
+  name: n100_5
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.99.6
+  name: n100_6
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.99.7
+  name: n100_7
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.99.8
+  name: n100_8
+  os: linux
+  type: machine
+subnet: 192.168.99.0

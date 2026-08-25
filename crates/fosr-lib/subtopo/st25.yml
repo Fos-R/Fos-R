@@ -1,0 +1,46 @@
+mask: 24
+name: st25
+nodes:
+- ip: 192.168.24.1
+  name: r25_1
+  type: router
+- ip: 192.168.24.2
+  name: n25_2
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.24.3
+  name: n25_3
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.24.4
+  name: n25_4
+  os: windows
+  type: machine
+- ip: 192.168.24.5
+  name: n25_5
+  os: windows
+  type: machine
+- ip: 192.168.24.6
+  name: n25_6
+  os: windows
+  type: machine
+- ip: 192.168.24.7
+  name: n25_7
+  os: linux
+  type: machine
+- ip: 192.168.24.8
+  name: n25_8
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.24.9
+  name: n25_9
+  os: windows
+  type: machine
+- ip: 192.168.24.10
+  name: n25_10
+  os: windows
+  type: machine
+subnet: 192.168.24.0

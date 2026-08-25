@@ -1,0 +1,38 @@
+mask: 24
+name: st48
+nodes:
+- ip: 192.168.47.1
+  name: r48_1
+  type: router
+- ip: 192.168.47.2
+  name: n48_2
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.47.3
+  name: n48_3
+  os: windows
+  type: machine
+- ip: 192.168.47.4
+  name: n48_4
+  os: linux
+  type: machine
+- ip: 192.168.47.5
+  name: n48_5
+  os: linux
+  type: machine
+- ip: 192.168.47.6
+  name: n48_6
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.47.7
+  name: n48_7
+  os: windows
+  type: machine
+- ip: 192.168.47.8
+  name: n48_8
+  os: windows
+  services: cms_server
+  type: machine
+subnet: 192.168.47.0

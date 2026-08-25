@@ -1,0 +1,20 @@
+mask: 24
+name: st45
+nodes:
+- ip: 192.168.44.1
+  name: r45_1
+  type: router
+- ip: 192.168.44.2
+  name: n45_2
+  os: windows
+  type: machine
+- ip: 192.168.44.3
+  name: n45_3
+  os: linux
+  type: machine
+- ip: 192.168.44.4
+  name: n45_4
+  os: linux
+  services: log_server
+  type: machine
+subnet: 192.168.44.0

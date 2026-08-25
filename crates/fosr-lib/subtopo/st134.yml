@@ -1,0 +1,33 @@
+mask: 24
+name: st134
+nodes:
+- ip: 192.168.133.1
+  name: r134_1
+  type: router
+- ip: 192.168.133.2
+  name: n134_2
+  os: linux
+  type: machine
+- ip: 192.168.133.3
+  name: n134_3
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.133.4
+  name: n134_4
+  os: windows
+  type: machine
+- ip: 192.168.133.5
+  name: n134_5
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.133.6
+  name: n134_6
+  os: linux
+  type: machine
+- ip: 192.168.133.7
+  name: n134_7
+  os: windows
+  type: machine
+subnet: 192.168.133.0

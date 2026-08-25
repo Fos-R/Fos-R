@@ -1,0 +1,42 @@
+mask: 24
+name: st179
+nodes:
+- ip: 192.168.178.1
+  name: r179_1
+  type: router
+- ip: 192.168.178.2
+  name: n179_2
+  os: linux
+  type: machine
+- ip: 192.168.178.3
+  name: n179_3
+  os: windows
+  type: machine
+- ip: 192.168.178.4
+  name: n179_4
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.178.5
+  name: n179_5
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.178.6
+  name: n179_6
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.178.7
+  name: n179_7
+  os: linux
+  type: machine
+- ip: 192.168.178.8
+  name: n179_8
+  os: windows
+  type: machine
+- ip: 192.168.178.9
+  name: n179_9
+  os: linux
+  type: machine
+subnet: 192.168.178.0

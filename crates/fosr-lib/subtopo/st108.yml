@@ -1,0 +1,46 @@
+mask: 24
+name: st108
+nodes:
+- ip: 192.168.107.1
+  name: r108_1
+  type: router
+- ip: 192.168.107.2
+  name: n108_2
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.107.3
+  name: n108_3
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.107.4
+  name: n108_4
+  os: windows
+  type: machine
+- ip: 192.168.107.5
+  name: n108_5
+  os: windows
+  type: machine
+- ip: 192.168.107.6
+  name: n108_6
+  os: linux
+  type: machine
+- ip: 192.168.107.7
+  name: n108_7
+  os: windows
+  type: machine
+- ip: 192.168.107.8
+  name: n108_8
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.107.9
+  name: n108_9
+  os: windows
+  type: machine
+- ip: 192.168.107.10
+  name: n108_10
+  os: windows
+  type: machine
+subnet: 192.168.107.0
