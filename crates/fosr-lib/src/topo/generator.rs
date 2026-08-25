@@ -172,7 +172,7 @@ impl TopologyGenerator {
 
         let solution = problem
             .solve()
-            .map_err(|e| format!("no topology satisfies the generation parameters: {e:?}"))?;
+            .map_err(|e| format!("no topology satisfies the generation parameters: {e:?}"))?.into_solution().unwrap();
 
         let mut selected: Vec<usize> = vars
             .iter()
