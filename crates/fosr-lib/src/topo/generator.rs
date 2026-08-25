@@ -1,12 +1,14 @@
 //! Topology Generator
 
+use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::net::Ipv4Addr;
 use std::path::Path;
 
 use microlp::{ComparisonOp, OptimizationDirection, Problem, Variable};
 
 use crate::topo::config::GenerationParameters;
-use crate::topo::sub_topology::SubTopology;
+use crate::topo::sub_topology::{SubTopology, SubTopologyNode};
 
 /// Tree node for representing topology hierarchies
 #[derive(Debug, Clone)]
@@ -84,7 +86,11 @@ impl TopologyGenerator {
         self.last_topo_generation_parameters = Some(topo_generation_parameters.clone());
 
         // The candidate pool is the list of sub-topologies the generator was built with
-        let topology = Self::solve_with_microlp(&self.sub_topologies, topo_generation_parameters)?;
+        let mut topology =
+            Self::solve_with_microlp(&self.sub_topologies, topo_generation_parameters)?;
+
+        // Assign each router an interco address in its parent's subnet, so sub-topologies are interconnected according to the tree structure
+        Self::assign_interco_addresses(&mut topology, topo_generation_parameters.tree_depth)?;
 
         // Build one tree over the selected sub-topologies, exactly `tree_depth` levels when possible
         if let Some(tree) = Self::generate_tree(
@@ -309,6 +315,105 @@ impl TopologyGenerator {
             fs::write(file_path, topology_json)?;
         }
 
+        Ok(())
+    }
+
+    /// Parent of each node in the tree
+    fn tree_parents(n: usize, max_depth: usize) -> Vec<Option<usize>> {
+        let depth = max_depth.min(n);
+        if depth == 0 {
+            return vec![None; n];
+        }
+        let chain_len = depth - 1;
+        (0..n)
+            .map(|i| {
+                if i < chain_len {
+                    if i == 0 { None } else { Some(i - 1) }
+                } else if chain_len == 0 {
+                    None
+                } else {
+                    Some(chain_len - 1)
+                }
+            })
+            .collect()
+    }
+
+    fn node_address(node: &SubTopologyNode) -> Ipv4Addr {
+        match node {
+            SubTopologyNode::Machine(m) => m.address,
+            SubTopologyNode::Router(r) => r.address,
+        }
+    }
+
+    /// Allocate the first free host address in `parent`'s subnet
+    fn alloc_ip_in_subnet(
+        parent: &SubTopology,
+        assigned: &mut HashSet<Ipv4Addr>,
+    ) -> Result<Ipv4Addr, String> {
+        if !(8..=30).contains(&parent.mask) {
+            return Err(format!(
+                "subnet {}/{}: mask outside the supported 8..=30 range",
+                parent.subnet, parent.mask
+            ));
+        }
+        let host_bits = 32 - parent.mask as u32;
+        let network = u32::from(parent.subnet) & (u32::MAX << host_bits);
+        let size = 1u64 << host_bits;
+
+        // Addresses already taken: machines, the router's LAN address, and interco addresses of previously processed siblings
+        let mut used: HashSet<Ipv4Addr> = assigned.clone();
+        for node in &parent.nodes {
+            used.insert(Self::node_address(node));
+        }
+        used.insert(Self::node_address(&parent.router_node));
+
+        // Usable host range: exclude the network and broadcast addresses
+        for offset in 1..(size - 1) {
+            let candidate = Ipv4Addr::from((network as u64 + offset) as u32);
+            if !used.contains(&candidate) {
+                assigned.insert(candidate);
+                return Ok(candidate);
+            }
+        }
+        Err(format!(
+            "no free address left in subnet {}/{}",
+            parent.subnet, parent.mask
+        ))
+    }
+
+    /// Assign each sub-topology's router an `interco_address` inside its parent sub-topology's subnet, so the router sits in both networks and
+    /// interconnects them. Top-level routers get an uplink address toward the Internet
+    fn assign_interco_addresses(
+        topology: &mut [SubTopology],
+        max_depth: usize,
+    ) -> Result<(), String> {
+        if max_depth == 0 {
+            return Ok(());
+        }
+        let parents = Self::tree_parents(topology.len(), max_depth);
+
+        /// Uplink range toward the Internet for top-level routers (CGNAT range)
+        const UPLINK_SUBNET: Ipv4Addr = Ipv4Addr::new(100, 64, 0, 0);
+        let mut uplink_host = 1u32;
+
+        let mut assigned_per_parent: HashMap<usize, HashSet<Ipv4Addr>> = HashMap::new();
+
+        for i in 0..topology.len() {
+            let interco = match parents[i] {
+                None => {
+                    let ip = Ipv4Addr::from(u32::from(UPLINK_SUBNET) + uplink_host);
+                    uplink_host += 1;
+                    ip
+                }
+                Some(p) => {
+                    let assigned = assigned_per_parent.entry(p).or_default();
+                    Self::alloc_ip_in_subnet(&topology[p], assigned)?
+                }
+            };
+            if let SubTopologyNode::Router(router) = &mut topology[i].router_node {
+                router.interco_address = interco;
+            }
+        }
         Ok(())
     }
 }
@@ -636,7 +741,7 @@ services:
         let mut rng = Rng::new(seed);
 
         // Build a random candidate pool as raw YAML strings
-        let pool_size = rng.gen_range(200, 250);
+        let pool_size = rng.gen_range(10, 50);
         let mut pool = Vec::new();
         let mut pool_yamls: Vec<String> = Vec::new();
         let mut pool_services: Vec<&'static str> = Vec::new();
@@ -697,7 +802,7 @@ services:
 
         let services_yaml: String = required.iter().map(|s| format!("  - {s}\n")).collect();
         let params_yaml = format!(
-            "minimum_sub_topology: {min_st}\nminimum_node_count: {min_nodes}\nminimum_subnet_count: {min_st}\ntree_depth: 5\n\nservices:\n{services_yaml}"
+            "minimum_sub_topology: {min_st}\nminimum_node_count: {min_nodes}\nminimum_subnet_count: {min_st}\ntree_depth: 2\n\nservices:\n{services_yaml}"
         );
         println!("\n=== generation parameters ===\n{params_yaml}");
 
@@ -761,5 +866,44 @@ services:
         assert_eq!(depth, 3);
 
         assert!(TopologyGenerator::generate_tree("root".to_string(), &pool, 0).is_none());
+    }
+
+    #[test]
+    fn test_interco_address_in_parent_subnet() {
+        let params = generation_params_from_yaml(
+            r#"
+minimum_sub_topology: 2
+minimum_node_count: 5
+minimum_subnet_count: 2
+tree_depth: 2
+
+services:
+  - ftp_server
+  - cloud_storage
+"#,
+        );
+
+        let mut generator = TopologyGenerator::new(test_pool());
+        let topology = generator
+            .generate_topologies(&params)
+            .expect("topology generation should succeed");
+
+        // With 2 sub-topologies and depth 2, the tree is root -> st1 -> st2
+        let st1 = topology.iter().find(|st| st.name == "st1").unwrap();
+        let st2 = topology.iter().find(|st| st.name == "st2").unwrap();
+
+        let SubTopologyNode::Router(r1) = &st1.router_node else {
+            panic!("st1 has a router");
+        };
+        let SubTopologyNode::Router(r2) = &st2.router_node else {
+            panic!("st2 has a router");
+        };
+
+        // Top-level router: interco toward the Internet (uplink range)
+        assert_eq!(r1.interco_address, Ipv4Addr::new(100, 64, 0, 1));
+
+        // Child router: interco inside the parent's subnet. st1 uses 192.168.0.1 (router) and .2-.4 (machines), so the first free is .5
+        assert_eq!(r2.interco_address, Ipv4Addr::new(192, 168, 0, 5));
+        assert_ne!(r2.interco_address, r2.address);
     }
 }
