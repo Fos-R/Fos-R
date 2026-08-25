@@ -1,0 +1,42 @@
+mask: 24
+name: st133
+nodes:
+- ip: 192.168.132.1
+  name: r133_1
+  type: router
+- ip: 192.168.132.2
+  name: n133_2
+  os: windows
+  type: machine
+- ip: 192.168.132.3
+  name: n133_3
+  os: windows
+  type: machine
+- ip: 192.168.132.4
+  name: n133_4
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.132.5
+  name: n133_5
+  os: linux
+  services: ldap_server
+  type: machine
+- ip: 192.168.132.6
+  name: n133_6
+  os: windows
+  type: machine
+- ip: 192.168.132.7
+  name: n133_7
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.132.8
+  name: n133_8
+  os: windows
+  type: machine
+- ip: 192.168.132.9
+  name: n133_9
+  os: linux
+  type: machine
+subnet: 192.168.132.0

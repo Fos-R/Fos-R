@@ -1,0 +1,46 @@
+mask: 24
+name: st89
+nodes:
+- ip: 192.168.88.1
+  name: r89_1
+  type: router
+- ip: 192.168.88.2
+  name: n89_2
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.88.3
+  name: n89_3
+  os: linux
+  type: machine
+- ip: 192.168.88.4
+  name: n89_4
+  os: windows
+  type: machine
+- ip: 192.168.88.5
+  name: n89_5
+  os: linux
+  type: machine
+- ip: 192.168.88.6
+  name: n89_6
+  os: linux
+  services: ftp_server
+  type: machine
+- ip: 192.168.88.7
+  name: n89_7
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.88.8
+  name: n89_8
+  os: linux
+  type: machine
+- ip: 192.168.88.9
+  name: n89_9
+  os: windows
+  type: machine
+- ip: 192.168.88.10
+  name: n89_10
+  os: linux
+  type: machine
+subnet: 192.168.88.0

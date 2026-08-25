@@ -1,0 +1,38 @@
+mask: 24
+name: st203
+nodes:
+- ip: 192.168.202.1
+  name: r203_1
+  type: router
+- ip: 192.168.202.2
+  name: n203_2
+  os: linux
+  type: machine
+- ip: 192.168.202.3
+  name: n203_3
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.202.4
+  name: n203_4
+  os: windows
+  type: machine
+- ip: 192.168.202.5
+  name: n203_5
+  os: windows
+  type: machine
+- ip: 192.168.202.6
+  name: n203_6
+  os: linux
+  type: machine
+- ip: 192.168.202.7
+  name: n203_7
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.202.8
+  name: n203_8
+  os: linux
+  services: log_server
+  type: machine
+subnet: 192.168.202.0

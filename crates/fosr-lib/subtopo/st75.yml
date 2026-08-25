@@ -1,0 +1,42 @@
+mask: 24
+name: st75
+nodes:
+- ip: 192.168.74.1
+  name: r75_1
+  type: router
+- ip: 192.168.74.2
+  name: n75_2
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.74.3
+  name: n75_3
+  os: windows
+  type: machine
+- ip: 192.168.74.4
+  name: n75_4
+  os: windows
+  type: machine
+- ip: 192.168.74.5
+  name: n75_5
+  os: windows
+  type: machine
+- ip: 192.168.74.6
+  name: n75_6
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.74.7
+  name: n75_7
+  os: windows
+  type: machine
+- ip: 192.168.74.8
+  name: n75_8
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.74.9
+  name: n75_9
+  os: linux
+  type: machine
+subnet: 192.168.74.0

@@ -1,0 +1,46 @@
+mask: 24
+name: st11
+nodes:
+- ip: 192.168.10.1
+  name: r11_1
+  type: router
+- ip: 192.168.10.2
+  name: n11_2
+  os: linux
+  type: machine
+- ip: 192.168.10.3
+  name: n11_3
+  os: windows
+  type: machine
+- ip: 192.168.10.4
+  name: n11_4
+  os: linux
+  type: machine
+- ip: 192.168.10.5
+  name: n11_5
+  os: windows
+  type: machine
+- ip: 192.168.10.6
+  name: n11_6
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.10.7
+  name: n11_7
+  os: linux
+  type: machine
+- ip: 192.168.10.8
+  name: n11_8
+  os: linux
+  type: machine
+- ip: 192.168.10.9
+  name: n11_9
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.10.10
+  name: n11_10
+  os: windows
+  services: web_server
+  type: machine
+subnet: 192.168.10.0

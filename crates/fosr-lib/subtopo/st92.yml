@@ -1,0 +1,38 @@
+mask: 24
+name: st92
+nodes:
+- ip: 192.168.91.1
+  name: r92_1
+  type: router
+- ip: 192.168.91.2
+  name: n92_2
+  os: windows
+  services: cms_server
+  type: machine
+- ip: 192.168.91.3
+  name: n92_3
+  os: windows
+  type: machine
+- ip: 192.168.91.4
+  name: n92_4
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.91.5
+  name: n92_5
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.91.6
+  name: n92_6
+  os: windows
+  type: machine
+- ip: 192.168.91.7
+  name: n92_7
+  os: windows
+  type: machine
+- ip: 192.168.91.8
+  name: n92_8
+  os: linux
+  type: machine
+subnet: 192.168.91.0

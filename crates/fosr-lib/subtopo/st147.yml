@@ -1,0 +1,45 @@
+mask: 24
+name: st147
+nodes:
+- ip: 192.168.146.1
+  name: r147_1
+  type: router
+- ip: 192.168.146.2
+  name: n147_2
+  os: linux
+  type: machine
+- ip: 192.168.146.3
+  name: n147_3
+  os: windows
+  type: machine
+- ip: 192.168.146.4
+  name: n147_4
+  os: linux
+  type: machine
+- ip: 192.168.146.5
+  name: n147_5
+  os: windows
+  type: machine
+- ip: 192.168.146.6
+  name: n147_6
+  os: windows
+  type: machine
+- ip: 192.168.146.7
+  name: n147_7
+  os: linux
+  type: machine
+- ip: 192.168.146.8
+  name: n147_8
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.146.9
+  name: n147_9
+  os: windows
+  type: machine
+- ip: 192.168.146.10
+  name: n147_10
+  os: linux
+  services: cms_server
+  type: machine
+subnet: 192.168.146.0

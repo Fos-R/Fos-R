@@ -1,0 +1,24 @@
+mask: 24
+name: st123
+nodes:
+- ip: 192.168.122.1
+  name: r123_1
+  type: router
+- ip: 192.168.122.2
+  name: n123_2
+  os: windows
+  type: machine
+- ip: 192.168.122.3
+  name: n123_3
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.122.4
+  name: n123_4
+  os: linux
+  type: machine
+- ip: 192.168.122.5
+  name: n123_5
+  os: linux
+  type: machine
+subnet: 192.168.122.0

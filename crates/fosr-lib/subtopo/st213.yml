@@ -1,0 +1,46 @@
+mask: 24
+name: st213
+nodes:
+- ip: 192.168.212.1
+  name: r213_1
+  type: router
+- ip: 192.168.212.2
+  name: n213_2
+  os: windows
+  type: machine
+- ip: 192.168.212.3
+  name: n213_3
+  os: linux
+  type: machine
+- ip: 192.168.212.4
+  name: n213_4
+  os: windows
+  type: machine
+- ip: 192.168.212.5
+  name: n213_5
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.212.6
+  name: n213_6
+  os: linux
+  services: ftp_server
+  type: machine
+- ip: 192.168.212.7
+  name: n213_7
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.212.8
+  name: n213_8
+  os: linux
+  type: machine
+- ip: 192.168.212.9
+  name: n213_9
+  os: windows
+  type: machine
+- ip: 192.168.212.10
+  name: n213_10
+  os: windows
+  type: machine
+subnet: 192.168.212.0

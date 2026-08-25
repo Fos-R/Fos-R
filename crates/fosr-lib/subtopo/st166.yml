@@ -1,0 +1,46 @@
+mask: 24
+name: st166
+nodes:
+- ip: 192.168.165.1
+  name: r166_1
+  type: router
+- ip: 192.168.165.2
+  name: n166_2
+  os: windows
+  type: machine
+- ip: 192.168.165.3
+  name: n166_3
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.165.4
+  name: n166_4
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.165.5
+  name: n166_5
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.165.6
+  name: n166_6
+  os: linux
+  type: machine
+- ip: 192.168.165.7
+  name: n166_7
+  os: windows
+  type: machine
+- ip: 192.168.165.8
+  name: n166_8
+  os: windows
+  type: machine
+- ip: 192.168.165.9
+  name: n166_9
+  os: windows
+  type: machine
+- ip: 192.168.165.10
+  name: n166_10
+  os: linux
+  type: machine
+subnet: 192.168.165.0

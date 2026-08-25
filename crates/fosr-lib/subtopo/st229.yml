@@ -1,0 +1,28 @@
+mask: 24
+name: st229
+nodes:
+- ip: 192.168.228.1
+  name: r229_1
+  type: router
+- ip: 192.168.228.2
+  name: n229_2
+  os: linux
+  type: machine
+- ip: 192.168.228.3
+  name: n229_3
+  os: windows
+  type: machine
+- ip: 192.168.228.4
+  name: n229_4
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.228.5
+  name: n229_5
+  os: linux
+  type: machine
+- ip: 192.168.228.6
+  name: n229_6
+  os: windows
+  type: machine
+subnet: 192.168.228.0

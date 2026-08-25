@@ -1,0 +1,46 @@
+mask: 24
+name: st148
+nodes:
+- ip: 192.168.147.1
+  name: r148_1
+  type: router
+- ip: 192.168.147.2
+  name: n148_2
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.147.3
+  name: n148_3
+  os: windows
+  type: machine
+- ip: 192.168.147.4
+  name: n148_4
+  os: windows
+  type: machine
+- ip: 192.168.147.5
+  name: n148_5
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.147.6
+  name: n148_6
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.147.7
+  name: n148_7
+  os: linux
+  type: machine
+- ip: 192.168.147.8
+  name: n148_8
+  os: linux
+  type: machine
+- ip: 192.168.147.9
+  name: n148_9
+  os: linux
+  type: machine
+- ip: 192.168.147.10
+  name: n148_10
+  os: windows
+  type: machine
+subnet: 192.168.147.0

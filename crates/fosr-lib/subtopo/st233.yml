@@ -1,0 +1,40 @@
+mask: 24
+name: st233
+nodes:
+- ip: 192.168.232.1
+  name: r233_1
+  type: router
+- ip: 192.168.232.2
+  name: n233_2
+  os: windows
+  type: machine
+- ip: 192.168.232.3
+  name: n233_3
+  os: windows
+  type: machine
+- ip: 192.168.232.4
+  name: n233_4
+  os: linux
+  type: machine
+- ip: 192.168.232.5
+  name: n233_5
+  os: linux
+  type: machine
+- ip: 192.168.232.6
+  name: n233_6
+  os: linux
+  type: machine
+- ip: 192.168.232.7
+  name: n233_7
+  os: linux
+  type: machine
+- ip: 192.168.232.8
+  name: n233_8
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.232.9
+  name: n233_9
+  os: linux
+  type: machine
+subnet: 192.168.232.0

@@ -1,0 +1,20 @@
+mask: 24
+name: st65
+nodes:
+- ip: 192.168.64.1
+  name: r65_1
+  type: router
+- ip: 192.168.64.2
+  name: n65_2
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.64.3
+  name: n65_3
+  os: windows
+  type: machine
+- ip: 192.168.64.4
+  name: n65_4
+  os: linux
+  type: machine
+subnet: 192.168.64.0

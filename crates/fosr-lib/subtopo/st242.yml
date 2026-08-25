@@ -1,0 +1,32 @@
+mask: 24
+name: st242
+nodes:
+- ip: 192.168.241.1
+  name: r242_1
+  type: router
+- ip: 192.168.241.2
+  name: n242_2
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.241.3
+  name: n242_3
+  os: windows
+  type: machine
+- ip: 192.168.241.4
+  name: n242_4
+  os: linux
+  type: machine
+- ip: 192.168.241.5
+  name: n242_5
+  os: windows
+  type: machine
+- ip: 192.168.241.6
+  name: n242_6
+  os: windows
+  type: machine
+- ip: 192.168.241.7
+  name: n242_7
+  os: windows
+  type: machine
+subnet: 192.168.241.0

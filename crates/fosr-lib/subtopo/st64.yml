@@ -1,0 +1,26 @@
+mask: 24
+name: st64
+nodes:
+- ip: 192.168.63.1
+  name: r64_1
+  type: router
+- ip: 192.168.63.2
+  name: n64_2
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.63.3
+  name: n64_3
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.63.4
+  name: n64_4
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.63.5
+  name: n64_5
+  os: windows
+  type: machine
+subnet: 192.168.63.0

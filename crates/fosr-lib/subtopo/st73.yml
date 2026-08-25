@@ -1,0 +1,46 @@
+mask: 24
+name: st73
+nodes:
+- ip: 192.168.72.1
+  name: r73_1
+  type: router
+- ip: 192.168.72.2
+  name: n73_2
+  os: windows
+  type: machine
+- ip: 192.168.72.3
+  name: n73_3
+  os: linux
+  type: machine
+- ip: 192.168.72.4
+  name: n73_4
+  os: windows
+  type: machine
+- ip: 192.168.72.5
+  name: n73_5
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.72.6
+  name: n73_6
+  os: linux
+  type: machine
+- ip: 192.168.72.7
+  name: n73_7
+  os: linux
+  services: ldap_server
+  type: machine
+- ip: 192.168.72.8
+  name: n73_8
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.72.9
+  name: n73_9
+  os: windows
+  type: machine
+- ip: 192.168.72.10
+  name: n73_10
+  os: linux
+  type: machine
+subnet: 192.168.72.0

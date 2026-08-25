@@ -1,0 +1,42 @@
+mask: 24
+name: st205
+nodes:
+- ip: 192.168.204.1
+  name: r205_1
+  type: router
+- ip: 192.168.204.2
+  name: n205_2
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.204.3
+  name: n205_3
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.204.4
+  name: n205_4
+  os: linux
+  type: machine
+- ip: 192.168.204.5
+  name: n205_5
+  os: linux
+  type: machine
+- ip: 192.168.204.6
+  name: n205_6
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.204.7
+  name: n205_7
+  os: linux
+  type: machine
+- ip: 192.168.204.8
+  name: n205_8
+  os: linux
+  type: machine
+- ip: 192.168.204.9
+  name: n205_9
+  os: windows
+  type: machine
+subnet: 192.168.204.0

@@ -1,0 +1,29 @@
+mask: 24
+name: st70
+nodes:
+- ip: 192.168.69.1
+  name: r70_1
+  type: router
+- ip: 192.168.69.2
+  name: n70_2
+  os: windows
+  type: machine
+- ip: 192.168.69.3
+  name: n70_3
+  os: windows
+  type: machine
+- ip: 192.168.69.4
+  name: n70_4
+  os: windows
+  type: machine
+- ip: 192.168.69.5
+  name: n70_5
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.69.6
+  name: n70_6
+  os: linux
+  services: ldap_server
+  type: machine
+subnet: 192.168.69.0

@@ -1,0 +1,29 @@
+mask: 24
+name: st188
+nodes:
+- ip: 192.168.187.1
+  name: r188_1
+  type: router
+- ip: 192.168.187.2
+  name: n188_2
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.187.3
+  name: n188_3
+  os: linux
+  type: machine
+- ip: 192.168.187.4
+  name: n188_4
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.187.5
+  name: n188_5
+  os: linux
+  type: machine
+- ip: 192.168.187.6
+  name: n188_6
+  os: windows
+  type: machine
+subnet: 192.168.187.0

@@ -1,0 +1,26 @@
+mask: 24
+name: st19
+nodes:
+- ip: 192.168.18.1
+  name: r19_1
+  type: router
+- ip: 192.168.18.2
+  name: n19_2
+  os: windows
+  type: machine
+- ip: 192.168.18.3
+  name: n19_3
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.18.4
+  name: n19_4
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.18.5
+  name: n19_5
+  os: linux
+  services: cloud_storage
+  type: machine
+subnet: 192.168.18.0

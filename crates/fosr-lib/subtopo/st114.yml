@@ -1,0 +1,45 @@
+mask: 24
+name: st114
+nodes:
+- ip: 192.168.113.1
+  name: r114_1
+  type: router
+- ip: 192.168.113.2
+  name: n114_2
+  os: windows
+  type: machine
+- ip: 192.168.113.3
+  name: n114_3
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.113.4
+  name: n114_4
+  os: linux
+  type: machine
+- ip: 192.168.113.5
+  name: n114_5
+  os: windows
+  type: machine
+- ip: 192.168.113.6
+  name: n114_6
+  os: windows
+  type: machine
+- ip: 192.168.113.7
+  name: n114_7
+  os: windows
+  type: machine
+- ip: 192.168.113.8
+  name: n114_8
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.113.9
+  name: n114_9
+  os: windows
+  type: machine
+- ip: 192.168.113.10
+  name: n114_10
+  os: windows
+  type: machine
+subnet: 192.168.113.0

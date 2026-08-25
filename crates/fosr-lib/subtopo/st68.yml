@@ -1,0 +1,21 @@
+mask: 24
+name: st68
+nodes:
+- ip: 192.168.67.1
+  name: r68_1
+  type: router
+- ip: 192.168.67.2
+  name: n68_2
+  os: linux
+  type: machine
+- ip: 192.168.67.3
+  name: n68_3
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.67.4
+  name: n68_4
+  os: linux
+  services: proxy_server
+  type: machine
+subnet: 192.168.67.0

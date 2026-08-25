@@ -1,0 +1,29 @@
+mask: 24
+name: st9
+nodes:
+- ip: 192.168.8.1
+  name: r9_1
+  type: router
+- ip: 192.168.8.2
+  name: n9_2
+  os: linux
+  type: machine
+- ip: 192.168.8.3
+  name: n9_3
+  os: windows
+  type: machine
+- ip: 192.168.8.4
+  name: n9_4
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.8.5
+  name: n9_5
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.8.6
+  name: n9_6
+  os: linux
+  type: machine
+subnet: 192.168.8.0

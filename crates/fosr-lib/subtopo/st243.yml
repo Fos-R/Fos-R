@@ -1,0 +1,30 @@
+mask: 24
+name: st243
+nodes:
+- ip: 192.168.242.1
+  name: r243_1
+  type: router
+- ip: 192.168.242.2
+  name: n243_2
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.242.3
+  name: n243_3
+  os: windows
+  type: machine
+- ip: 192.168.242.4
+  name: n243_4
+  os: linux
+  services: ldap_server
+  type: machine
+- ip: 192.168.242.5
+  name: n243_5
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.242.6
+  name: n243_6
+  os: linux
+  type: machine
+subnet: 192.168.242.0

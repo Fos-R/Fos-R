@@ -1,0 +1,45 @@
+mask: 24
+name: st8
+nodes:
+- ip: 192.168.7.1
+  name: r8_1
+  type: router
+- ip: 192.168.7.2
+  name: n8_2
+  os: windows
+  type: machine
+- ip: 192.168.7.3
+  name: n8_3
+  os: linux
+  type: machine
+- ip: 192.168.7.4
+  name: n8_4
+  os: windows
+  type: machine
+- ip: 192.168.7.5
+  name: n8_5
+  os: windows
+  type: machine
+- ip: 192.168.7.6
+  name: n8_6
+  os: linux
+  type: machine
+- ip: 192.168.7.7
+  name: n8_7
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.7.8
+  name: n8_8
+  os: linux
+  type: machine
+- ip: 192.168.7.9
+  name: n8_9
+  os: windows
+  type: machine
+- ip: 192.168.7.10
+  name: n8_10
+  os: linux
+  services: web_server
+  type: machine
+subnet: 192.168.7.0

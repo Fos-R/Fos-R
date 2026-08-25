@@ -1,0 +1,42 @@
+mask: 24
+name: st106
+nodes:
+- ip: 192.168.105.1
+  name: r106_1
+  type: router
+- ip: 192.168.105.2
+  name: n106_2
+  os: linux
+  type: machine
+- ip: 192.168.105.3
+  name: n106_3
+  os: linux
+  type: machine
+- ip: 192.168.105.4
+  name: n106_4
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.105.5
+  name: n106_5
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.105.6
+  name: n106_6
+  os: linux
+  type: machine
+- ip: 192.168.105.7
+  name: n106_7
+  os: windows
+  type: machine
+- ip: 192.168.105.8
+  name: n106_8
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.105.9
+  name: n106_9
+  os: linux
+  type: machine
+subnet: 192.168.105.0

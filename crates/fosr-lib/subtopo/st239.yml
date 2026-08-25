@@ -1,0 +1,42 @@
+mask: 24
+name: st239
+nodes:
+- ip: 192.168.238.1
+  name: r239_1
+  type: router
+- ip: 192.168.238.2
+  name: n239_2
+  os: linux
+  type: machine
+- ip: 192.168.238.3
+  name: n239_3
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.238.4
+  name: n239_4
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.238.5
+  name: n239_5
+  os: windows
+  type: machine
+- ip: 192.168.238.6
+  name: n239_6
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.238.7
+  name: n239_7
+  os: windows
+  type: machine
+- ip: 192.168.238.8
+  name: n239_8
+  os: windows
+  type: machine
+- ip: 192.168.238.9
+  name: n239_9
+  os: linux
+  type: machine
+subnet: 192.168.238.0

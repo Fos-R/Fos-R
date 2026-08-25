@@ -1,0 +1,20 @@
+mask: 24
+name: st138
+nodes:
+- ip: 192.168.137.1
+  name: r138_1
+  type: router
+- ip: 192.168.137.2
+  name: n138_2
+  os: linux
+  services: ftp_server
+  type: machine
+- ip: 192.168.137.3
+  name: n138_3
+  os: windows
+  type: machine
+- ip: 192.168.137.4
+  name: n138_4
+  os: windows
+  type: machine
+subnet: 192.168.137.0

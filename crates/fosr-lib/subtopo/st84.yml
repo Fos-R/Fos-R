@@ -1,0 +1,24 @@
+mask: 24
+name: st84
+nodes:
+- ip: 192.168.83.1
+  name: r84_1
+  type: router
+- ip: 192.168.83.2
+  name: n84_2
+  os: windows
+  type: machine
+- ip: 192.168.83.3
+  name: n84_3
+  os: windows
+  type: machine
+- ip: 192.168.83.4
+  name: n84_4
+  os: linux
+  type: machine
+- ip: 192.168.83.5
+  name: n84_5
+  os: linux
+  services: log_server
+  type: machine
+subnet: 192.168.83.0

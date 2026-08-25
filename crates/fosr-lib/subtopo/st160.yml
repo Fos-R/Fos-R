@@ -1,0 +1,29 @@
+mask: 24
+name: st160
+nodes:
+- ip: 192.168.159.1
+  name: r160_1
+  type: router
+- ip: 192.168.159.2
+  name: n160_2
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.159.3
+  name: n160_3
+  os: windows
+  type: machine
+- ip: 192.168.159.4
+  name: n160_4
+  os: linux
+  type: machine
+- ip: 192.168.159.5
+  name: n160_5
+  os: windows
+  type: machine
+- ip: 192.168.159.6
+  name: n160_6
+  os: windows
+  services: ftp_server
+  type: machine
+subnet: 192.168.159.0

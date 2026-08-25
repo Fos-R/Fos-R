@@ -1,0 +1,42 @@
+mask: 24
+name: st58
+nodes:
+- ip: 192.168.57.1
+  name: r58_1
+  type: router
+- ip: 192.168.57.2
+  name: n58_2
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.57.3
+  name: n58_3
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.57.4
+  name: n58_4
+  os: windows
+  type: machine
+- ip: 192.168.57.5
+  name: n58_5
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.57.6
+  name: n58_6
+  os: linux
+  type: machine
+- ip: 192.168.57.7
+  name: n58_7
+  os: windows
+  type: machine
+- ip: 192.168.57.8
+  name: n58_8
+  os: linux
+  type: machine
+- ip: 192.168.57.9
+  name: n58_9
+  os: linux
+  type: machine
+subnet: 192.168.57.0

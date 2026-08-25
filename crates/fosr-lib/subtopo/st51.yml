@@ -1,0 +1,38 @@
+mask: 24
+name: st51
+nodes:
+- ip: 192.168.50.1
+  name: r51_1
+  type: router
+- ip: 192.168.50.2
+  name: n51_2
+  os: windows
+  type: machine
+- ip: 192.168.50.3
+  name: n51_3
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.50.4
+  name: n51_4
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.50.5
+  name: n51_5
+  os: linux
+  type: machine
+- ip: 192.168.50.6
+  name: n51_6
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.50.7
+  name: n51_7
+  os: linux
+  type: machine
+- ip: 192.168.50.8
+  name: n51_8
+  os: linux
+  type: machine
+subnet: 192.168.50.0

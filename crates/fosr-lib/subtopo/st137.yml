@@ -1,0 +1,46 @@
+mask: 24
+name: st137
+nodes:
+- ip: 192.168.136.1
+  name: r137_1
+  type: router
+- ip: 192.168.136.2
+  name: n137_2
+  os: linux
+  services: ldap_server
+  type: machine
+- ip: 192.168.136.3
+  name: n137_3
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.136.4
+  name: n137_4
+  os: windows
+  services: cms_server
+  type: machine
+- ip: 192.168.136.5
+  name: n137_5
+  os: windows
+  type: machine
+- ip: 192.168.136.6
+  name: n137_6
+  os: windows
+  type: machine
+- ip: 192.168.136.7
+  name: n137_7
+  os: linux
+  type: machine
+- ip: 192.168.136.8
+  name: n137_8
+  os: linux
+  type: machine
+- ip: 192.168.136.9
+  name: n137_9
+  os: linux
+  type: machine
+- ip: 192.168.136.10
+  name: n137_10
+  os: linux
+  type: machine
+subnet: 192.168.136.0

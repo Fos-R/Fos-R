@@ -1,0 +1,35 @@
+mask: 24
+name: st14
+nodes:
+- ip: 192.168.13.1
+  name: r14_1
+  type: router
+- ip: 192.168.13.2
+  name: n14_2
+  os: linux
+  type: machine
+- ip: 192.168.13.3
+  name: n14_3
+  os: windows
+  type: machine
+- ip: 192.168.13.4
+  name: n14_4
+  os: windows
+  type: machine
+- ip: 192.168.13.5
+  name: n14_5
+  os: linux
+  type: machine
+- ip: 192.168.13.6
+  name: n14_6
+  os: linux
+  type: machine
+- ip: 192.168.13.7
+  name: n14_7
+  os: linux
+  type: machine
+- ip: 192.168.13.8
+  name: n14_8
+  os: linux
+  type: machine
+subnet: 192.168.13.0

@@ -1,0 +1,32 @@
+mask: 24
+name: st31
+nodes:
+- ip: 192.168.30.1
+  name: r31_1
+  type: router
+- ip: 192.168.30.2
+  name: n31_2
+  os: linux
+  type: machine
+- ip: 192.168.30.3
+  name: n31_3
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.30.4
+  name: n31_4
+  os: windows
+  type: machine
+- ip: 192.168.30.5
+  name: n31_5
+  os: windows
+  type: machine
+- ip: 192.168.30.6
+  name: n31_6
+  os: linux
+  type: machine
+- ip: 192.168.30.7
+  name: n31_7
+  os: windows
+  type: machine
+subnet: 192.168.30.0

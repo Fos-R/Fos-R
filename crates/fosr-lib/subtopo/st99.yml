@@ -1,0 +1,46 @@
+mask: 24
+name: st99
+nodes:
+- ip: 192.168.98.1
+  name: r99_1
+  type: router
+- ip: 192.168.98.2
+  name: n99_2
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.98.3
+  name: n99_3
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.98.4
+  name: n99_4
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.98.5
+  name: n99_5
+  os: windows
+  type: machine
+- ip: 192.168.98.6
+  name: n99_6
+  os: linux
+  type: machine
+- ip: 192.168.98.7
+  name: n99_7
+  os: windows
+  type: machine
+- ip: 192.168.98.8
+  name: n99_8
+  os: windows
+  type: machine
+- ip: 192.168.98.9
+  name: n99_9
+  os: windows
+  type: machine
+- ip: 192.168.98.10
+  name: n99_10
+  os: windows
+  type: machine
+subnet: 192.168.98.0

@@ -1,0 +1,30 @@
+mask: 24
+name: st10
+nodes:
+- ip: 192.168.9.1
+  name: r10_1
+  type: router
+- ip: 192.168.9.2
+  name: n10_2
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.9.3
+  name: n10_3
+  os: linux
+  services: ftp_server
+  type: machine
+- ip: 192.168.9.4
+  name: n10_4
+  os: windows
+  type: machine
+- ip: 192.168.9.5
+  name: n10_5
+  os: windows
+  services: cms_server
+  type: machine
+- ip: 192.168.9.6
+  name: n10_6
+  os: windows
+  type: machine
+subnet: 192.168.9.0

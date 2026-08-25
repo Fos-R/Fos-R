@@ -1,0 +1,20 @@
+mask: 24
+name: st254
+nodes:
+- ip: 192.168.253.1
+  name: r254_1
+  type: router
+- ip: 192.168.253.2
+  name: n254_2
+  os: linux
+  type: machine
+- ip: 192.168.253.3
+  name: n254_3
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.253.4
+  name: n254_4
+  os: windows
+  type: machine
+subnet: 192.168.253.0

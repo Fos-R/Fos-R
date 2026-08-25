@@ -1,0 +1,38 @@
+mask: 24
+name: st172
+nodes:
+- ip: 192.168.171.1
+  name: r172_1
+  type: router
+- ip: 192.168.171.2
+  name: n172_2
+  os: linux
+  services: ftp_server
+  type: machine
+- ip: 192.168.171.3
+  name: n172_3
+  os: windows
+  type: machine
+- ip: 192.168.171.4
+  name: n172_4
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.171.5
+  name: n172_5
+  os: windows
+  type: machine
+- ip: 192.168.171.6
+  name: n172_6
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.171.7
+  name: n172_7
+  os: linux
+  type: machine
+- ip: 192.168.171.8
+  name: n172_8
+  os: linux
+  type: machine
+subnet: 192.168.171.0

@@ -1,0 +1,20 @@
+mask: 24
+name: st245
+nodes:
+- ip: 192.168.244.1
+  name: r245_1
+  type: router
+- ip: 192.168.244.2
+  name: n245_2
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.244.3
+  name: n245_3
+  os: linux
+  type: machine
+- ip: 192.168.244.4
+  name: n245_4
+  os: windows
+  type: machine
+subnet: 192.168.244.0

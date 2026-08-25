@@ -1,0 +1,25 @@
+mask: 24
+name: st238
+nodes:
+- ip: 192.168.237.1
+  name: r238_1
+  type: router
+- ip: 192.168.237.2
+  name: n238_2
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.237.3
+  name: n238_3
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.237.4
+  name: n238_4
+  os: linux
+  type: machine
+- ip: 192.168.237.5
+  name: n238_5
+  os: linux
+  type: machine
+subnet: 192.168.237.0

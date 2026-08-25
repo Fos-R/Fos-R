@@ -1,0 +1,20 @@
+mask: 24
+name: st43
+nodes:
+- ip: 192.168.42.1
+  name: r43_1
+  type: router
+- ip: 192.168.42.2
+  name: n43_2
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.42.3
+  name: n43_3
+  os: windows
+  type: machine
+- ip: 192.168.42.4
+  name: n43_4
+  os: linux
+  type: machine
+subnet: 192.168.42.0

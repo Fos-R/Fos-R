@@ -1,0 +1,38 @@
+mask: 24
+name: st155
+nodes:
+- ip: 192.168.154.1
+  name: r155_1
+  type: router
+- ip: 192.168.154.2
+  name: n155_2
+  os: linux
+  type: machine
+- ip: 192.168.154.3
+  name: n155_3
+  os: windows
+  type: machine
+- ip: 192.168.154.4
+  name: n155_4
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.154.5
+  name: n155_5
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.154.6
+  name: n155_6
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.154.7
+  name: n155_7
+  os: windows
+  type: machine
+- ip: 192.168.154.8
+  name: n155_8
+  os: linux
+  type: machine
+subnet: 192.168.154.0

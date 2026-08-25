@@ -1,0 +1,46 @@
+mask: 24
+name: st244
+nodes:
+- ip: 192.168.243.1
+  name: r244_1
+  type: router
+- ip: 192.168.243.2
+  name: n244_2
+  os: linux
+  type: machine
+- ip: 192.168.243.3
+  name: n244_3
+  os: linux
+  type: machine
+- ip: 192.168.243.4
+  name: n244_4
+  os: windows
+  type: machine
+- ip: 192.168.243.5
+  name: n244_5
+  os: linux
+  type: machine
+- ip: 192.168.243.6
+  name: n244_6
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.243.7
+  name: n244_7
+  os: windows
+  type: machine
+- ip: 192.168.243.8
+  name: n244_8
+  os: linux
+  type: machine
+- ip: 192.168.243.9
+  name: n244_9
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.243.10
+  name: n244_10
+  os: linux
+  services: cms_server
+  type: machine
+subnet: 192.168.243.0

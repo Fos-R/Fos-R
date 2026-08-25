@@ -1,0 +1,32 @@
+mask: 24
+name: st186
+nodes:
+- ip: 192.168.185.1
+  name: r186_1
+  type: router
+- ip: 192.168.185.2
+  name: n186_2
+  os: windows
+  type: machine
+- ip: 192.168.185.3
+  name: n186_3
+  os: linux
+  type: machine
+- ip: 192.168.185.4
+  name: n186_4
+  os: linux
+  type: machine
+- ip: 192.168.185.5
+  name: n186_5
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.185.6
+  name: n186_6
+  os: linux
+  type: machine
+- ip: 192.168.185.7
+  name: n186_7
+  os: windows
+  type: machine
+subnet: 192.168.185.0

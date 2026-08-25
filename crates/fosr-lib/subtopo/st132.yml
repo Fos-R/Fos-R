@@ -1,0 +1,34 @@
+mask: 24
+name: st132
+nodes:
+- ip: 192.168.131.1
+  name: r132_1
+  type: router
+- ip: 192.168.131.2
+  name: n132_2
+  os: linux
+  type: machine
+- ip: 192.168.131.3
+  name: n132_3
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.131.4
+  name: n132_4
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.131.5
+  name: n132_5
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.131.6
+  name: n132_6
+  os: windows
+  type: machine
+- ip: 192.168.131.7
+  name: n132_7
+  os: linux
+  type: machine
+subnet: 192.168.131.0

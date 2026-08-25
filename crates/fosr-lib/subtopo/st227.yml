@@ -1,0 +1,21 @@
+mask: 24
+name: st227
+nodes:
+- ip: 192.168.226.1
+  name: r227_1
+  type: router
+- ip: 192.168.226.2
+  name: n227_2
+  os: windows
+  type: machine
+- ip: 192.168.226.3
+  name: n227_3
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.226.4
+  name: n227_4
+  os: windows
+  services: dns_server
+  type: machine
+subnet: 192.168.226.0

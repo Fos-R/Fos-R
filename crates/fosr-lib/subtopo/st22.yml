@@ -1,0 +1,26 @@
+mask: 24
+name: st22
+nodes:
+- ip: 192.168.21.1
+  name: r22_1
+  type: router
+- ip: 192.168.21.2
+  name: n22_2
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.21.3
+  name: n22_3
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.21.4
+  name: n22_4
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.21.5
+  name: n22_5
+  os: linux
+  type: machine
+subnet: 192.168.21.0

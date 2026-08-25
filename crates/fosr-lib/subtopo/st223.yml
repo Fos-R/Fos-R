@@ -1,0 +1,46 @@
+mask: 24
+name: st223
+nodes:
+- ip: 192.168.222.1
+  name: r223_1
+  type: router
+- ip: 192.168.222.2
+  name: n223_2
+  os: linux
+  type: machine
+- ip: 192.168.222.3
+  name: n223_3
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.222.4
+  name: n223_4
+  os: windows
+  type: machine
+- ip: 192.168.222.5
+  name: n223_5
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.222.6
+  name: n223_6
+  os: linux
+  type: machine
+- ip: 192.168.222.7
+  name: n223_7
+  os: windows
+  type: machine
+- ip: 192.168.222.8
+  name: n223_8
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.222.9
+  name: n223_9
+  os: linux
+  type: machine
+- ip: 192.168.222.10
+  name: n223_10
+  os: windows
+  type: machine
+subnet: 192.168.222.0

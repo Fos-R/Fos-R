@@ -1,0 +1,21 @@
+mask: 24
+name: st62
+nodes:
+- ip: 192.168.61.1
+  name: r62_1
+  type: router
+- ip: 192.168.61.2
+  name: n62_2
+  os: linux
+  type: machine
+- ip: 192.168.61.3
+  name: n62_3
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.61.4
+  name: n62_4
+  os: windows
+  services: cms_server
+  type: machine
+subnet: 192.168.61.0

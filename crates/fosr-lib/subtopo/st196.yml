@@ -1,0 +1,19 @@
+mask: 24
+name: st196
+nodes:
+- ip: 192.168.195.1
+  name: r196_1
+  type: router
+- ip: 192.168.195.2
+  name: n196_2
+  os: windows
+  type: machine
+- ip: 192.168.195.3
+  name: n196_3
+  os: windows
+  type: machine
+- ip: 192.168.195.4
+  name: n196_4
+  os: linux
+  type: machine
+subnet: 192.168.195.0

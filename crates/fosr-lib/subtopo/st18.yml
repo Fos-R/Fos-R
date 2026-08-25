@@ -1,0 +1,38 @@
+mask: 24
+name: st18
+nodes:
+- ip: 192.168.17.1
+  name: r18_1
+  type: router
+- ip: 192.168.17.2
+  name: n18_2
+  os: linux
+  type: machine
+- ip: 192.168.17.3
+  name: n18_3
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.17.4
+  name: n18_4
+  os: linux
+  type: machine
+- ip: 192.168.17.5
+  name: n18_5
+  os: linux
+  type: machine
+- ip: 192.168.17.6
+  name: n18_6
+  os: windows
+  type: machine
+- ip: 192.168.17.7
+  name: n18_7
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.17.8
+  name: n18_8
+  os: linux
+  services: mail_server
+  type: machine
+subnet: 192.168.17.0

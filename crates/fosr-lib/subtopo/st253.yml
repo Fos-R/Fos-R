@@ -1,0 +1,38 @@
+mask: 24
+name: st253
+nodes:
+- ip: 192.168.252.1
+  name: r253_1
+  type: router
+- ip: 192.168.252.2
+  name: n253_2
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.252.3
+  name: n253_3
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.252.4
+  name: n253_4
+  os: windows
+  type: machine
+- ip: 192.168.252.5
+  name: n253_5
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.252.6
+  name: n253_6
+  os: linux
+  type: machine
+- ip: 192.168.252.7
+  name: n253_7
+  os: linux
+  type: machine
+- ip: 192.168.252.8
+  name: n253_8
+  os: windows
+  type: machine
+subnet: 192.168.252.0

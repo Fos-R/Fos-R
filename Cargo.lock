@@ -1856,6 +1856,7 @@ dependencies = [
  "pcap-file",
  "pnet",
  "pnet_packet",
+ "serde_yaml",
  "sha2",
  "thingbuf",
  "tikv-jemallocator",

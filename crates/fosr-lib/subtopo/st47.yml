@@ -1,0 +1,25 @@
+mask: 24
+name: st47
+nodes:
+- ip: 192.168.46.1
+  name: r47_1
+  type: router
+- ip: 192.168.46.2
+  name: n47_2
+  os: windows
+  type: machine
+- ip: 192.168.46.3
+  name: n47_3
+  os: linux
+  type: machine
+- ip: 192.168.46.4
+  name: n47_4
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.46.5
+  name: n47_5
+  os: linux
+  services: ftp_server
+  type: machine
+subnet: 192.168.46.0

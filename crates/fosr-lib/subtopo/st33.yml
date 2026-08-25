@@ -1,0 +1,37 @@
+mask: 24
+name: st33
+nodes:
+- ip: 192.168.32.1
+  name: r33_1
+  type: router
+- ip: 192.168.32.2
+  name: n33_2
+  os: linux
+  type: machine
+- ip: 192.168.32.3
+  name: n33_3
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.32.4
+  name: n33_4
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.32.5
+  name: n33_5
+  os: linux
+  type: machine
+- ip: 192.168.32.6
+  name: n33_6
+  os: windows
+  type: machine
+- ip: 192.168.32.7
+  name: n33_7
+  os: windows
+  type: machine
+- ip: 192.168.32.8
+  name: n33_8
+  os: linux
+  type: machine
+subnet: 192.168.32.0
