@@ -86,14 +86,12 @@ impl TopologyGenerator {
         // The candidate pool is the list of sub-topologies the generator was built with
         let topology = Self::solve_with_microlp(&self.sub_topologies, topo_generation_parameters)?;
 
-        // Build every tree over the selected sub-topologies and keep the unique ones
-        let trees = Self::generate_trees(
+        // Build one tree over the selected sub-topologies, exactly `tree_depth` levels when possible
+        if let Some(tree) = Self::generate_tree(
             format!("{topology:?}"),
             &topology,
-            0,
             topo_generation_parameters.tree_depth,
-        );
-        for tree in trees {
+        ) {
             self.save_tree_if_unique(tree);
         }
         self.root = self.topology_trees.first().cloned();
@@ -207,108 +205,42 @@ impl TopologyGenerator {
             .collect())
     }
 
-    /// Generate every depth-limited tree over `nodes`
-    fn generate_trees(
-        label: String,
-        nodes: &[SubTopology],
-        depth: usize,
-        max_depth: usize,
-    ) -> Vec<TreeNode> {
-        // No nodes left: the node alone is a complete tree
-        if nodes.is_empty() {
-            return vec![TreeNode::new(label)];
+    /// Build one valid tree
+    fn generate_tree(label: String, nodes: &[SubTopology], max_depth: usize) -> Option<TreeNode> {
+        if nodes.is_empty() || max_depth == 0 {
+            return None;
         }
 
-        let depth = depth + 1;
-        if depth > max_depth {
-            return Vec::new();
-        }
+        let depth = max_depth.min(nodes.len());
+        let chain_len = depth - 1;
+        let leaves = &nodes[chain_len..];
 
-        // A single remaining node becomes a leaf child
-        if nodes.len() == 1 {
-            let mut tree = TreeNode::new(label);
-            tree.add_child(TreeNode::new(format!("{:?}", nodes[0])));
-            return vec![tree];
-        }
-
-        let mut trees = Vec::new();
-
-        // Try every non-empty subset of the remaining nodes as the set of children for this level
-        for k in 1..=nodes.len() {
-            for subset in Self::combinations(nodes, k) {
-                // Nodes left for deeper levels.
-                let mut remaining = nodes.to_vec();
-                for n in &subset {
-                    if let Some(pos) = remaining.iter().position(|x| x.name == n.name) {
-                        remaining.remove(pos);
+        // Build the chain bottom-up, the deepest chain node carries the leaves
+        let mut subtree: Option<TreeNode> = None;
+        for node in nodes[..chain_len].iter().rev() {
+            let mut parent = TreeNode::new(format!("{:?}", node));
+            match subtree {
+                Some(child) => parent.add_child(child),
+                None => {
+                    for leaf in leaves {
+                        parent.add_child(TreeNode::new(format!("{:?}", leaf)));
                     }
                 }
+            }
+            subtree = Some(parent);
+        }
 
-                // Each child of the subset gets its own possible subtrees
-                let option_lists: Vec<Vec<TreeNode>> = subset
-                    .iter()
-                    .map(|n| Self::generate_trees(format!("{:?}", n), &remaining, depth, max_depth))
-                    .collect();
-
-                // If any child is a dead end (e.g. depth limit reached), the whole subset is
-                if option_lists.iter().any(|opts| opts.is_empty()) {
-                    continue;
-                }
-
-                // One tree per combination of child subtrees
-                for picks in Self::cartesian_product(&option_lists) {
-                    let mut tree = TreeNode::new(label.clone());
-                    for pick in picks {
-                        tree.add_child(pick);
-                    }
-                    trees.push(tree);
+        let mut root = TreeNode::new(label);
+        match subtree {
+            Some(chain_top) => root.add_child(chain_top),
+            None => {
+                // depth == 1 so every node is a direct child of the root
+                for leaf in leaves {
+                    root.add_child(TreeNode::new(format!("{:?}", leaf)));
                 }
             }
         }
-
-        trees
-    }
-
-    /// Cartesian product of lists of trees: every way to pick one subtree per child
-    fn cartesian_product(option_lists: &[Vec<TreeNode>]) -> Vec<Vec<TreeNode>> {
-        let mut acc: Vec<Vec<TreeNode>> = vec![Vec::new()];
-        for options in option_lists {
-            let mut next = Vec::new();
-            for prefix in &acc {
-                for opt in options {
-                    let mut combined = prefix.clone();
-                    combined.push(opt.clone());
-                    next.push(combined);
-                }
-            }
-            acc = next;
-        }
-        acc
-    }
-
-    /// Generate all combinations of k elements from a slice
-    fn combinations(elements: &[SubTopology], k: usize) -> Vec<Vec<SubTopology>> {
-        if k == 0 {
-            return vec![vec![]];
-        }
-        if k > elements.len() {
-            return vec![];
-        }
-
-        let mut result = Vec::new();
-
-        // Include first element
-        let with_first = Self::combinations(&elements[1..], k - 1);
-        for mut combo in with_first {
-            combo.insert(0, elements[0].clone());
-            result.push(combo);
-        }
-
-        // Exclude first element
-        let without_first = Self::combinations(&elements[1..], k);
-        result.extend(without_first);
-
-        result
+        Some(root)
     }
 
     /// Save a tree if it's unique
@@ -704,14 +636,14 @@ services:
         let mut rng = Rng::new(seed);
 
         // Build a random candidate pool as raw YAML strings
-        let pool_size = rng.gen_range(40, 60);
+        let pool_size = rng.gen_range(200, 250);
         let mut pool = Vec::new();
         let mut pool_yamls: Vec<String> = Vec::new();
         let mut pool_services: Vec<&'static str> = Vec::new();
 
         println!("\n=== candidate pool ({pool_size} sub-topologies) ===");
         for i in 0..pool_size {
-            let machine_count = rng.gen_range(1, 5);
+            let machine_count = rng.gen_range(2, 5);
             let mut yaml = format!(
                 "mask: 24\nname: st{i}\nnodes:\n- ip: 10.0.{i}.1\n  name: r{i}_1\n  type: router\n"
             );
@@ -765,7 +697,7 @@ services:
 
         let services_yaml: String = required.iter().map(|s| format!("  - {s}\n")).collect();
         let params_yaml = format!(
-            "minimum_sub_topology: {min_st}\nminimum_node_count: {min_nodes}\nminimum_subnet_count: {min_st}\ntree_depth: 2\n\nservices:\n{services_yaml}"
+            "minimum_sub_topology: {min_st}\nminimum_node_count: {min_nodes}\nminimum_subnet_count: {min_st}\ntree_depth: 5\n\nservices:\n{services_yaml}"
         );
         println!("\n=== generation parameters ===\n{params_yaml}");
 
@@ -809,5 +741,25 @@ services:
             assert!(topology.iter().any(|st| st.contains_service(service)));
         }
         assert!(!trees.is_empty());
+    }
+
+    #[test]
+    fn test_generate_tree_exact_depth() {
+        let pool = test_pool();
+
+        let tree = TopologyGenerator::generate_tree("root".to_string(), &pool, 2).expect("a tree");
+        assert_eq!(tree.children().len(), 1);
+        assert_eq!(tree.children()[0].children().len(), 2);
+
+        let tree = TopologyGenerator::generate_tree("root".to_string(), &pool, 10).expect("a tree");
+        let mut depth = 0;
+        let mut node = &tree;
+        while let Some(child) = node.children().first() {
+            depth += 1;
+            node = child;
+        }
+        assert_eq!(depth, 3);
+
+        assert!(TopologyGenerator::generate_tree("root".to_string(), &pool, 0).is_none());
     }
 }
