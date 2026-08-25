@@ -22,6 +22,7 @@ include_dir = { version = "0.7.4", features = ["glob"] }
 indicatif = "0.18.6"
 log = "0.4.34"
 log-once = "0.4.1"
+microlp = "0.6"
 nalgebra = "0.33.3"
 pcap-file = "2.0.0"
 pnet = { version = "0.35.0", default-features = false }
@@ -37,7 +38,6 @@ serde_yaml = "0.9.34"
 statrs = { git = "https://github.com/PFGimenez/statrs.git" }
 strum = { version = "0.28.0", features = ["derive"] }
 thingbuf = "0.1.6"
-microlp = "0.2"
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
 aya = { version = "0.13.1", default-features = false, optional = true }
