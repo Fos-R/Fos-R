@@ -133,7 +133,7 @@ impl TopologyGenerator {
         // One variable per candidate
         let vars: Vec<Variable> = candidates
             .iter()
-            .map(|st| problem.add_var(node_count(st) as f64, (0.0, 1.0)))
+            .map(|_| problem.add_binary_var(1.0))
             .collect();
 
         // sum(x_i) >= min_count
@@ -704,14 +704,14 @@ services:
         let mut rng = Rng::new(seed);
 
         // Build a random candidate pool as raw YAML strings
-        let pool_size = rng.gen_range(4, 6);
+        let pool_size = rng.gen_range(40, 60);
         let mut pool = Vec::new();
         let mut pool_yamls: Vec<String> = Vec::new();
         let mut pool_services: Vec<&'static str> = Vec::new();
 
         println!("\n=== candidate pool ({pool_size} sub-topologies) ===");
         for i in 0..pool_size {
-            let machine_count = rng.gen_range(1, 4);
+            let machine_count = rng.gen_range(1, 5);
             let mut yaml = format!(
                 "mask: 24\nname: st{i}\nnodes:\n- ip: 10.0.{i}.1\n  name: r{i}_1\n  type: router\n"
             );
