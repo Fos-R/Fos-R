@@ -270,18 +270,21 @@ pub enum Command {
         )]
         outfile: String,
         #[arg(
+            short = 's',
             long,
             default_value_t = 0,
             help = "Minimum number of subnets in the topology"
         )]
         min_subnets: usize,
         #[arg(
+            short = 'n',
             long,
             default_value_t = 0,
             help = "Minimum number of nodes in the topology"
         )]
         min_nodes: usize,
         #[arg(
+            short = 'd',
             long,
             default_value_t = 2,
             help = "Target depth of the topology"

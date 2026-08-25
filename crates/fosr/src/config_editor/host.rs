@@ -15,8 +15,8 @@ use crate::shared::widgets::helpers::{
 };
 use eframe::egui;
 use egui_material_icons::icons::{ICON_ADD, ICON_CLEAR, ICON_DELETE, ICON_WARNING};
-use fosr_lib::network::{NetworkYaml, HostYaml, SubNetworkYaml};
 use fosr_lib::network::{HostType, InterfaceYaml, next_ui_id};
+use fosr_lib::network::{HostYaml, NetworkYaml, SubNetworkYaml};
 use fosr_lib::structs::OS;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;

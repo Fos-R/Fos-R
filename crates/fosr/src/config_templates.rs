@@ -1,7 +1,7 @@
 //! Predefined configuration templates: Home, Enterprise, Datacenter.
 
 use crate::shared::config::state::ConfigFileState;
-use fosr_lib::network::{NetworkYaml, Metadata};
+use fosr_lib::network::{Metadata, NetworkYaml};
 use include_dir::Dir;
 use include_dir::include_dir;
 
@@ -30,11 +30,7 @@ pub fn load_template(state: &mut ConfigFileState, template: &NetworkYaml) {
 }
 
 /// Reset state and apply a successfully-parsed template.
-fn apply_template_to_state(
-    state: &mut ConfigFileState,
-    model: &NetworkYaml,
-    snapshot: String,
-) {
+fn apply_template_to_state(state: &mut ConfigFileState, model: &NetworkYaml, snapshot: String) {
     state.picked_config_file = None;
     state.config_file_content = Some(snapshot.clone());
     state.loaded_template_id = Some(model.metadata.title.clone());

@@ -11,7 +11,7 @@ use crate::shared::widgets::helpers::os_display_name;
 use eframe::egui;
 use egui_graphs::events::{Event, PayloadNodeClick};
 use egui_material_icons::icons::{ICON_CLOSE, ICON_SAVE};
-use fosr_lib::network::{NetworkYaml, HostYaml};
+use fosr_lib::network::{HostYaml, NetworkYaml};
 use fosr_lib::structs::OS;
 
 /// Look up a host by `(net_idx, host_idx)` position.
@@ -25,10 +25,7 @@ fn get_host_by_pos(model: &NetworkYaml, pos: (usize, usize)) -> Option<&HostYaml
 }
 
 /// Look up a host by `(net_idx, host_idx)` position, mutably.
-fn get_host_by_pos_mut(
-    model: &mut NetworkYaml,
-    pos: (usize, usize),
-) -> Option<&mut HostYaml> {
+fn get_host_by_pos_mut(model: &mut NetworkYaml, pos: (usize, usize)) -> Option<&mut HostYaml> {
     let (net_idx, h_idx) = pos;
     if net_idx == INTERNET_HOST_SENTINEL {
         model.internet.get_mut(h_idx)

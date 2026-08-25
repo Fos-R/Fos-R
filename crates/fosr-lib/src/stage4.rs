@@ -1,7 +1,10 @@
 // use crate::config::Hosts;
 use crate::icmp::ICMPPacketInfo;
 use crate::stats::Stats;
-use crate::structs::{PacketInfo, Flow, PacketDirection, FlowData, Payload, SeededData, PacketsIR, Packets, Packet, PacketsRecycler};
+use crate::structs::{
+    Flow, FlowData, Packet, PacketDirection, PacketInfo, Packets, PacketsIR, PacketsRecycler,
+    Payload, SeededData,
+};
 use crate::tcp::TCPPacketInfo;
 use crate::udp::UDPPacketInfo;
 

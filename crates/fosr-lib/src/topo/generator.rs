@@ -172,7 +172,9 @@ impl TopologyGenerator {
 
         let solution = problem
             .solve()
-            .map_err(|e| format!("no topology satisfies the generation parameters: {e:?}"))?.into_solution().unwrap();
+            .map_err(|e| format!("no topology satisfies the generation parameters: {e:?}"))?
+            .into_solution()
+            .unwrap();
 
         let mut selected: Vec<usize> = vars
             .iter()
@@ -258,9 +260,9 @@ impl TopologyGenerator {
 
         if !exists {
             self.topology_trees.push(root);
-            println!("tree added, total: {}", self.topology_trees.len());
-        } else {
-            println!("same trees");
+            // println!("tree added, total: {}", self.topology_trees.len());
+            // } else {
+            //     println!("same trees");
         }
     }
 

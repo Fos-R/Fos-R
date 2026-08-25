@@ -2,7 +2,7 @@
 
 use crate::shared::constants::network::{MAC_ADDRESS_PARTS, MAC_PART_LENGTH};
 use fosr_lib::network::HostType;
-use fosr_lib::network::{NetworkYaml, HostYaml, SubNetworkYaml};
+use fosr_lib::network::{HostYaml, NetworkYaml, SubNetworkYaml};
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
 
@@ -170,7 +170,10 @@ fn subnets_overlap(a: Ipv4Addr, mask_a: u8, b: Ipv4Addr, mask_b: u8) -> bool {
 
 /// Collect all `(subnet, mask)` pairs defined in the configuration,
 /// excluding a specific network index (used when checking a network against *others*).
-pub fn collect_other_subnets(networks: &[SubNetworkYaml], exclude_idx: usize) -> Vec<(Ipv4Addr, u8)> {
+pub fn collect_other_subnets(
+    networks: &[SubNetworkYaml],
+    exclude_idx: usize,
+) -> Vec<(Ipv4Addr, u8)> {
     networks
         .iter()
         .enumerate()

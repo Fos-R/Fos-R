@@ -1,4 +1,4 @@
-use crate::structs::{Packets, PacketsRecycler, Packet};
+use crate::structs::{Packet, Packets, PacketsRecycler};
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use pcap_file::pcap::{PcapPacket, PcapWriter};
 use std::fmt::Write;
@@ -86,7 +86,7 @@ pub fn run_export(
         .write(true)
         .create(true)
         .truncate(true)
-        .open(&outfile)
+        .open(outfile)
         .expect("Error opening or creating file");
     let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
     log::trace!("Saving into {outfile}");
