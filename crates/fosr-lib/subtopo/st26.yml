@@ -1,0 +1,38 @@
+mask: 24
+name: st26
+nodes:
+- ip: 192.168.25.1
+  name: r26_1
+  type: router
+- ip: 192.168.25.2
+  name: n26_2
+  os: windows
+  type: machine
+- ip: 192.168.25.3
+  name: n26_3
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.25.4
+  name: n26_4
+  os: linux
+  type: machine
+- ip: 192.168.25.5
+  name: n26_5
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.25.6
+  name: n26_6
+  os: linux
+  type: machine
+- ip: 192.168.25.7
+  name: n26_7
+  os: linux
+  type: machine
+- ip: 192.168.25.8
+  name: n26_8
+  os: linux
+  services: dbms_server
+  type: machine
+subnet: 192.168.25.0

@@ -1,0 +1,38 @@
+mask: 24
+name: st115
+nodes:
+- ip: 192.168.114.1
+  name: r115_1
+  type: router
+- ip: 192.168.114.2
+  name: n115_2
+  os: windows
+  type: machine
+- ip: 192.168.114.3
+  name: n115_3
+  os: linux
+  type: machine
+- ip: 192.168.114.4
+  name: n115_4
+  os: linux
+  services: ldap_server
+  type: machine
+- ip: 192.168.114.5
+  name: n115_5
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.114.6
+  name: n115_6
+  os: linux
+  type: machine
+- ip: 192.168.114.7
+  name: n115_7
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.114.8
+  name: n115_8
+  os: windows
+  type: machine
+subnet: 192.168.114.0

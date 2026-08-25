@@ -1,0 +1,33 @@
+mask: 24
+name: st232
+nodes:
+- ip: 192.168.231.1
+  name: r232_1
+  type: router
+- ip: 192.168.231.2
+  name: n232_2
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.231.3
+  name: n232_3
+  os: linux
+  type: machine
+- ip: 192.168.231.4
+  name: n232_4
+  os: linux
+  type: machine
+- ip: 192.168.231.5
+  name: n232_5
+  os: linux
+  type: machine
+- ip: 192.168.231.6
+  name: n232_6
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.231.7
+  name: n232_7
+  os: linux
+  type: machine
+subnet: 192.168.231.0

@@ -1,0 +1,46 @@
+mask: 24
+name: st159
+nodes:
+- ip: 192.168.158.1
+  name: r159_1
+  type: router
+- ip: 192.168.158.2
+  name: n159_2
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.158.3
+  name: n159_3
+  os: linux
+  type: machine
+- ip: 192.168.158.4
+  name: n159_4
+  os: linux
+  type: machine
+- ip: 192.168.158.5
+  name: n159_5
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.158.6
+  name: n159_6
+  os: windows
+  type: machine
+- ip: 192.168.158.7
+  name: n159_7
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.158.8
+  name: n159_8
+  os: windows
+  type: machine
+- ip: 192.168.158.9
+  name: n159_9
+  os: linux
+  type: machine
+- ip: 192.168.158.10
+  name: n159_10
+  os: windows
+  type: machine
+subnet: 192.168.158.0

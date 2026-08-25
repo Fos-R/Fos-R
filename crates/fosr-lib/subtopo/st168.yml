@@ -1,0 +1,20 @@
+mask: 24
+name: st168
+nodes:
+- ip: 192.168.167.1
+  name: r168_1
+  type: router
+- ip: 192.168.167.2
+  name: n168_2
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.167.3
+  name: n168_3
+  os: windows
+  type: machine
+- ip: 192.168.167.4
+  name: n168_4
+  os: windows
+  type: machine
+subnet: 192.168.167.0

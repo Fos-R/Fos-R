@@ -1,0 +1,23 @@
+mask: 24
+name: st95
+nodes:
+- ip: 192.168.94.1
+  name: r95_1
+  type: router
+- ip: 192.168.94.2
+  name: n95_2
+  os: linux
+  type: machine
+- ip: 192.168.94.3
+  name: n95_3
+  os: windows
+  type: machine
+- ip: 192.168.94.4
+  name: n95_4
+  os: linux
+  type: machine
+- ip: 192.168.94.5
+  name: n95_5
+  os: linux
+  type: machine
+subnet: 192.168.94.0

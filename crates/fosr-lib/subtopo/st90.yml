@@ -1,0 +1,42 @@
+mask: 24
+name: st90
+nodes:
+- ip: 192.168.89.1
+  name: r90_1
+  type: router
+- ip: 192.168.89.2
+  name: n90_2
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.89.3
+  name: n90_3
+  os: linux
+  type: machine
+- ip: 192.168.89.4
+  name: n90_4
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.89.5
+  name: n90_5
+  os: windows
+  type: machine
+- ip: 192.168.89.6
+  name: n90_6
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.89.7
+  name: n90_7
+  os: linux
+  type: machine
+- ip: 192.168.89.8
+  name: n90_8
+  os: linux
+  type: machine
+- ip: 192.168.89.9
+  name: n90_9
+  os: linux
+  type: machine
+subnet: 192.168.89.0

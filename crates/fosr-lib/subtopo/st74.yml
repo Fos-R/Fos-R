@@ -1,0 +1,30 @@
+mask: 24
+name: st74
+nodes:
+- ip: 192.168.73.1
+  name: r74_1
+  type: router
+- ip: 192.168.73.2
+  name: n74_2
+  os: windows
+  type: machine
+- ip: 192.168.73.3
+  name: n74_3
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.73.4
+  name: n74_4
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.73.5
+  name: n74_5
+  os: windows
+  services: cms_server
+  type: machine
+- ip: 192.168.73.6
+  name: n74_6
+  os: windows
+  type: machine
+subnet: 192.168.73.0

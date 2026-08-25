@@ -1,0 +1,42 @@
+mask: 24
+name: st177
+nodes:
+- ip: 192.168.176.1
+  name: r177_1
+  type: router
+- ip: 192.168.176.2
+  name: n177_2
+  os: windows
+  type: machine
+- ip: 192.168.176.3
+  name: n177_3
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.176.4
+  name: n177_4
+  os: windows
+  type: machine
+- ip: 192.168.176.5
+  name: n177_5
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.176.6
+  name: n177_6
+  os: windows
+  services: cms_server
+  type: machine
+- ip: 192.168.176.7
+  name: n177_7
+  os: linux
+  type: machine
+- ip: 192.168.176.8
+  name: n177_8
+  os: linux
+  type: machine
+- ip: 192.168.176.9
+  name: n177_9
+  os: linux
+  type: machine
+subnet: 192.168.176.0

@@ -1,0 +1,38 @@
+mask: 24
+name: st72
+nodes:
+- ip: 192.168.71.1
+  name: r72_1
+  type: router
+- ip: 192.168.71.2
+  name: n72_2
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.71.3
+  name: n72_3
+  os: linux
+  type: machine
+- ip: 192.168.71.4
+  name: n72_4
+  os: linux
+  type: machine
+- ip: 192.168.71.5
+  name: n72_5
+  os: linux
+  type: machine
+- ip: 192.168.71.6
+  name: n72_6
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.71.7
+  name: n72_7
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.71.8
+  name: n72_8
+  os: windows
+  type: machine
+subnet: 192.168.71.0

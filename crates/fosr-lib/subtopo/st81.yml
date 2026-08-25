@@ -1,0 +1,42 @@
+mask: 24
+name: st81
+nodes:
+- ip: 192.168.80.1
+  name: r81_1
+  type: router
+- ip: 192.168.80.2
+  name: n81_2
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.80.3
+  name: n81_3
+  os: windows
+  type: machine
+- ip: 192.168.80.4
+  name: n81_4
+  os: linux
+  type: machine
+- ip: 192.168.80.5
+  name: n81_5
+  os: linux
+  type: machine
+- ip: 192.168.80.6
+  name: n81_6
+  os: linux
+  type: machine
+- ip: 192.168.80.7
+  name: n81_7
+  os: linux
+  services: ldap_server
+  type: machine
+- ip: 192.168.80.8
+  name: n81_8
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.80.9
+  name: n81_9
+  os: windows
+  type: machine
+subnet: 192.168.80.0

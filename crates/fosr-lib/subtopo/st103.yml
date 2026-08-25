@@ -1,0 +1,37 @@
+mask: 24
+name: st103
+nodes:
+- ip: 192.168.102.1
+  name: r103_1
+  type: router
+- ip: 192.168.102.2
+  name: n103_2
+  os: windows
+  type: machine
+- ip: 192.168.102.3
+  name: n103_3
+  os: windows
+  type: machine
+- ip: 192.168.102.4
+  name: n103_4
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.102.5
+  name: n103_5
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.102.6
+  name: n103_6
+  os: linux
+  type: machine
+- ip: 192.168.102.7
+  name: n103_7
+  os: windows
+  type: machine
+- ip: 192.168.102.8
+  name: n103_8
+  os: linux
+  type: machine
+subnet: 192.168.102.0

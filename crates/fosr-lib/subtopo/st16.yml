@@ -1,0 +1,28 @@
+mask: 24
+name: st16
+nodes:
+- ip: 192.168.15.1
+  name: r16_1
+  type: router
+- ip: 192.168.15.2
+  name: n16_2
+  os: windows
+  type: machine
+- ip: 192.168.15.3
+  name: n16_3
+  os: linux
+  type: machine
+- ip: 192.168.15.4
+  name: n16_4
+  os: linux
+  services: cms_server
+  type: machine
+- ip: 192.168.15.5
+  name: n16_5
+  os: windows
+  type: machine
+- ip: 192.168.15.6
+  name: n16_6
+  os: windows
+  type: machine
+subnet: 192.168.15.0

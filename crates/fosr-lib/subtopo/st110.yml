@@ -1,0 +1,20 @@
+mask: 24
+name: st110
+nodes:
+- ip: 192.168.109.1
+  name: r110_1
+  type: router
+- ip: 192.168.109.2
+  name: n110_2
+  os: windows
+  type: machine
+- ip: 192.168.109.3
+  name: n110_3
+  os: linux
+  type: machine
+- ip: 192.168.109.4
+  name: n110_4
+  os: linux
+  services: web_server
+  type: machine
+subnet: 192.168.109.0

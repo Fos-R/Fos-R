@@ -1,0 +1,22 @@
+mask: 24
+name: st252
+nodes:
+- ip: 192.168.251.1
+  name: r252_1
+  type: router
+- ip: 192.168.251.2
+  name: n252_2
+  os: linux
+  services: web_server
+  type: machine
+- ip: 192.168.251.3
+  name: n252_3
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.251.4
+  name: n252_4
+  os: linux
+  services: dbms_server
+  type: machine
+subnet: 192.168.251.0

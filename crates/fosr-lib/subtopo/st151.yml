@@ -1,0 +1,25 @@
+mask: 24
+name: st151
+nodes:
+- ip: 192.168.150.1
+  name: r151_1
+  type: router
+- ip: 192.168.150.2
+  name: n151_2
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.150.3
+  name: n151_3
+  os: linux
+  type: machine
+- ip: 192.168.150.4
+  name: n151_4
+  os: windows
+  services: dns_server
+  type: machine
+- ip: 192.168.150.5
+  name: n151_5
+  os: windows
+  type: machine
+subnet: 192.168.150.0

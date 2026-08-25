@@ -1,0 +1,30 @@
+mask: 24
+name: st135
+nodes:
+- ip: 192.168.134.1
+  name: r135_1
+  type: router
+- ip: 192.168.134.2
+  name: n135_2
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.134.3
+  name: n135_3
+  os: windows
+  type: machine
+- ip: 192.168.134.4
+  name: n135_4
+  os: linux
+  services: ldap_server
+  type: machine
+- ip: 192.168.134.5
+  name: n135_5
+  os: windows
+  type: machine
+- ip: 192.168.134.6
+  name: n135_6
+  os: windows
+  services: log_server
+  type: machine
+subnet: 192.168.134.0

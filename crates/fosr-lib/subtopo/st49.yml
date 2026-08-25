@@ -1,0 +1,30 @@
+mask: 24
+name: st49
+nodes:
+- ip: 192.168.48.1
+  name: r49_1
+  type: router
+- ip: 192.168.48.2
+  name: n49_2
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.48.3
+  name: n49_3
+  os: linux
+  type: machine
+- ip: 192.168.48.4
+  name: n49_4
+  os: windows
+  type: machine
+- ip: 192.168.48.5
+  name: n49_5
+  os: linux
+  services: ftp_server
+  type: machine
+- ip: 192.168.48.6
+  name: n49_6
+  os: windows
+  services: web_server
+  type: machine
+subnet: 192.168.48.0

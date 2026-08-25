@@ -1,0 +1,42 @@
+mask: 24
+name: st189
+nodes:
+- ip: 192.168.188.1
+  name: r189_1
+  type: router
+- ip: 192.168.188.2
+  name: n189_2
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.188.3
+  name: n189_3
+  os: windows
+  type: machine
+- ip: 192.168.188.4
+  name: n189_4
+  os: linux
+  type: machine
+- ip: 192.168.188.5
+  name: n189_5
+  os: linux
+  type: machine
+- ip: 192.168.188.6
+  name: n189_6
+  os: windows
+  services: web_server
+  type: machine
+- ip: 192.168.188.7
+  name: n189_7
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.188.8
+  name: n189_8
+  os: windows
+  type: machine
+- ip: 192.168.188.9
+  name: n189_9
+  os: windows
+  type: machine
+subnet: 192.168.188.0

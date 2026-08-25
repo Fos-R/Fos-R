@@ -1,0 +1,46 @@
+mask: 24
+name: st17
+nodes:
+- ip: 192.168.16.1
+  name: r17_1
+  type: router
+- ip: 192.168.16.2
+  name: n17_2
+  os: linux
+  type: machine
+- ip: 192.168.16.3
+  name: n17_3
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.16.4
+  name: n17_4
+  os: windows
+  type: machine
+- ip: 192.168.16.5
+  name: n17_5
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.16.6
+  name: n17_6
+  os: windows
+  type: machine
+- ip: 192.168.16.7
+  name: n17_7
+  os: windows
+  type: machine
+- ip: 192.168.16.8
+  name: n17_8
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.16.9
+  name: n17_9
+  os: linux
+  type: machine
+- ip: 192.168.16.10
+  name: n17_10
+  os: windows
+  type: machine
+subnet: 192.168.16.0

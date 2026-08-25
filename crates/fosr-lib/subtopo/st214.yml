@@ -1,0 +1,30 @@
+mask: 24
+name: st214
+nodes:
+- ip: 192.168.213.1
+  name: r214_1
+  type: router
+- ip: 192.168.213.2
+  name: n214_2
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.213.3
+  name: n214_3
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.213.4
+  name: n214_4
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.213.5
+  name: n214_5
+  os: linux
+  type: machine
+- ip: 192.168.213.6
+  name: n214_6
+  os: linux
+  type: machine
+subnet: 192.168.213.0

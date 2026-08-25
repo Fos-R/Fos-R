@@ -1,0 +1,34 @@
+mask: 24
+name: st67
+nodes:
+- ip: 192.168.66.1
+  name: r67_1
+  type: router
+- ip: 192.168.66.2
+  name: n67_2
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.66.3
+  name: n67_3
+  os: linux
+  services: mail_server
+  type: machine
+- ip: 192.168.66.4
+  name: n67_4
+  os: windows
+  type: machine
+- ip: 192.168.66.5
+  name: n67_5
+  os: windows
+  services: proxy_server
+  type: machine
+- ip: 192.168.66.6
+  name: n67_6
+  os: windows
+  type: machine
+- ip: 192.168.66.7
+  name: n67_7
+  os: windows
+  type: machine
+subnet: 192.168.66.0

@@ -1,0 +1,30 @@
+mask: 24
+name: st129
+nodes:
+- ip: 192.168.128.1
+  name: r129_1
+  type: router
+- ip: 192.168.128.2
+  name: n129_2
+  os: linux
+  services: ftp_server
+  type: machine
+- ip: 192.168.128.3
+  name: n129_3
+  os: windows
+  services: cms_server
+  type: machine
+- ip: 192.168.128.4
+  name: n129_4
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.128.5
+  name: n129_5
+  os: linux
+  type: machine
+- ip: 192.168.128.6
+  name: n129_6
+  os: windows
+  type: machine
+subnet: 192.168.128.0

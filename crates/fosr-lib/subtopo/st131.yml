@@ -1,0 +1,46 @@
+mask: 24
+name: st131
+nodes:
+- ip: 192.168.130.1
+  name: r131_1
+  type: router
+- ip: 192.168.130.2
+  name: n131_2
+  os: linux
+  services: ldap_server
+  type: machine
+- ip: 192.168.130.3
+  name: n131_3
+  os: linux
+  type: machine
+- ip: 192.168.130.4
+  name: n131_4
+  os: linux
+  type: machine
+- ip: 192.168.130.5
+  name: n131_5
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.130.6
+  name: n131_6
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.130.7
+  name: n131_7
+  os: linux
+  type: machine
+- ip: 192.168.130.8
+  name: n131_8
+  os: linux
+  type: machine
+- ip: 192.168.130.9
+  name: n131_9
+  os: linux
+  type: machine
+- ip: 192.168.130.10
+  name: n131_10
+  os: windows
+  type: machine
+subnet: 192.168.130.0

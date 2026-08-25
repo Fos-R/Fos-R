@@ -7,7 +7,9 @@ use fosr_lib::stage2;
 use fosr_lib::stage3;
 use fosr_lib::stage4;
 use fosr_lib::stats;
+use fosr_lib::topo;
 use fosr_lib::utils;
+use fosr_lib::network;
 use fosr_lib::*;
 mod cmd;
 
@@ -22,6 +24,8 @@ use std::sync::mpsc::channel;
 use std::thread;
 use std::time::Instant;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::fs::File;
+use std::io::Write;
 
 use chrono::DateTime;
 use chrono::Offset;
@@ -212,6 +216,73 @@ fn main() -> Result<(), String> {
 
         cmd::Command::Untaint { input, output } => {
             utils::untaint_file(&input, &output);
+        }
+
+        cmd::Command::GenerateTopology {
+            outfile,
+            min_subnets,
+            min_nodes,
+            tree_depth,
+            with_web_server,
+            with_ftp_server,
+            with_mail_server,
+            with_cloud_storage,
+            with_log_server,
+            with_dbms_server,
+            with_cms_server,
+            with_proxy_server,
+            with_ldap_server,
+            with_dns_server,
+            with_ssh_server,
+        } => {
+            let mut services: Vec<topo::config::Service> = vec![];
+            if with_web_server {
+                services.push(topo::config::Service::WebServer);
+            }
+            if with_ftp_server {
+                services.push(topo::config::Service::FtpServer);
+            }
+            if with_mail_server {
+                services.push(topo::config::Service::MailServer);
+            }
+            if with_cloud_storage {
+                services.push(topo::config::Service::CloudStorage);
+            }
+            if with_log_server {
+                services.push(topo::config::Service::LogServer);
+            }
+            if with_dbms_server {
+                services.push(topo::config::Service::DbmsServer);
+            }
+            if with_cms_server {
+                services.push(topo::config::Service::CmsServer);
+            }
+            if with_proxy_server {
+                services.push(topo::config::Service::ProxyServer);
+            }
+            if with_ldap_server {
+                services.push(topo::config::Service::LdapServer);
+            }
+            if with_dns_server {
+                services.push(topo::config::Service::DnsServer);
+            }
+            if with_ssh_server {
+                services.push(topo::config::Service::SshServer);
+            }
+
+            let gen_params = topo::config::GenerationParameters {
+                minimum_sub_topology: min_subnets,
+                minimum_subnet_count: min_subnets,
+                minimum_node_count: min_nodes,
+                tree_depth,
+                services,
+            };
+            let mut generator = topo::generator::TopologyGenerator::new(topo::sub_topology::get_default_subtopos());
+            let topology = network::NetworkYaml::from(generator.generate_topologies(&gen_params)?);
+            let mut file = File::create(outfile)
+                .expect("Failed to create or open the topology file");
+            file.write_all(serde_yaml::to_string(&topology).expect("Serialization issue").as_bytes())
+                .expect("Failed to write to the file");
         }
     };
     Ok(())

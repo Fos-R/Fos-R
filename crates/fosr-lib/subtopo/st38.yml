@@ -1,0 +1,33 @@
+mask: 24
+name: st38
+nodes:
+- ip: 192.168.37.1
+  name: r38_1
+  type: router
+- ip: 192.168.37.2
+  name: n38_2
+  os: linux
+  type: machine
+- ip: 192.168.37.3
+  name: n38_3
+  os: windows
+  services: dbms_server
+  type: machine
+- ip: 192.168.37.4
+  name: n38_4
+  os: windows
+  services: ldap_server
+  type: machine
+- ip: 192.168.37.5
+  name: n38_5
+  os: windows
+  type: machine
+- ip: 192.168.37.6
+  name: n38_6
+  os: linux
+  type: machine
+- ip: 192.168.37.7
+  name: n38_7
+  os: linux
+  type: machine
+subnet: 192.168.37.0

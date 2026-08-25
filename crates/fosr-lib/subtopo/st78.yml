@@ -1,0 +1,21 @@
+mask: 24
+name: st78
+nodes:
+- ip: 192.168.77.1
+  name: r78_1
+  type: router
+- ip: 192.168.77.2
+  name: n78_2
+  os: windows
+  type: machine
+- ip: 192.168.77.3
+  name: n78_3
+  os: linux
+  services: ftp_server
+  type: machine
+- ip: 192.168.77.4
+  name: n78_4
+  os: windows
+  services: cloud_storage
+  type: machine
+subnet: 192.168.77.0

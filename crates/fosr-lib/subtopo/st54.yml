@@ -1,0 +1,24 @@
+mask: 24
+name: st54
+nodes:
+- ip: 192.168.53.1
+  name: r54_1
+  type: router
+- ip: 192.168.53.2
+  name: n54_2
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.53.3
+  name: n54_3
+  os: linux
+  type: machine
+- ip: 192.168.53.4
+  name: n54_4
+  os: linux
+  type: machine
+- ip: 192.168.53.5
+  name: n54_5
+  os: linux
+  type: machine
+subnet: 192.168.53.0

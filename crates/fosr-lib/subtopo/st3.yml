@@ -1,0 +1,30 @@
+mask: 24
+name: st3
+nodes:
+- ip: 192.168.2.1
+  name: r3_1
+  type: router
+- ip: 192.168.2.2
+  name: n3_2
+  os: windows
+  type: machine
+- ip: 192.168.2.3
+  name: n3_3
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.2.4
+  name: n3_4
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.2.5
+  name: n3_5
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.2.6
+  name: n3_6
+  os: windows
+  type: machine
+subnet: 192.168.2.0

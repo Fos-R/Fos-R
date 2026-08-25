@@ -1,0 +1,46 @@
+mask: 24
+name: st175
+nodes:
+- ip: 192.168.174.1
+  name: r175_1
+  type: router
+- ip: 192.168.174.2
+  name: n175_2
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.174.3
+  name: n175_3
+  os: windows
+  type: machine
+- ip: 192.168.174.4
+  name: n175_4
+  os: windows
+  type: machine
+- ip: 192.168.174.5
+  name: n175_5
+  os: linux
+  type: machine
+- ip: 192.168.174.6
+  name: n175_6
+  os: linux
+  type: machine
+- ip: 192.168.174.7
+  name: n175_7
+  os: linux
+  services: cloud_storage
+  type: machine
+- ip: 192.168.174.8
+  name: n175_8
+  os: linux
+  type: machine
+- ip: 192.168.174.9
+  name: n175_9
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.174.10
+  name: n175_10
+  os: windows
+  type: machine
+subnet: 192.168.174.0

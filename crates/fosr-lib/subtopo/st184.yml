@@ -1,0 +1,34 @@
+mask: 24
+name: st184
+nodes:
+- ip: 192.168.183.1
+  name: r184_1
+  type: router
+- ip: 192.168.183.2
+  name: n184_2
+  os: linux
+  type: machine
+- ip: 192.168.183.3
+  name: n184_3
+  os: windows
+  type: machine
+- ip: 192.168.183.4
+  name: n184_4
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.183.5
+  name: n184_5
+  os: windows
+  type: machine
+- ip: 192.168.183.6
+  name: n184_6
+  os: linux
+  services: proxy_server
+  type: machine
+- ip: 192.168.183.7
+  name: n184_7
+  os: linux
+  services: cloud_storage
+  type: machine
+subnet: 192.168.183.0

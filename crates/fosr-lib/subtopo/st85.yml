@@ -1,0 +1,19 @@
+mask: 24
+name: st85
+nodes:
+- ip: 192.168.84.1
+  name: r85_1
+  type: router
+- ip: 192.168.84.2
+  name: n85_2
+  os: linux
+  type: machine
+- ip: 192.168.84.3
+  name: n85_3
+  os: linux
+  type: machine
+- ip: 192.168.84.4
+  name: n85_4
+  os: windows
+  type: machine
+subnet: 192.168.84.0

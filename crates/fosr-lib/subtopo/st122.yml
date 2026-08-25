@@ -1,0 +1,38 @@
+mask: 24
+name: st122
+nodes:
+- ip: 192.168.121.1
+  name: r122_1
+  type: router
+- ip: 192.168.121.2
+  name: n122_2
+  os: linux
+  type: machine
+- ip: 192.168.121.3
+  name: n122_3
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.121.4
+  name: n122_4
+  os: linux
+  type: machine
+- ip: 192.168.121.5
+  name: n122_5
+  os: windows
+  services: cms_server
+  type: machine
+- ip: 192.168.121.6
+  name: n122_6
+  os: linux
+  services: dbms_server
+  type: machine
+- ip: 192.168.121.7
+  name: n122_7
+  os: windows
+  type: machine
+- ip: 192.168.121.8
+  name: n122_8
+  os: linux
+  type: machine
+subnet: 192.168.121.0

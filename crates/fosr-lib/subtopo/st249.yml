@@ -1,0 +1,42 @@
+mask: 24
+name: st249
+nodes:
+- ip: 192.168.248.1
+  name: r249_1
+  type: router
+- ip: 192.168.248.2
+  name: n249_2
+  os: linux
+  services: dns_server
+  type: machine
+- ip: 192.168.248.3
+  name: n249_3
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 192.168.248.4
+  name: n249_4
+  os: linux
+  type: machine
+- ip: 192.168.248.5
+  name: n249_5
+  os: linux
+  type: machine
+- ip: 192.168.248.6
+  name: n249_6
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.248.7
+  name: n249_7
+  os: windows
+  type: machine
+- ip: 192.168.248.8
+  name: n249_8
+  os: linux
+  type: machine
+- ip: 192.168.248.9
+  name: n249_9
+  os: linux
+  type: machine
+subnet: 192.168.248.0

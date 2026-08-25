@@ -1,0 +1,38 @@
+mask: 24
+name: st107
+nodes:
+- ip: 192.168.106.1
+  name: r107_1
+  type: router
+- ip: 192.168.106.2
+  name: n107_2
+  os: windows
+  services: cloud_storage
+  type: machine
+- ip: 192.168.106.3
+  name: n107_3
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.106.4
+  name: n107_4
+  os: windows
+  type: machine
+- ip: 192.168.106.5
+  name: n107_5
+  os: windows
+  services: log_server
+  type: machine
+- ip: 192.168.106.6
+  name: n107_6
+  os: windows
+  type: machine
+- ip: 192.168.106.7
+  name: n107_7
+  os: windows
+  type: machine
+- ip: 192.168.106.8
+  name: n107_8
+  os: windows
+  type: machine
+subnet: 192.168.106.0

@@ -1,0 +1,30 @@
+mask: 24
+name: st176
+nodes:
+- ip: 192.168.175.1
+  name: r176_1
+  type: router
+- ip: 192.168.175.2
+  name: n176_2
+  os: windows
+  services: ftp_server
+  type: machine
+- ip: 192.168.175.3
+  name: n176_3
+  os: linux
+  type: machine
+- ip: 192.168.175.4
+  name: n176_4
+  os: linux
+  services: log_server
+  type: machine
+- ip: 192.168.175.5
+  name: n176_5
+  os: linux
+  type: machine
+- ip: 192.168.175.6
+  name: n176_6
+  os: windows
+  services: web_server
+  type: machine
+subnet: 192.168.175.0
