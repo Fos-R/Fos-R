@@ -73,6 +73,18 @@ struct BayesianNetworkNode {
                          // in the cpt
 }
 
+/// Extra information for the transfer learning
+#[derive(Debug, Clone)]
+struct TransferLearningExtraData {
+    src_ip_weights: WeightedIndex<f64>,
+    src_ip: Vec<AnonymizedIpv4Addr>,
+    dst_ip_weights: WeightedIndex<f64>,
+    dst_ip: Vec<AnonymizedIpv4Addr>,
+    // TODO: TTL: précalculer
+    ttl: HashMap<Ipv4Addr, u8>,
+    open_ports: HashMap<(Ipv4Addr, L7Proto), u16>,
+}
+
 #[derive(Debug, Clone, Copy, EnumString)]
 #[strum(
     parse_err_fn = String::from,
@@ -297,7 +309,6 @@ pub struct BayesianModel {
     bn: BayesianNetwork,
     bin_count: usize,
     // bn_additional_data: AdditionalData,
-    open_ports: HashMap<(Ipv4Addr, L7Proto), u16>,
 }
 
 /// Stage 1: generates flow descriptions
@@ -351,7 +362,7 @@ impl BayesianModel {
             bn,
             bin_count,
             // bn_additional_data,
-            open_ports: HashMap::new(),
+            // open_ports: HashMap::new(),
         };
 
         model.apply_network(network)?;
@@ -378,7 +389,7 @@ impl BayesianModel {
             bn,
             bin_count,
             // bn_additional_data,
-            open_ports: HashMap::new(),
+            // open_ports: HashMap::new(),
         };
 
         model.remove_impossible_values()?;
@@ -473,24 +484,36 @@ impl BayesianModel {
             }
         }
 
-        self.open_ports = network.open_ports.clone();
+        // self.open_ports = network.open_ports.clone();
 
         let mut src_ip_roles: Vec<IpRole> = vec![];
         let mut src_ip_role_index: usize = 0;
-        for (index, node) in self.bn.nodes.iter().enumerate() {
-            if let Feature::SrcIpRole(v) = &node.feature {
-                src_ip_roles = v.clone();
-                src_ip_role_index = index;
+        {
+            let mut found = false;
+            for (index, node) in self.bn.nodes.iter().enumerate() {
+                if let Feature::SrcIpRole(v) = &node.feature {
+                    src_ip_roles = v.clone();
+                    src_ip_role_index = index;
+                    found = true;
+                    break;
+                }
             }
+            assert!(found);
         }
 
         let mut dst_ip_roles: Vec<IpRole> = vec![];
         let mut dst_ip_role_index: usize = 0;
-        for (index, node) in self.bn.nodes.iter().enumerate() {
-            if let Feature::DstIpRole(v) = &node.feature {
-                dst_ip_roles = v.clone();
-                dst_ip_role_index = index;
+        {
+            let mut found = false;
+            for (index, node) in self.bn.nodes.iter().enumerate() {
+                if let Feature::DstIpRole(v) = &node.feature {
+                    dst_ip_roles = v.clone();
+                    dst_ip_role_index = index;
+                    found = true;
+                    break;
+                }
             }
+            assert!(found);
         }
 
         // TODO: changer de distribution !
@@ -534,159 +557,20 @@ impl BayesianModel {
                         }
                     }
                 }
-                // TODO: trop de copier-coller !
-                Feature::SrcIp(_) => {
-                    // we replace the node by a new one
-                    let mut all_src_ip = network.users.clone();
-                    all_src_ip.append(&mut network.servers.clone());
-                    let ip: Vec<AnonymizedIpv4Addr> = all_src_ip
-                        .clone()
-                        .into_iter()
-                        .map(AnonymizedIpv4Addr::Local)
-                        .chain(iter::once(AnonymizedIpv4Addr::Public))
-                        .collect();
-                    let mut cpt: Vec<Option<WeightedIndex<f64>>> = vec![];
-                    for p in protocols.iter() {
-                        if !network.services.contains(p) {
-                            // this protocol will never be sampled with this network
-                            for _ in src_ip_roles.iter() {
-                                cpt.push(None);
-                            }
-                        } else {
-                            for role in src_ip_roles.iter() {
-                                match role {
-                                    IpRole::User => {
-                                        let proto_users = network.get_users_per_service(p);
-                                        assert!(!proto_users.is_empty());
-                                        let proba = all_src_ip
-                                            .clone()
-                                            .into_iter()
-                                            .map(|ip| {
-                                                if proto_users.contains(&ip) {
-                                                    // this IP can be sampled
-                                                    *usages_map.get(&ip).unwrap()
-                                                } else {
-                                                    // this IP cannot be sampled
-                                                    0.0f64
-                                                }
-                                            })
-                                            .chain(iter::once(0.0f64)); // no internet
-                                        cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}")));
-                                    }
-                                    IpRole::Server => {
-                                        let proto_servers = network.get_servers_per_service(p);
-                                        assert!(!proto_servers.is_empty());
-                                        let proba = all_src_ip
-                                            .clone()
-                                            .into_iter()
-                                            .map(|ip| {
-                                                if proto_servers.contains(&ip) {
-                                                    // this IP can be sampled
-                                                    *usages_map.get(&ip).unwrap()
-                                                } else {
-                                                    // this IP cannot be sampled
-                                                    0.0f64
-                                                }
-                                            })
-                                            .chain(iter::once(0.0f64)); // no internet
-                                        cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}")));
-                                    }
-                                    IpRole::Internet => {
-                                        let mut proba: Vec<f64> = vec![];
-                                        proba.extend(std::iter::repeat_n(0.0f64, all_src_ip.len()));
-                                        proba.push(1.0f64); // always a public IP
-                                        cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of SrcIp for {p} and {role}")));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    *node = BayesianNetworkNode {
-                        feature: Feature::SrcIp(ip),
-                        cpt: Some(cpt),
-                        removed_values: HashSet::new(),
-                        parents: vec![l7proto_index, src_ip_role_index],
-                        parents_cardinality: vec![protocols.len(), src_ip_roles.len()],
-                    };
-                }
-                Feature::DstIp(_) => {
-                    // we replace the node by a new one
-                    let mut all_dst_ip = network.users.clone();
-                    all_dst_ip.append(&mut network.servers.clone());
-                    let ip: Vec<AnonymizedIpv4Addr> = all_dst_ip
-                        .clone()
-                        .into_iter()
-                        .map(AnonymizedIpv4Addr::Local)
-                        .chain(iter::once(AnonymizedIpv4Addr::Public))
-                        .collect();
-                    let mut cpt: Vec<Option<WeightedIndex<f64>>> = vec![];
-                    for p in protocols.iter() {
-                        if !network.services.contains(p) {
-                            // this protocol will never be sampled with this network
-                            for _ in dst_ip_roles.iter() {
-                                cpt.push(None);
-                            }
-                        } else {
-                            for role in dst_ip_roles.iter() {
-                                match role {
-                                    IpRole::User => {
-                                        let proto_users = network.get_users_per_service(p);
-                                        assert!(!proto_users.is_empty());
-                                        let proba = all_dst_ip
-                                            .clone()
-                                            .into_iter()
-                                            .map(|ip| {
-                                                if proto_users.contains(&ip) {
-                                                    // this IP can be sampled
-                                                    *usages_map.get(&ip).unwrap()
-                                                } else {
-                                                    // this IP cannot be sampled
-                                                    0.0f64
-                                                }
-                                            })
-                                            .chain(iter::once(0.0f64)); // no internet
-                                        cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of DstIp for {p} and {role}")));
-                                    }
-                                    IpRole::Server => {
-                                        let proto_servers = network.get_servers_per_service(p);
-                                        assert!(!proto_servers.is_empty());
-                                        let proba = all_dst_ip
-                                            .clone()
-                                            .into_iter()
-                                            .map(|ip| {
-                                                if proto_servers.contains(&ip) {
-                                                    // this IP can be sampled
-                                                    *usages_map.get(&ip).unwrap()
-                                                } else {
-                                                    // this IP cannot be sampled
-                                                    0.0f64
-                                                }
-                                            })
-                                            .chain(iter::once(0.0f64)); // no internet
-                                        cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of DstIp for {p} and {role}")));
-                                    }
-                                    IpRole::Internet => {
-                                        let mut proba: Vec<f64> = vec![];
-                                        proba.extend(std::iter::repeat_n(0.0f64, all_dst_ip.len()));
-                                        proba.push(1.0f64); // always a public IP
-                                        cpt.push(Some(WeightedIndex::new(proba).expect("Cannot create the probability distribution of DstIp for {p} and {role}")));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    *node = BayesianNetworkNode {
-                        feature: Feature::DstIp(ip),
-                        cpt: Some(cpt),
-                        removed_values: HashSet::new(),
-                        parents: vec![l7proto_index, dst_ip_role_index],
-                        parents_cardinality: vec![protocols.len(), dst_ip_roles.len()],
-                    };
-                }
-
                 _ => (),
             }
         }
+
+
+        // we replace the node by a new one
+        // let mut all_src_ip = network.users.clone();
+        // all_src_ip.append(&mut network.servers.clone());
+        let ip: Vec<AnonymizedIpv4Addr> = network.users
+            .clone()
+            .into_iter()
+            .map(AnonymizedIpv4Addr::Local)
+            .chain(iter::once(AnonymizedIpv4Addr::Public))
+            .collect();
         self.remove_impossible_values()?;
         Ok(())
     }

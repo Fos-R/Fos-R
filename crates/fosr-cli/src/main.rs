@@ -161,7 +161,7 @@ fn main() -> Result<(), String> {
                 default_models.unwrap().get_source() // we are sure it contains something
             };
 
-            let model = models::Models::from_source(&source)?.with_network(&network)?;
+            let model = models::Models::from_source_with_network(&source, &network)?;
 
             generate_pcap(
                 duration,
