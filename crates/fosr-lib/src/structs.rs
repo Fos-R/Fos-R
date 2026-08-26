@@ -126,8 +126,11 @@ pub enum L7Proto {
     KMS,
     MulticastDNS,
     FTP,
+    FTPData,
     LDAP,
-    NTP, // TODO complete
+    NTP,
+    Kerberos,
+    // TODO complete
     // Joker variant for everything else
     Unknown(&'static str), // &'static str costs a little leak (a few bytes) but make this enum
                            // Copy, which is very convenient
@@ -150,8 +153,10 @@ impl FromStr for L7Proto {
             "KMS" => L7Proto::KMS,
             "MULTICASTDNS" => L7Proto::MulticastDNS,
             "FTP" => L7Proto::FTP,
+            "FTP-DATA" => L7Proto::FTPData,
             "LDAP" => L7Proto::LDAP,
             "NTP" => L7Proto::NTP,
+            "KRB" => L7Proto::Kerberos,
             _ => L7Proto::Unknown(String::from(s).leak()),
         })
     }
@@ -179,8 +184,10 @@ impl L7Proto {
             L7Proto::KMS => "KMS",
             L7Proto::MulticastDNS => "mDNS",
             L7Proto::FTP => "FTP",
+            L7Proto::FTPData => "FTP (data)",
             L7Proto::LDAP => "LDAP",
             L7Proto::NTP => "NTP",
+            L7Proto::Kerberos => "Kerberos",
             L7Proto::Unknown(s) => s,
         }
     }
@@ -200,8 +207,10 @@ impl L7Proto {
             L7Proto::KMS => 1688,
             L7Proto::MulticastDNS => 5353,
             L7Proto::FTP => 21,
+            L7Proto::FTPData => 20,
             L7Proto::LDAP => 389, // TODO(pf): this is non encrypted LDAP port
             L7Proto::NTP => 123,
+            L7Proto::Kerberos => 88,
             L7Proto::Unknown(_) => todo!(), // TODO: should return an Option
         }
     }
