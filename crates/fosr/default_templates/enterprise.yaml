@@ -12,7 +12,7 @@ networks:
     name: "DMZ"
     hosts:
       - hostname: dmz-web-gateway
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 192.168.10.10
@@ -24,7 +24,7 @@ networks:
             mac_addr: 00:14:2A:3F:10:02
 
       - hostname: dmz-dns-server
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 192.168.10.20
@@ -33,7 +33,7 @@ networks:
               - dns:53
 
       - hostname: dmz-mail-relay
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 192.168.10.30
@@ -47,7 +47,7 @@ networks:
     name: "Application"
     hosts:
       - hostname: app-api-frontend
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 192.168.20.10
@@ -57,7 +57,7 @@ networks:
               - http:80
 
       - hostname: app-api-backend
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 192.168.20.20
@@ -71,7 +71,7 @@ networks:
     name: "Database"
     hosts:
       - hostname: db-primary
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 192.168.30.10
@@ -84,7 +84,7 @@ networks:
               - ssh:22
 
       - hostname: db-replica
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 192.168.30.20
@@ -98,21 +98,21 @@ networks:
     name: "Users"
     hosts:
       - hostname: admin-workstation
-        os: Linux
+        os: linux
         type: user
         interfaces:
           - ip_addr: 192.168.50.100
             mac_addr: AA:BB:CC:DD:EE:01
 
       - hostname: dev-workstation-01
-        os: Linux
+        os: linux
         type: user
         interfaces:
           - ip_addr: 192.168.50.101
             mac_addr: AA:BB:CC:DD:EE:02
 
       - hostname: dev-workstation-02
-        os: Linux
+        os: linux
         type: user
         interfaces:
           - ip_addr: 192.168.50.102
