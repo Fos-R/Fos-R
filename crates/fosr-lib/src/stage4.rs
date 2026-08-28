@@ -97,12 +97,12 @@ impl Stage4 {
         // Fields that depend on the direction
         match packet_info.get_direction() {
             PacketDirection::Forward => {
-                ipv4_packet.set_ttl(flow.ttl_client);
+                ipv4_packet.set_ttl(flow.src_ttl);
                 ipv4_packet.set_source(flow.src_ip);
                 ipv4_packet.set_destination(flow.dst_ip);
             }
             PacketDirection::Backward => {
-                ipv4_packet.set_ttl(flow.ttl_server);
+                ipv4_packet.set_ttl(flow.dst_ttl);
                 ipv4_packet.set_source(flow.dst_ip);
                 ipv4_packet.set_destination(flow.src_ip);
             }
