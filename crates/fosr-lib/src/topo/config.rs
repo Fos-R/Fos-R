@@ -13,8 +13,6 @@ pub struct GenerationParameters {
     pub minimum_sub_topology: usize,
     /// Minimal number of node to generate, hard constraint
     pub minimum_node_count: usize,
-    /// Minimal number of subnet to generate, hard constraint
-    pub minimum_subnet_count: usize,
     /// Target depth of the topology tree
     pub tree_depth: usize,
     /// List of services to include in the topology

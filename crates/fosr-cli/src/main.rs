@@ -272,7 +272,6 @@ fn main() -> Result<(), String> {
 
             let gen_params = topo::config::GenerationParameters {
                 minimum_sub_topology: min_subnets,
-                minimum_subnet_count: min_subnets,
                 minimum_node_count: min_nodes,
                 tree_depth,
                 services,

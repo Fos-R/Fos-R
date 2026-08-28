@@ -1,4 +1,4 @@
-use crate::structs::{L7Proto, OS};
+use crate::structs::{L7Proto, OS, L7ProtoWithPort};
 
 use pnet::util::MacAddr;
 use rand::prelude::*;
@@ -39,8 +39,11 @@ pub struct Network {
     /// The list of services proposed in the configuration
     pub services: Vec<L7Proto>,
 
-    /// Overridden listening ports
-    pub open_ports: HashMap<(Ipv4Addr, L7Proto), u16>,
+    /// The list of services per server
+    pub services_per_server: HashMap<(Ipv4Addr, L7Proto), Vec<L7ProtoWithPort>>,
+
+    // /// Overridden listening ports
+    // pub open_ports: HashMap<(Ipv4Addr, L7Proto), u16>,
 
     /// The list of servers that provide each service
     servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
@@ -154,11 +157,11 @@ pub struct Interface {
     /// Its MAC address
     pub mac_addr: Option<MacAddr>,
     /// The services it provides (may be empty)
-    pub services: Vec<L7Proto>,
+    pub services: Vec<L7ProtoWithPort>,
     /// Its IP address
     pub ip_addr: Ipv4Addr,
-    /// The open ports of services, if they are not the default one
-    pub open_ports: HashMap<L7Proto, u16>,
+    // /// The open ports of services, if they are not the default one
+    // pub open_ports: HashMap<L7Proto, u16>,
     // /// The services it uses (may be empty)
     // pub uses: Option<Vec<L7Proto>>,
 }
@@ -329,8 +332,8 @@ impl From<NetworkYaml> for Network {
         let mut mac_addr_map: HashMap<Ipv4Addr, MacAddr> = HashMap::new();
         let mut services: HashSet<L7Proto> = HashSet::new();
         let mut servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
+        let mut services_per_server: HashMap<(Ipv4Addr, L7Proto), Vec<L7ProtoWithPort>> = HashMap::new();
         let mut users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
-        let mut open_ports: HashMap<(Ipv4Addr, L7Proto), u16> = HashMap::new();
 
         let all_hosts = internet
             .iter()
@@ -339,16 +342,21 @@ impl From<NetworkYaml> for Network {
             if let Some(mac_addr) = interface.mac_addr {
                 mac_addr_map.insert(interface.ip_addr, mac_addr);
             }
-            for k in interface.open_ports.keys() {
-                open_ports.insert(
-                    (interface.ip_addr, *k),
-                    *interface.open_ports.get(k).unwrap(),
-                );
-            }
+            // TODO: si protocole pas connu, alors il *faut* mettre le port explicitement (mettre
+            // un warning)
+            // for k in interface.open_ports.keys() {
+            //     open_ports.insert(
+            //         (interface.ip_addr, *k),
+            //         *interface.open_ports.get(k).unwrap(),
+            //     );
+            // }
             for s in interface.services.iter() {
-                services.insert(*s);
-                let v = servers_per_service.entry(*s).or_default();
+                services.insert(s.get_proto());
+                let v = servers_per_service.entry(s.get_proto()).or_default();
                 v.push(interface.ip_addr);
+                let v = services_per_server.entry((interface.ip_addr,s.get_proto())).or_default();
+                v.push(*s);
+
             }
         }
 
@@ -410,9 +418,10 @@ impl From<NetworkYaml> for Network {
             users,
             servers,
             services: services.into_iter().collect(),
+            services_per_server,
             servers_per_service,
             // users_per_service,
-            open_ports,
+            // open_ports,
         }
     }
 }
@@ -454,18 +463,10 @@ impl TryFrom<InterfaceYaml> for Interface {
     type Error = String;
 
     fn try_from(i: InterfaceYaml) -> Result<Self, String> {
-        let mut open_ports: HashMap<L7Proto, u16> = HashMap::new();
+        // let mut open_ports: HashMap<L7Proto, u16> = HashMap::new();
         let mut services = vec![];
         for s in i.services.unwrap_or_default() {
-            let v: Vec<String> = s.as_str().split(':').map(ToString::to_string).collect();
-            assert!(!v.is_empty() && v.len() <= 2);
-            let service: L7Proto = L7Proto::from_str(&v[0])?;
-            if v.len() == 2 {
-                open_ports.insert(
-                    service,
-                    v[1].parse::<u16>().expect("Cannot parse the port in {s}"),
-                );
-            }
+            let service: L7ProtoWithPort = L7ProtoWithPort::from_str(&s.as_str())?;
             services.push(service);
         }
         // let uses = match i.uses {
@@ -482,7 +483,7 @@ impl TryFrom<InterfaceYaml> for Interface {
         //     }
         // };
 
-        let mut rng = rand::rng();
+        let mut rng = rand::rng(); //TODO: déterminisme
         let ip_addr = match i.ip_addr.as_str() {
             "auto" => Ipv4Addr::new(0, 0, 0, 0),
             "internet" => Ipv4Addr::new(
@@ -500,7 +501,7 @@ impl TryFrom<InterfaceYaml> for Interface {
                 .map(|s| s.parse().expect("Cannot parse MAC address")),
             ip_addr,
             services,
-            open_ports,
+            // open_ports,
         })
     }
 }

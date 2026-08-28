@@ -17,6 +17,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use strum::EnumString;
+use rand::prelude::SliceRandom;
 
 #[derive(Debug, Clone, Default)]
 /// This structure holds the flow that is being built. Since we cannot instance all the variables
@@ -76,13 +77,11 @@ struct BayesianNetworkNode {
 /// Extra information for the transfer learning
 #[derive(Debug, Clone)]
 struct TransferLearningExtraData {
-    src_ip_weights: WeightedIndex<f64>,
-    src_ip: Vec<AnonymizedIpv4Addr>,
-    dst_ip_weights: WeightedIndex<f64>,
-    dst_ip: Vec<AnonymizedIpv4Addr>,
-    // TODO: TTL: précalculer
+    local_src_ip_weights: WeightedIndex<f64>,
+    local_src_ip: Vec<Ipv4Addr>,
+    local_dst_ip_weights: WeightedIndex<f64>,
+    local_dst_ip: Vec<Ipv4Addr>,
     ttl: HashMap<Ipv4Addr, u8>,
-    open_ports: HashMap<(Ipv4Addr, L7Proto), u16>,
 }
 
 #[derive(Debug, Clone, Copy, EnumString)]
@@ -194,17 +193,20 @@ struct BayesianNetwork {
     nodes: Vec<BayesianNetworkNode>,
 }
 
+fn is_global(addr: &Ipv4Addr) -> bool {
+    addr.octets()[0] != 0
+        && !addr.is_multicast()
+        && !addr.is_broadcast()
+        && !addr.is_documentation()
+        && !addr.is_link_local()
+        && !addr.is_loopback()
+        && !addr.is_private()
+}
+
 fn sample_random_global_ip(rng: &mut impl Rng) -> Ipv4Addr {
     let mut addr = Ipv4Addr::from_bits(rng.next_u32());
     // rejection sampling
-    while addr.octets()[0] == 0
-        || addr.is_multicast()
-        || addr.is_broadcast()
-        || addr.is_documentation()
-        || addr.is_link_local()
-        || addr.is_loopback()
-        || addr.is_private()
-    {
+    while !is_global(&addr) {
         // while !addr.is_global() { // TODO: use when not experimental anymore
         addr = Ipv4Addr::from_bits(rng.next_u32());
     }
@@ -308,7 +310,7 @@ impl BayesianNetwork {
 pub struct BayesianModel {
     bn: BayesianNetwork,
     bin_count: usize,
-    // bn_additional_data: AdditionalData,
+    transfer_learning: Option<TransferLearningExtraData>,
 }
 
 /// Stage 1: generates flow descriptions
@@ -348,6 +350,10 @@ impl BayesianModel {
         m: &models::ModelsSource,
         network: &network::Network,
     ) -> Result<Self, String> {
+
+        // We use a seeded RNG so everything is deterministic
+        let mut rng = Pcg32::seed_from_u64(12345);
+
         let bn_string: String = m
             .get_tl_bn()
             .map_err(|e| format!("Cannot find the Bayesian networks: {e}"))?;
@@ -360,12 +366,43 @@ impl BayesianModel {
 
         log::info!("Bayesian network has been loaded");
 
+        // Use a Zipf distribution for clients activity
+        let mut weights: Vec<f64> = iter::repeat_n(1, network.users.len())
+            .enumerate()
+            .map(|(i,_)| 1./(i as f64))
+            .collect();
+        weights.shuffle(&mut rng);
+        let local_src_ip_weights = WeightedIndex::new(&weights).unwrap();
+
+        // Use a Zipf distribution for servers activity
+        let mut weights: Vec<f64> = iter::repeat_n(1, network.servers.len())
+            .enumerate()
+            .map(|(i,_)| 1./(i as f64))
+            .collect();
+        weights.shuffle(&mut rng);
+        let local_dst_ip_weights = WeightedIndex::new(&weights).unwrap();
+
+        let mut ttl: HashMap<Ipv4Addr, u8> = HashMap::new();
+        for ip in network.users.iter().chain(network.servers.iter()) {
+            // TODO ! TTL should be calculated from the topology
+            ttl.insert(*ip, 255);
+        }
+
+        let tl_extra_data = TransferLearningExtraData {
+            local_src_ip: network.users
+                        .clone(),
+            local_src_ip_weights,
+            local_dst_ip: network.servers
+                        .clone(),
+            local_dst_ip_weights,
+            ttl,
+        };
+
         // log::info!("{bn_common}");
         let mut model = BayesianModel {
             bn,
             bin_count,
-            // bn_additional_data,
-            // open_ports: HashMap::new(),
+            transfer_learning: Some(tl_extra_data),
         };
 
         model.apply_network(network)?;
@@ -389,8 +426,7 @@ impl BayesianModel {
         let mut model = BayesianModel {
             bn,
             bin_count,
-            // bn_additional_data,
-            // open_ports: HashMap::new(),
+            transfer_learning: None,
         };
 
         model.remove_impossible_values()?;
@@ -476,16 +512,14 @@ impl BayesianModel {
 
     fn apply_network(&mut self, network: &network::Network) -> Result<(), String> {
         // we know L7Proto exists
-        let mut protocols: Vec<L7Proto> = vec![];
-        let mut l7proto_index: usize = 0;
-        for (index, node) in self.bn.nodes.iter().enumerate() {
-            if let Feature::L7Proto(v) = &node.feature {
-                protocols = v.clone();
-                l7proto_index = index;
-            }
-        }
-
-        // self.open_ports = network.open_ports.clone();
+        // let mut protocols: Vec<L7Proto> = vec![];
+        // let mut l7proto_index: usize = 0;
+        // for (index, node) in self.bn.nodes.iter().enumerate() {
+        //     if let Feature::L7Proto(v) = &node.feature {
+        //         protocols = v.clone();
+        //         l7proto_index = index;
+        //     }
+        // }
 
         let mut src_ip_roles: Vec<IpRole> = vec![];
         let mut src_ip_role_index: usize = 0;
@@ -579,7 +613,6 @@ impl BayesianModel {
 
 fn bn_from_bif(
     network: bifxml::Network,
-    // bn_additional_data: &AdditionalData,
 ) -> Result<(BayesianNetwork, usize), String> {
     // Used only for computing the topological order
     struct TopologicalNode {
@@ -814,12 +847,6 @@ fn bn_from_bif(
                     .collect::<Result<Vec<TCPConnState>, String>>()?,
             )),
 
-            // "Cat Out Packet UDP" => Some(Feature::FwdPkt(
-            //     bn_additional_data.udp_out_pkt_gaussians.to_normals(),
-            // )),
-            // "Cat In Packet UDP" => Some(Feature::BwdPkt(
-            //     bn_additional_data.udp_in_pkt_gaussians.to_normals(),
-            // )),
             _ => None, // some duplicated features are deliberately ignored (such as Dst Pt UDP/TCP)
         };
 
@@ -904,18 +931,35 @@ impl Stage2 for BNGenerator {
 
             domain_vector.timestamp = Some(ts.data.unix_time);
             let uniform = OS::Windows.get_ephemeral_port_distr(); // TODO: use the actual OS
-            domain_vector.src_port = Some(uniform.sample(&mut rng));
+            // Use the default source port for that protocol if that exists
+            domain_vector.src_port = Some(match domain_vector.l7_proto.unwrap().get_default_src_port() {
+                Port::Fixed(p) => p,
+                Port::Random => uniform.sample(&mut rng)
+            });
+
             if domain_vector.dst_port.is_none() {
                 // Some protocol have random destination port, like FTP-data
                 domain_vector.dst_port = Some(uniform.sample(&mut rng));
             }
-            // TODO: allow that again
-            // if let Some(port) = self.model.open_ports.get(&(
-            //     domain_vector.dst_ip.unwrap(),
-            //     domain_vector.l7_proto.unwrap(),
-            // )) {
-            //     domain_vector.dst_port = Some(*port);
-            // }
+
+            if let Some(ref tl) = self.model.transfer_learning {
+                match domain_vector.dst_ip_role.unwrap() {
+                    IpRole::User => unreachable!("User can never be destination"),
+                    IpRole::Server => {},
+                    IpRole::Internet => {
+                    },
+
+                }
+
+                // TODO: dépend de l’IP
+                // domain_vector.dst_port = Some(domain_vector.l7_proto.unwrap().get_port());
+
+
+                // Sample IP addresses
+            
+                // Complete TTL
+            }
+
         }
         Ok(iter::once(SeededData {
             seed: rng.next_u64(),
