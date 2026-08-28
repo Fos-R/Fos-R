@@ -52,6 +52,8 @@ pub enum DefaultModels {
     CUPID,
     #[cfg(feature = "models_dedale")]
     DEDALE,
+    #[cfg(all(feature = "models_cicids17", feature = "models_cupid", feature = "models_dedale"))]
+    CCD,
 }
 
 impl DefaultModels {
@@ -63,6 +65,8 @@ impl DefaultModels {
             DefaultModels::CUPID => models::ModelsSource::CUPID,
             #[cfg(feature = "models_dedale")]
             DefaultModels::DEDALE => models::ModelsSource::DEDALE,
+            #[cfg(all(feature = "models_cicids17", feature = "models_cupid", feature = "models_dedale"))]
+            DefaultModels::CCD => models::ModelsSource::CCD,
         }
     }
 }
