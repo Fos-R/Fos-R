@@ -26,10 +26,17 @@ def remove_public_ip(value, local_ips):
     else:
         return "Internet"
 
-def get_network_role(ip, clients, servers):
+def get_network_src_role(ip, clients, servers):
     if ip in clients:
         return "User"
     elif ip in servers:
+        return "Server"
+    else:
+        return "Internet"
+
+def get_network_dst_role(ip, clients, servers):
+    # by definition, only server can be a destination
+    if ip in clients or ip in servers:
         return "Server"
     else:
         return "Internet"
@@ -266,7 +273,7 @@ if __name__ == '__main__':
     for ip in ips:
         occurrences_dst = sum(flow["Dst IP Addr"]==ip)
         occurrences_src = sum(flow["Src IP Addr"]==ip)
-        if occurrences_src >= occurrences_dst:
+        if occurrences_src >= 3*occurrences_dst: # at least 75% of flows as a source
             # print(ip,"is a client")
             clients.append(ip)
         else:
@@ -283,8 +290,8 @@ if __name__ == '__main__':
     print("Local servers:",list(servers))
 
 # only for local addresses
-    flow['Src IP Role'] = flow['Src IP Addr'].apply(get_network_role, clients=clients, servers=servers)
-    flow['Dst IP Role'] = flow['Dst IP Addr'].apply(get_network_role, clients=clients, servers=servers)
+    flow['Src IP Role'] = flow['Src IP Addr'].apply(get_network_src_role, clients=clients, servers=servers)
+    flow['Dst IP Role'] = flow['Dst IP Addr'].apply(get_network_dst_role, clients=clients, servers=servers)
 
     def categorize(out_pkt_count, in_pkt_count):
         best_bic = None

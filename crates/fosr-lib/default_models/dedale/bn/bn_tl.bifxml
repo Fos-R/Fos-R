@@ -1,0 +1,335 @@
+<?xml version="1.0" ?>
+
+<BIF VERSION="0.3">
+<NETWORK>
+<NAME>Fos-R model (TL)</NAME>
+<PROPERTY>software aGrUM</PROPERTY>
+
+<!-- Variables -->
+<VARIABLE TYPE="nature">
+	<NAME>Time</NAME>
+	<PROPERTY>description = Time</PROPERTY>
+	<PROPERTY>fast = Time{bin-000|bin-001|bin-002|bin-003|bin-004|bin-005|bin-006|bin-007|bin-008|bin-009|bin-010|bin-011|bin-012|bin-013|bin-014|bin-015|bin-016|bin-017|bin-018|bin-019|bin-020|bin-021|bin-022|bin-023}</PROPERTY>
+<!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
+	<OUTCOME>bin-000</OUTCOME>
+	<OUTCOME>bin-001</OUTCOME>
+	<OUTCOME>bin-002</OUTCOME>
+	<OUTCOME>bin-003</OUTCOME>
+	<OUTCOME>bin-004</OUTCOME>
+	<OUTCOME>bin-005</OUTCOME>
+	<OUTCOME>bin-006</OUTCOME>
+	<OUTCOME>bin-007</OUTCOME>
+	<OUTCOME>bin-008</OUTCOME>
+	<OUTCOME>bin-009</OUTCOME>
+	<OUTCOME>bin-010</OUTCOME>
+	<OUTCOME>bin-011</OUTCOME>
+	<OUTCOME>bin-012</OUTCOME>
+	<OUTCOME>bin-013</OUTCOME>
+	<OUTCOME>bin-014</OUTCOME>
+	<OUTCOME>bin-015</OUTCOME>
+	<OUTCOME>bin-016</OUTCOME>
+	<OUTCOME>bin-017</OUTCOME>
+	<OUTCOME>bin-018</OUTCOME>
+	<OUTCOME>bin-019</OUTCOME>
+	<OUTCOME>bin-020</OUTCOME>
+	<OUTCOME>bin-021</OUTCOME>
+	<OUTCOME>bin-022</OUTCOME>
+	<OUTCOME>bin-023</OUTCOME>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Applicative Proto</NAME>
+	<PROPERTY>description = Applicative Proto</PROPERTY>
+	<PROPERTY>fast = Applicative Proto{dce_rpc|dce_rpc,gssapi,krb|dhcp|dns|gssapi,krb,smb|http|ldap_tcp|ldap_udp|ntp|quic,ssl|smtp,ssl|ssl}</PROPERTY>
+<!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
+	<OUTCOME>dce_rpc</OUTCOME>
+	<OUTCOME>dce_rpc,gssapi,krb</OUTCOME>
+	<OUTCOME>dhcp</OUTCOME>
+	<OUTCOME>dns</OUTCOME>
+	<OUTCOME>gssapi,krb,smb</OUTCOME>
+	<OUTCOME>http</OUTCOME>
+	<OUTCOME>ldap_tcp</OUTCOME>
+	<OUTCOME>ldap_udp</OUTCOME>
+	<OUTCOME>ntp</OUTCOME>
+	<OUTCOME>quic,ssl</OUTCOME>
+	<OUTCOME>smtp,ssl</OUTCOME>
+	<OUTCOME>ssl</OUTCOME>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Proto</NAME>
+	<PROPERTY>description = Proto</PROPERTY>
+	<PROPERTY>fast = Proto{TCP|UDP}</PROPERTY>
+<!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
+	<OUTCOME>TCP</OUTCOME>
+	<OUTCOME>UDP</OUTCOME>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Connection State</NAME>
+	<PROPERTY>description = Connection State</PROPERTY>
+	<PROPERTY>fast = Connection State{RST|S0|SF|SH|none}</PROPERTY>
+<!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
+	<OUTCOME>RST</OUTCOME>
+	<OUTCOME>S0</OUTCOME>
+	<OUTCOME>SF</OUTCOME>
+	<OUTCOME>SH</OUTCOME>
+	<OUTCOME>none</OUTCOME>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Cat Packet</NAME>
+	<PROPERTY>description = Cat Packet</PROPERTY>
+	<PROPERTY>fast = Cat Packet{cluster-000|cluster-001|cluster-002|cluster-003|cluster-004|cluster-005|cluster-006|cluster-007|cluster-008}</PROPERTY>
+<!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
+	<OUTCOME>cluster-000</OUTCOME>
+	<OUTCOME>cluster-001</OUTCOME>
+	<OUTCOME>cluster-002</OUTCOME>
+	<OUTCOME>cluster-003</OUTCOME>
+	<OUTCOME>cluster-004</OUTCOME>
+	<OUTCOME>cluster-005</OUTCOME>
+	<OUTCOME>cluster-006</OUTCOME>
+	<OUTCOME>cluster-007</OUTCOME>
+	<OUTCOME>cluster-008</OUTCOME>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Src IP Role</NAME>
+	<PROPERTY>description = Src IP Role</PROPERTY>
+	<PROPERTY>fast = Src IP Role{User}</PROPERTY>
+<!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
+	<OUTCOME>User</OUTCOME>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>Dst IP Role</NAME>
+	<PROPERTY>description = Dst IP Role</PROPERTY>
+	<PROPERTY>fast = Dst IP Role{Internet|Server}</PROPERTY>
+<!--OUTCOME are not used in pyAgrum BIFXML (see fast property) but are kept for compatibility-->
+	<OUTCOME>Internet</OUTCOME>
+	<OUTCOME>Server</OUTCOME>
+</VARIABLE>
+
+<!-- Probability distributions -->
+<DEFINITION>
+	<FOR>Time</FOR>
+	<TABLE>
+		0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0
+	</TABLE>
+</DEFINITION>
+<DEFINITION>
+	<FOR>Applicative Proto</FOR>
+	<GIVEN>Connection State</GIVEN>
+	<TABLE>
+		0.0168668 0.0168668 0 0 0.0417381 0.0923385 0 0 0 0 0 0.83219
+		0 0 0 0 0 0.209524 0 0 0 0 0 0.790476
+		0.0170512 0.00319973 0 0.00757831 0 0.207309 0.00774672 0 0 0 0.00345234 0.753663
+		0 0 0 0 0 0 0 0 0 0 0 1
+		0 0 0.00101614 0.895558 0 0 0 0.00296374 0.00311616 0.0973462 0 0
+	</TABLE>
+</DEFINITION>
+<DEFINITION>
+	<FOR>Proto</FOR>
+	<TABLE>
+		0.320338 0.679662
+	</TABLE>
+</DEFINITION>
+<DEFINITION>
+	<FOR>Connection State</FOR>
+	<GIVEN>Proto</GIVEN>
+	<TABLE>
+		0.125692 0.00754581 0.853467 0.013295 0
+		0 0 0 0 1
+	</TABLE>
+</DEFINITION>
+<DEFINITION>
+	<FOR>Cat Packet</FOR>
+	<GIVEN>Applicative Proto</GIVEN>
+	<GIVEN>Connection State</GIVEN>
+	<TABLE>
+		0.610169 0.254237 0.0508475 0.0508475 0.0169492 0.0169492 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0.844444 0.0469136 0.0320988 0.0666667 0.00493827 0.00246914 0.00246914 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0.457627 0.305085 0.0338983 0.0169492 0.0847458 0.0508475 0.0338983 0.0169492 0
+		0 0 0 0 0 0 0 0 0
+		0.684211 0.223684 0.0394737 0.0526316 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0.8 0.2 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0.338889 0.294444 0.366667 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0.995008 0.000453858 0.00164523 0.0015885 0.000680787 0.000567322 5.67322e-05 0 0
+		0.0958904 0.0273973 0.40411 0.136986 0.0205479 0.00684932 0.253425 0.0547945 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0.0526316 0.20743 0.482972 0.0743034 0.105263 0.0123839 0.0247678 0.0185759 0.0216718
+		0.613636 0.386364 0 0 0 0 0 0 0
+		0.38749 0.077173 0.00629569 0.0148253 0.103777 0.0030463 0.327579 0.0798132 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0.0706522 0.11413 0.222826 0.152174 0.152174 0.13587 0.0815217 0.0326087 0.0380435
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		1 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0.869565 0.130435 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0.508177 0.0422756 0.0414057 0.0323591 0.0140919 0.151531 0.0189631 0.191197 0
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0.829268 0.0121951 0.0487805 0.0121951 0.0243902 0.0121951 0.0121951 0.0243902 0.0243902
+		0 0 0 0 0 0 0 0 0
+		0 0 0 0 0 0 0 0 0
+		0.704912 0.076606 0.0625215 0.14325 0.0127104 0 0 0 0
+		0.63253 0.349398 0.0180723 0 0 0 0 0 0
+		0.0457516 0.410312 0.0217865 0.0494944 0.11234 0.0301659 0.00882632 0.0315625 0.28976
+		0.0189189 0.432432 0.362162 0.0108108 0.105405 0.0405405 0.0189189 0.00810811 0.0027027
+		0 0 0 0 0 0 0 0 0
+	</TABLE>
+</DEFINITION>
+<DEFINITION>
+	<FOR>Src IP Role</FOR>
+	<TABLE>
+		1
+	</TABLE>
+</DEFINITION>
+<DEFINITION>
+	<FOR>Dst IP Role</FOR>
+	<GIVEN>Applicative Proto</GIVEN>
+	<GIVEN>Cat Packet</GIVEN>
+	<TABLE>
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 0
+		0 0
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 0
+		0 1
+		0 1
+		0 0
+		0 0
+		0 0
+		0 0
+		0 0
+		0 0
+		0 0
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 0
+		0 0
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 0
+		0.162398 0.837602
+		0.734914 0.265086
+		0.97861 0.0213904
+		0.783505 0.216495
+		0.877064 0.122936
+		1 0
+		0.99013 0.00987045
+		0.9599 0.0401003
+		1 0
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 0
+		0 0
+		0 0
+		0 0
+		0 0
+		0 0
+		0 0
+		0 0
+		0 1
+		0 1
+		0 0
+		0 0
+		0 0
+		0 0
+		0 0
+		0 0
+		0 0
+		1 0
+		1 0
+		1 0
+		1 0
+		1 0
+		1 0
+		1 0
+		1 0
+		0 0
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0 1
+		0.99296 0.00703989
+		0.988698 0.0113023
+		0.991537 0.00846262
+		0.99694 0.00306044
+		0.998563 0.00143747
+		0.983784 0.0162162
+		0.987879 0.0121212
+		0.992958 0.00704225
+		0.99441 0.00558982
+	</TABLE>
+</DEFINITION>
+
+</NETWORK>
+</BIF>

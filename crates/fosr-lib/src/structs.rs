@@ -134,7 +134,7 @@ pub enum L7Proto {
     // Joker variant for everything else
     // &'static str costs a little leak (a few bytes) but make this enum
     // Copy, which is very convenient
-    Unknown(&'static str),
+    NonDefault(&'static str),
 }
 
 impl FromStr for L7Proto {
@@ -158,7 +158,7 @@ impl FromStr for L7Proto {
             "LDAP" => L7Proto::LDAP,
             "NTP" => L7Proto::NTP,
             "KRB" => L7Proto::Kerberos,
-            _ => L7Proto::Unknown(String::from(s).leak()),
+            _ => L7Proto::NonDefault(String::from(s).leak()),
         })
     }
 }
@@ -189,7 +189,7 @@ impl L7Proto {
             L7Proto::LDAP => "LDAP",
             L7Proto::NTP => "NTP",
             L7Proto::Kerberos => "Kerberos",
-            L7Proto::Unknown(s) => s,
+            L7Proto::NonDefault(s) => s,
         }
     }
 
@@ -217,7 +217,7 @@ impl L7Proto {
             L7Proto::LDAP => Some(Port::Fixed(389)), // TODO(pf): this is non encrypted LDAP port
             L7Proto::NTP => Some(Port::Fixed(123)),
             L7Proto::Kerberos => Some(Port::Fixed(88)),
-            L7Proto::Unknown(_) => None,
+            L7Proto::NonDefault(_) => None,
         }
     }
 }
