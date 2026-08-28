@@ -24,8 +24,8 @@ use strum::EnumString;
 /// This structure holds the flow that is being built. Since we cannot instance all the variables
 /// at the same time, each variable is an Option
 struct IntermediateVector {
-    src_ip_role: Option<IpRole>,
-    dst_ip_role: Option<IpRole>,
+    src_ip_role: Option<SrcIpRole>,
+    dst_ip_role: Option<DstIpRole>,
     l7_proto: Option<L7Proto>,
     dst_port: Option<u16>,
     src_port: Option<u16>,
@@ -37,8 +37,8 @@ struct IntermediateVector {
     timestamp: Option<Duration>,
     proto: Option<L4Proto>,
     tcp_flags: Option<TCPConnState>,
-    src_ip: Option<Ipv4Addr>, // if None, randomly sampled
-    dst_ip: Option<Ipv4Addr>, // if None, randomly sampled
+    src_ip: Option<Ipv4Addr>,
+    dst_ip: Option<Ipv4Addr>,
     src_mac: Option<MacAddr>,
     dst_mac: Option<MacAddr>,
 }
@@ -78,11 +78,13 @@ struct BayesianNetworkNode {
 /// Extra information for the transfer learning
 #[derive(Debug, Clone)]
 struct TransferLearningExtraData {
+    // TODO: différencier IP locales et IP connues
     local_src_ip_users: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)>,
     local_src_ip_servers: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)>,
     local_dst_ip: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)>,
     local_ttl: HashMap<Ipv4Addr, u8>,
     services_per_server: HashMap<(Ipv4Addr, L7Proto), Vec<L7ProtoWithPort>>,
+    mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
 }
 
 #[derive(Debug, Clone, Copy, EnumString)]
@@ -90,11 +92,22 @@ struct TransferLearningExtraData {
     parse_err_fn = String::from,
     parse_err_ty = String
 )]
-enum IpRole {
+enum SrcIpRole {
     User,
     Server,
     Internet,
 }
+
+#[derive(Debug, Clone, Copy, EnumString)]
+#[strum(
+    parse_err_fn = String::from,
+    parse_err_ty = String
+)]
+enum DstIpRole {
+    Server,
+    Internet,
+}
+
 
 #[derive(Debug, Clone)]
 enum AnonymizedIpv4Addr {
@@ -113,8 +126,8 @@ enum DstPt {
 enum Feature {
     // for each feature, we associate a domain
     TimeBin(usize), // cardinality only
-    SrcIpRole(Vec<IpRole>),
-    DstIpRole(Vec<IpRole>),
+    SrcIpRole(Vec<SrcIpRole>),
+    DstIpRole(Vec<DstIpRole>),
     SrcIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
     DstIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
     DstPt(Vec<DstPt>), // the port comes from the network file (must be chosen after the dest IP)
@@ -141,7 +154,8 @@ impl Feature {
             Feature::L7Proto(v) => format!("{:?}", v[index]),
             Feature::EndFlags(v) => format!("{:?}", v[index]),
             Feature::TimeBin(_) => format!("Time bin {index}"),
-            Feature::SrcIpRole(v) | Feature::DstIpRole(v) => format!("{:?}", v[index]),
+            Feature::SrcIpRole(v) => format!("{:?}", v[index]),
+            Feature::DstIpRole(v) => format!("{:?}", v[index]),
         }
     }
 
@@ -153,7 +167,8 @@ impl Feature {
             Feature::PktCount(card) | Feature::TimeBin(card) => *card,
             Feature::SrcTTL(v) | Feature::DstTTL(v) => v.len(),
             Feature::SrcMac(v) | Feature::DstMac(v) => v.len(),
-            Feature::SrcIpRole(v) | Feature::DstIpRole(v) => v.len(),
+            Feature::SrcIpRole(v) => v.len(),
+            Feature::DstIpRole(v) => v.len(),
             Feature::L4Proto(v) => v.len(),
             Feature::L7Proto(v) => v.len(),
             Feature::EndFlags(v) => v.len(),
@@ -410,9 +425,19 @@ impl BayesianModel {
         }
 
         let mut local_ttl: HashMap<Ipv4Addr, u8> = HashMap::new();
+        let mut mac_addr_map = network.mac_addr_map.clone();
         for ip in network.users.iter().chain(network.servers.iter()) {
             // TODO ! TTL should be calculated from the topology
             local_ttl.insert(*ip, 255);
+            if !mac_addr_map.contains_key(ip) {
+                mac_addr_map.insert(*ip, MacAddr::new(
+                rng.next_u32() as u8,
+                rng.next_u32() as u8,
+                rng.next_u32() as u8,
+                rng.next_u32() as u8,
+                rng.next_u32() as u8,
+                rng.next_u32() as u8));
+            }
         }
 
         let tl_extra_data = TransferLearningExtraData {
@@ -421,6 +446,7 @@ impl BayesianModel {
             local_dst_ip,
             local_ttl,
             services_per_server: network.services_per_server.clone(),
+            mac_addr_map,
         };
 
         // log::info!("{bn_common}");
@@ -492,7 +518,7 @@ impl BayesianModel {
 
     // find the values of parents that only lead to "None" CPTs
     fn remove_impossible_values(&mut self) -> Result<(), String> {
-        // log::info!("Remove impossible values");
+        log::trace!("Remove impossible values");
         // traverse the network in reverse topological order
         // indeed, children can modify their parents’ CPT
         for index in (0..self.bn.nodes.len()).rev() {
@@ -719,8 +745,8 @@ fn bn_from_bif(network: bifxml::Network) -> Result<(BayesianNetwork, usize), Str
                 v.outcome
                     .clone()
                     .into_iter()
-                    .map(|s| IpRole::from_str(&s))
-                    .collect::<Result<Vec<IpRole>, String>>()?,
+                    .map(|s| SrcIpRole::from_str(&s))
+                    .collect::<Result<Vec<SrcIpRole>, String>>()?,
             )),
             "Src IP Addr" => Some(Feature::SrcIp(
                 v.outcome
@@ -736,8 +762,8 @@ fn bn_from_bif(network: bifxml::Network) -> Result<(BayesianNetwork, usize), Str
                 v.outcome
                     .clone()
                     .into_iter()
-                    .map(|s| IpRole::from_str(&s))
-                    .collect::<Result<Vec<IpRole>, String>>()?,
+                    .map(|s| DstIpRole::from_str(&s))
+                    .collect::<Result<Vec<DstIpRole>, String>>()?,
             )),
             "Dst IP Addr" => Some(Feature::DstIp(
                 v.outcome
@@ -891,7 +917,8 @@ impl Stage2 for BNGenerator {
             discrete_vector.push(time);
             domain_vector = self.model.bn.sample(&mut rng, &mut discrete_vector)?;
 
-            if domain_vector.src_ip == domain_vector.dst_ip {
+            if domain_vector.src_ip.is_some() && domain_vector.src_ip == domain_vector.dst_ip {
+                log::trace!("Restart (identical IPs)");
                 restart = true;
                 continue;
             }
@@ -906,16 +933,10 @@ impl Stage2 for BNGenerator {
                 },
             );
 
-            if domain_vector.dst_port.is_none() {
-                // Some protocol have random destination port, like FTP-data
-                domain_vector.dst_port = Some(uniform.sample(&mut rng));
-            }
-
             if let Some(ref tl) = self.model.transfer_learning {
                 // Sample the destination IP
                 domain_vector.dst_ip = Some(match domain_vector.dst_ip_role.unwrap() {
-                    IpRole::User => unreachable!("User can never be destination"),
-                    IpRole::Server => {
+                    DstIpRole::Server => {
                         let (ips, weights) = tl
                             .local_dst_ip
                             .get(&domain_vector.l7_proto.unwrap())
@@ -923,38 +944,56 @@ impl Stage2 for BNGenerator {
                         *ips.get(weights.sample(&mut rng)).unwrap()
                     }
                     // TODO: take into account Internet servers from the config
-                    IpRole::Internet => sample_random_global_ip(&mut rng),
+                    DstIpRole::Internet => sample_random_global_ip(&mut rng),
                 });
 
-                domain_vector.src_ip = Some(match domain_vector.dst_ip_role.unwrap() {
-                    IpRole::User => {
+                domain_vector.src_ip = Some(match domain_vector.src_ip_role.unwrap() {
+                    SrcIpRole::User => {
                         let (ips, weights) = tl
                             .local_src_ip_users
                             .get(&domain_vector.l7_proto.unwrap())
                             .unwrap();
-                        *ips.get(weights.sample(&mut rng)).unwrap()
+                        match ips.iter().position(|ip| ip == &domain_vector.dst_ip.unwrap()) {
+                            Some(i) => { let mut new_weights = weights.clone();
+                                new_weights.update_weights(&[(i,&0f64)]).expect("Cannot enforce src IP != dst IP");
+                                // make it impossible to draw the same IP
+                                *ips.get(new_weights.sample(&mut rng)).unwrap() },
+                            None => *ips.get(weights.sample(&mut rng)).unwrap()
+                        }
                     }
-                    IpRole::Server => {
+                    SrcIpRole::Server => {
                         let (ips, weights) = tl
                             .local_src_ip_servers
                             .get(&domain_vector.l7_proto.unwrap())
                             .unwrap();
-                        *ips.get(weights.sample(&mut rng)).unwrap()
+                        match ips.iter().position(|ip| ip == &domain_vector.dst_ip.unwrap()) {
+                            Some(i) => { let mut new_weights = weights.clone();
+                                new_weights.update_weights(&[(i,&0f64)]).expect("Cannot enforce src IP != dst IP");
+                                // make it impossible to draw the same IP
+                                *ips.get(new_weights.sample(&mut rng)).unwrap() },
+                            None => *ips.get(weights.sample(&mut rng)).unwrap()
+                        }
                     }
                     // TODO: take into account Internet clients from the config
-                    IpRole::Internet => sample_random_global_ip(&mut rng),
+                    SrcIpRole::Internet => sample_random_global_ip(&mut rng),
                 });
 
-                let port = tl
+                domain_vector.src_mac = Some(*tl.mac_addr_map.get(&domain_vector.src_ip.unwrap()).unwrap_or(&MacAddr::zero())); // TODO
+                domain_vector.dst_mac = Some(*tl.mac_addr_map.get(&domain_vector.dst_ip.unwrap()).unwrap_or(&MacAddr::zero())); // TODO
+
+                let port = match tl
                     .services_per_server
                     .get(&(
                         domain_vector.dst_ip.unwrap(),
                         domain_vector.l7_proto.unwrap(),
-                    ))
+                    )) {
+                    // local IPs
+                    Some(v) => v.first()
                     .unwrap()
-                    .first()
-                    .unwrap()
-                    .get_port();
+                    .get_port(),
+                    // public IPs
+                    None => domain_vector.l7_proto.unwrap().get_default_dst_port().unwrap()
+                    };
                 domain_vector.dst_port = Some(match port {
                     Port::Fixed(p) => p,
                     Port::Random => uniform.sample(&mut rng),
@@ -963,11 +1002,11 @@ impl Stage2 for BNGenerator {
                 // Complete TTL
                 domain_vector.src_ttl = Some(match domain_vector.src_ip_role.unwrap() {
                     // TODO: we can do better
-                    IpRole::Internet => Uniform::new(52, 108).unwrap().sample(&mut rng),
+                    SrcIpRole::Internet => Uniform::new(52, 108).unwrap().sample(&mut rng),
                     _ => *tl.local_ttl.get(&domain_vector.src_ip.unwrap()).unwrap(),
                 });
                 domain_vector.dst_ttl = Some(match domain_vector.dst_ip_role.unwrap() {
-                    IpRole::Internet => Uniform::new(52, 108).unwrap().sample(&mut rng),
+                    DstIpRole::Internet => Uniform::new(52, 108).unwrap().sample(&mut rng),
                     _ => *tl.local_ttl.get(&domain_vector.src_ip.unwrap()).unwrap(),
                 });
             }

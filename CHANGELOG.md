@@ -49,6 +49,7 @@
 #### fosr-cli
 
 - No network injection by default
+- `create-pcap` is behind the `unstable` feature
 - Pcap files are now sorted by default
 - Bugfixes
 
