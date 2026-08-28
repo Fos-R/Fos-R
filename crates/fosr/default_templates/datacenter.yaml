@@ -12,7 +12,7 @@ networks:
     name: "Load Balancers"
     hosts:
       - hostname: lb-primary
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 10.0.1.10
@@ -22,7 +22,7 @@ networks:
               - http:80
 
       - hostname: lb-secondary
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 10.0.1.11
@@ -37,7 +37,7 @@ networks:
     name: "Web Servers"
     hosts:
       - hostname: web-server-01
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 10.0.2.10
@@ -47,7 +47,7 @@ networks:
               - http:80
 
       - hostname: web-server-02
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 10.0.2.11
@@ -57,7 +57,7 @@ networks:
               - http:80
 
       - hostname: web-server-03
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 10.0.2.12
@@ -72,7 +72,7 @@ networks:
     name: "Application Servers"
     hosts:
       - hostname: app-server-01
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 10.0.3.10
@@ -82,7 +82,7 @@ networks:
               - ssh:22
 
       - hostname: app-server-02
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 10.0.3.11
@@ -97,7 +97,7 @@ networks:
     name: "Database Servers"
     hosts:
       - hostname: db-primary
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 10.0.4.10
@@ -107,7 +107,7 @@ networks:
               - ssh:22
 
       - hostname: db-replica-01
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 10.0.4.11
@@ -116,7 +116,7 @@ networks:
               - https:5432
 
       - hostname: db-replica-02
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 10.0.4.12
@@ -130,7 +130,7 @@ networks:
     name: "Cache"
     hosts:
       - hostname: cache-server
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 10.0.5.10
@@ -144,7 +144,7 @@ networks:
     name: "Monitoring"
     hosts:
       - hostname: monitoring-server
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 10.0.6.10
@@ -159,7 +159,7 @@ networks:
     name: "DNS"
     hosts:
       - hostname: dns-server
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 10.0.7.10

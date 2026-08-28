@@ -11,7 +11,7 @@ networks:
     name: "Home Network"
     hosts:
       - hostname: home-router
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 192.168.1.1
@@ -21,14 +21,14 @@ networks:
               - https:443
 
       - hostname: workstation
-        os: Windows
+        os: windows
         type: user
         interfaces:
           - ip_addr: 192.168.1.10
             mac_addr: AA:BB:CC:DD:EE:01
 
       - hostname: nas
-        os: Linux
+        os: linux
         type: server
         interfaces:
           - ip_addr: 192.168.1.20
