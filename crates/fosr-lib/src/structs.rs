@@ -108,8 +108,6 @@ impl L4Proto {
     }
 }
 
-
-
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq, Display, EnumIter)]
 #[allow(clippy::upper_case_acronyms)]
 #[serde(rename_all = "lowercase")]
@@ -244,17 +242,23 @@ impl FromStr for L7ProtoWithPort {
         let v: Vec<String> = s.split(':').map(ToString::to_string).collect();
         assert!(!v.is_empty() && v.len() <= 2);
         let port: Option<Port> = if v.len() == 2 {
-            if v[1].to_lowercase() == "random" { // the usefulness of "http:random" is debattable
+            if v[1].to_lowercase() == "random" {
+                // the usefulness of "http:random" is debattable
                 Some(Port::Random)
             } else {
-                Some(Port::Fixed(v[1].parse::<u16>().expect("Cannot parse the port in {s}")))
+                Some(Port::Fixed(
+                    v[1].parse::<u16>().expect("Cannot parse the port in {s}"),
+                ))
             }
         } else {
             None
         };
-        let proto: L7Proto = L7Proto::from_str(v[0].to_uppercase().replace(" ", "").as_str().trim()).unwrap();
+        let proto: L7Proto =
+            L7Proto::from_str(v[0].to_uppercase().replace(" ", "").as_str().trim()).unwrap();
         if port.is_none() && proto.get_default_dst_port().is_none() {
-            Err(format!("Non-default protocol {s} must include a port number"))
+            Err(format!(
+                "Non-default protocol {s} must include a port number"
+            ))
         } else {
             let port = port.unwrap_or(proto.get_default_dst_port().unwrap());
             Ok(L7ProtoWithPort { proto, port })

@@ -322,19 +322,19 @@ fn render_host_tooltip(ui: &mut egui::Ui, host: &HostYaml) {
     });
 
     // Show uses from interfaces
-    let all_uses: Vec<&str> = host
-        .interfaces
-        .iter()
-        .filter_map(|i| i.uses.as_ref())
-        .flatten()
-        .map(String::as_str)
-        .collect();
-    if !all_uses.is_empty() {
-        ui.horizontal(|ui| {
-            ui.label("Uses protocols :");
-            ui.strong(all_uses.join(", "));
-        });
-    }
+    // let all_uses: Vec<&str> = host
+    //     .interfaces
+    //     .iter()
+    //     .filter_map(|i| i.uses.as_ref())
+    //     .flatten()
+    //     .map(String::as_str)
+    //     .collect();
+    // if !all_uses.is_empty() {
+    //     ui.horizontal(|ui| {
+    //         ui.label("Uses protocols :");
+    //         ui.strong(all_uses.join(", "));
+    //     });
+    // }
 
     ui.add_space(SPACING_SM);
 
@@ -482,7 +482,6 @@ fn create_host_with_network_ip(
             ip_addr: ip,
             mac_addr: Some(host_interfaces::generate_mac_until_unique(mac_counts)),
             services: Some(Vec::new()),
-            uses: None,
         }],
         ..Default::default()
     }
@@ -495,7 +494,6 @@ fn create_internet_host(mac_counts: &HashMap<String, usize>) -> HostYaml {
             ip_addr: String::new(),
             mac_addr: Some(host_interfaces::generate_mac_until_unique(mac_counts)),
             services: Some(Vec::new()),
-            uses: None,
         }],
         ..Default::default()
     }

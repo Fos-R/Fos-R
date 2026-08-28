@@ -1,4 +1,4 @@
-use crate::structs::{L7Proto, OS, L7ProtoWithPort};
+use crate::structs::{L7Proto, L7ProtoWithPort, OS};
 
 use pnet::util::MacAddr;
 use rand::prelude::*;
@@ -44,7 +44,6 @@ pub struct Network {
 
     // /// Overridden listening ports
     // pub open_ports: HashMap<(Ipv4Addr, L7Proto), u16>,
-
     /// The list of servers that provide each service
     pub servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
     // /// The list of users that use each service
@@ -332,7 +331,8 @@ impl From<NetworkYaml> for Network {
         let mut mac_addr_map: HashMap<Ipv4Addr, MacAddr> = HashMap::new();
         let mut services: HashSet<L7Proto> = HashSet::new();
         let mut servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
-        let mut services_per_server: HashMap<(Ipv4Addr, L7Proto), Vec<L7ProtoWithPort>> = HashMap::new();
+        let mut services_per_server: HashMap<(Ipv4Addr, L7Proto), Vec<L7ProtoWithPort>> =
+            HashMap::new();
         let mut users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
 
         let all_hosts = internet
@@ -354,9 +354,10 @@ impl From<NetworkYaml> for Network {
                 services.insert(s.get_proto());
                 let v = servers_per_service.entry(s.get_proto()).or_default();
                 v.push(interface.ip_addr);
-                let v = services_per_server.entry((interface.ip_addr,s.get_proto())).or_default();
+                let v = services_per_server
+                    .entry((interface.ip_addr, s.get_proto()))
+                    .or_default();
                 v.push(*s);
-
             }
         }
 

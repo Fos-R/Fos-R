@@ -132,6 +132,6 @@ pub fn color_for_protocol(proto: &L7Proto) -> Color32 {
         L7Proto::FTP => COLOR_PROTOCOL_FTP,
         L7Proto::LDAP => COLOR_PROTOCOL_LDAP,
         L7Proto::NTP => COLOR_PROTOCOL_NTP,
-        L7Proto::Unknown(_) => COLOR_PROTOCOL_UNKNOWN,
+        _ => COLOR_PROTOCOL_UNKNOWN,
     }
 }
