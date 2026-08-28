@@ -567,10 +567,9 @@ impl NetworkData {
             .expect("Internet node must exist");
 
         for service in &config.services {
-            let users = config.get_users_per_service(service);
             let servers = config.get_servers_per_service(service);
 
-            for &user_ip in &users {
+            for &user_ip in &config.users {
                 if let Some(&user_idx) = self.ip_to_node.get(&user_ip) {
                     for &server_ip in &servers {
                         if let Some(&server_idx) = self.ip_to_node.get(&server_ip) {

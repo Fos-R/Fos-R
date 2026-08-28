@@ -3,15 +3,12 @@
 use crate::config_editor::host_services;
 use crate::shared::constants::colors::COLOR_ERROR;
 use crate::shared::constants::network::{MAC_ADDRESS_BYTES, MAC_LOCAL_BIT, MAC_LOCAL_MASK};
-use crate::shared::constants::ui::{MULTI_SELECT_PICKER_WIDTH, SPACING_MD, SPACING_SM};
-use crate::shared::widgets::helpers::{
-    info_icon_with_tooltip, render_optional_string_input, required_label,
+use crate::shared::constants::ui::{SPACING_MD, SPACING_SM};
+use crate::shared::widgets::helpers::{render_optional_string_input, required_label,
 };
-use crate::shared::widgets::multi_select_picker::multi_select_picker;
 use eframe::egui;
 use egui_material_icons::icons::{ICON_ADD, ICON_DELETE};
 use fosr_lib::network::{HostYaml, InterfaceYaml};
-use fosr_lib::structs::L7Proto;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
 
@@ -74,7 +71,6 @@ pub fn render_interfaces_section(
                             ip_addr: ip,
                             mac_addr: Some(generate_mac_until_unique(mac_counts)),
                             services: Some(Vec::new()),
-                            uses: None,
                         },
                     );
                 }
@@ -86,7 +82,6 @@ pub fn render_interfaces_section(
                             ip_addr: String::new(),
                             mac_addr: Some(generate_mac_until_unique(mac_counts)),
                             services: Some(Vec::new()),
-                            uses: None,
                         },
                     );
                 }
@@ -199,35 +194,35 @@ fn render_interface_fields(
     host_services::render_services_section(ui, host_idx, interface_idx, interface);
 
     // Uses section - multi-select picker for protocols the host can use
-    {
-        let protocol_names = L7Proto::all_names();
-        let protocol_name_refs: Vec<&str> = protocol_names.iter().map(|s| s.as_str()).collect();
+    // {
+    //     let protocol_names = L7Proto::all_names();
+    //     let protocol_name_refs: Vec<&str> = protocol_names.iter().map(|s| s.as_str()).collect();
 
-        let mut selected: Vec<String> = interface.uses.clone().unwrap_or_default();
+    //     let mut selected: Vec<String> = interface.uses.clone().unwrap_or_default();
 
-        ui.horizontal(|ui| {
-            ui.label("Uses");
-            info_icon_with_tooltip(
-                ui,
-                "Specify what protocols the host can use through this interface.",
-            );
+    //     ui.horizontal(|ui| {
+    //         ui.label("Uses");
+    //         info_icon_with_tooltip(
+    //             ui,
+    //             "Specify what protocols the host can use through this interface.",
+    //         );
 
-            let picker_id = ui.make_persistent_id(("uses_picker", host_idx, interface_idx));
-            multi_select_picker(
-                ui,
-                picker_id,
-                &protocol_name_refs,
-                &mut selected,
-                MULTI_SELECT_PICKER_WIDTH,
-            );
-        });
+    //         let picker_id = ui.make_persistent_id(("uses_picker", host_idx, interface_idx));
+    //         multi_select_picker(
+    //             ui,
+    //             picker_id,
+    //             &protocol_name_refs,
+    //             &mut selected,
+    //             MULTI_SELECT_PICKER_WIDTH,
+    //         );
+    //     });
 
-        interface.uses = if selected.is_empty() {
-            None
-        } else {
-            Some(selected)
-        };
-    }
+    //     interface.uses = if selected.is_empty() {
+    //         None
+    //     } else {
+    //         Some(selected)
+    //     };
+    // }
 }
 
 /// Generate a random MAC address with the locally administered bit set.

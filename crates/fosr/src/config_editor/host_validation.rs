@@ -76,13 +76,13 @@ pub fn validate_host(
     }
 
     if host.host_type == Some(HostType::User) {
-        let has_uses = host
-            .interfaces
-            .iter()
-            .any(|i| i.uses.as_ref().is_some_and(|u| !u.is_empty()));
-        if !has_uses {
-            errors.push("Client missing protocols".to_string());
-        }
+        // let has_uses = host
+        //     .interfaces
+        //     .iter()
+        //     .any(|i| i.uses.as_ref().is_some_and(|u| !u.is_empty()));
+        // if !has_uses {
+        //     errors.push("Client missing protocols".to_string());
+        // }
         let has_service = host
             .interfaces
             .iter()

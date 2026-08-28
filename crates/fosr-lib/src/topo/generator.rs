@@ -119,7 +119,10 @@ impl TopologyGenerator {
         if candidates.is_empty() {
             return Err("no candidate sub-topologies to select from".to_string());
         }
-        if params.minimum_sub_topology == 0 && params.minimum_node_count == 0 && params.services.is_empty() {
+        if params.minimum_sub_topology == 0
+            && params.minimum_node_count == 0
+            && params.services.is_empty()
+        {
             return Err("generation parameters describe an empty topology".to_string());
         }
         if params.minimum_sub_topology > candidates.len() {
@@ -140,7 +143,11 @@ impl TopologyGenerator {
 
         // sum(x_i) >= params.minimum_sub_topology
         let count_expr: Vec<(Variable, f64)> = vars.iter().map(|&v| (v, 1.0)).collect();
-        problem.add_constraint(count_expr, ComparisonOp::Ge, params.minimum_sub_topology as f64);
+        problem.add_constraint(
+            count_expr,
+            ComparisonOp::Ge,
+            params.minimum_sub_topology as f64,
+        );
 
         // sum(nodes_i * x_i) >= minimum_node_count
         let nodes_expr: Vec<(Variable, f64)> = vars
