@@ -17,6 +17,7 @@ import csv
 import time
 import random
 import math
+import yaml
 
 pd.options.mode.copy_on_write = True
 
@@ -181,10 +182,15 @@ if __name__ == '__main__':
     try:
         print("Loading files")
         csv.field_size_limit(sys.maxsize) # payload is too long
-        conn_input = os.path.join(args.input, "conn.log")
+        file = open(args.input, 'r')
+        config = yaml.safe_load(file)
+        if not os.path.isabs(config["train_set"]):
+            config["train_set"] = os.path.join(os.path.dirname(args.input), config["train_set"])
+        conn_input = os.path.join(config["train_set"], "conn.log")
+
         flow = pd.read_csv(conn_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
 
-        file_input = os.path.join(args.input, "fosr_tcp.log")
+        file_input = os.path.join(config["train_set"], "fosr_tcp.log")
         df = pd.read_csv(file_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service", "flags", "conn_state"])
         # print("Services in the TCP file:\n",df["service"].value_counts())
         df = df.join(flow.set_index("uid"), on="uid", rsuffix="_conn")
@@ -194,7 +200,7 @@ if __name__ == '__main__':
             print((prev_len-len(df)),"TCP flows have been ignored because they are too long.")
         df_tcp = df
 
-        file_input = os.path.join(args.input, "fosr_udp.log")
+        file_input = os.path.join(config["train_set"], "fosr_udp.log")
         df = pd.read_csv(file_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service"])
         # print("Services in the UDP file:\n",df[["service"]].value_counts())
         df = df.join(flow.set_index("uid"), on="uid", rsuffix="_conn")
@@ -215,12 +221,12 @@ if __name__ == '__main__':
             return payload_types[['payload', 'type']].drop_duplicates()
 
         # TCP payload types
-        types_input = os.path.join(args.input, "payload_tcp.csv")
+        types_input = os.path.join(config["train_set"], "payload_tcp.csv")
         payload_types = pd.read_csv(types_input, low_memory=False).rename(columns={"tcp.payload": "payload"})
         payload_types_tcp = process_payload_types(payload_types)
 
         # UDP payload types
-        types_input = os.path.join(args.input, "payload_udp.csv")
+        types_input = os.path.join(config["train_set"], "payload_udp.csv")
         payload_types = pd.read_csv(types_input, low_memory=False).rename(columns={"udp.payload": "payload"})
         payload_types_udp = process_payload_types(payload_types)
 

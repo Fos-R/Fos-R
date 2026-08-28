@@ -5,21 +5,26 @@ import json
 import datetime
 import argparse
 import matplotlib.pyplot as plt
+import yaml
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Learn temporal models for Fos-R.')
-    parser.add_argument('--input', required=True, help="Input directory.")
+    parser.add_argument('--input', required=True, help="Input config.")
     parser.add_argument('--output', required=True, help="Output directory.")
-    parser.add_argument('--offset', help="Offset from UTC (in hours).", type=float)
     parser.add_argument('--bin-count', help="Number of bins per day (by default, 15-min bins)", type=int)
     args = parser.parse_args()
-    args.offset = args.offset or 0 # default: consider it’s UTC
     bin_count = args.bin_count or 24 * 4
 
+    file = open(args.input, 'r')
+    config = yaml.safe_load(file)
+    offset = config["offset"] or 0 # default: consider it’s UTC
+    if not os.path.isabs(config["train_set"]):
+        config["train_set"] = os.path.join(os.path.dirname(args.input), config["train_set"])
+    conn_input = os.path.join(config["train_set"], "conn.log")
+
     print("Loading file")
-    conn_input = os.path.join(args.input, "conn.log")
     flow = pd.read_csv(conn_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
-    dates = (flow["ts"] + (60 * 60 * args.offset)) % (60 * 60 * 24)
+    dates = (flow["ts"] + (60 * 60 * offset)) % (60 * 60 * 24)
 
     print("Computing model")
     bin_edges = np.linspace(0, 60 * 60 * 24, bin_count + 1) # fence post problem

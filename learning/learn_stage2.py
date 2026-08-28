@@ -12,6 +12,7 @@ import functools
 import pyagrum.lib.image as gumimage
 from IPython.display import Image
 import time
+import yaml
 
 pd.options.mode.copy_on_write = True
 
@@ -102,23 +103,28 @@ def complete_proto(l, port):
     return pd.NA
 
 if __name__ == '__main__':
+
     parser = argparse.ArgumentParser(description='Learn a Bayesian network for Fos-R.')
-    parser.add_argument('--input', required=True, help="Select the input folder.", action='append')
+    parser.add_argument('--input', required=True, help="Select the input configuration.", nargs='+')
     parser.add_argument('--output', help="Select the output directory.")
     parser.add_argument('--offset', help="Offset from UTC (in hours).", type=float)
     args = parser.parse_args()
-    args.offset = args.offset or 0 # default: consider it’s UTC
     random.seed(0)
+
     gum.initRandom(seed=42)
 
     unique_dataset = len(args.input) == 1
     # Learn from only one dataset
     if unique_dataset:
-        args.input = args.input[0]
-        conn_input = os.path.join(args.input, "conn.log")
+        file = open(args.input[0], 'r')
+        config = yaml.safe_load(file)
+        offset = config["offset"] or 0 # default: consider it’s UTC
+        if not os.path.isabs(config["train_set"]):
+            config["train_set"] = os.path.join(os.path.dirname(args.input[0]), config["train_set"])
+        conn_input = os.path.join(config["train_set"], "conn.log")
 
-        tcp_input = os.path.join(args.input, "fosr_tcp.log")
-        udp_input = os.path.join(args.input, "fosr_udp.log")
+        tcp_input = os.path.join(config["train_set"], "fosr_tcp.log")
+        udp_input = os.path.join(config["train_set"], "fosr_udp.log")
 
         print("Loading files")
 
@@ -126,6 +132,7 @@ if __name__ == '__main__':
         try:
             flow = pd.read_csv(conn_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
             flow["weight"] = 1.
+            flow["Time"] = flow["ts"].apply(functools.partial(categorize_time, offset))
         except Exception as e:
             print(f"Cannot find conn.log in {args.input}!",e)
             exit(1)
@@ -142,18 +149,26 @@ if __name__ == '__main__':
             print("No UDP data", e)
 
     else:
-        conn_input = [os.path.join(i, "conn.log") for i in args.input]
+        configs = [yaml.safe_load(open(i, 'r')) for i in args.input]
+        offsets = [c["offset"] or 0 for c in configs] # default: consider it’s UTC
 
-        tcp_input = [os.path.join(i, "fosr_tcp.log") for i in args.input]
-        udp_input = [os.path.join(i, "fosr_udp.log") for i in args.input]
+        for (c,i) in zip(configs,args.input):
+            if not os.path.isabs(c["train_set"]):
+                c["train_set"] = os.path.join(os.path.dirname(i), c["train_set"])
+
+        conn_input = [os.path.join(c["train_set"], "conn.log") for c in configs]
+
+        tcp_input = [os.path.join(c["train_set"], "fosr_tcp.log") for c in configs]
+        udp_input = [os.path.join(c["train_set"], "fosr_udp.log") for c in configs]
 
         print("Loading files")
 
         csv.field_size_limit(sys.maxsize) # payload is too long
         try:
             flow = [pd.read_csv(i, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"]) for i in conn_input]
-            for f in flow: # all input should have the same weight, no matter their size
+            for (i,f) in enumerate(flow): # all input should have the same weight, no matter their size
                 f["weight"] = 1000000. / len(f)
+                f["Time"] = f["ts"].apply(functools.partial(categorize_time, offsets[i]))
             flow = pd.concat(flow, ignore_index=True)
         except Exception as e:
             print(f"Cannot find conn.log in {args.input}!",e)
@@ -177,7 +192,6 @@ if __name__ == '__main__':
     print("Services in the UDP file:\n",udp_fosr["service"].value_counts())
 
     print("Extracting")
-    flow["Time"] = flow["ts"].apply(functools.partial(categorize_time, args.offset))
 
     flow["Proto"] = flow["proto"].str.upper()
 
@@ -399,7 +413,7 @@ if __name__ == '__main__':
     bn.saveBIFXML(os.path.join(args.output, "bn/bn_tl.bifxml"))
 
     try:
-        out_file = open(os.path.join(args.output, "pkt_count_clusters_tl.json"), "w")
+        out_file = open(os.path.join(args.output, "pkt_count_clusters.json"), "w")
         json.dump(output, out_file, indent=1)
         print("JSON file successfully created")
     except Exception as e:
