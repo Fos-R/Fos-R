@@ -108,6 +108,8 @@ impl L4Proto {
     }
 }
 
+
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Hash, PartialEq, Display, EnumIter)]
 #[allow(clippy::upper_case_acronyms)]
 #[serde(rename_all = "lowercase")]
@@ -132,8 +134,9 @@ pub enum L7Proto {
     Kerberos,
     // TODO complete
     // Joker variant for everything else
-    Unknown(&'static str), // &'static str costs a little leak (a few bytes) but make this enum
-                           // Copy, which is very convenient
+    // &'static str costs a little leak (a few bytes) but make this enum
+    // Copy, which is very convenient
+    Unknown(&'static str),
 }
 
 impl FromStr for L7Proto {
@@ -192,27 +195,80 @@ impl L7Proto {
         }
     }
 
+    /// Default source port. Some protocols impose it.
+    pub fn get_default_src_port(&self) -> Port {
+        Port::Random
+    }
+
     /// Default destination port that is used if a configuration file does not override it
-    pub fn get_default_port(&self) -> u16 {
+    pub fn get_default_dst_port(&self) -> Option<Port> {
         match self {
-            L7Proto::HTTP => 80,
-            L7Proto::HTTPS => 443,
-            L7Proto::SSH => 22,
-            L7Proto::DNS => 53,
-            L7Proto::DHCP => 67,
-            L7Proto::SMTP => 587,
-            L7Proto::Telnet => 23,
-            L7Proto::IMAPS => 993,
-            L7Proto::MQTT => 1883,
-            L7Proto::KMS => 1688,
-            L7Proto::MulticastDNS => 5353,
-            L7Proto::FTP => 21,
-            L7Proto::FTPData => 20,
-            L7Proto::LDAP => 389, // TODO(pf): this is non encrypted LDAP port
-            L7Proto::NTP => 123,
-            L7Proto::Kerberos => 88,
-            L7Proto::Unknown(_) => todo!(), // TODO: should return an Option
+            L7Proto::HTTP => Some(Port::Fixed(80)),
+            L7Proto::HTTPS => Some(Port::Fixed(443)),
+            L7Proto::SSH => Some(Port::Fixed(22)),
+            L7Proto::DNS => Some(Port::Fixed(53)),
+            L7Proto::DHCP => Some(Port::Fixed(67)),
+            L7Proto::SMTP => Some(Port::Fixed(587)),
+            L7Proto::Telnet => Some(Port::Fixed(23)),
+            L7Proto::IMAPS => Some(Port::Fixed(993)),
+            L7Proto::MQTT => Some(Port::Fixed(1883)),
+            L7Proto::KMS => Some(Port::Fixed(1688)),
+            L7Proto::MulticastDNS => Some(Port::Fixed(5353)),
+            L7Proto::FTP => Some(Port::Fixed(21)),
+            L7Proto::FTPData => Some(Port::Random),
+            L7Proto::LDAP => Some(Port::Fixed(389)), // TODO(pf): this is non encrypted LDAP port
+            L7Proto::NTP => Some(Port::Fixed(123)),
+            L7Proto::Kerberos => Some(Port::Fixed(88)),
+            L7Proto::Unknown(_) => None,
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
+pub enum Port {
+    Fixed(u16),
+    Random, // TODO: range ? weights ?
+}
+
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
+/// A list of application layer protocol
+pub struct L7ProtoWithPort {
+    proto: L7Proto,
+    port: Port,
+}
+
+impl FromStr for L7ProtoWithPort {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let v: Vec<String> = s.split(':').map(ToString::to_string).collect();
+        assert!(!v.is_empty() && v.len() <= 2);
+        let port: Option<Port> = if v.len() == 2 {
+            if v[1].to_lowercase() == "random" {
+                Some(Port::Random)
+            } else {
+                Some(Port::Fixed(v[1].parse::<u16>().expect("Cannot parse the port in {s}")))
+            }
+        } else {
+            None
+        };
+        let proto: L7Proto = L7Proto::from_str(v[0].to_uppercase().replace(" ", "").as_str().trim()).unwrap();
+        if port.is_none() && proto.get_default_dst_port().is_none() {
+            Err(format!("Non-default protocol {s} must include a port number"))
+        } else {
+            let port = port.unwrap_or(proto.get_default_dst_port().unwrap());
+            Ok(L7ProtoWithPort { proto, port })
+        }
+    }
+}
+
+impl L7ProtoWithPort {
+    pub fn get_proto(&self) -> L7Proto {
+        self.proto
+    }
+
+    pub fn get_port(&self) -> Port {
+        self.port
     }
 }
 

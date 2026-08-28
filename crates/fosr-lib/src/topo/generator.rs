@@ -116,18 +116,16 @@ impl TopologyGenerator {
         // Machines + the router of each sub-topology.
         let node_count = |st: &SubTopology| st.nodes.len() + 1;
 
-        // Each sub-topology owns exactly one subnet, so a single count constraint covers both minimums
-        let min_count = params.minimum_sub_topology.max(params.minimum_subnet_count);
-
         if candidates.is_empty() {
             return Err("no candidate sub-topologies to select from".to_string());
         }
-        if min_count == 0 && params.minimum_node_count == 0 && params.services.is_empty() {
+        if params.minimum_sub_topology == 0 && params.minimum_node_count == 0 && params.services.is_empty() {
             return Err("generation parameters describe an empty topology".to_string());
         }
-        if min_count > candidates.len() {
+        if params.minimum_sub_topology > candidates.len() {
             return Err(format!(
-                "need at least {min_count} sub-topologies, but only {} candidates exist",
+                "need at least {} sub-topologies, but only {} candidates exist",
+                params.minimum_sub_topology,
                 candidates.len()
             ));
         }
@@ -140,9 +138,9 @@ impl TopologyGenerator {
             .map(|_| problem.add_binary_var(1.0))
             .collect();
 
-        // sum(x_i) >= min_count
+        // sum(x_i) >= params.minimum_sub_topology
         let count_expr: Vec<(Variable, f64)> = vars.iter().map(|&v| (v, 1.0)).collect();
-        problem.add_constraint(count_expr, ComparisonOp::Ge, min_count as f64);
+        problem.add_constraint(count_expr, ComparisonOp::Ge, params.minimum_sub_topology as f64);
 
         // sum(nodes_i * x_i) >= minimum_node_count
         let nodes_expr: Vec<(Variable, f64)> = vars
@@ -184,7 +182,7 @@ impl TopologyGenerator {
             .collect();
 
         let is_feasible = |sel: &[usize]| {
-            sel.len() >= min_count
+            sel.len() >= params.minimum_sub_topology
                 && sel
                     .iter()
                     .map(|&i| node_count(&candidates[i]))
@@ -195,17 +193,17 @@ impl TopologyGenerator {
                     .iter()
                     .all(|s| sel.iter().any(|&i| candidates[i].contains_service(s)))
         };
-
-        while !is_feasible(&selected) {
-            // Add the smallest candidate not yet selected
-            let next = (0..candidates.len())
-                .filter(|i| !selected.contains(i))
-                .min_by_key(|&i| node_count(&candidates[i]));
-            match next {
-                Some(i) => selected.push(i),
-                None => return Err("could not assemble a feasible topology".to_string()),
-            }
-        }
+        assert!(is_feasible(&selected));
+        // while !is_feasible(&selected) {
+        //     // Add the smallest candidate not yet selected
+        //     let next = (0..candidates.len())
+        //         .filter(|i| !selected.contains(i))
+        //         .min_by_key(|&i| node_count(&candidates[i]));
+        //     match next {
+        //         Some(i) => selected.push(i),
+        //         None => return Err("could not assemble a feasible topology".to_string()),
+        //     }
+        // }
 
         Ok(selected
             .into_iter()
