@@ -46,7 +46,7 @@ pub struct Network {
     // pub open_ports: HashMap<(Ipv4Addr, L7Proto), u16>,
 
     /// The list of servers that provide each service
-    servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
+    pub servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
     // /// The list of users that use each service
     // users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
 }

@@ -244,7 +244,7 @@ impl FromStr for L7ProtoWithPort {
         let v: Vec<String> = s.split(':').map(ToString::to_string).collect();
         assert!(!v.is_empty() && v.len() <= 2);
         let port: Option<Port> = if v.len() == 2 {
-            if v[1].to_lowercase() == "random" {
+            if v[1].to_lowercase() == "random" { // the usefulness of "http:random" is debattable
                 Some(Port::Random)
             } else {
                 Some(Port::Fixed(v[1].parse::<u16>().expect("Cannot parse the port in {s}")))
@@ -361,8 +361,8 @@ pub struct FlowData {
     pub dst_mac: MacAddr,
     pub src_port: u16,
     pub dst_port: u16,
-    pub ttl_client: u8,
-    pub ttl_server: u8,
+    pub src_ttl: u8,
+    pub dst_ttl: u8,
     pub packets_count_cluster: usize,
     pub fwd_packets_count: usize,
     pub bwd_packets_count: usize,
@@ -514,7 +514,7 @@ impl Packets {
         let data = self.flow.get_data_mut();
         (data.src_ip, data.dst_ip) = (data.dst_ip, data.src_ip);
         (data.src_port, data.dst_port) = (data.dst_port, data.src_port);
-        (data.ttl_client, data.ttl_server) = (data.ttl_server, data.ttl_client);
+        (data.src_ttl, data.dst_ttl) = (data.dst_ttl, data.src_ttl);
         (data.fwd_packets_count, data.bwd_packets_count) =
             (data.bwd_packets_count, data.fwd_packets_count);
     }
@@ -533,8 +533,8 @@ impl Default for Packets {
                 dst_mac: MacAddr::zero(),
                 src_port: 0,
                 dst_port: 0,
-                ttl_client: 0,
-                ttl_server: 0,
+                src_ttl: 0,
+                dst_ttl: 0,
                 packets_count_cluster: 0,
                 fwd_packets_count: 0,
                 bwd_packets_count: 0,

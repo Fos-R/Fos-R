@@ -174,7 +174,7 @@ impl TopologyGenerator {
             .into_solution()
             .unwrap();
 
-        let mut selected: Vec<usize> = vars
+        let selected: Vec<usize> = vars
             .iter()
             .enumerate()
             .filter(|&(_, &v)| solution[v] > 0.5)
@@ -194,16 +194,6 @@ impl TopologyGenerator {
                     .all(|s| sel.iter().any(|&i| candidates[i].contains_service(s)))
         };
         assert!(is_feasible(&selected));
-        // while !is_feasible(&selected) {
-        //     // Add the smallest candidate not yet selected
-        //     let next = (0..candidates.len())
-        //         .filter(|i| !selected.contains(i))
-        //         .min_by_key(|&i| node_count(&candidates[i]));
-        //     match next {
-        //         Some(i) => selected.push(i),
-        //         None => return Err("could not assemble a feasible topology".to_string()),
-        //     }
-        // }
 
         Ok(selected
             .into_iter()
