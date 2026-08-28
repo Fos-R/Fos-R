@@ -263,13 +263,39 @@ pub struct TimeModel {
 
 impl TimeModel {
     pub fn from_source(m: &models::ModelsSource) -> Result<Self, String> {
-        let profile: TimeModel = serde_json::from_str(&m.get_time_profile()?)
-            .map_err(|e| format!("Cannot parse the time model: {e}"))?;
+        let mut models: Vec<TimeModel> = vec![];
+        for s in m.get_time_profiles()? {
+            models.push(serde_json::from_str(&s).map_err(|e| format!("Cannot parse the time model: {e}"))?);
+        }
+        assert!(!models.is_empty());
+
+        let profile = Self::from_list(models);
         log::info!(
             "Time model learned on {} has been loaded",
             profile.metadata.input_file
         );
         Ok(profile)
+    }
+
+    fn from_list(mut models: Vec<TimeModel>) -> Self {
+        let metadata = Metadata { creation_time: "On-the-fly".to_string(), input_file: models.iter().map(|m| m.metadata.input_file.clone()).collect::<Vec<String>>().join(", ") };
+        // the overall number of packets of the new time model is the sum of the packets of each
+        // dataset, but each dataset has an equal weight
+        let overall_sum: u64 = models.iter().map(|m: &TimeModel| -> u64 { m.bins.iter().sum() }).sum();
+        let nb_models = models.len() as u64;
+        for m in &mut models {
+            let sum: u64 = m.bins.iter().sum();
+            m.bins = m.bins.clone().into_iter().map(|v| -> u64 { v * overall_sum/(sum * nb_models) }).collect();
+        }
+        let mut bins: Vec<u64> = vec![];
+        assert!(!models.is_empty());
+        for i in 0..models[0].bins.len() {
+            bins.push(models.iter().map(|m| m.bins[i]).sum());
+        }
+        TimeModel {
+            bins,
+            metadata,
+        }
     }
 }
 
