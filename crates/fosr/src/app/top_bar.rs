@@ -1,5 +1,6 @@
 //! Top bar rendering: tab navigation, zoom controls, and theme switch.
 
+use crate::app::{AppTab, FosrApp, ViewState};
 use crate::shared::constants::colors::COLOR_ERROR;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::shared::constants::ui::*;
@@ -8,7 +9,6 @@ use eframe::egui::global_theme_preference_switch;
 use egui_material_icons::icons::{ICON_ADD, ICON_REMOVE};
 #[cfg(target_arch = "wasm32")]
 use egui_material_icons::icons::{ICON_FULLSCREEN, ICON_FULLSCREEN_EXIT};
-use crate::app::{FosrApp, AppTab, ViewState};
 
 // /// Available tabs in the Fos-R application.
 // #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
@@ -196,7 +196,6 @@ fn render_fullscreen_toggle(ui: &mut egui::Ui) {
 
 /// Renders utility buttons on the right side of the top bar.
 pub fn render_utility_buttons(ui: &mut egui::Ui, ctx: &egui::Context, state: &mut FosrApp) {
-        
     #[cfg(target_arch = "wasm32")]
     render_fullscreen_toggle(ui);
 
@@ -208,13 +207,7 @@ pub fn render_utility_buttons(ui: &mut egui::Ui, ctx: &egui::Context, state: &mu
 
     let button = egui::Button::new(egui::RichText::new("About").size(TEXT_SIZE_SM));
 
-    if ui
-        .add(button)
-        .on_hover_text("About Fos-R")
-        .clicked()
-    {
+    if ui.add(button).on_hover_text("About Fos-R").clicked() {
         state.extra_modals.about = true;
     }
-
 }
-
