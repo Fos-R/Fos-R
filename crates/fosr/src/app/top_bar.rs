@@ -2,49 +2,44 @@
 
 use crate::shared::constants::colors::COLOR_ERROR;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::shared::constants::ui::SPACING_SM;
-use crate::shared::constants::ui::{
-    PANEL_INNER_MARGIN, SPACING_XS, TAB_BUTTON_PADDING, TEXT_SIZE_DEFAULT, ZOOM_MAX, ZOOM_MIN,
-    ZOOM_OFFSET, ZOOM_STEP,
-};
+use crate::shared::constants::ui::*;
 use eframe::egui;
 use eframe::egui::global_theme_preference_switch;
 use egui_material_icons::icons::{ICON_ADD, ICON_REMOVE};
 #[cfg(target_arch = "wasm32")]
 use egui_material_icons::icons::{ICON_FULLSCREEN, ICON_FULLSCREEN_EXIT};
+use crate::app::{FosrApp, AppTab, ViewState};
 
-/// Available tabs in the Fos-R application.
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
-pub enum AppTab {
-    #[default]
-    Run,
-    Configuration,
-    About,
-}
+// /// Available tabs in the Fos-R application.
+// #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+// pub enum AppTab {
+//     #[default]
+//     Run,
+//     Configuration,
+//     About,
+// }
 
-/// State passed between the top bar and the main app for rendering.
-#[derive(Clone)]
-pub struct TopBarState {
-    pub current_tab: AppTab,
-    pub zoom_factor: f32,
-    pub has_errors: bool,
-    pub has_hosts: bool,
-}
+// /// State passed between the top bar and the main app for rendering.
+// #[derive(Clone)]
+// pub struct TopBarState {
+//     pub current_tab: AppTab,
+//     pub zoom_factor: f32,
+//     pub has_errors: bool,
+//     pub has_hosts: bool,
+// }
 
 /// Renders a tab button with consistent styling.
-///
-/// Returns `Some(clicked_tab)` if the button was clicked, `None` otherwise.
-/// Handles both enabled and disabled states with appropriate tooltips.
 fn render_tab_button(
     ui: &mut egui::Ui,
     text_size: f32,
     label: &str,
+    state: &mut FosrApp,
     tab: AppTab,
     is_selected: bool,
     is_enabled: bool,
     tooltip: &str,
     disabled_tooltip: &str,
-) -> Option<AppTab> {
+) {
     let button =
         egui::Button::new(egui::RichText::new(label).size(text_size)).selected(is_selected);
     let response = ui.add_enabled(is_enabled, button);
@@ -56,19 +51,21 @@ fn render_tab_button(
     };
 
     if is_enabled && response.clicked() {
-        Some(tab)
-    } else {
-        None
+        match tab {
+            AppTab::Run => state.change_view(ViewState::GraphTab),
+            AppTab::Configuration => state.change_view(ViewState::ConfigTab),
+        }
     }
 }
 
 /// Renders the Configuration tab with error indicator when config is invalid.
 fn render_config_tab_button(
     ui: &mut egui::Ui,
+    state: &mut FosrApp,
     text_size: f32,
     has_errors: bool,
     is_selected: bool,
-) -> Option<AppTab> {
+) {
     let label = if has_errors {
         egui::RichText::new("⚠ Configuration")
             .color(COLOR_ERROR)
@@ -84,25 +81,24 @@ fn render_config_tab_button(
         .on_hover_text("Edit the network configuration: hosts, interfaces, and services.")
         .clicked()
     {
-        Some(AppTab::Configuration)
-    } else {
-        None
+        state.change_view(ViewState::ConfigTab);
     }
 }
 
-/// Renders all tab buttons and returns the newly selected tab if changed.
-fn render_tab_buttons(ui: &mut egui::Ui, state: &TopBarState) -> Option<AppTab> {
+/// Renders all tab buttons.
+pub fn render_tab_buttons(ui: &mut egui::Ui, state: &mut FosrApp) {
     let text_size = TEXT_SIZE_DEFAULT;
-    let has_errors = state.has_errors;
+    let has_errors = state.has_errors_in_config();
 
     // Run tab (disabled when config has errors or no hosts)
-    let run_enabled = !has_errors && state.has_hosts;
-    if let Some(tab) = render_tab_button(
+    let run_enabled = !has_errors && state.has_hosts_in_config();
+    render_tab_button(
         ui,
         text_size,
         "Run",
+        state,
         AppTab::Run,
-        state.current_tab == AppTab::Run,
+        state.get_current_tab() == Some(AppTab::Run),
         run_enabled,
         "Live preview and PCAP generation from the current configuration.",
         if has_errors {
@@ -110,39 +106,34 @@ fn render_tab_buttons(ui: &mut egui::Ui, state: &TopBarState) -> Option<AppTab> 
         } else {
             "No hosts in the configuration. Add at least one host to enable Run."
         },
-    ) {
-        return Some(tab);
-    }
+    );
 
     // Configuration tab (always enabled, shows warning icon on errors)
-    if let Some(tab) = render_config_tab_button(
+    render_config_tab_button(
         ui,
+        state,
         text_size,
         has_errors,
-        state.current_tab == AppTab::Configuration,
-    ) {
-        return Some(tab);
-    }
+        state.get_current_tab() == Some(AppTab::Configuration),
+    );
 
+    // TODO: modale
     // About tab
-    if let Some(tab) = render_tab_button(
-        ui,
-        text_size,
-        "About",
-        AppTab::About,
-        state.current_tab == AppTab::About,
-        true,
-        "About Fos-R and its authors.",
-        "",
-    ) {
-        return Some(tab);
-    }
-
-    None
+    // render_tab_button(
+    //     ui,
+    //     text_size,
+    //     "About",
+    //     state,
+    //     AppTab::About,
+    //     state.get_current_tab() == Some(AppTab::About),
+    //     true,
+    //     "About Fos-R and its authors.",
+    //     "",
+    // );
 }
 
-/// Renders zoom in/out controls and returns the updated zoom factor.
-fn render_zoom_controls(ui: &mut egui::Ui, ctx: &egui::Context) -> f32 {
+/// Renders zoom in/out controls.
+fn render_zoom_controls(ui: &mut egui::Ui, ctx: &egui::Context) {
     let mut new_zoom = ctx.zoom_factor();
 
     ui.horizontal(|ui| {
@@ -160,8 +151,6 @@ fn render_zoom_controls(ui: &mut egui::Ui, ctx: &egui::Context) -> f32 {
             ctx.set_zoom_factor(new_zoom);
         }
     });
-
-    new_zoom
 }
 
 /// Returns true if the browser is currently in fullscreen mode.
@@ -206,7 +195,8 @@ fn render_fullscreen_toggle(ui: &mut egui::Ui) {
 }
 
 /// Renders utility buttons on the right side of the top bar.
-fn render_utility_buttons(ui: &mut egui::Ui, ctx: &egui::Context, state: &mut TopBarState) {
+pub fn render_utility_buttons(ui: &mut egui::Ui, ctx: &egui::Context, state: &mut FosrApp) {
+        
     #[cfg(target_arch = "wasm32")]
     render_fullscreen_toggle(ui);
 
@@ -214,37 +204,17 @@ fn render_utility_buttons(ui: &mut egui::Ui, ctx: &egui::Context, state: &mut To
     ui.add_space(SPACING_SM);
 
     global_theme_preference_switch(ui);
-    state.zoom_factor = render_zoom_controls(ui, ctx);
+    render_zoom_controls(ui, ctx);
+
+    let button = egui::Button::new(egui::RichText::new("About").size(TEXT_SIZE_SM));
+
+    if ui
+        .add(button)
+        .on_hover_text("About Fos-R")
+        .clicked()
+    {
+        state.extra_modals.about = true;
+    }
+
 }
 
-/// Render the top bar with tabs and utility buttons.
-/// Returns the updated TopBarState.
-pub fn render_top_bar(ctx: &egui::Context, state: TopBarState) -> TopBarState {
-    let mut new_state = state.clone();
-
-    egui::TopBottomPanel::top("top_panel")
-        .frame(
-            egui::Frame::side_top_panel(&ctx.style()).inner_margin(egui::Margin::symmetric(
-                PANEL_INNER_MARGIN.0,
-                PANEL_INNER_MARGIN.1,
-            )),
-        )
-        .show(ctx, |ui| {
-            egui::MenuBar::new().ui(ui, |ui| {
-                // Scoped padding for tab buttons only
-                ui.scope(|ui| {
-                    ui.spacing_mut().button_padding =
-                        egui::vec2(TAB_BUTTON_PADDING.0, TAB_BUTTON_PADDING.1);
-                    if let Some(tab) = render_tab_buttons(ui, &state) {
-                        new_state.current_tab = tab;
-                    }
-                });
-
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    render_utility_buttons(ui, ctx, &mut new_state);
-                });
-            });
-        });
-
-    new_state
-}
