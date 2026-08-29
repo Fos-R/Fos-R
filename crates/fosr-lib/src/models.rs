@@ -18,7 +18,11 @@ pub enum ModelsSource {
     #[cfg(feature = "models_dedale")]
     /// Models based on the DEDALE dataset
     DEDALE,
-    #[cfg(all(feature = "models_cicids17", feature = "models_cupid", feature = "models_dedale"))]
+    #[cfg(all(
+        feature = "models_cicids17",
+        feature = "models_cupid",
+        feature = "models_dedale"
+    ))]
     /// Models merged from CICIDS17, CUPID and DEDALE
     CCD,
     /// Models defined by the user
@@ -458,7 +462,11 @@ impl ModelsSource {
                 //     ]
                 // },
             ),
-            #[cfg(all(feature = "models_cicids17", feature = "models_cupid", feature = "models_dedale"))]
+            #[cfg(all(
+                feature = "models_cicids17",
+                feature = "models_cupid",
+                feature = "models_dedale"
+            ))]
             ModelsSource::CCD => {
                 let mut v = ModelsSource::CICIDS17.get_automata()?;
                 v.append(&mut ModelsSource::CUPID.get_automata()?);
@@ -524,7 +532,11 @@ impl ModelsSource {
                 },
             ),
 
-            #[cfg(all(feature = "models_cicids17", feature = "models_cupid", feature = "models_dedale"))]
+            #[cfg(all(
+                feature = "models_cicids17",
+                feature = "models_cupid",
+                feature = "models_dedale"
+            ))]
             ModelsSource::CCD => Ok(
                 #[cfg(debug_assertions)]
                 include_str!("../default_models/ccd/bn/bn_tl.bifxml").to_string(),
@@ -591,7 +603,11 @@ impl ModelsSource {
                 },
             ),
 
-            #[cfg(all(feature = "models_cicids17", feature = "models_cupid", feature = "models_dedale"))]
+            #[cfg(all(
+                feature = "models_cicids17",
+                feature = "models_cupid",
+                feature = "models_dedale"
+            ))]
             ModelsSource::CCD => todo!("CCD can only be used with transfer learning"),
 
             ModelsSource::UserDefined(path) => {
@@ -647,7 +663,11 @@ impl ModelsSource {
                 },
             ),
 
-            #[cfg(all(feature = "models_cicids17", feature = "models_cupid", feature = "models_dedale"))]
+            #[cfg(all(
+                feature = "models_cicids17",
+                feature = "models_cupid",
+                feature = "models_dedale"
+            ))]
             ModelsSource::CCD => Ok(
                 #[cfg(debug_assertions)]
                 include_str!("../default_models/ccd/pkt_count_clusters_tl.json").to_string(),
@@ -679,11 +699,13 @@ impl ModelsSource {
                 vec![include_str!("../default_models/cicids17/time_profile.json").to_string()],
                 #[cfg(not(debug_assertions))]
                 {
-                    vec![String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/cicids17/time_profile.json",
-                        1
-                    ))
-                    .unwrap()]
+                    vec![
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cicids17/time_profile.json",
+                            1
+                        ))
+                        .unwrap(),
+                    ]
                 },
             ),
             #[cfg(feature = "models_cupid")]
@@ -692,11 +714,13 @@ impl ModelsSource {
                 vec![include_str!("../default_models/cupid/time_profile.json").to_string()],
                 #[cfg(not(debug_assertions))]
                 {
-                    vec![String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/cupid/time_profile.json",
-                        1
-                    ))
-                    .unwrap()]
+                    vec![
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/cupid/time_profile.json",
+                            1
+                        ))
+                        .unwrap(),
+                    ]
                 },
             ),
             #[cfg(feature = "models_dedale")]
@@ -705,27 +729,32 @@ impl ModelsSource {
                 vec![include_str!("../default_models/dedale/time_profile.json").to_string()],
                 #[cfg(not(debug_assertions))]
                 {
-                    vec![String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/dedale/time_profile.json",
-                        1
-                    ))
-                    .unwrap()]
+                    vec![
+                        String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
+                            "default_models/dedale/time_profile.json",
+                            1
+                        ))
+                        .unwrap(),
+                    ]
                 },
             ),
 
-            #[cfg(all(feature = "models_cicids17", feature = "models_cupid", feature = "models_dedale"))]
+            #[cfg(all(
+                feature = "models_cicids17",
+                feature = "models_cupid",
+                feature = "models_dedale"
+            ))]
             ModelsSource::CCD => {
                 let mut v = ModelsSource::CICIDS17.get_time_profiles()?;
                 v.append(&mut ModelsSource::CUPID.get_time_profiles()?);
                 v.append(&mut ModelsSource::DEDALE.get_time_profiles()?);
                 Ok(v)
-            },
+            }
 
-
-            ModelsSource::UserDefined(path) => Ok(vec![fs::read_to_string(
-                Path::new(path).join("time_profile.json").to_str().unwrap(),
-            )
-            .map_err(|e| format!("Cannot open the time profile file: {e}"))?]),
+            ModelsSource::UserDefined(path) => Ok(vec![
+                fs::read_to_string(Path::new(path).join("time_profile.json").to_str().unwrap())
+                    .map_err(|e| format!("Cannot open the time profile file: {e}"))?,
+            ]),
         }
     }
 }

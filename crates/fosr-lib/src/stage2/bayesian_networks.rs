@@ -108,7 +108,6 @@ enum DstIpRole {
     Internet,
 }
 
-
 #[derive(Debug, Clone)]
 enum AnonymizedIpv4Addr {
     Public,
@@ -430,13 +429,17 @@ impl BayesianModel {
             // TODO ! TTL should be calculated from the topology
             local_ttl.insert(*ip, 255);
             if !mac_addr_map.contains_key(ip) {
-                mac_addr_map.insert(*ip, MacAddr::new(
-                rng.next_u32() as u8,
-                rng.next_u32() as u8,
-                rng.next_u32() as u8,
-                rng.next_u32() as u8,
-                rng.next_u32() as u8,
-                rng.next_u32() as u8));
+                mac_addr_map.insert(
+                    *ip,
+                    MacAddr::new(
+                        rng.next_u32() as u8,
+                        rng.next_u32() as u8,
+                        rng.next_u32() as u8,
+                        rng.next_u32() as u8,
+                        rng.next_u32() as u8,
+                        rng.next_u32() as u8,
+                    ),
+                );
             }
         }
 
@@ -563,41 +566,38 @@ impl BayesianModel {
 
     fn apply_network(&mut self, network: &network::Network) -> Result<(), String> {
         for node in self.bn.nodes.iter_mut() {
-            match &mut node.feature {
-                // we set the probability of absent services to 0
-                Feature::L7Proto(v) => {
-                    // get services present in the network
-                    for s in network.services.iter() {
-                        if !v.contains(s) {
-                            log::warn!(
-                                "Service {s:?} is not present in the original dataset and will not be generated"
-                            );
-                        }
+            // we set the probability of absent services to 0
+            if let Feature::L7Proto(v) = &mut node.feature {
+                // get services present in the network
+                for s in network.services.iter() {
+                    if !v.contains(s) {
+                        log::warn!(
+                            "Service {s:?} is not present in the original dataset and will not be generated"
+                        );
                     }
-                    // create a list of all the indices to set the probability to 0
-                    let weight_update: Vec<(usize, &f64)> = v
-                        .iter()
-                        .enumerate()
-                        .filter_map(|(index, proto)| {
-                            if network.services.contains(proto) {
-                                None
-                            } else {
-                                Some((index, &0.0f64))
-                            }
-                        })
-                        .collect();
-                    // modify all the probability distributions
-                    for cpt in node.cpt.as_mut().unwrap().iter_mut() {
-                        if let Some(weights) = cpt {
-                            let result = weights.update_weights(&weight_update);
-                            // log::error!("Valeur impossible après mise à jour des distributions");
-                            if result.is_err() {
-                                *cpt = None;
-                            }
+                }
+                // create a list of all the indices to set the probability to 0
+                let weight_update: Vec<(usize, &f64)> = v
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, proto)| {
+                        if network.services.contains(proto) {
+                            None
+                        } else {
+                            Some((index, &0.0f64))
+                        }
+                    })
+                    .collect();
+                // modify all the probability distributions
+                for cpt in node.cpt.as_mut().unwrap().iter_mut() {
+                    if let Some(weights) = cpt {
+                        let result = weights.update_weights(&weight_update);
+                        // log::error!("Valeur impossible après mise à jour des distributions");
+                        if result.is_err() {
+                            *cpt = None;
                         }
                     }
                 }
-                _ => (),
             }
         }
 
@@ -953,12 +953,19 @@ impl Stage2 for BNGenerator {
                             .local_src_ip_users
                             .get(&domain_vector.l7_proto.unwrap())
                             .unwrap();
-                        match ips.iter().position(|ip| ip == &domain_vector.dst_ip.unwrap()) {
-                            Some(i) => { let mut new_weights = weights.clone();
-                                new_weights.update_weights(&[(i,&0f64)]).expect("Cannot enforce src IP != dst IP");
+                        match ips
+                            .iter()
+                            .position(|ip| ip == &domain_vector.dst_ip.unwrap())
+                        {
+                            Some(i) => {
+                                let mut new_weights = weights.clone();
+                                new_weights
+                                    .update_weights(&[(i, &0f64)])
+                                    .expect("Cannot enforce src IP != dst IP");
                                 // make it impossible to draw the same IP
-                                *ips.get(new_weights.sample(&mut rng)).unwrap() },
-                            None => *ips.get(weights.sample(&mut rng)).unwrap()
+                                *ips.get(new_weights.sample(&mut rng)).unwrap()
+                            }
+                            None => *ips.get(weights.sample(&mut rng)).unwrap(),
                         }
                     }
                     SrcIpRole::Server => {
@@ -966,34 +973,49 @@ impl Stage2 for BNGenerator {
                             .local_src_ip_servers
                             .get(&domain_vector.l7_proto.unwrap())
                             .unwrap();
-                        match ips.iter().position(|ip| ip == &domain_vector.dst_ip.unwrap()) {
-                            Some(i) => { let mut new_weights = weights.clone();
-                                new_weights.update_weights(&[(i,&0f64)]).expect("Cannot enforce src IP != dst IP");
+                        match ips
+                            .iter()
+                            .position(|ip| ip == &domain_vector.dst_ip.unwrap())
+                        {
+                            Some(i) => {
+                                let mut new_weights = weights.clone();
+                                new_weights
+                                    .update_weights(&[(i, &0f64)])
+                                    .expect("Cannot enforce src IP != dst IP");
                                 // make it impossible to draw the same IP
-                                *ips.get(new_weights.sample(&mut rng)).unwrap() },
-                            None => *ips.get(weights.sample(&mut rng)).unwrap()
+                                *ips.get(new_weights.sample(&mut rng)).unwrap()
+                            }
+                            None => *ips.get(weights.sample(&mut rng)).unwrap(),
                         }
                     }
                     // TODO: take into account Internet clients from the config
                     SrcIpRole::Internet => sample_random_global_ip(&mut rng),
                 });
 
-                domain_vector.src_mac = Some(*tl.mac_addr_map.get(&domain_vector.src_ip.unwrap()).unwrap_or(&MacAddr::zero())); // TODO
-                domain_vector.dst_mac = Some(*tl.mac_addr_map.get(&domain_vector.dst_ip.unwrap()).unwrap_or(&MacAddr::zero())); // TODO
+                domain_vector.src_mac = Some(
+                    *tl.mac_addr_map
+                        .get(&domain_vector.src_ip.unwrap())
+                        .unwrap_or(&MacAddr::zero()),
+                ); // TODO
+                domain_vector.dst_mac = Some(
+                    *tl.mac_addr_map
+                        .get(&domain_vector.dst_ip.unwrap())
+                        .unwrap_or(&MacAddr::zero()),
+                ); // TODO
 
-                let port = match tl
-                    .services_per_server
-                    .get(&(
-                        domain_vector.dst_ip.unwrap(),
-                        domain_vector.l7_proto.unwrap(),
-                    )) {
+                let port = match tl.services_per_server.get(&(
+                    domain_vector.dst_ip.unwrap(),
+                    domain_vector.l7_proto.unwrap(),
+                )) {
                     // local IPs
-                    Some(v) => v.first()
-                    .unwrap()
-                    .get_port(),
+                    Some(v) => v.first().unwrap().get_port(),
                     // public IPs
-                    None => domain_vector.l7_proto.unwrap().get_default_dst_port().unwrap()
-                    };
+                    None => domain_vector
+                        .l7_proto
+                        .unwrap()
+                        .get_default_dst_port()
+                        .unwrap(),
+                };
                 domain_vector.dst_port = Some(match port {
                     Port::Fixed(p) => p,
                     Port::Random => uniform.sample(&mut rng),

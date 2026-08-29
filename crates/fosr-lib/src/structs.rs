@@ -116,6 +116,7 @@ pub enum L7Proto {
     // Dedicated variants for well-known protocols
     HTTP,
     HTTPS,
+    QUIC,
     SSH,
     DNS,
     DHCP,
@@ -130,6 +131,8 @@ pub enum L7Proto {
     LDAP,
     NTP,
     Kerberos,
+    DCERPC,
+    SMB,
     // TODO complete
     // Joker variant for everything else
     // &'static str costs a little leak (a few bytes) but make this enum
@@ -140,25 +143,57 @@ pub enum L7Proto {
 impl FromStr for L7Proto {
     type Err = String;
 
-    fn from_str(s: &str) -> Result<Self, String> {
-        Ok(match s.to_uppercase().replace(" ", "").as_str().trim() {
-            "HTTP" => L7Proto::HTTP,
-            "HTTPS" => L7Proto::HTTPS,
-            "SSH" => L7Proto::SSH,
-            "DNS" => L7Proto::DNS,
-            "DHCP" => L7Proto::DHCP,
-            "SMTP" => L7Proto::SMTP,
-            "TELNET" => L7Proto::Telnet,
-            "IMAPS" => L7Proto::IMAPS,
-            "MQTT" => L7Proto::MQTT,
-            "KMS" => L7Proto::KMS,
-            "MULTICASTDNS" => L7Proto::MulticastDNS,
-            "FTP" => L7Proto::FTP,
-            "FTP-DATA" => L7Proto::FTPData,
-            "LDAP" => L7Proto::LDAP,
-            "NTP" => L7Proto::NTP,
-            "KRB" => L7Proto::Kerberos,
-            _ => L7Proto::NonDefault(String::from(s).leak()),
+    // TODO: ssl ok pour plusieurs protocoles (idem pour http si on a des sous-usages)
+
+    fn from_str(original_s: &str) -> Result<Self, String> {
+        let binding = original_s.to_uppercase().replace(" ", "");
+        let s = binding.as_str().trim();
+        Ok(if s.contains("HTTPS") || s.contains("SSL") {
+            L7Proto::HTTPS
+        } else if s.contains("HTTP") {
+            // must be after "https"
+            L7Proto::HTTP
+        } else if s.contains("QUIC") {
+            L7Proto::QUIC
+        } else if s.contains("SSH") {
+            L7Proto::SSH
+        } else if s.contains("MULTICASTDNS") {
+            L7Proto::MulticastDNS
+        } else if s.contains("DNS") {
+            // must be after "multicast dns"
+            L7Proto::DNS
+        } else if s.contains("DHCP") {
+            L7Proto::DHCP
+        } else if s.contains("SMTP") {
+            // including SMTPS
+            L7Proto::SMTP
+        } else if s.contains("TELNET") {
+            L7Proto::Telnet
+        } else if s.contains("IMAP") {
+            // including IMAPS
+            L7Proto::IMAPS
+        } else if s.contains("MQTT") {
+            L7Proto::MQTT
+        } else if s.contains("KMS") {
+            L7Proto::KMS
+        } else if s.contains("FTP-DATA") {
+            L7Proto::FTPData
+        } else if s.contains("FTP") {
+            // must be after "ftp"
+            L7Proto::FTP
+        } else if s.contains("LDAP") {
+            L7Proto::LDAP
+        } else if s.contains("NTP") {
+            L7Proto::NTP
+        } else if s.contains("DCE_RPC") {
+            L7Proto::DCERPC
+        } else if s.contains("KRB") {
+            L7Proto::Kerberos
+        } else if s.contains("SMB") {
+            L7Proto::SMB
+        } else {
+            log::info!("Non-default protocol: {original_s}");
+            L7Proto::NonDefault(String::from(original_s).leak())
         })
     }
 }
@@ -175,6 +210,7 @@ impl L7Proto {
         match self {
             L7Proto::HTTP => "HTTP",
             L7Proto::HTTPS => "HTTPS",
+            L7Proto::QUIC => "QUIC",
             L7Proto::SSH => "SSH",
             L7Proto::DNS => "DNS",
             L7Proto::DHCP => "DHCP",
@@ -189,6 +225,8 @@ impl L7Proto {
             L7Proto::LDAP => "LDAP",
             L7Proto::NTP => "NTP",
             L7Proto::Kerberos => "Kerberos",
+            L7Proto::SMB => "SMB",
+            L7Proto::DCERPC => "DCE/RPC",
             L7Proto::NonDefault(s) => s,
         }
     }
@@ -203,6 +241,7 @@ impl L7Proto {
         match self {
             L7Proto::HTTP => Some(Port::Fixed(80)),
             L7Proto::HTTPS => Some(Port::Fixed(443)),
+            L7Proto::QUIC => Some(Port::Fixed(443)),
             L7Proto::SSH => Some(Port::Fixed(22)),
             L7Proto::DNS => Some(Port::Fixed(53)),
             L7Proto::DHCP => Some(Port::Fixed(67)),
@@ -217,6 +256,8 @@ impl L7Proto {
             L7Proto::LDAP => Some(Port::Fixed(389)), // TODO(pf): this is non encrypted LDAP port
             L7Proto::NTP => Some(Port::Fixed(123)),
             L7Proto::Kerberos => Some(Port::Fixed(88)),
+            L7Proto::SMB => Some(Port::Fixed(445)),
+            L7Proto::DCERPC => Some(Port::Fixed(135)),
             L7Proto::NonDefault(_) => None,
         }
     }

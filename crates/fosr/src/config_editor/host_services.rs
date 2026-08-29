@@ -6,7 +6,7 @@ use crate::shared::widgets::helpers::info_icon_with_tooltip;
 use crate::shared::widgets::multi_select_picker::multi_select_picker;
 use eframe::egui;
 use fosr_lib::network::InterfaceYaml;
-use fosr_lib::structs::{L7Proto,Port};
+use fosr_lib::structs::{L7Proto, Port};
 use std::str::FromStr;
 
 /// Splits "name:port" into ("name", Some(port))
@@ -29,11 +29,10 @@ fn format_service(name: &str, port: Option<u16>) -> String {
 
 /// Look up the default port for a known service name via L7Proto.
 fn default_port_for_service(name: &str) -> u16 {
-    match L7Proto::from_str(name)
-        .map(|p| p.get_default_dst_port()) {
+    match L7Proto::from_str(name).map(|p| p.get_default_dst_port()) {
         Ok(Some(Port::Fixed(p))) => p,
         _ => PORT_UNSPECIFIED,
-        }
+    }
 }
 
 /// Service section rendering.

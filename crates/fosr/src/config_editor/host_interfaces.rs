@@ -4,8 +4,7 @@ use crate::config_editor::host_services;
 use crate::shared::constants::colors::COLOR_ERROR;
 use crate::shared::constants::network::{MAC_ADDRESS_BYTES, MAC_LOCAL_BIT, MAC_LOCAL_MASK};
 use crate::shared::constants::ui::{SPACING_MD, SPACING_SM};
-use crate::shared::widgets::helpers::{render_optional_string_input, required_label,
-};
+use crate::shared::widgets::helpers::{render_optional_string_input, required_label};
 use eframe::egui;
 use egui_material_icons::icons::{ICON_ADD, ICON_DELETE};
 use fosr_lib::network::{HostYaml, InterfaceYaml};
