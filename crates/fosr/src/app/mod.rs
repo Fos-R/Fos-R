@@ -88,6 +88,7 @@ pub struct FosrApp {
     pub run_tab_state: RunTabState,
     pub config_file_state: ConfigFileState,
     pub configuration_tab_state: ConfigurationTabState,
+    pub default_topologies: Vec<fosr_lib::network::NetworkYaml>,
     // TODO: topologie actuelle ?
     // /// Whether to show the close confirmation dialog
     // /// Whether the user has confirmed they want to close
@@ -106,6 +107,7 @@ impl FosrApp {
             run_tab_state: RunTabState::default(),
             #[cfg(not(target_arch = "wasm32"))]
             allowed_to_close: false,
+            default_topologies: fosr_lib::network::get_default_topologies(),
         };
 
         // Set default zoom once
@@ -221,7 +223,10 @@ impl eframe::App for FosrApp {
         match self.view_state {
             ViewState::Welcome => {
                 egui::CentralPanel::default().show(ctx, |_ui| {});
-                startup_modal::render_initial_modal(ctx, self)
+                let should_close = startup_modal::render_initial_modal(ctx, self);
+                if should_close {
+                    self.view_state = ViewState::Exit;
+                }
             }
             ViewState::TemplateSelection => {
                 egui::CentralPanel::default().show(ctx, |_ui| {});

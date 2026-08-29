@@ -72,7 +72,7 @@ fn startup_card(
 }
 
 /// Renders the initial modal with options to use templates or import a file.
-pub fn render_initial_modal(ctx: &egui::Context, state: &mut FosrApp) {
+pub fn render_initial_modal(ctx: &egui::Context, state: &mut FosrApp) -> bool {
     // Use the same modal ID as template selection to avoid flicker when transitioning
     egui::Modal::new(egui::Id::new("startup_modal")).show(ctx, |ui| {
         ui.set_width(MODAL_WIDTH_MD);
@@ -108,10 +108,25 @@ pub fn render_initial_modal(ctx: &egui::Context, state: &mut FosrApp) {
                 state.change_view(ViewState::TemplateSelection)
                 // state.modal_state = StartupModalStep::TemplateSelection;
             }
+        });
+
+        ui.add_space(SPACING_SM);
+        ui.columns(STARTUP_COLUMNS_INITIAL, |cols| {
+            if startup_card(
+                &mut cols[0],
+                Some(egui_material_icons::icons::ICON_AUTOMATION),
+                "Synthetic network",
+                "Generate a network from constraints. Coming soon!",
+                STARTUP_CARD_INITIAL_HEIGHT,
+            ) {
+                // state.change_view(ViewState::TemplateSelection)
+                // state.modal_state = StartupModalStep::TemplateSelection;
+            }
+
 
             // Right: import file
             if startup_card(
-                &mut cols[2],
+                &mut cols[1],
                 Some(ICON_UPLOAD_FILE),
                 "Import YAML file",
                 "Load a network configuration from a file",
@@ -123,7 +138,7 @@ pub fn render_initial_modal(ctx: &egui::Context, state: &mut FosrApp) {
 
         #[cfg(target_arch = "wasm32")]
         poll_file_import(state);
-    });
+    }).should_close()
 }
 
 /// Renders the template selection modal with preset network configurations.
@@ -142,9 +157,10 @@ pub fn render_template_selection_modal(ctx: &egui::Context, state: &mut FosrApp)
 
         ui.add_space(SPACING_XL);
 
+        let mut new_view: Option<ViewState> = None;
         // Grid of template cards
         ui.columns(STARTUP_COLUMNS_TEMPLATES, |cols| {
-            for (i, template) in fosr_lib::network::get_default_topologies()
+            for (i, template) in state.default_topologies
                 .iter()
                 .enumerate()
             {
@@ -160,9 +176,12 @@ pub fn render_template_selection_modal(ctx: &egui::Context, state: &mut FosrApp)
                     STARTUP_CARD_TEMPLATE_HEIGHT,
                 ) {
                     load_template(&mut state.config_file_state, template);
-                    state.change_view(ViewState::GraphTab);
+                    new_view = Some(ViewState::GraphTab);
                 }
             }
         });
+        if let Some(view) = new_view {
+            state.change_view(view);
+        }
     });
 }
