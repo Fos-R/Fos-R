@@ -3,6 +3,7 @@ use crate::stage3::*;
 
 // use indicatif::{ProgressBar, ProgressStyle};
 use nalgebra::{matrix, vector};
+use rand::prelude::IndexedRandom;
 use rand_core::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
 use serde::Deserialize;
@@ -17,8 +18,8 @@ struct AutomataSet<T: EdgeType> {
 }
 
 pub struct AutomataLibrary {
-    tcp_automata: HashMap<(L7Proto, TCPConnState), AutomataSet<TCPEdgeTuple>>,
-    udp_automata: HashMap<L7Proto, AutomataSet<UDPEdgeTuple>>,
+    tcp_automata: HashMap<(L7Proto, TCPConnState), Vec<AutomataSet<TCPEdgeTuple>>>,
+    udp_automata: HashMap<L7Proto, Vec<AutomataSet<UDPEdgeTuple>>>,
 }
 
 impl AutomataLibrary {
@@ -93,14 +94,16 @@ impl AutomataLibrary {
                     automata_clusters.clone(),
                     parse_tcp_symbol,
                 )?;
-                log::debug!("Import TCP {a}");
-                self.tcp_automata.insert(
-                    (L7Proto::from_str(l7proto).unwrap(), conn_state.unwrap()),
-                    AutomataSet {
-                        uncons_a: a.clone(),
-                        cons_a: a.into(),
-                    },
-                );
+                let proto = L7Proto::from_str(l7proto).unwrap();
+                log::debug!("Import TCP {a}, registered for {proto:?}");
+                let v = self
+                    .tcp_automata
+                    .entry((proto, conn_state.unwrap()))
+                    .or_default();
+                v.push(AutomataSet {
+                    uncons_a: a.clone(),
+                    cons_a: a.into(),
+                });
             }
             L4Proto::UDP => {
                 let automata_clusters = clusters
@@ -122,14 +125,13 @@ impl AutomataLibrary {
                     automata_clusters.clone(),
                     parse_udp_symbol,
                 )?;
-                log::debug!("Import UDP {a}");
-                self.udp_automata.insert(
-                    L7Proto::from_str(l7proto).unwrap(),
-                    AutomataSet {
-                        uncons_a: a.clone(),
-                        cons_a: a.into(),
-                    },
-                );
+                let proto = L7Proto::from_str(l7proto).unwrap();
+                log::debug!("Import UDP {a}, registered for {proto:?}");
+                let v = self.udp_automata.entry(proto).or_default();
+                v.push(AutomataSet {
+                    uncons_a: a.clone(),
+                    cons_a: a.into(),
+                });
             }
             L4Proto::ICMP => todo!(),
         }
@@ -248,7 +250,10 @@ impl Stage3 for TadamGenerator {
         let automata = self.lib.tcp_automata.get(&(flow.data.l7_proto, conn_state));
 
         // automata is found
-        if let Some(AutomataSet { uncons_a, cons_a }) = automata {
+        if let Some(vector) = automata {
+            // choose a random automata among the list
+            // this can only happen when using models from multiple models at once
+            let AutomataSet { uncons_a, cons_a } = vector.choose(&mut rng).unwrap();
             let packets_info =
                 automaton::sample(&mut rng, uncons_a, cons_a, &flow.data, create_tcp_header);
 
@@ -290,7 +295,8 @@ impl Stage3 for TadamGenerator {
         // let a = self.lib.udp_automata.get(&flow.data.l7_proto);
 
         // automata is found
-        if let Some(AutomataSet { uncons_a, cons_a }) = automata {
+        if let Some(vector) = automata {
+            let AutomataSet { uncons_a, cons_a } = vector.choose(&mut rng).unwrap();
             let packets_info =
                 automaton::sample(&mut rng, uncons_a, cons_a, &flow.data, create_udp_header);
 

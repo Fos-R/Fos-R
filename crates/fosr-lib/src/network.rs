@@ -467,7 +467,7 @@ impl TryFrom<InterfaceYaml> for Interface {
         // let mut open_ports: HashMap<L7Proto, u16> = HashMap::new();
         let mut services = vec![];
         for s in i.services.unwrap_or_default() {
-            let service: L7ProtoWithPort = L7ProtoWithPort::from_str(&s.as_str())?;
+            let service: L7ProtoWithPort = L7ProtoWithPort::from_str(s.as_str())?;
             services.push(service);
         }
         // let uses = match i.uses {

@@ -33,7 +33,6 @@ pub struct Variable {
     #[allow(unused)]
     property: Vec<String>,
     pub outcome: Vec<String>,
-    // pub proto_specific: Option<L4Proto>, // not present in the format but convenient
 }
 
 #[derive(Deserialize, Debug, Clone)]

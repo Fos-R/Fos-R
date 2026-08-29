@@ -265,7 +265,10 @@ impl TimeModel {
     pub fn from_source(m: &models::ModelsSource) -> Result<Self, String> {
         let mut models: Vec<TimeModel> = vec![];
         for s in m.get_time_profiles()? {
-            models.push(serde_json::from_str(&s).map_err(|e| format!("Cannot parse the time model: {e}"))?);
+            models.push(
+                serde_json::from_str(&s)
+                    .map_err(|e| format!("Cannot parse the time model: {e}"))?,
+            );
         }
         assert!(!models.is_empty());
 
@@ -278,24 +281,36 @@ impl TimeModel {
     }
 
     fn from_list(mut models: Vec<TimeModel>) -> Self {
-        let metadata = Metadata { creation_time: "On-the-fly".to_string(), input_file: models.iter().map(|m| m.metadata.input_file.clone()).collect::<Vec<String>>().join(", ") };
+        let metadata = Metadata {
+            creation_time: "On-the-fly".to_string(),
+            input_file: models
+                .iter()
+                .map(|m| m.metadata.input_file.clone())
+                .collect::<Vec<String>>()
+                .join(", "),
+        };
         // the overall number of packets of the new time model is the sum of the packets of each
         // dataset, but each dataset has an equal weight
-        let overall_sum: u64 = models.iter().map(|m: &TimeModel| -> u64 { m.bins.iter().sum() }).sum();
+        let overall_sum: u64 = models
+            .iter()
+            .map(|m: &TimeModel| -> u64 { m.bins.iter().sum() })
+            .sum();
         let nb_models = models.len() as u64;
         for m in &mut models {
             let sum: u64 = m.bins.iter().sum();
-            m.bins = m.bins.clone().into_iter().map(|v| -> u64 { v * overall_sum/(sum * nb_models) }).collect();
+            m.bins = m
+                .bins
+                .clone()
+                .into_iter()
+                .map(|v| -> u64 { v * overall_sum / (sum * nb_models) })
+                .collect();
         }
         let mut bins: Vec<u64> = vec![];
         assert!(!models.is_empty());
         for i in 0..models[0].bins.len() {
             bins.push(models.iter().map(|m| m.bins[i]).sum());
         }
-        TimeModel {
-            bins,
-            metadata,
-        }
+        TimeModel { bins, metadata }
     }
 }
 
