@@ -150,13 +150,13 @@ pub const TOOLTIP_DELAY: f32 = 0.1;
 // ============================================================================
 
 /// Startup card height (px)
-pub const STARTUP_CARD_INITIAL_HEIGHT: f32 = 175.0;
+pub const STARTUP_CARD_INITIAL_HEIGHT: f32 = 100.0;
 
 /// Template card height (px)
 pub const STARTUP_CARD_TEMPLATE_HEIGHT: f32 = 125.0;
 
 /// Number of columns in initial startup modal
-pub const STARTUP_COLUMNS_INITIAL: usize = 3;
+pub const STARTUP_COLUMNS_INITIAL: usize = 2;
 
 /// Number of columns in template selection modal
 pub const STARTUP_COLUMNS_TEMPLATES: usize = 5;
