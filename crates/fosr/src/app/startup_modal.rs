@@ -1,10 +1,10 @@
 //! Startup modal for choosing configuration source (templates or import).
 
+use crate::app::{FosrApp, ViewState};
 use crate::config_templates::{load_empty_config, load_template};
 #[cfg(target_arch = "wasm32")]
 use crate::shared::config::file_ops::poll_file_import;
 use crate::shared::config::file_ops::trigger_file_import;
-use crate::shared::config::state::{ConfigFileState, StartupModalStep};
 use crate::shared::constants::colors::COLOR_TEXT_MUTED;
 use crate::shared::constants::ui::*;
 use eframe::egui;
@@ -70,16 +70,8 @@ fn startup_card(
     response.clicked()
 }
 
-/// Renders the startup modal for choosing a configuration source.
-pub fn render_startup_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
-    match state.modal_state {
-        StartupModalStep::Initial => render_initial_modal(ctx, state),
-        StartupModalStep::TemplateSelection => render_template_selection_modal(ctx, state),
-    }
-}
-
 /// Renders the initial modal with options to use templates or import a file.
-fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
+pub fn render_initial_modal(ctx: &egui::Context, state: &mut FosrApp) {
     // Use the same modal ID as template selection to avoid flicker when transitioning
     egui::Modal::new(egui::Id::new("startup_modal")).show(ctx, |ui| {
         ui.set_width(MODAL_WIDTH_MD);
@@ -97,7 +89,8 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
                 "Start from scratch with an empty network",
                 STARTUP_CARD_INITIAL_HEIGHT,
             ) {
-                load_empty_config(state);
+                load_empty_config(&mut state.config_file_state);
+                state.change_view(ViewState::ConfigTab);
             }
 
             // Middle: default config (templates)
@@ -108,7 +101,8 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
                 "Choose from presets of different network types",
                 STARTUP_CARD_INITIAL_HEIGHT,
             ) {
-                state.modal_state = StartupModalStep::TemplateSelection;
+                state.change_view(ViewState::TemplateSelection)
+                // state.modal_state = StartupModalStep::TemplateSelection;
             }
 
             // Right: import file
@@ -119,7 +113,7 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
                 "Load a network configuration from a file",
                 STARTUP_CARD_INITIAL_HEIGHT,
             ) {
-                trigger_file_import(state, cols[2].ctx());
+                trigger_file_import(&mut state.config_file_state, cols[2].ctx());
             }
         });
 
@@ -129,7 +123,7 @@ fn render_initial_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
 }
 
 /// Renders the template selection modal with preset network configurations.
-fn render_template_selection_modal(ctx: &egui::Context, state: &mut ConfigFileState) {
+pub fn render_template_selection_modal(ctx: &egui::Context, state: &mut FosrApp) {
     // Use the same modal ID as initial modal to avoid flicker when transitioning
     egui::Modal::new(egui::Id::new("startup_modal")).show(ctx, |ui| {
         ui.set_width(MODAL_WIDTH_MD_TEMPLATE_SELECTION);
@@ -137,7 +131,7 @@ fn render_template_selection_modal(ctx: &egui::Context, state: &mut ConfigFileSt
         // Header with back button
         ui.horizontal(|ui| {
             if ui.button(ICON_ARROW_BACK).on_hover_text("Back").clicked() {
-                state.modal_state = StartupModalStep::Initial;
+                state.change_view(ViewState::Welcome);
             }
             ui.heading("Choose a template");
         });
@@ -146,7 +140,10 @@ fn render_template_selection_modal(ctx: &egui::Context, state: &mut ConfigFileSt
 
         // Grid of template cards
         ui.columns(STARTUP_COLUMNS_TEMPLATES, |cols| {
-            for (i, template) in fosr_lib::network::get_default_topologies().iter().enumerate() {
+            for (i, template) in fosr_lib::network::get_default_topologies()
+                .iter()
+                .enumerate()
+            {
                 if startup_card(
                     &mut cols[i % STARTUP_COLUMNS_TEMPLATES],
                     None,
@@ -158,7 +155,8 @@ fn render_template_selection_modal(ctx: &egui::Context, state: &mut ConfigFileSt
                         .unwrap_or("No description".to_string()),
                     STARTUP_CARD_TEMPLATE_HEIGHT,
                 ) {
-                    load_template(state, template);
+                    load_template(&mut state.config_file_state, template);
+                    state.change_view(ViewState::GraphTab);
                 }
             }
         });

@@ -15,11 +15,10 @@ use crate::run::state::RunTabState;
 use crate::run::tab::render_run_tab;
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_LOGO, IMG_SERVER};
 use crate::shared::config::state::ConfigFileState;
+use crate::shared::constants::ui::*;
 #[cfg(not(target_arch = "wasm32"))]
 use close_dialog::render_close_confirmation_dialog;
 use eframe::egui;
-use startup_modal::render_startup_modal;
-use crate::shared::constants::ui::*;
 
 pub enum ViewState {
     Welcome,
@@ -36,7 +35,6 @@ pub enum AppTab {
     // About,
 }
 
-
 impl FosrApp {
     fn get_current_tab(&self) -> Option<AppTab> {
         match &self.view_state {
@@ -44,7 +42,6 @@ impl FosrApp {
             ViewState::ConfigTab => Some(AppTab::Configuration),
             _ => None,
         }
-
     }
 
     fn change_view(&mut self, view_state: ViewState) {
@@ -56,20 +53,11 @@ impl FosrApp {
     }
 
     fn has_hosts_in_config(&self) -> bool {
-        self
-            .config_file_state
+        self.config_file_state
             .config_model
             .as_ref()
             .is_some_and(|m| m.count_hosts() > 0)
     }
-
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
-pub enum ConfigTabSubstate {
-    #[default]
-    Visual,
-    Code,
 }
 
 // pub struct ViewOptions {
@@ -87,20 +75,19 @@ pub struct ExtraModals {
 /// // TODO: découpler la vue (machine à état) et le modèle
 pub struct FosrApp {
     // View
-    view_state: ViewState,
-    config_view_state: ConfigTabSubstate,
-    extra_modals: ExtraModals,
+    pub view_state: ViewState,
+    pub extra_modals: ExtraModals,
     // view_options: ViewOptions,
     #[cfg(not(target_arch = "wasm32"))]
-    allowed_to_close: bool,
+    pub allowed_to_close: bool,
     // Model
     // current_tab: AppTab,
     // style_initialized: bool,
     // images_preloaded: bool,
     // zoom_factor: f32,
-    config_file_state: ConfigFileState,
-    configuration_tab_state: ConfigurationTabState,
-    run_tab_state: RunTabState,
+    pub run_tab_state: RunTabState,
+    pub config_file_state: ConfigFileState,
+    pub configuration_tab_state: ConfigurationTabState,
     // TODO: topologie actuelle ?
     // /// Whether to show the close confirmation dialog
     // /// Whether the user has confirmed they want to close
@@ -109,11 +96,9 @@ pub struct FosrApp {
 // TODO: ajouter un constructeur qui initialise tout ce qu’il faut
 
 impl FosrApp {
-
     pub fn new(ctx: &egui::Context) -> Self {
         let app = FosrApp {
             view_state: ViewState::Welcome,
-            config_view_state: ConfigTabSubstate::default(),
             // view_options: ViewOptions { zoom_factor: ZOOM_DEFAULT },
             extra_modals: ExtraModals::default(),
             config_file_state: ConfigFileState::default(),
@@ -181,7 +166,6 @@ impl FosrApp {
 
     /// Render the top bar and update internal state from user interactions.
     fn render_top_bar(&mut self, ctx: &egui::Context) {
-
         // Render top bar and get updated state
         // let top_bar_state = TopBarState {
         //     view_state: self.view_state,
@@ -224,37 +208,6 @@ impl FosrApp {
         //     self.current_tab = updated_state.current_tab;
         // }
     }
-
-    /// Render the current tab content in the central panel.
-    fn render_current_tab(&mut self, ctx: &egui::Context) {
-        // The Central Panel is the region left after adding the Top, Bottom and Side panels.
-        egui::CentralPanel::default().show(ctx, |ui| {
-            // Display the tab content depending on the currently select tab
-            // Note: Run tab doesn't use ScrollArea as it has its own layout
-            match self.get_current_tab() {
-                Some(AppTab::Run) => {
-                    render_run_tab(ui, &mut self.run_tab_state, &mut self.config_file_state);
-                }
-                Some(AppTab::Configuration) => {
-                    // Wrap in ScrollArea for vertical scrolling
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        render_configuration_tab(
-                            ui,
-                            &mut self.configuration_tab_state,
-                            &mut self.config_file_state,
-                        );
-                    });
-                }
-                _ => (),
-                // AppTab::About => {
-                //     // Wrap in ScrollArea for vertical scrolling
-                //     egui::ScrollArea::vertical().show(ui, |ui| {
-                //         render_about_tab(ui);
-                //     });
-                // }
-            }
-        });
-    }
 }
 
 impl eframe::App for FosrApp {
@@ -265,12 +218,44 @@ impl eframe::App for FosrApp {
         #[cfg(not(target_arch = "wasm32"))]
         self.handle_close_confirmation(ctx);
 
-        // Startup modal: choose configuration source
-        if !self.config_file_state.config_chosen {
-            // Render empty CentralPanel for background, then modal on top
-            egui::CentralPanel::default().show(ctx, |_ui| {});
-            render_startup_modal(ctx, &mut self.config_file_state);
-            return;
+        match self.view_state {
+            ViewState::Welcome => {
+                egui::CentralPanel::default().show(ctx, |_ui| {});
+                startup_modal::render_initial_modal(ctx, self)
+            }
+            ViewState::TemplateSelection => {
+                egui::CentralPanel::default().show(ctx, |_ui| {});
+                startup_modal::render_template_selection_modal(ctx, self)
+            }
+            ViewState::GraphTab => {
+                // Main UI
+                self.render_top_bar(ctx);
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    // Display the tab content depending on the currently select tab
+                    // Note: Run tab doesn't use ScrollArea as it has its own layout
+                    render_run_tab(ui, &mut self.run_tab_state, &mut self.config_file_state);
+                });
+            }
+            ViewState::ConfigTab => {
+                self.render_top_bar(ctx);
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    // Wrap in ScrollArea for vertical scrolling
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        render_configuration_tab(
+                            ui,
+                            &mut self.configuration_tab_state,
+                            &mut self.config_file_state,
+                        );
+                    });
+                });
+            }
+            // AppTab::About => {
+            //     // Wrap in ScrollArea for vertical scrolling
+            //     egui::ScrollArea::vertical().show(ui, |ui| {
+            //         render_about_tab(ui);
+            //     });
+            // }
+            ViewState::Exit => todo!(),
         }
 
         // Close confirmation dialog (native only)
@@ -280,9 +265,5 @@ impl eframe::App for FosrApp {
             &mut self.extra_modals.show_close_confirmation,
             &mut self.allowed_to_close,
         );
-
-        // Main UI
-        self.render_top_bar(ctx);
-        self.render_current_tab(ctx);
     }
 }
