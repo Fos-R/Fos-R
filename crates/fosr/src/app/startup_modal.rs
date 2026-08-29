@@ -2,6 +2,7 @@
 
 use crate::app::{FosrApp, ViewState};
 use crate::config_templates::{load_empty_config, load_template};
+use crate::shared::assets::IMG_LOGO;
 #[cfg(target_arch = "wasm32")]
 use crate::shared::config::file_ops::poll_file_import;
 use crate::shared::config::file_ops::trigger_file_import;
@@ -75,10 +76,13 @@ pub fn render_initial_modal(ctx: &egui::Context, state: &mut FosrApp) {
     // Use the same modal ID as template selection to avoid flicker when transitioning
     egui::Modal::new(egui::Id::new("startup_modal")).show(ctx, |ui| {
         ui.set_width(MODAL_WIDTH_MD);
-        ui.heading("Welcome to Fos-R");
-        ui.add_space(SPACING_SM);
-        ui.label("Select a network to get started");
-        ui.add_space(SPACING_XL);
+        ui.columns(2, |cols| {
+            cols[0].heading("Welcome!");
+            cols[0].add_space(SPACING_SM);
+            cols[0].label("Select a network to get started");
+            cols[0].add_space(SPACING_XL);
+            cols[1].add(egui::Image::new(IMG_LOGO));
+        });
 
         ui.columns(STARTUP_COLUMNS_INITIAL, |cols| {
             // Left: empty config

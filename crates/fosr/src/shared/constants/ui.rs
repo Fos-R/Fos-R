@@ -166,7 +166,10 @@ pub const STARTUP_COLUMNS_TEMPLATES: usize = 5;
 // ============================================================================
 
 /// Logo max width in about tab (px)
-pub const LOGO_MAX_WIDTH: f32 = 450.0;
+pub const LOGO_MAX_WIDTH: f32 = 350.0;
+
+/// Logo max height in about tab (px)
+pub const LOGO_MAX_HEIGHT: f32 = 70.0;
 
 // ============================================================================
 // GENERATION OPTIONS
