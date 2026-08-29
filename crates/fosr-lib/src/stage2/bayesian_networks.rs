@@ -77,7 +77,7 @@ struct BayesianNetworkNode {
 
 /// Extra information for the transfer learning
 #[derive(Debug, Clone)]
-struct TransferLearningExtraData {
+pub struct TransferLearningExtraData {
     // TODO: différencier IP locales et IP connues
     local_src_ip_users: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)>,
     local_src_ip_servers: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)>,
@@ -202,9 +202,9 @@ impl BayesianNetworkNode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// A Bayesian network, which is simply a collection of nodes in topological order
-struct BayesianNetwork {
+pub struct BayesianNetwork {
     nodes: Vec<BayesianNetworkNode>,
 }
 
@@ -319,13 +319,138 @@ impl BayesianNetwork {
         *discrete_vector = new_discrete_vector;
         Ok(domain_vector)
     }
+
+    // Used to remove impossible values
+    fn condition_cpt(&self, node: usize, index_parent: usize, parent_val: usize) -> CPT {
+        let mut output: Vec<Option<WeightedIndex<f64>>> = vec![];
+        assert!(
+            self.nodes[node].parents_cardinality[index_parent] > parent_val,
+            "Parent val is too large: {parent_val}"
+        );
+        for (mut index_cpt, cpt) in self.nodes[node].cpt.as_ref().unwrap().iter().enumerate() {
+            for (index, card) in self.nodes[node]
+                .parents_cardinality
+                .iter()
+                .enumerate()
+                .rev()
+            {
+                if index == index_parent {
+                    if index_cpt % card == parent_val {
+                        output.push(cpt.clone());
+                    }
+                    break;
+                }
+                index_cpt /= card;
+            }
+        }
+        // log::info!("Initial CPT: {:?}", self.nodes[node].cpt.as_ref().unwrap());
+        // log::info!("Conditioned CPT: {output:?}");
+        assert_eq!(
+            self.nodes[node].cpt.as_ref().unwrap().len() / output.len(),
+            self.nodes[node].parents_cardinality[index_parent]
+        );
+        output
+    }
+
+    // find the values of parents that only lead to "None" CPTs
+    fn remove_impossible_values(&mut self) -> Result<(), String> {
+        log::trace!("Remove impossible values");
+        // traverse the network in reverse topological order
+        // indeed, children can modify their parents’ CPT
+        for index in (0..self.nodes.len()).rev() {
+            let node = &self.nodes[index];
+            // log::info!("{:?}", node.feature);
+            let parents = node.parents.clone();
+            let parents_card = node.parents_cardinality.clone();
+            for (index_parent, parent) in parents.iter().enumerate() {
+                // let mut removed: Vec<String> = vec![]; // only used for log
+                for v in 0..parents_card[index_parent] {
+                    // check each value of each parent
+                    if self
+                        .condition_cpt(index, index_parent, v)
+                        .iter()
+                        .all(Option::is_none)
+                    // is there only None? Then we delete that value
+                    {
+                        // removed.push(self.nodes[*parent].feature.get_value_string(v));
+                        let parent = self.nodes.get_mut(*parent).unwrap();
+                        if !parent.removed_values.contains(&v) {
+                            remove_value(parent, v)?;
+                        }
+                    }
+                }
+            }
+        }
+        for index in (0..self.nodes.len()).rev() {
+            let node = &self.nodes[index];
+            if !node.removed_values.is_empty() {
+                log::debug!(
+                    "Removed unnecessary values {:?} of {:?}",
+                    node.removed_values
+                        .iter()
+                        .map(|v| node.feature.get_value_string(*v))
+                        .collect::<Vec<String>>(),
+                    node.feature
+                );
+            }
+        }
+        Ok(())
+    }
+
+    fn apply_network(&mut self, network: &network::Network) -> Result<(), String> {
+        for node in self.nodes.iter_mut() {
+            // we set the probability of absent services to 0
+            if let Feature::L7Proto(v) = &mut node.feature {
+                // get services present in the network
+                for s in network.services.iter() {
+                    if !v.contains(s) {
+                        log::warn!(
+                            "Service {s:?} is not present in the original dataset and will not be generated"
+                        );
+                    }
+                }
+                // create a list of all the indices to set the probability to 0
+                let weight_update: Vec<(usize, &f64)> = v
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, proto)| {
+                        if network.services.contains(proto) {
+                            None
+                        } else {
+                            Some((index, &0.0f64))
+                        }
+                    })
+                    .collect();
+                // modify all the probability distributions
+                for cpt in node.cpt.as_mut().unwrap().iter_mut() {
+                    if let Some(weights) = cpt {
+                        let result = weights.update_weights(&weight_update);
+                        // log::error!("Valeur impossible après mise à jour des distributions");
+                        if result.is_err() {
+                            *cpt = None;
+                        }
+                    }
+                }
+            }
+        }
+
+        self.remove_impossible_values()?;
+        Ok(())
+    }
 }
 
 /// The model with all the data
-pub struct BayesianModel {
-    bn: BayesianNetwork,
-    bin_count: usize,
-    transfer_learning: Option<TransferLearningExtraData>,
+pub enum BayesianModel {
+    DatasetSpecific {
+        bn: BayesianNetwork,
+        bin_count: usize,
+    },
+    ForTransferLearning {
+        base_bn: BayesianNetwork,
+        bn: BayesianNetwork,
+        bin_count: usize,
+        transfer_learning: TransferLearningExtraData,
+    },
 }
 
 /// Stage 1: generates flow descriptions
@@ -376,7 +501,7 @@ impl BayesianModel {
         let bif_common = bifxml::from_str(&bn_string)?;
 
         log::trace!("Converting from BIF");
-        let (bn, bin_count) = bn_from_bif(bif_common)?;
+        let (mut bn, bin_count) = bn_from_bif(bif_common)?;
 
         log::info!("Bayesian network has been loaded");
 
@@ -452,15 +577,14 @@ impl BayesianModel {
             mac_addr_map,
         };
 
-        // log::info!("{bn_common}");
-        let mut model = BayesianModel {
+        let base_bn = bn.clone();
+        bn.apply_network(network)?;
+        Ok(BayesianModel::ForTransferLearning {
+            base_bn,
             bn,
             bin_count,
-            transfer_learning: Some(tl_extra_data),
-        };
-
-        model.apply_network(network)?;
-        Ok(model)
+            transfer_learning: tl_extra_data,
+        })
     }
 
     pub fn from_source(m: &models::ModelsSource) -> Result<Self, String> {
@@ -472,137 +596,49 @@ impl BayesianModel {
         let bif_common = bifxml::from_str(&bn_string)?;
 
         log::trace!("Converting from BIF");
-        let (bn, bin_count) = bn_from_bif(bif_common)?;
+        let (mut bn, bin_count) = bn_from_bif(bif_common)?;
 
         log::info!("Bayesian network has been loaded");
+        bn.remove_impossible_values()?;
 
         // log::info!("{bn_common}");
-        let mut model = BayesianModel {
-            bn,
-            bin_count,
-            transfer_learning: None,
-        };
-
-        model.remove_impossible_values()?;
-        Ok(model)
+        Ok(BayesianModel::DatasetSpecific { bn, bin_count })
     }
 
-    // Used to remove impossible values
-    fn condition_cpt(&self, node: usize, index_parent: usize, parent_val: usize) -> CPT {
-        let mut output: Vec<Option<WeightedIndex<f64>>> = vec![];
-        assert!(
-            self.bn.nodes[node].parents_cardinality[index_parent] > parent_val,
-            "Parent val is too large: {parent_val}"
-        );
-        for (mut index_cpt, cpt) in self.bn.nodes[node].cpt.as_ref().unwrap().iter().enumerate() {
-            for (index, card) in self.bn.nodes[node]
-                .parents_cardinality
-                .iter()
-                .enumerate()
-                .rev()
-            {
-                if index == index_parent {
-                    if index_cpt % card == parent_val {
-                        output.push(cpt.clone());
-                    }
-                    break;
-                }
-                index_cpt /= card;
-            }
+    fn get_bin_count(&self) -> usize {
+        match self {
+            BayesianModel::DatasetSpecific { bin_count, .. } => *bin_count,
+            BayesianModel::ForTransferLearning { bin_count, .. } => *bin_count,
         }
-        // log::info!("Initial CPT: {:?}", self.bn.nodes[node].cpt.as_ref().unwrap());
-        // log::info!("Conditioned CPT: {output:?}");
-        assert_eq!(
-            self.bn.nodes[node].cpt.as_ref().unwrap().len() / output.len(),
-            self.bn.nodes[node].parents_cardinality[index_parent]
-        );
-        output
     }
 
-    // find the values of parents that only lead to "None" CPTs
-    fn remove_impossible_values(&mut self) -> Result<(), String> {
-        log::trace!("Remove impossible values");
-        // traverse the network in reverse topological order
-        // indeed, children can modify their parents’ CPT
-        for index in (0..self.bn.nodes.len()).rev() {
-            let node = &self.bn.nodes[index];
-            // log::info!("{:?}", node.feature);
-            let parents = node.parents.clone();
-            let parents_card = node.parents_cardinality.clone();
-            for (index_parent, parent) in parents.iter().enumerate() {
-                // let mut removed: Vec<String> = vec![]; // only used for log
-                for v in 0..parents_card[index_parent] {
-                    // check each value of each parent
-                    if self
-                        .condition_cpt(index, index_parent, v)
-                        .iter()
-                        .all(Option::is_none)
-                    // is there only None? Then we delete that value
-                    {
-                        // removed.push(self.bn.nodes[*parent].feature.get_value_string(v));
-                        let parent = self.bn.nodes.get_mut(*parent).unwrap();
-                        if !parent.removed_values.contains(&v) {
-                            remove_value(parent, v)?;
-                        }
-                    }
-                }
-            }
+    fn get_bn(&self) -> &BayesianNetwork {
+        match self {
+            BayesianModel::DatasetSpecific { bn, .. } => bn,
+            BayesianModel::ForTransferLearning { bn, .. } => bn,
         }
-        for index in (0..self.bn.nodes.len()).rev() {
-            let node = &self.bn.nodes[index];
-            if !node.removed_values.is_empty() {
-                log::debug!(
-                    "Removed unnecessary values {:?} of {:?}",
-                    node.removed_values
-                        .iter()
-                        .map(|v| node.feature.get_value_string(*v))
-                        .collect::<Vec<String>>(),
-                    node.feature
-                );
-            }
-        }
-        Ok(())
     }
 
-    fn apply_network(&mut self, network: &network::Network) -> Result<(), String> {
-        for node in self.bn.nodes.iter_mut() {
-            // we set the probability of absent services to 0
-            if let Feature::L7Proto(v) = &mut node.feature {
-                // get services present in the network
-                for s in network.services.iter() {
-                    if !v.contains(s) {
-                        log::warn!(
-                            "Service {s:?} is not present in the original dataset and will not be generated"
-                        );
-                    }
-                }
-                // create a list of all the indices to set the probability to 0
-                let weight_update: Vec<(usize, &f64)> = v
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, proto)| {
-                        if network.services.contains(proto) {
-                            None
-                        } else {
-                            Some((index, &0.0f64))
-                        }
-                    })
-                    .collect();
-                // modify all the probability distributions
-                for cpt in node.cpt.as_mut().unwrap().iter_mut() {
-                    if let Some(weights) = cpt {
-                        let result = weights.update_weights(&weight_update);
-                        // log::error!("Valeur impossible après mise à jour des distributions");
-                        if result.is_err() {
-                            *cpt = None;
-                        }
-                    }
-                }
+    fn get_tl(&self) -> Option<&TransferLearningExtraData> {
+        match self {
+            BayesianModel::DatasetSpecific { .. } => None,
+            BayesianModel::ForTransferLearning {
+                transfer_learning, ..
+            } => Some(&transfer_learning),
+        }
+    }
+
+    pub fn update_network(&mut self, network: &network::Network) -> Result<(), String> {
+        match self {
+            BayesianModel::DatasetSpecific { .. } => {
+                Err("Cannot update the network of a dataset-specific Bayesian model".to_string())
+            }
+            BayesianModel::ForTransferLearning { bn, base_bn, .. } => {
+                *bn = base_bn.clone();
+                bn.apply_network(network)?;
+                Ok(())
             }
         }
-
-        self.remove_impossible_values()?;
-        Ok(())
     }
 }
 
@@ -905,17 +941,19 @@ impl Stage2 for BNGenerator {
         let mut domain_vector: IntermediateVector = IntermediateVector::default();
         let mut discrete_vector: Vec<usize> = vec![];
 
+        let bin_count = self.model.get_bin_count();
         let mut restart = true;
+        let bn = self.model.get_bn();
         while restart {
             restart = false;
             let time = min(
-                self.model.bin_count - 1,
+                bin_count - 1,
                 ((ts.data.date_time.num_seconds_from_midnight() as f64 / (3600. * 24.)).fract()
-                    * (self.model.bin_count as f64)) as usize,
+                    * (bin_count as f64)) as usize,
             );
             discrete_vector.clear();
             discrete_vector.push(time);
-            domain_vector = self.model.bn.sample(&mut rng, &mut discrete_vector)?;
+            domain_vector = bn.sample(&mut rng, &mut discrete_vector)?;
 
             if domain_vector.src_ip.is_some() && domain_vector.src_ip == domain_vector.dst_ip {
                 log::trace!("Restart (identical IPs)");
@@ -933,7 +971,8 @@ impl Stage2 for BNGenerator {
                 },
             );
 
-            if let Some(ref tl) = self.model.transfer_learning {
+            if let Some(tl) = self.model.get_tl() {
+                // if let Some(ref tl) = self.model.transfer_learning {
                 // Sample the destination IP
                 domain_vector.dst_ip = Some(match domain_vector.dst_ip_role.unwrap() {
                     DstIpRole::Server => {
