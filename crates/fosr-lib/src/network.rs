@@ -8,9 +8,24 @@ use std::collections::HashSet;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
+use include_dir::Dir;
+use include_dir::include_dir;
 
 /// Name of the synthetic Internet network.
 pub const INTERNET_NETWORK_NAME: &str = "Internet";
+
+pub fn get_default_topologies() -> Vec<NetworkYaml> {
+    let d: Dir = include_dir!("$CARGO_MANIFEST_DIR/default_topologies");
+    d.files()
+        .inspect(|e| {
+            log::debug!("Loading default template {:?}", e.path());
+        })
+        .map(|f: &include_dir::File| {
+            reversibly_import_network(f.contents_utf8().unwrap())
+        })
+        .collect()
+}
+
 
 /// The configuration file of the network and the hosts
 /// TODO: clean useless attributes

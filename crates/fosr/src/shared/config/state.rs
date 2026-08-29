@@ -56,7 +56,7 @@ impl Default for ConfigFileState {
             has_errors: false,
             modal_state: StartupModalStep::Initial,
             loaded_template_id: None,
-            all_templates: crate::config_templates::get_default_templates(),
+            all_templates: fosr_lib::network::get_default_topologies(),
         }
     }
 }
