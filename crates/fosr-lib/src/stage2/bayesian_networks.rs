@@ -396,47 +396,6 @@ impl BayesianNetwork {
         }
         Ok(())
     }
-
-    fn apply_network(&mut self, network: &network::Network) -> Result<(), String> {
-        for node in self.nodes.iter_mut() {
-            // we set the probability of absent services to 0
-            if let Feature::L7Proto(v) = &mut node.feature {
-                // get services present in the network
-                for s in network.services.iter() {
-                    if !v.contains(s) {
-                        log::warn!(
-                            "Service {s:?} is not present in the original dataset and will not be generated"
-                        );
-                    }
-                }
-                // create a list of all the indices to set the probability to 0
-                let weight_update: Vec<(usize, &f64)> = v
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, proto)| {
-                        if network.services.contains(proto) {
-                            None
-                        } else {
-                            Some((index, &0.0f64))
-                        }
-                    })
-                    .collect();
-                // modify all the probability distributions
-                for cpt in node.cpt.as_mut().unwrap().iter_mut() {
-                    if let Some(weights) = cpt {
-                        let result = weights.update_weights(&weight_update);
-                        // log::error!("Valeur impossible après mise à jour des distributions");
-                        if result.is_err() {
-                            *cpt = None;
-                        }
-                    }
-                }
-            }
-        }
-
-        self.remove_impossible_values()?;
-        Ok(())
-    }
 }
 
 /// The model with all the data
@@ -450,6 +409,10 @@ pub enum BayesianModel {
         bn: BayesianNetwork,
         bin_count: usize,
         transfer_learning: TransferLearningExtraData,
+    },
+    WaitingForNetwork {
+        base_bn: BayesianNetwork,
+        bin_count: usize,
     },
 }
 
@@ -486,12 +449,8 @@ fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), Stri
 }
 
 impl BayesianModel {
-    pub fn from_source_with_network(
-        m: &models::ModelsSource,
-        network: &network::Network,
-    ) -> Result<Self, String> {
+    pub fn from_source_for_transfer_learning(m: &models::ModelsSource) -> Result<Self, String> {
         // We use a seeded RNG so everything is deterministic
-        let mut rng = Pcg32::seed_from_u64(12345);
 
         let bn_string: String = m
             .get_tl_bn()
@@ -501,90 +460,150 @@ impl BayesianModel {
         let bif_common = bifxml::from_str(&bn_string)?;
 
         log::trace!("Converting from BIF");
-        let (mut bn, bin_count) = bn_from_bif(bif_common)?;
+        let (bn, bin_count) = bn_from_bif(bif_common)?;
 
         log::info!("Bayesian network has been loaded");
-
-        let mut local_src_ip_users: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)> =
-            HashMap::new();
-        let mut local_src_ip_servers: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)> =
-            HashMap::new();
-        let mut local_dst_ip: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)> =
-            HashMap::new();
-
-        for s in network.services.iter() {
-            // Use a Zipf distribution for clients activity
-            // We assume all clients can use any service
-            let mut weights: Vec<f64> = iter::repeat_n(1, network.users.len())
-                .enumerate()
-                .map(|(i, _)| 1. / ((i + 1) as f64))
-                .collect();
-            weights.shuffle(&mut rng);
-            local_src_ip_users.insert(
-                *s,
-                (network.users.clone(), WeightedIndex::new(&weights).unwrap()),
-            );
-
-            let mut weights: Vec<f64> = iter::repeat_n(1, network.servers.len())
-                .enumerate()
-                .map(|(i, _)| 1. / ((i + 1) as f64))
-                .collect();
-            weights.shuffle(&mut rng);
-            local_src_ip_servers.insert(
-                *s,
-                (
-                    network.servers.clone(),
-                    WeightedIndex::new(&weights).unwrap(),
-                ),
-            );
-
-            let servers = network.servers_per_service.get(s).unwrap().clone();
-            // Use a Zipf distribution for servers activity
-            let mut weights: Vec<f64> = iter::repeat_n(1, servers.len())
-                .enumerate()
-                .map(|(i, _)| 1. / ((i + 1) as f64))
-                .collect();
-            weights.shuffle(&mut rng);
-            local_dst_ip.insert(*s, (servers, WeightedIndex::new(&weights).unwrap()));
-        }
-
-        let mut local_ttl: HashMap<Ipv4Addr, u8> = HashMap::new();
-        let mut mac_addr_map = network.mac_addr_map.clone();
-        for ip in network.users.iter().chain(network.servers.iter()) {
-            // TODO ! TTL should be calculated from the topology
-            local_ttl.insert(*ip, 255);
-            if !mac_addr_map.contains_key(ip) {
-                mac_addr_map.insert(
-                    *ip,
-                    MacAddr::new(
-                        rng.next_u32() as u8,
-                        rng.next_u32() as u8,
-                        rng.next_u32() as u8,
-                        rng.next_u32() as u8,
-                        rng.next_u32() as u8,
-                        rng.next_u32() as u8,
-                    ),
-                );
-            }
-        }
-
-        let tl_extra_data = TransferLearningExtraData {
-            local_src_ip_users,
-            local_src_ip_servers,
-            local_dst_ip,
-            local_ttl,
-            services_per_server: network.services_per_server.clone(),
-            mac_addr_map,
-        };
-
-        let base_bn = bn.clone();
-        bn.apply_network(network)?;
-        Ok(BayesianModel::ForTransferLearning {
-            base_bn,
-            bn,
+        Ok(BayesianModel::WaitingForNetwork {
+            base_bn: bn,
             bin_count,
-            transfer_learning: tl_extra_data,
         })
+    }
+
+    pub fn with_network(self, network: &network::Network) -> Result<Self, String> {
+        match self {
+            BayesianModel::WaitingForNetwork {
+                base_bn, bin_count, ..
+            }
+            | BayesianModel::ForTransferLearning {
+                base_bn, bin_count, ..
+            } => {
+                let mut rng = Pcg32::seed_from_u64(12345);
+                let mut local_src_ip_users: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)> =
+                    HashMap::new();
+                let mut local_src_ip_servers: HashMap<
+                    L7Proto,
+                    (Vec<Ipv4Addr>, WeightedIndex<f64>),
+                > = HashMap::new();
+                let mut local_dst_ip: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)> =
+                    HashMap::new();
+
+                for s in network.services.iter() {
+                    // Use a Zipf distribution for clients activity
+                    // We assume all clients can use any service
+                    let mut weights: Vec<f64> = iter::repeat_n(1, network.users.len())
+                        .enumerate()
+                        .map(|(i, _)| 1. / ((i + 1) as f64))
+                        .collect();
+                    weights.shuffle(&mut rng);
+                    local_src_ip_users.insert(
+                        *s,
+                        (network.users.clone(), WeightedIndex::new(&weights).unwrap()),
+                    );
+
+                    let mut weights: Vec<f64> = iter::repeat_n(1, network.servers.len())
+                        .enumerate()
+                        .map(|(i, _)| 1. / ((i + 1) as f64))
+                        .collect();
+                    weights.shuffle(&mut rng);
+                    local_src_ip_servers.insert(
+                        *s,
+                        (
+                            network.servers.clone(),
+                            WeightedIndex::new(&weights).unwrap(),
+                        ),
+                    );
+
+                    let servers = network.servers_per_service.get(s).unwrap().clone();
+                    // Use a Zipf distribution for servers activity
+                    let mut weights: Vec<f64> = iter::repeat_n(1, servers.len())
+                        .enumerate()
+                        .map(|(i, _)| 1. / ((i + 1) as f64))
+                        .collect();
+                    weights.shuffle(&mut rng);
+                    local_dst_ip.insert(*s, (servers, WeightedIndex::new(&weights).unwrap()));
+                }
+
+                let mut local_ttl: HashMap<Ipv4Addr, u8> = HashMap::new();
+                let mut mac_addr_map = network.mac_addr_map.clone();
+                for ip in network.users.iter().chain(network.servers.iter()) {
+                    // TODO ! TTL should be calculated from the topology
+                    local_ttl.insert(*ip, 255);
+                    if !mac_addr_map.contains_key(ip) {
+                        mac_addr_map.insert(
+                            *ip,
+                            MacAddr::new(
+                                rng.next_u32() as u8,
+                                rng.next_u32() as u8,
+                                rng.next_u32() as u8,
+                                rng.next_u32() as u8,
+                                rng.next_u32() as u8,
+                                rng.next_u32() as u8,
+                            ),
+                        );
+                    }
+                }
+
+                let tl_extra_data = TransferLearningExtraData {
+                    local_src_ip_users,
+                    local_src_ip_servers,
+                    local_dst_ip,
+                    local_ttl,
+                    services_per_server: network.services_per_server.clone(),
+                    mac_addr_map,
+                };
+
+                let mut bn = base_bn.clone();
+
+                for node in bn.nodes.iter_mut() {
+                    // we set the probability of absent services to 0
+                    if let Feature::L7Proto(v) = &mut node.feature {
+                        // get services present in the network
+                        for s in network.services.iter() {
+                            if !v.contains(s) {
+                                log::warn!(
+                                    "Service {s:?} is not present in the original dataset and will not be generated"
+                                );
+                            }
+                        }
+                        // create a list of all the indices to set the probability to 0
+                        let weight_update: Vec<(usize, &f64)> = v
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(index, proto)| {
+                                if network.services.contains(proto) {
+                                    None
+                                } else {
+                                    Some((index, &0.0f64))
+                                }
+                            })
+                            .collect();
+                        // modify all the probability distributions
+                        for cpt in node.cpt.as_mut().unwrap().iter_mut() {
+                            if let Some(weights) = cpt {
+                                let result = weights.update_weights(&weight_update);
+                                // log::error!("Valeur impossible après mise à jour des distributions");
+                                if result.is_err() {
+                                    *cpt = None;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                bn.remove_impossible_values()?;
+
+                Ok(BayesianModel::ForTransferLearning {
+                    base_bn,
+                    bn,
+                    bin_count: bin_count,
+                    transfer_learning: tl_extra_data,
+                })
+            }
+            BayesianModel::DatasetSpecific { .. } => Err(
+                "A model suited for transfer learning is mandatory to use a custom network"
+                    .to_string(),
+            ),
+        }
     }
 
     pub fn from_source(m: &models::ModelsSource) -> Result<Self, String> {
@@ -607,39 +626,34 @@ impl BayesianModel {
 
     fn get_bin_count(&self) -> usize {
         match self {
-            BayesianModel::DatasetSpecific { bin_count, .. } => *bin_count,
-            BayesianModel::ForTransferLearning { bin_count, .. } => *bin_count,
+            BayesianModel::DatasetSpecific { bin_count, .. }
+            | BayesianModel::ForTransferLearning { bin_count, .. }
+            | BayesianModel::WaitingForNetwork { bin_count, .. } => *bin_count,
         }
     }
 
-    fn get_bn(&self) -> &BayesianNetwork {
+    fn get_bn(&self) -> Result<&BayesianNetwork, String> {
         match self {
-            BayesianModel::DatasetSpecific { bn, .. } => bn,
-            BayesianModel::ForTransferLearning { bn, .. } => bn,
+            BayesianModel::DatasetSpecific { bn, .. } => Ok(bn),
+            BayesianModel::ForTransferLearning { bn, .. } => Ok(bn),
+            BayesianModel::WaitingForNetwork { .. } => {
+                Err("A network must be specified before this model can be used".to_string())
+            }
         }
     }
 
-    fn get_tl(&self) -> Option<&TransferLearningExtraData> {
+    fn get_tl(&self) -> Result<Option<&TransferLearningExtraData>, String> {
         match self {
-            BayesianModel::DatasetSpecific { .. } => None,
+            BayesianModel::DatasetSpecific { .. } => Ok(None),
             BayesianModel::ForTransferLearning {
                 transfer_learning, ..
-            } => Some(&transfer_learning),
+            } => Ok(Some(&transfer_learning)),
+            BayesianModel::WaitingForNetwork { .. } => {
+                Err("A network must be specified before this model can be used".to_string())
+            }
         }
     }
 
-    pub fn update_network(&mut self, network: &network::Network) -> Result<(), String> {
-        match self {
-            BayesianModel::DatasetSpecific { .. } => {
-                Err("Cannot update the network of a dataset-specific Bayesian model".to_string())
-            }
-            BayesianModel::ForTransferLearning { bn, base_bn, .. } => {
-                *bn = base_bn.clone();
-                bn.apply_network(network)?;
-                Ok(())
-            }
-        }
-    }
 }
 
 fn bn_from_bif(network: bifxml::Network) -> Result<(BayesianNetwork, usize), String> {
@@ -926,7 +940,6 @@ fn bn_from_bif(network: bifxml::Network) -> Result<(BayesianNetwork, usize), Str
 
 impl BNGenerator {
     pub fn new(model: Arc<BayesianModel>, online: bool) -> Self {
-        // TODO: adapter le modèle à la config du réseau !
         BNGenerator { model, online }
     }
 }
@@ -943,7 +956,7 @@ impl Stage2 for BNGenerator {
 
         let bin_count = self.model.get_bin_count();
         let mut restart = true;
-        let bn = self.model.get_bn();
+        let bn = self.model.get_bn()?;
         while restart {
             restart = false;
             let time = min(
@@ -971,7 +984,7 @@ impl Stage2 for BNGenerator {
                 },
             );
 
-            if let Some(tl) = self.model.get_tl() {
+            if let Some(tl) = self.model.get_tl()? {
                 // if let Some(ref tl) = self.model.transfer_learning {
                 // Sample the destination IP
                 domain_vector.dst_ip = Some(match domain_vector.dst_ip_role.unwrap() {
