@@ -9,5 +9,7 @@ pub const IMG_SERVER: ImageSource = include_image!("../../assets/server.png");
 pub const IMG_COMPUTER: ImageSource = include_image!("../../assets/computer.png");
 pub const IMG_INTERNET: ImageSource = include_image!("../../assets/internet.png");
 
-// Fos-R logo
+// Logos
 pub const IMG_LOGO: ImageSource = include_image!("../../../../public/logo.png");
+pub const IMG_LOGO_INRIA: ImageSource = include_image!("../../../../public/logo_inria.png");
+pub const IMG_LOGO_PIRAT: ImageSource = include_image!("../../../../public/logo_pirat.png");

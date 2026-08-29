@@ -8,7 +8,7 @@ mod close_dialog;
 mod startup_modal;
 mod top_bar;
 
-// use crate::about_tab::render_about_tab;
+use crate::about_tab::render_about_modal;
 use crate::config_editor::state::ConfigurationTabState;
 use crate::config_editor::tab::render_configuration_tab;
 use crate::run::state::RunTabState;
@@ -249,13 +249,17 @@ impl eframe::App for FosrApp {
                     });
                 });
             }
-            // AppTab::About => {
-            //     // Wrap in ScrollArea for vertical scrolling
-            //     egui::ScrollArea::vertical().show(ui, |ui| {
-            //         render_about_tab(ui);
-            //     });
-            // }
             ViewState::Exit => todo!(),
+        }
+
+        if self.extra_modals.about {
+            // Wrap in ScrollArea for vertical scrolling
+            let response = egui::Modal::new(egui::Id::new("about_modal")).show(ctx, |ui| {
+                render_about_modal(ui);
+            });
+            if response.should_close() {
+                self.extra_modals.about = false;
+            }
         }
 
         // Close confirmation dialog (native only)

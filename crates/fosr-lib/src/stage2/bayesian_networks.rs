@@ -595,7 +595,7 @@ impl BayesianModel {
                 Ok(BayesianModel::ForTransferLearning {
                     base_bn,
                     bn,
-                    bin_count: bin_count,
+                    bin_count,
                     transfer_learning: tl_extra_data,
                 })
             }
@@ -647,7 +647,7 @@ impl BayesianModel {
             BayesianModel::DatasetSpecific { .. } => Ok(None),
             BayesianModel::ForTransferLearning {
                 transfer_learning, ..
-            } => Ok(Some(&transfer_learning)),
+            } => Ok(Some(transfer_learning)),
             BayesianModel::WaitingForNetwork { .. } => {
                 Err("A network must be specified before this model can be used".to_string())
             }
