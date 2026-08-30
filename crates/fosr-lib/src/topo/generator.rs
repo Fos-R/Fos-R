@@ -43,8 +43,10 @@ impl TopologyTree {
         if let SubTopologyOrInternet::SubTopo(ref mut t) = child {
             let interco = match self.nodes[parent].value {
                 SubTopologyOrInternet::Internet => utils::sample_random_global_ip(rng),
-                SubTopologyOrInternet::SubTopo(_) => {
-                    alloc_ip_in_subnet(t, &mut self.nodes[parent].assigned).unwrap()
+                SubTopologyOrInternet::SubTopo(ref p) => {
+                    let ip = alloc_ip_in_subnet(p, &self.nodes[parent].assigned).unwrap();
+                    self.nodes[parent].assigned.insert(ip);
+                    ip
                 }
             };
 
@@ -263,7 +265,7 @@ fn node_address(node: &SubTopologyNode) -> Ipv4Addr {
 /// Allocate the first free host address in `parent`'s subnet
 fn alloc_ip_in_subnet(
     parent: &SubTopology,
-    assigned: &mut HashSet<Ipv4Addr>,
+    assigned: &HashSet<Ipv4Addr>,
 ) -> Result<Ipv4Addr, String> {
     if !(8..=30).contains(&parent.mask) {
         return Err(format!(
@@ -286,7 +288,6 @@ fn alloc_ip_in_subnet(
     for offset in 1..(size - 1) {
         let candidate = Ipv4Addr::from((network as u64 + offset) as u32);
         if !used.contains(&candidate) {
-            assigned.insert(candidate);
             return Ok(candidate);
         }
     }
