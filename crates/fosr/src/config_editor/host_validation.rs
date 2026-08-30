@@ -158,6 +158,10 @@ pub fn validate_host_network_placement(
 ///   min_mask = 24 → net_mask = 0xFFFFFF00
 ///   192.168.1.0 & 0xFFFFFF00 == 192.168.1.128 & 0xFFFFFF00 → overlap
 fn subnets_overlap(a: Ipv4Addr, mask_a: u8, b: Ipv4Addr, mask_b: u8) -> bool {
+    if mask_a == 0 || mask_b == 0 {
+        // one of them is internet
+        return false;
+    }
     let min_mask = mask_a.min(mask_b);
     // Build a bitmask with the top `min_mask` bits set to 1:
     //   32 - min_mask = number of host bits

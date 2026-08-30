@@ -4,11 +4,10 @@
 
 use crate::L7Proto;
 use crate::network::{
-    HostType, HostYaml, INTERNET_NETWORK_NAME, InterfaceYaml, Metadata, Network, NetworkYaml,
+    HostType, HostYaml, InterfaceYaml, Metadata, Network, NetworkYaml,
     SubNetworkYaml, next_ui_id,
 };
 use crate::topo::subtopo::{SubTopologyNode, SubTopologyOrInternet};
-use std::net::Ipv4Addr;
 
 impl From<Vec<SubTopologyOrInternet>> for NetworkYaml {
     fn from(topology: Vec<SubTopologyOrInternet>) -> Self {
@@ -16,13 +15,7 @@ impl From<Vec<SubTopologyOrInternet>> for NetworkYaml {
         for st in &topology {
             match st {
                 SubTopologyOrInternet::Internet => {
-                    networks.push(SubNetworkYaml {
-                        ui_id: next_ui_id(),
-                        subnet: Ipv4Addr::UNSPECIFIED,
-                        mask: 0,
-                        name: INTERNET_NETWORK_NAME.to_string(),
-                        hosts: vec![],
-                    });
+                    // no included in the network file
                 }
                 SubTopologyOrInternet::SubTopo(st) => {
                     let mut hosts = Vec::with_capacity(st.nodes.len() + 1);

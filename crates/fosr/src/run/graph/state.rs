@@ -309,7 +309,9 @@ impl NetworkData {
     pub fn from_config(config: &network::Network, mode: SubnetDisplayMode) -> Self {
         let mut data = Self::default();
         let has_internet_hosts = data.add_host_nodes(config);
-        data.add_internet_node(has_internet_hosts);
+        if config.has_internet_access {
+            data.add_internet_node(has_internet_hosts);
+        }
         data.distribute_layout(mode);
         data.add_edges(config);
         data
@@ -561,11 +563,6 @@ impl NetworkData {
 
     /// Add edges between users and servers per service, plus edges to Internet.
     fn add_edges(&mut self, config: &network::Network) {
-        let internet_idx = self
-            .ip_to_node
-            .get(&INTERNET_NODE_IP)
-            .expect("Internet node must exist");
-
         for service in &config.services {
             let servers = config.get_servers_per_service(service);
 
@@ -580,15 +577,16 @@ impl NetworkData {
                 }
             }
         }
-
-        // Add edges from all user and server nodes to Internet
-        let mut connected_to_internet: HashSet<NodeIndex> = HashSet::new();
-        for &ip in config.users.iter().chain(config.servers.iter()) {
-            if let Some(&idx) = self.ip_to_node.get(&ip)
-                && connected_to_internet.insert(idx)
-            {
-                self.graph
-                    .add_edge(idx, *internet_idx, NetworkEdge::default());
+        if let Some(internet_idx) = self.ip_to_node.get(&INTERNET_NODE_IP) {
+            // Add edges from all user and server nodes to Internet
+            let mut connected_to_internet: HashSet<NodeIndex> = HashSet::new();
+            for &ip in config.users.iter().chain(config.servers.iter()) {
+                if let Some(&idx) = self.ip_to_node.get(&ip)
+                    && connected_to_internet.insert(idx)
+                {
+                    self.graph
+                        .add_edge(idx, *internet_idx, NetworkEdge::default());
+                }
             }
         }
     }
