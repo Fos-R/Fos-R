@@ -49,6 +49,14 @@ impl Models {
         })
     }
 
+    pub fn from_source_for_transfer_learning(source: &ModelsSource) -> Result<Self, String> {
+        Ok(Models {
+            bn: stage2::bayesian_networks::BayesianModel::from_source_for_transfer_learning(source)?,
+            time_bins: stage1::TimeModel::from_source(source)?,
+            automata: stage3::tadam::AutomataLibrary::from_source(source)?,
+        })
+    }
+
     pub fn from_source_with_network(source: &ModelsSource, network: Network) -> Result<Self, String> {
         let m = Models {
             bn: stage2::bayesian_networks::BayesianModel::from_source_for_transfer_learning(source)?.with_network(&network)?,
