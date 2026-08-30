@@ -19,10 +19,79 @@ use crate::shared::constants::ui::*;
 #[cfg(not(target_arch = "wasm32"))]
 use close_dialog::render_close_confirmation_dialog;
 use eframe::egui;
+use fosr_lib::topo::config::GenerationParameters;
+use fosr_lib::topo::config::Service;
+use fosr_lib::topo::generator::TopologyGenerator;
+
+#[derive(Debug, Default, Clone)]
+pub struct TopologyGeneration {
+    min_subnets: usize,
+    min_nodes: usize,
+    tree_depth: usize,
+    with_web_server: bool,
+    with_ftp_server: bool,
+    with_mail_server: bool,
+    with_cloud_storage: bool,
+    with_log_server: bool,
+    with_dbms_server: bool,
+    with_cms_server: bool,
+    with_proxy_server: bool,
+    with_ldap_server: bool,
+    with_dns_server: bool,
+    with_ssh_server: bool,
+    generation_failed: bool,
+}
+
+impl TopologyGeneration {
+    fn get_generation_parameters(&self) -> GenerationParameters {
+        let mut services: Vec<Service> = vec![];
+        if self.with_web_server {
+            services.push(Service::WebServer);
+        }
+        if self.with_ftp_server {
+            services.push(Service::FtpServer);
+        }
+        if self.with_mail_server {
+            services.push(Service::MailServer);
+        }
+        if self.with_cloud_storage {
+            services.push(Service::CloudStorage);
+        }
+        if self.with_log_server {
+            services.push(Service::LogServer);
+        }
+        if self.with_dbms_server {
+            services.push(Service::DbmsServer);
+        }
+        if self.with_cms_server {
+            services.push(Service::CmsServer);
+        }
+        if self.with_proxy_server {
+            services.push(Service::ProxyServer);
+        }
+        if self.with_ldap_server {
+            services.push(Service::LdapServer);
+        }
+        if self.with_dns_server {
+            services.push(Service::DnsServer);
+        }
+        if self.with_ssh_server {
+            services.push(Service::SshServer);
+        }
+
+        GenerationParameters {
+            minimum_sub_topology: self.min_subnets,
+            minimum_node_count: self.min_nodes,
+            tree_depth: self.tree_depth,
+            services,
+        }
+    }
+}
 
 pub enum ViewState {
     Welcome,
     TemplateSelection,
+    TemplateGeneration,
     GraphTab,
     ConfigTab,
     Exit,
@@ -75,8 +144,11 @@ pub struct ExtraModals {
 /// // TODO: découpler la vue (machine à état) et le modèle
 pub struct FosrApp {
     // View
+    pub topology_generation: TopologyGeneration,
+    pub generator: TopologyGenerator,
     pub view_state: ViewState,
     pub extra_modals: ExtraModals,
+    // pub network_generation_options: GenerationParameters,
     // view_options: ViewOptions,
     #[cfg(not(target_arch = "wasm32"))]
     pub allowed_to_close: bool,
@@ -98,7 +170,16 @@ pub struct FosrApp {
 
 impl FosrApp {
     pub fn new(ctx: &egui::Context) -> Self {
+        let mut topology_generation = TopologyGeneration::default();
+        topology_generation.with_cms_server = true;
+        topology_generation.with_dns_server = true;
+        topology_generation.min_subnets = 3;
+        topology_generation.min_nodes = 10;
+        topology_generation.tree_depth = 2;
+
         let app = FosrApp {
+            generator: TopologyGenerator::new(fosr_lib::topo::sub_topology::get_default_subtopos()),
+            topology_generation,
             view_state: ViewState::Welcome,
             // view_options: ViewOptions { zoom_factor: ZOOM_DEFAULT },
             extra_modals: ExtraModals::default(),
@@ -231,6 +312,10 @@ impl eframe::App for FosrApp {
             ViewState::TemplateSelection => {
                 egui::CentralPanel::default().show(ctx, |_ui| {});
                 startup_modal::render_template_selection_modal(ctx, self)
+            }
+            ViewState::TemplateGeneration => {
+                egui::CentralPanel::default().show(ctx, |_ui| {});
+                startup_modal::render_template_generation(ctx, self)
             }
             ViewState::GraphTab => {
                 // Main UI
