@@ -29,8 +29,8 @@ pub fn render_hosts_section(ui: &mut egui::Ui, model: &mut NetworkYaml) {
     let mut network_to_remove: Option<usize> = None;
 
     if ui
-        .button(format!("{} Add network", ICON_ADD))
-        .on_hover_text("Add a new network")
+        .button(format!("{} Add subnet", ICON_ADD))
+        .on_hover_text("Add a new subnetwork")
         .clicked()
     {
         let net_count = model.networks.len();

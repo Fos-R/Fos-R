@@ -1,6 +1,6 @@
 //! Network tab: toggles between visual mode and YAML editor.
 
-use crate::config_editor::state::ConfigurationTabState;
+use crate::app::FosrApp;
 use crate::config_editor::toolbar::render_configuration_toolbar;
 use crate::config_editor::{host, host_validation, yaml_editor};
 use crate::shared::config::file_ops::load_config_file_contents;
@@ -15,24 +15,21 @@ use egui_material_icons::icons::ICON_WARNING;
 use fosr_lib::network::NetworkYaml;
 
 /// The main tab component
-pub fn render_configuration_tab(
-    ui: &mut egui::Ui,
-    tab_state: &mut ConfigurationTabState,
-    file_state: &mut ConfigFileState,
-) {
+pub fn render_configuration_tab(ui: &mut egui::Ui, state: &mut FosrApp) {
     // Eagerly load config file contents when a file is selected
-    load_config_file_contents(file_state);
+    load_config_file_contents(&mut state.config_file_state);
 
     // Toolbar stays fixed above the scroll area
-    render_configuration_toolbar(ui, tab_state, file_state);
+    render_configuration_toolbar(ui, state);
 
+    let mut file_state = &mut state.config_file_state;
     render_parse_error_banner(ui, file_state);
 
     ui.separator();
 
     if file_state.config_chosen {
         egui::ScrollArea::vertical().show(ui, |ui| {
-            if !tab_state.is_code_mode {
+            if !state.configuration_tab_state.is_code_mode {
                 // Visual mode
                 if let Some(model) = file_state.config_model.as_mut() {
                     host::render_hosts_section(ui, model);

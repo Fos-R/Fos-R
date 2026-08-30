@@ -1,8 +1,8 @@
 //! Configuration toolbar UI: file picker, template menu, save button, and mode toggle.
 
+use crate::app::{FosrApp, ViewState};
 use crate::config_editor::state::ConfigurationTabState;
-use crate::config_templates::{load_empty_config, load_template};
-use crate::shared::config::file_ops::{enforce_metadata_defaults, trigger_file_import};
+use crate::shared::config::file_ops::enforce_metadata_defaults;
 use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::COLOR_WARNING;
 use crate::shared::constants::ui::SPACING_LG;
@@ -12,10 +12,7 @@ use crate::shared::file_io::save_file_desktop;
 use crate::shared::file_io::save_file_wasm;
 use crate::shared::widgets::helpers::labeled_toggle;
 use eframe::egui;
-use egui_material_icons::icons::{
-    ICON_CODE, ICON_DELETE, ICON_DESCRIPTION, ICON_EDIT, ICON_FOLDER_OPEN, ICON_SAVE_AS,
-    ICON_WARNING,
-};
+use egui_material_icons::icons::{ICON_CODE, ICON_DELETE, ICON_EDIT, ICON_SAVE_AS, ICON_WARNING};
 
 #[cfg(target_arch = "wasm32")]
 use crate::shared::config::file_ops::poll_file_import;
@@ -24,80 +21,88 @@ use crate::shared::config::file_ops::poll_file_import;
 ///
 /// Displays a file picker button, a template selection dropdown menu,
 /// the selected file name and a Visual/Code mode toggle.
-pub fn render_configuration_toolbar(
-    ui: &mut egui::Ui,
-    tab_state: &mut ConfigurationTabState,
-    state: &mut ConfigFileState,
-) {
+pub fn render_configuration_toolbar(ui: &mut egui::Ui, state: &mut FosrApp) {
     ui.horizontal(|ui| {
-        render_file_import_button(ui, state);
-        render_template_menu_button(ui, state);
-        render_clear_all_button(ui, state);
-        render_file_save_button(ui, state);
-        render_filename(ui, state);
-        render_mode_toggle_button(ui, tab_state);
+        render_change_network(ui, state);
+        // render_file_import_button(ui, state);
+        // render_template_menu_button(ui, state);
+        // render_clear_all_button(ui, state);
+        render_file_save_button(ui, &mut state.config_file_state);
+        render_filename(ui, &state.config_file_state);
+        render_mode_toggle_button(ui, &mut state.configuration_tab_state);
     });
 }
 
-/// File import button with folder icon.
-///
-/// Opens a file picker dialog to select a configuration file.
-/// On WASM, polls the async file picker result.
-fn render_file_import_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
-    let (label, tooltip) = if cfg!(target_arch = "wasm32") {
-        ("Load", "Load a configuration file from your device")
-    } else {
-        ("Open", "Open a configuration file from disk")
-    };
-    let button_text = format!("{} {label}", ICON_FOLDER_OPEN);
-    if ui.button(&button_text).on_hover_text(tooltip).clicked() {
-        trigger_file_import(state, ui.ctx());
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    poll_file_import(state);
-}
-
-/// Template menu button with document icon.
-///
-/// Dropdown menu listing available configuration templates.
-/// Clicking a template loads it into the editor.
-fn render_template_menu_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
-    let label = format!("{} Template", ICON_DESCRIPTION);
-    let template_menu = ui.menu_button(&label, |menu_ui| {
-        let mut template_to_load = None;
-        for template in state.all_templates.iter() {
-            if menu_ui
-                .button(template.metadata.title.to_string())
-                .clicked()
-            {
-                menu_ui.close();
-                template_to_load = Some(template.clone());
-            }
-        }
-        if let Some(template_to_load) = template_to_load {
-            load_template(state, &template_to_load);
-        }
-    });
-    template_menu
-        .response
-        .on_hover_text("Choose a template configuration to open");
-}
-
-/// Clear all button to reset the configuration to an empty state.
-fn render_clear_all_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
-    if state.config_model.is_none() {
-        return;
-    }
-    let label = format!("{} Clear all", ICON_DELETE);
+fn render_change_network(ui: &mut egui::Ui, state: &mut FosrApp) {
+    let button_text = format!("{} Discard network", ICON_DELETE);
     if ui
-        .button(&label)
-        .on_hover_text("Reset to a blank configuration")
+        .button(&button_text)
+        .on_hover_text("Return to the welcome screen")
         .clicked()
     {
-        load_empty_config(state);
+        state.view_state = ViewState::Welcome;
     }
 }
+
+// /// File import button with folder icon.
+// ///
+// /// Opens a file picker dialog to select a configuration file.
+// /// On WASM, polls the async file picker result.
+// fn render_file_import_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
+//     let (label, tooltip) = if cfg!(target_arch = "wasm32") {
+//         ("Load", "Load a configuration file from your device")
+//     } else {
+//         ("Open", "Open a configuration file from disk")
+//     };
+//     let button_text = format!("{} {label}", ICON_FOLDER_OPEN);
+//     if ui.button(&button_text).on_hover_text(tooltip).clicked() {
+//         trigger_file_import(state, ui.ctx());
+//     }
+
+//     #[cfg(target_arch = "wasm32")]
+//     poll_file_import(state);
+// }
+
+// /// Template menu button with document icon.
+// ///
+// /// Dropdown menu listing available configuration templates.
+// /// Clicking a template loads it into the editor.
+// fn render_template_menu_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
+//     let label = format!("{} Template", ICON_DESCRIPTION);
+//     let template_menu = ui.menu_button(&label, |menu_ui| {
+//         let mut template_to_load = None;
+//         for template in state.all_templates.iter() {
+//             if menu_ui
+//                 .button(template.metadata.title.to_string())
+//                 .clicked()
+//             {
+//                 menu_ui.close();
+//                 template_to_load = Some(template.clone());
+//             }
+//         }
+//         if let Some(template_to_load) = template_to_load {
+//             load_template(state, &template_to_load);
+//         }
+//     });
+//     template_menu
+//         .response
+//         .on_hover_text("Choose a template configuration to open");
+// }
+
+// /// Clear all button to reset the configuration to an empty state.
+// fn render_clear_all_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
+//     if state.config_model.is_none() {
+//         return;
+//     }
+//     let label = format!("{} Clear all", ICON_DELETE);
+//     if ui
+//         .button(&label)
+//         .on_hover_text("Reset to a blank configuration")
+//         .clicked()
+//     {
+//         load_empty_config(state);
+//     }
+// }
 
 /// Save button with "Save as" functionality.
 ///
@@ -127,7 +132,7 @@ fn render_file_save_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
             .picked_config_file
             .as_ref()
             .map(|f| f.file_name())
-            .unwrap_or_else(|| "config.yaml".to_string());
+            .unwrap_or_else(|| "network.yaml".to_string());
 
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -142,7 +147,7 @@ fn render_file_save_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
                     state.loaded_template_id = None;
                 }
                 Err(e) => {
-                    log::error!("Failed to save config: {}", e);
+                    log::warn!("Failed to save config: {}", e);
                 }
             }
         }
@@ -153,7 +158,7 @@ fn render_file_save_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
             wasm_bindgen_futures::spawn_local(async move {
                 match save_file_wasm(content_clone.as_bytes(), &default_name).await {
                     Ok(_) => log::info!("Config saved"),
-                    Err(e) => log::error!("Failed to save config: {}", e),
+                    Err(e) => log::warn!("Failed to save config: {}", e),
                 }
             });
             // Difficult to retrieve the success status out of the thread.
