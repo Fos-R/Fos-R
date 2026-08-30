@@ -1,7 +1,7 @@
 use crate::models;
 use crate::network;
-use crate::utils;
 use crate::stage2::*;
+use crate::utils;
 
 use chrono::Timelike;
 use pnet::util::MacAddr;
@@ -261,13 +261,15 @@ impl BayesianNetwork {
                             Feature::SrcIp(v) => match v[i] {
                                 AnonymizedIpv4Addr::Local(p) => domain_vector.src_ip = Some(p),
                                 AnonymizedIpv4Addr::Public => {
-                                    domain_vector.src_ip = Some(utils::sample_random_global_ip(rng));
+                                    domain_vector.src_ip =
+                                        Some(utils::sample_random_global_ip(rng));
                                 }
                             },
                             Feature::DstIp(v) => match v[i] {
                                 AnonymizedIpv4Addr::Local(p) => domain_vector.dst_ip = Some(p),
                                 AnonymizedIpv4Addr::Public => {
-                                    domain_vector.dst_ip = Some(utils::sample_random_global_ip(rng));
+                                    domain_vector.dst_ip =
+                                        Some(utils::sample_random_global_ip(rng));
                                 }
                             },
                             Feature::DstPt(v) => match v[i] {
@@ -380,6 +382,7 @@ impl BayesianNetwork {
 }
 
 /// The model with all the data
+#[allow(clippy::large_enum_variant)]
 pub enum BayesianModel {
     DatasetSpecific {
         bn: BayesianNetwork,
@@ -635,7 +638,6 @@ impl BayesianModel {
             }
         }
     }
-
 }
 
 fn bn_from_bif(network: bifxml::Network) -> Result<(BayesianNetwork, usize), String> {

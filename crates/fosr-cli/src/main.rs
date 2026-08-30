@@ -221,7 +221,7 @@ fn main() -> Result<(), String> {
             outfile,
             min_subnets,
             min_nodes,
-            tree_depth,
+            // tree_depth,
             no_internet_access,
             with_web_server,
             with_ftp_server,
@@ -274,7 +274,7 @@ fn main() -> Result<(), String> {
                 minimum_sub_topology: min_subnets,
                 minimum_node_count: min_nodes,
                 no_internet_access,
-                tree_depth,
+                // tree_depth,
                 services,
             };
             log::info!("Starting the topology generation");
