@@ -1,4 +1,5 @@
 use crate::structs::{L7Proto, L7ProtoWithPort, OS};
+use crate::utils;
 
 use include_dir::Dir;
 use include_dir::include_dir;
@@ -25,16 +26,16 @@ pub fn get_default_topologies() -> Vec<NetworkYaml> {
 }
 
 /// The configuration file of the network and the hosts
-/// TODO: clean useless attributes
 #[derive(Debug)]
 pub struct Network {
     /// The metadata of the configuration
     pub metadata: Metadata,
 
-    // /// The list of hosts
-    // pub hosts: Vec<Host>,
     /// The list of networks
     pub networks: Vec<SubNetwork>,
+
+    /// Whether this network can access the Internet
+    pub has_internet_access: bool,
 
     /// A hashmap that maps an IP to a MAC address (if it is defined in the config file)
     pub mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
@@ -54,12 +55,8 @@ pub struct Network {
     /// The list of services per server
     pub services_per_server: HashMap<(Ipv4Addr, L7Proto), Vec<L7ProtoWithPort>>,
 
-    // /// Overridden listening ports
-    // pub open_ports: HashMap<(Ipv4Addr, L7Proto), u16>,
     /// The list of servers that provide each service
     pub servers_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
-    // /// The list of users that use each service
-    // users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>>,
 }
 
 impl Network {
@@ -77,13 +74,6 @@ impl Network {
             .clone()
     }
 
-    // /// Get the list of users that use a service
-    // pub fn get_users_per_service(&self, service: &L7Proto) -> Vec<Ipv4Addr> {
-    //     self.users_per_service
-    //         .get(service)
-    //         .unwrap_or(&vec![])
-    //         .clone()
-    // }
 }
 
 /// A network in the simulation, containing resolved hosts.
@@ -143,9 +133,6 @@ pub struct Host {
     /// Its OS
     pub os: OS,
 
-    // client: Option<Vec<L7Proto>>, // we keep the option here, because there is a difference
-    // between an empty list (no service is used) and nothing
-    // (default services are used)
     /// The type of host (server or user)
     pub host_type: HostType,
 
@@ -171,10 +158,6 @@ pub struct Interface {
     pub services: Vec<L7ProtoWithPort>,
     /// Its IP address
     pub ip_addr: Ipv4Addr,
-    // /// The open ports of services, if they are not the default one
-    // pub open_ports: HashMap<L7Proto, u16>,
-    // /// The services it uses (may be empty)
-    // pub uses: Option<Vec<L7Proto>>,
 }
 
 /// Global counter for stable UI identifiers (not serialized to YAML).
@@ -290,8 +273,6 @@ pub struct InterfaceYaml {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub services: Option<Vec<String>>,
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    // pub uses: Option<Vec<String>>,
 }
 
 impl From<NetworkYaml> for Network {
@@ -347,6 +328,15 @@ impl From<NetworkYaml> for Network {
             HashMap::new();
         let mut users_per_service: HashMap<L7Proto, Vec<Ipv4Addr>> = HashMap::new();
 
+        let mut has_internet_access = false;
+        let local_hosts = networks.iter().flat_map(|n| n.hosts.iter());
+        for interface in local_hosts.flat_map(|h| &h.interfaces) {
+            if utils::is_global(&interface.ip_addr) {
+                has_internet_access = true;
+                break;
+            }
+        }
+
         let all_hosts = internet
             .iter()
             .chain(networks.iter().flat_map(|n| n.hosts.iter()));
@@ -372,30 +362,11 @@ impl From<NetworkYaml> for Network {
                 v.push(*s);
             }
         }
-
+ 
         let all_hosts = internet
             .iter()
             .chain(networks.iter().flat_map(|n| n.hosts.iter()));
         for host in all_hosts {
-            // for i in &host.interfaces {
-            // if let Some(client) = &i.uses {
-            //     // if a list is defined, then this host will only use these services
-            //     for s in client {
-            //         if services.contains(s) {
-            //             for interface in host.interfaces.iter() {
-            //                 users_per_service
-            //                     .entry(*s)
-            //                     .or_default()
-            //                     .push(interface.ip_addr);
-            //             }
-            //         } else {
-            //             log::warn!(
-            //                 "There is a client of {s:?}, but that service is not proposed by any server"
-            //             );
-            //         }
-            //     }
-            // } else {
-            // otherwise, use all available services
             for s in services.iter() {
                 for interface in host.interfaces.iter() {
                     users_per_service
@@ -404,8 +375,6 @@ impl From<NetworkYaml> for Network {
                         .push(interface.ip_addr)
                 }
             }
-            // }
-            // }
         }
 
         for service in services.iter() {
@@ -413,15 +382,15 @@ impl From<NetworkYaml> for Network {
             assert!(users_per_service.contains_key(service));
         }
 
-        // let hosts = c.internet.into_iter().chain(c.networks.into_iter().map(|n| n.hosts.into_iter()).flatten()).collect();
-
         let mut all_networks = networks;
-        all_networks.push(SubNetwork {
-            subnet: Ipv4Addr::UNSPECIFIED, // 0.0.0.0
-            mask: 0,
-            name: INTERNET_NETWORK_NAME.to_string(),
-            hosts: internet,
-        });
+        if !internet.is_empty() {
+            all_networks.push(SubNetwork {
+                subnet: Ipv4Addr::UNSPECIFIED, // 0.0.0.0
+                mask: 0,
+                name: INTERNET_NETWORK_NAME.to_string(),
+                hosts: internet,
+            });
+        }
 
         Network {
             metadata: c.metadata,
@@ -433,6 +402,7 @@ impl From<NetworkYaml> for Network {
             services: services.into_iter().collect(),
             services_per_server,
             servers_per_service,
+            has_internet_access,
             // users_per_service,
             // open_ports,
         }
@@ -482,19 +452,6 @@ impl TryFrom<InterfaceYaml> for Interface {
             let service: L7ProtoWithPort = L7ProtoWithPort::from_str(s.as_str())?;
             services.push(service);
         }
-        // let uses = match i.uses {
-        //     None => None,
-        //     Some(l) => {
-        //         let mut uses = vec![];
-        //         for s in l {
-        //             let v: Vec<String> = s.as_str().split(':').map(ToString::to_string).collect();
-        //             assert!(!v.is_empty() && v.len() <= 2);
-        //             let service: L7Proto = L7Proto::from_str(&v[0])?;
-        //             uses.push(service);
-        //         }
-        //         Some(uses)
-        //     }
-        // };
 
         let mut rng = rand::rng(); //TODO: déterminisme
         let ip_addr = match i.ip_addr.as_str() {
@@ -540,112 +497,3 @@ pub fn reversibly_import_network(config_string: &str) -> NetworkYaml {
     config
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-
-//     #[test]
-//     fn test_config_simple() {
-//         let config = import_config(
-//             r#"
-// metadata:
-//   title: Sample configuration
-// hosts:
-//   - interfaces:
-//       - services:
-//           - https
-//           - ssh
-//         ip_addr: 192.168.0.8
-//   - interfaces:
-//       - ip_addr: 192.168.0.9
-// "#,
-//         );
-//         // TODO tester la config chargée
-//     }
-
-//     #[test]
-//     fn test_config_complex() {
-//         let config = import_config(
-//             r#"
-// metadata:
-//   title: Sample configuration # Mandatory. The title of the configuration file.
-//   desc: A sample configuration file to show all the different available fields # Optional. A description of the configuration file.
-//   author: Jane Doe # Optional. Author of the file.
-//   date: 2025/11/05 # Optional. Last modification date.
-//   version: 0.1.0 # Optional. The version number of this configuration file. Format is free.
-//   format: 1 # Reserved for now. The version will be bumped when the format changes.
-
-// hosts:
-//   - hostname: host1 # Optional. The hostname of the host.
-//     os: Linux # Optional (default value: Linux). The OS of the host
-//     type: server  # Optional (default value: "server" if there is at least one service, "user" otherwise). Whether this host is used by a user and is a server. Can be either "server" or "user"
-//     client: # Optional (default value: all available services if type is "user", none otherwise). Specify what services the host is a client of.
-//         - http
-//         - https
-//         - ssh
-//     interfaces:
-//       - mac_addr: 00:14:2A:3F:47:D8 # Optional. The MAC address of that interface
-//         services: # Optional (default value: empty list). The list of available services
-//           - http  # an HTTP server
-//           - https # an HTTPS server
-//           - ssh   # an SSH server
-//         ip_addr: 192.168.0.8 # Mandatory. The IP address of this interface.
-//       - ip_addr: 192.168.0.9 # This host has another interface that does not provide any service
-//   - interfaces:
-//       - ip_addr: 192.168.0.11 # Another host with a single interface
-// "#,
-//         );
-//         println!("{config:?}");
-//     }
-
-//     #[test]
-//     fn test_config_json() {
-//         let config = import_config(
-//             r#"
-// {
-//     "metadata": {
-//         "title": "Sample JSON configuration",
-//         "desc": "A sample configuration file to show all the different available fields",
-//         "author": "Jane Doe",
-//         "date": "2025/11/05",
-//         "version": "0.1.0",
-//         "format": 1
-//     },
-//     "hosts": [
-//         {
-//             "hostname": "host1",
-//             "os": "Linux",
-//             "type": "server",
-//             "client": [
-//                 "http",
-//                 "https",
-//                 "ssh"
-//             ],
-//             "interfaces": [
-//                 {
-//                     "mac_addr": "00:14:2A:3F:47:D8",
-//                     "services": [
-//                         "http",
-//                         "https",
-//                         "ssh"
-//                     ],
-//                     "ip_addr": "192.168.0.8"
-//                 },
-//                 {
-//                     "ip_addr": "192.168.0.9"
-//                 }
-//             ]
-//         },
-//         {
-//             "interfaces": [
-//                 {
-//                     "ip_addr": "192.168.0.11"
-//                 }
-//             ]
-//         }
-//     ]
-// }"#,
-//         );
-//         println!("{config:?}");
-//     }
-// }
