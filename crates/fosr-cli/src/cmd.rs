@@ -325,7 +325,6 @@ pub enum Command {
         #[arg(long, default_value_t = false, help = "At least one SSH server")]
         with_ssh_server: bool,
     },
-    #[cfg(feature = "unstable")]
     /// Create a pcap file for the described network. For deterministic generation,
     /// specify -t, --tz and --seed.
     #[clap(group(
