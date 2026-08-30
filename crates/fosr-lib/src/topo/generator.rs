@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use std::net::Ipv4Addr;
 
 use crate::topo::config::GenerationParameters;
-use crate::topo::sub_topology::{SubTopology, SubTopologyNode, SubTopologyOrInternet};
+use crate::topo::subtopo::{SubTopology, SubTopologyNode, SubTopologyOrInternet};
 use crate::utils;
 
 /// Tree for representing topology hierarchies
