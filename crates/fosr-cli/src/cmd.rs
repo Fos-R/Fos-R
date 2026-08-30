@@ -295,13 +295,13 @@ pub enum Command {
             help = "Minimum number of nodes in the topology"
         )]
         min_nodes: usize,
-        #[arg(
-            short = 'd',
-            long,
-            default_value_t = 2,
-            help = "Target depth of the topology"
-        )]
-        tree_depth: usize,
+        // #[arg(
+        //     short = 'd',
+        //     long,
+        //     default_value_t = 2,
+        //     help = "Target depth of the topology"
+        // )]
+        // tree_depth: usize,
         #[arg(long, default_value_t = false, help = "The topology has no Internet access")]
         no_internet_access: bool,
         #[arg(long, default_value_t = false, help = "At least one Web server")]

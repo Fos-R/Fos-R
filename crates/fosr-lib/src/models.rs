@@ -1,3 +1,4 @@
+use crate::network::Network;
 use crate::{network, stage1, stage2, stage3};
 #[allow(unused_imports)]
 use include_dir::include_dir;
@@ -6,7 +7,6 @@ use include_dir::{Dir, DirEntry};
 use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
-use crate::network::Network;
 
 /// The source of models
 pub enum ModelsSource {
@@ -51,29 +51,39 @@ impl Models {
 
     pub fn from_source_for_transfer_learning(source: &ModelsSource) -> Result<Self, String> {
         Ok(Models {
-            bn: stage2::bayesian_networks::BayesianModel::from_source_for_transfer_learning(source)?,
+            bn: stage2::bayesian_networks::BayesianModel::from_source_for_transfer_learning(
+                source,
+            )?,
             time_bins: stage1::TimeModel::from_source(source)?,
             automata: stage3::tadam::AutomataLibrary::from_source(source)?,
         })
     }
 
-    pub fn from_source_with_network(source: &ModelsSource, network: Network) -> Result<Self, String> {
+    pub fn from_source_with_network(
+        source: &ModelsSource,
+        network: Network,
+    ) -> Result<Self, String> {
         let m = Models {
-            bn: stage2::bayesian_networks::BayesianModel::from_source_for_transfer_learning(source)?.with_network(&network)?,
+            bn: stage2::bayesian_networks::BayesianModel::from_source_for_transfer_learning(
+                source,
+            )?
+            .with_network(&network)?,
             time_bins: stage1::TimeModel::from_source(source)?,
             automata: stage3::tadam::AutomataLibrary::from_source(source)?,
         };
         Ok(m)
     }
 
-    pub fn from_source_with_path_network(source: &ModelsSource, path: &str) -> Result<Self, String> {
+    pub fn from_source_with_path_network(
+        source: &ModelsSource,
+        path: &str,
+    ) -> Result<Self, String> {
         let network = network::import_network(
             &fs::read_to_string(Path::new(path))
                 .map_err(|e| format!("Cannot open the network file: {e}"))?,
         );
         Self::from_source_with_network(source, network)
     }
-
 
     pub fn from_source_with_string_network(
         source: &ModelsSource,

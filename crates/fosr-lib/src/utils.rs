@@ -5,6 +5,7 @@ use pcap_file::pcap;
 use pnet_packet::Packet;
 use pnet_packet::ip::IpNextHeaderProtocols;
 use pnet_packet::{ethernet, ipv4, tcp, udp};
+use rand::Rng;
 use std::collections::HashMap;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -13,7 +14,6 @@ use std::io::BufWriter;
 use std::io::Write;
 use std::net::Ipv4Addr;
 use std::time::Duration;
-use rand::Rng;
 
 const DURATION_THRESHOLD: Duration = Duration::from_secs(600);
 
@@ -529,5 +529,3 @@ pub fn sample_random_global_ip(rng: &mut impl Rng) -> Ipv4Addr {
     }
     addr
 }
-
-

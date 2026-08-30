@@ -15,8 +15,8 @@ pub struct GenerationParameters {
     pub minimum_sub_topology: usize,
     /// Minimal number of node to generate, hard constraint
     pub minimum_node_count: usize,
-    /// Target depth of the topology tree
-    pub tree_depth: usize,
+    // /// Target depth of the topology tree
+    // pub tree_depth: usize,
     /// List of services to include in the topology
     /// A service to include in the topology (e.g. http server, mailing server...)
     pub services: Vec<Service>,

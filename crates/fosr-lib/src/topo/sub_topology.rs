@@ -6,9 +6,9 @@ use include_dir::{DirEntry, include_dir};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    utils,
     OS,
     topo::config::{NodeType, Service, SubTopologyParameters},
+    utils,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -23,6 +23,7 @@ pub struct SubTopology {
 }
 
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum SubTopologyOrInternet {
     SubTopo(SubTopology),
     Internet,
