@@ -63,7 +63,7 @@ fn save_screenshot_as_png(image: &egui::ColorImage) {
                         log::info!("Exported graph to {}", file_handle.path().to_string_lossy());
                     }
                     Err(e) => {
-                        log::error!("Failed to save graph PNG: {:?}", e);
+                        log::warn!("Failed to save graph PNG: {:?}", e);
                     }
                 }
             }
@@ -74,11 +74,11 @@ fn save_screenshot_as_png(image: &egui::ColorImage) {
                 wasm_bindgen_futures::spawn_local(async move {
                     match crate::shared::file_io::save_file_wasm(&buffer, &filename_clone).await {
                         Ok(_) => log::info!("Exported graph to {}", filename_clone),
-                        Err(e) => log::error!("Failed to save PNG on WASM: {:?}", e),
+                        Err(e) => log::warn!("Failed to save PNG on WASM: {:?}", e),
                     }
                 });
             }
         }
-        Err(e) => log::error!("Failed to write PNG to buffer: {}", e),
+        Err(e) => log::warn!("Failed to write PNG to buffer: {}", e),
     }
 }

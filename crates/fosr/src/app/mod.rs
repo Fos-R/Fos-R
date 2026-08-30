@@ -170,12 +170,7 @@ pub struct FosrApp {
 
 impl FosrApp {
     pub fn new(ctx: &egui::Context) -> Self {
-        let mut topology_generation = TopologyGeneration::default();
-        topology_generation.with_cms_server = true;
-        topology_generation.with_dns_server = true;
-        topology_generation.min_subnets = 3;
-        topology_generation.min_nodes = 10;
-        topology_generation.tree_depth = 2;
+        let topology_generation = TopologyGeneration { with_cms_server: true, with_dns_server: true, min_subnets: 3, min_nodes: 10, tree_depth: 2, ..Default::default() };
 
         let app = FosrApp {
             generator: TopologyGenerator::new(fosr_lib::topo::sub_topology::get_default_subtopos()),
@@ -331,11 +326,7 @@ impl eframe::App for FosrApp {
                 egui::CentralPanel::default().show(ctx, |ui| {
                     // Wrap in ScrollArea for vertical scrolling
                     egui::ScrollArea::vertical().show(ui, |ui| {
-                        render_configuration_tab(
-                            ui,
-                            &mut self.configuration_tab_state,
-                            &mut self.config_file_state,
-                        );
+                        render_configuration_tab(ui, self);
                     });
                 });
             }

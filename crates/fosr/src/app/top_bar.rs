@@ -67,18 +67,18 @@ fn render_config_tab_button(
     is_selected: bool,
 ) {
     let label = if has_errors {
-        egui::RichText::new("⚠ Configuration")
+        egui::RichText::new("⚠ Network Editor")
             .color(COLOR_ERROR)
             .size(text_size)
     } else {
-        egui::RichText::new("Configuration").size(text_size)
+        egui::RichText::new("Network Editor").size(text_size)
     };
 
     let button = egui::Button::new(label).selected(is_selected);
 
     if ui
         .add(button)
-        .on_hover_text("Edit the network configuration: hosts, interfaces, and services.")
+        .on_hover_text("Edit the network: hosts, interfaces, and services.")
         .clicked()
     {
         state.change_view(ViewState::ConfigTab);
@@ -95,12 +95,12 @@ pub fn render_tab_buttons(ui: &mut egui::Ui, state: &mut FosrApp) {
     render_tab_button(
         ui,
         text_size,
-        "Run",
+        "View & Run",
         state,
         AppTab::Run,
         state.get_current_tab() == Some(AppTab::Run),
         run_enabled,
-        "Live preview and PCAP generation from the current configuration.",
+        "Live preview and PCAP generation for the current network.",
         if has_errors {
             "Configuration is invalid. Fix errors in the Configuration tab to enable Run."
         } else {

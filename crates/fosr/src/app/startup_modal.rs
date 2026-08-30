@@ -166,7 +166,8 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
         //     info_icon_with_tooltip(ui, "Beginning time of the pcap. By default, use the current time. For deterministic generation, you must specify this along with duration, timezone and seed.");
 
         // });
-        ui.label("Services in the network");
+        ui.label("Services present in the network");
+        ui.add_space(SPACING_SM);
         ui.columns(3, |cols| {
             cols[0].checkbox(&mut state.topology_generation.with_web_server, "Web server");
             cols[1].checkbox(&mut state.topology_generation.with_ftp_server, "FTP server");
@@ -205,7 +206,7 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
             cols[1].checkbox(&mut state.topology_generation.with_dns_server, "DNS server");
         });
 
-        ui.add_space(SPACING_MD);
+        ui.add_space(SPACING_XL);
         ui.add(
             egui::Slider::new(&mut state.topology_generation.min_subnets, 1..=200)
                 .text("Minimum number of subnets"),
@@ -268,8 +269,9 @@ pub fn render_template_selection_modal(ctx: &egui::Context, state: &mut FosrApp)
             if ui.button(ICON_ARROW_BACK).on_hover_text("Back").clicked() {
                 state.change_view(ViewState::Welcome);
             }
-            ui.heading("Choose a template");
+            ui.heading("Choose a default network");
         });
+        ui.separator();
 
         ui.add_space(SPACING_XL);
 
