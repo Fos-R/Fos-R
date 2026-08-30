@@ -138,7 +138,6 @@ fn main() -> Result<(), String> {
                 source,
             );
         }
-        #[cfg(feature = "unstable")]
         cmd::Command::CreatePcap {
             seed,
             outfile,
@@ -161,7 +160,7 @@ fn main() -> Result<(), String> {
                 default_models.unwrap().get_source() // we are sure it contains something
             };
 
-            let model = models::Models::from_source_with_network(&source, &network)?;
+            let model = models::Models::from_source_with_path_network(&source, &network)?;
 
             generate_pcap(
                 duration,
