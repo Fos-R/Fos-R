@@ -1,9 +1,7 @@
 //! About tab: Fos-R information, usage guide, and repository links.
 
 use crate::shared::assets::*;
-use crate::shared::constants::ui::{
-    LOGO_MAX_HEIGHT, SPACING_SM, SPACING_XXL,
-};
+use crate::shared::constants::ui::{LOGO_MAX_HEIGHT, SPACING_SM, SPACING_XXL};
 use eframe::egui;
 
 /// Renders the About modal with application info and repository links.

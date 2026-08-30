@@ -79,6 +79,9 @@ pub const MODAL_WIDTH_MD: f32 = 400.0;
 /// Default modal width (px) - template selection
 pub const MODAL_WIDTH_MD_TEMPLATE_SELECTION: f32 = 670.0;
 
+/// Default modal width (px) - template generation
+pub const MODAL_WIDTH_MD_TEMPLATE_GENERATION: f32 = 350.0;
+
 /// Node info modal width (px)
 pub const NODE_MODAL_WIDTH: f32 = 250.0;
 
@@ -165,8 +168,8 @@ pub const STARTUP_COLUMNS_TEMPLATES: usize = 5;
 // ABOUT TAB
 // ============================================================================
 
-/// Logo max width in about tab (px)
-pub const LOGO_MAX_WIDTH: f32 = 350.0;
+// /// Logo max width in about tab (px)
+// pub const LOGO_MAX_WIDTH: f32 = 350.0;
 
 /// Logo max height in about tab (px)
 pub const LOGO_MAX_HEIGHT: f32 = 70.0;
