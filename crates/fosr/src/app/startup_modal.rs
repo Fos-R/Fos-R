@@ -12,6 +12,7 @@ use eframe::egui;
 use egui_material_icons::icons::{
     ICON_ARROW_BACK, ICON_EDIT, ICON_LAN, ICON_MAGIC_BUTTON, ICON_PLAY_ARROW, ICON_UPLOAD_FILE,
 };
+use crate::shared::widgets::helpers::info_icon_with_tooltip;
 
 /// Builds the frame style for a startup card based on hover state.
 fn card_frame_for_hover(ui: &egui::Ui, is_hovered: bool) -> egui::Frame {
@@ -135,7 +136,7 @@ pub fn render_initial_modal(ctx: &egui::Context, state: &mut FosrApp) -> bool {
                     "Load a network configuration from a file",
                     STARTUP_CARD_INITIAL_HEIGHT,
                 ) {
-                    trigger_file_import(&mut state.config_file_state, cols[2].ctx());
+                    trigger_file_import(&mut state.config_file_state, cols[1].ctx());
                 }
             });
 
@@ -207,20 +208,25 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
         });
 
         ui.add_space(SPACING_XL);
-        ui.checkbox(
-            &mut state.topology_generation.internet_access,
-            "Internet access",
-        );
+        ui.horizontal(|ui| {
+            ui.checkbox(
+                &mut state.topology_generation.internet_access,
+                "Internet access",
+            );
+            info_icon_with_tooltip(ui, "Ensure the network has a public IP and generate flows to and from the Internet.");
+        });
 
         ui.add_space(SPACING_XL);
         ui.add(
-            egui::Slider::new(&mut state.topology_generation.min_subnets, 1..=200)
-                .text("Minimum number of subnets"),
+            egui::Slider::new(&mut state.topology_generation.min_subnets, 1..=50)
+                .text("Minimum number of subnets")
+                .logarithmic(true),
         );
         ui.add_space(SPACING_SM);
         ui.add(
             egui::Slider::new(&mut state.topology_generation.min_nodes, 1..=1000)
-                .text("Minimum number of machines"),
+                .text("Minimum number of machines")
+                .logarithmic(true),
         );
 
         ui.add_space(SPACING_LG);

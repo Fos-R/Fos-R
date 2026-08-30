@@ -88,7 +88,7 @@ pub struct TransferLearningExtraData {
     mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
 }
 
-#[derive(Debug, Clone, Copy, EnumString)]
+#[derive(Debug, Clone, Copy, EnumString, PartialEq, Eq)]
 #[strum(
     parse_err_fn = String::from,
     parse_err_ty = String
@@ -99,7 +99,7 @@ enum SrcIpRole {
     Internet,
 }
 
-#[derive(Debug, Clone, Copy, EnumString)]
+#[derive(Debug, Clone, Copy, EnumString, PartialEq, Eq)]
 #[strum(
     parse_err_fn = String::from,
     parse_err_ty = String
@@ -461,6 +461,96 @@ impl BayesianModel {
             | BayesianModel::ForTransferLearning {
                 base_bn, bin_count, ..
             } => {
+                let mut bn = base_bn.clone();
+
+                for node in bn.nodes.iter_mut() {
+                    // we set the probability of absent services to 0
+                    if let Feature::L7Proto(v) = &mut node.feature {
+                        // get services present in the network
+                        for s in network.services.iter() {
+                            if !v.contains(s) {
+                                log::warn!(
+                                    "Service {s:?} is not present in the original dataset and will not be generated"
+                                );
+                            }
+                        }
+                        // create a list of all the indices to set the probability to 0
+                        let weight_update: Vec<(usize, &f64)> = v
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(index, proto)| {
+                                if network.services.contains(proto) {
+                                    None
+                                } else {
+                                    Some((index, &0.0f64))
+                                }
+                            })
+                            .collect();
+                        // modify all the probability distributions
+                        for cpt in node.cpt.as_mut().unwrap().iter_mut() {
+                            if let Some(weights) = cpt {
+                                let result = weights.update_weights(&weight_update);
+                                // log::error!("Valeur impossible après mise à jour des distributions");
+                                if result.is_err() {
+                                    *cpt = None;
+                                }
+                            }
+                        }
+                    } else if !network.has_internet_access && let Feature::SrcIpRole(v) = &mut node.feature {
+                        // No internet access? Then set the probability of the Internet role to
+                        // zero
+                        let weight_update: Vec<(usize, &f64)> = v
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(index, role)| {
+                                if role == &SrcIpRole::Internet {
+                                    Some((index, &0.0f64))
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        // modify all the probability distributions
+                        for cpt in node.cpt.as_mut().unwrap().iter_mut() {
+                            if let Some(weights) = cpt {
+                                let result = weights.update_weights(&weight_update);
+                                // log::error!("Valeur impossible après mise à jour des distributions");
+                                if result.is_err() {
+                                    *cpt = None;
+                                }
+                            }
+                        }
+                    } else if !network.has_internet_access && let Feature::DstIpRole(v) = &mut node.feature {
+                        // Same for DstIpRole
+                        let weight_update: Vec<(usize, &f64)> = v
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(index, role)| {
+                                if role == &DstIpRole::Internet {
+                                    Some((index, &0.0f64))
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        // modify all the probability distributions
+                        for cpt in node.cpt.as_mut().unwrap().iter_mut() {
+                            if let Some(weights) = cpt {
+                                let result = weights.update_weights(&weight_update);
+                                // log::error!("Valeur impossible après mise à jour des distributions");
+                                if result.is_err() {
+                                    *cpt = None;
+                                }
+                            }
+                        }
+
+                    }
+                }
+
+                bn.remove_impossible_values()?;
+
+
+
                 let mut rng = Pcg32::seed_from_u64(12345);
                 let mut local_src_ip_users: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)> =
                     HashMap::new();
@@ -536,46 +626,6 @@ impl BayesianModel {
                     services_per_server: network.services_per_server.clone(),
                     mac_addr_map,
                 };
-
-                let mut bn = base_bn.clone();
-
-                for node in bn.nodes.iter_mut() {
-                    // we set the probability of absent services to 0
-                    if let Feature::L7Proto(v) = &mut node.feature {
-                        // get services present in the network
-                        for s in network.services.iter() {
-                            if !v.contains(s) {
-                                log::warn!(
-                                    "Service {s:?} is not present in the original dataset and will not be generated"
-                                );
-                            }
-                        }
-                        // create a list of all the indices to set the probability to 0
-                        let weight_update: Vec<(usize, &f64)> = v
-                            .iter()
-                            .enumerate()
-                            .filter_map(|(index, proto)| {
-                                if network.services.contains(proto) {
-                                    None
-                                } else {
-                                    Some((index, &0.0f64))
-                                }
-                            })
-                            .collect();
-                        // modify all the probability distributions
-                        for cpt in node.cpt.as_mut().unwrap().iter_mut() {
-                            if let Some(weights) = cpt {
-                                let result = weights.update_weights(&weight_update);
-                                // log::error!("Valeur impossible après mise à jour des distributions");
-                                if result.is_err() {
-                                    *cpt = None;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                bn.remove_impossible_values()?;
 
                 Ok(BayesianModel::ForTransferLearning {
                     base_bn,

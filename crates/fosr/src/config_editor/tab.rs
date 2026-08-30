@@ -22,7 +22,7 @@ pub fn render_configuration_tab(ui: &mut egui::Ui, state: &mut FosrApp) {
     // Toolbar stays fixed above the scroll area
     render_configuration_toolbar(ui, state);
 
-    let mut file_state = &mut state.config_file_state;
+    let file_state = &mut state.config_file_state;
     render_parse_error_banner(ui, file_state);
 
     ui.separator();
