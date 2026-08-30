@@ -21,13 +21,11 @@ use close_dialog::render_close_confirmation_dialog;
 use eframe::egui;
 use fosr_lib::topo::config::GenerationParameters;
 use fosr_lib::topo::config::Service;
-use fosr_lib::topo::generator::TopologyGenerator;
 
 #[derive(Debug, Default, Clone)]
 pub struct TopologyGeneration {
     min_subnets: usize,
     min_nodes: usize,
-    tree_depth: usize,
     with_web_server: bool,
     with_ftp_server: bool,
     with_mail_server: bool,
@@ -39,6 +37,7 @@ pub struct TopologyGeneration {
     with_ldap_server: bool,
     with_dns_server: bool,
     with_ssh_server: bool,
+    internet_access: bool,
     generation_failed: bool,
 }
 
@@ -82,8 +81,8 @@ impl TopologyGeneration {
         GenerationParameters {
             minimum_sub_topology: self.min_subnets,
             minimum_node_count: self.min_nodes,
-            tree_depth: self.tree_depth,
             services,
+            no_internet_access: !self.internet_access,
         }
     }
 }
@@ -145,7 +144,6 @@ pub struct ExtraModals {
 pub struct FosrApp {
     // View
     pub topology_generation: TopologyGeneration,
-    pub generator: TopologyGenerator,
     pub view_state: ViewState,
     pub extra_modals: ExtraModals,
     // pub network_generation_options: GenerationParameters,
@@ -161,6 +159,7 @@ pub struct FosrApp {
     pub config_file_state: ConfigFileState,
     pub configuration_tab_state: ConfigurationTabState,
     pub default_topologies: Vec<fosr_lib::network::NetworkYaml>,
+    pub default_subtopo: Vec<fosr_lib::topo::subtopo::SubTopology>,
     // TODO: topologie actuelle ?
     // /// Whether to show the close confirmation dialog
     // /// Whether the user has confirmed they want to close
@@ -170,10 +169,17 @@ pub struct FosrApp {
 
 impl FosrApp {
     pub fn new(ctx: &egui::Context) -> Self {
-        let topology_generation = TopologyGeneration { with_cms_server: true, with_dns_server: true, min_subnets: 3, min_nodes: 10, tree_depth: 2, ..Default::default() };
+        let topology_generation = TopologyGeneration {
+            internet_access: true,
+            with_cms_server: true,
+            with_dns_server: true,
+            min_subnets: 3,
+            min_nodes: 10,
+            ..Default::default()
+        };
 
         let app = FosrApp {
-            generator: TopologyGenerator::new(fosr_lib::topo::sub_topology::get_default_subtopos()),
+            default_subtopo: fosr_lib::topo::subtopo::get_default_subtopos(),
             topology_generation,
             view_state: ViewState::Welcome,
             // view_options: ViewOptions { zoom_factor: ZOOM_DEFAULT },

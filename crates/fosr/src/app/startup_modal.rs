@@ -207,6 +207,12 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
         });
 
         ui.add_space(SPACING_XL);
+        ui.checkbox(
+            &mut state.topology_generation.internet_access,
+            "Internet access",
+        );
+
+        ui.add_space(SPACING_XL);
         ui.add(
             egui::Slider::new(&mut state.topology_generation.min_subnets, 1..=200)
                 .text("Minimum number of subnets"),
@@ -215,11 +221,6 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
         ui.add(
             egui::Slider::new(&mut state.topology_generation.min_nodes, 1..=1000)
                 .text("Minimum number of machines"),
-        );
-        ui.add_space(SPACING_SM);
-        ui.add(
-            egui::Slider::new(&mut state.topology_generation.tree_depth, 1..=10)
-                .text("Depth of the network topology"),
         );
 
         ui.add_space(SPACING_LG);
@@ -240,10 +241,10 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
                 .on_hover_text("Generate topology from constraints")
                 .clicked()
             {
-                match state
-                    .generator
-                    .generate_topologies(&state.topology_generation.get_generation_parameters())
-                {
+                match fosr_lib::topo::generator::generate_topology(
+                    &state.default_subtopo,
+                    &state.topology_generation.get_generation_parameters(),
+                ) {
                     Ok(topo) => {
                         load_template(
                             &mut state.config_file_state,

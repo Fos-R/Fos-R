@@ -279,7 +279,7 @@ fn main() -> Result<(), String> {
             };
             log::info!("Starting the topology generation");
             log::info!("Depending on the contraints, it can take up to 10 minutes");
-            let topology = network::NetworkYaml::from(topo::generator::generate_topology(&topo::sub_topology::get_default_subtopos(), &gen_params)?);
+            let topology = network::NetworkYaml::from(topo::generator::generate_topology(&topo::subtopo::get_default_subtopos(), &gen_params)?);
             let mut file =
                 File::create(&outfile).expect("Failed to create or open the topology file");
             file.write_all(
