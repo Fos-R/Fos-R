@@ -1,5 +1,6 @@
 use crate::models;
 use crate::network;
+use crate::utils;
 use crate::stage2::*;
 
 use chrono::Timelike;
@@ -208,26 +209,6 @@ pub struct BayesianNetwork {
     nodes: Vec<BayesianNetworkNode>,
 }
 
-fn is_global(addr: &Ipv4Addr) -> bool {
-    addr.octets()[0] != 0
-        && !addr.is_multicast()
-        && !addr.is_broadcast()
-        && !addr.is_documentation()
-        && !addr.is_link_local()
-        && !addr.is_loopback()
-        && !addr.is_private()
-}
-
-fn sample_random_global_ip(rng: &mut impl Rng) -> Ipv4Addr {
-    let mut addr = Ipv4Addr::from_bits(rng.next_u32());
-    // rejection sampling
-    while !is_global(&addr) {
-        // while !addr.is_global() { // TODO: use when not experimental anymore
-        addr = Ipv4Addr::from_bits(rng.next_u32());
-    }
-    addr
-}
-
 impl Display for BayesianNetwork {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         for (index, n) in self.nodes.iter().enumerate() {
@@ -280,13 +261,13 @@ impl BayesianNetwork {
                             Feature::SrcIp(v) => match v[i] {
                                 AnonymizedIpv4Addr::Local(p) => domain_vector.src_ip = Some(p),
                                 AnonymizedIpv4Addr::Public => {
-                                    domain_vector.src_ip = Some(sample_random_global_ip(rng));
+                                    domain_vector.src_ip = Some(utils::sample_random_global_ip(rng));
                                 }
                             },
                             Feature::DstIp(v) => match v[i] {
                                 AnonymizedIpv4Addr::Local(p) => domain_vector.dst_ip = Some(p),
                                 AnonymizedIpv4Addr::Public => {
-                                    domain_vector.dst_ip = Some(sample_random_global_ip(rng));
+                                    domain_vector.dst_ip = Some(utils::sample_random_global_ip(rng));
                                 }
                             },
                             Feature::DstPt(v) => match v[i] {
@@ -531,6 +512,7 @@ impl BayesianModel {
                     if !mac_addr_map.contains_key(ip) {
                         mac_addr_map.insert(
                             *ip,
+                            // TODO: MacAddr are not fully random
                             MacAddr::new(
                                 rng.next_u32() as u8,
                                 rng.next_u32() as u8,
@@ -996,7 +978,7 @@ impl Stage2 for BNGenerator {
                         *ips.get(weights.sample(&mut rng)).unwrap()
                     }
                     // TODO: take into account Internet servers from the config
-                    DstIpRole::Internet => sample_random_global_ip(&mut rng),
+                    DstIpRole::Internet => utils::sample_random_global_ip(&mut rng),
                 });
 
                 domain_vector.src_ip = Some(match domain_vector.src_ip_role.unwrap() {
@@ -1041,7 +1023,7 @@ impl Stage2 for BNGenerator {
                         }
                     }
                     // TODO: take into account Internet clients from the config
-                    SrcIpRole::Internet => sample_random_global_ip(&mut rng),
+                    SrcIpRole::Internet => utils::sample_random_global_ip(&mut rng),
                 });
 
                 domain_vector.src_mac = Some(

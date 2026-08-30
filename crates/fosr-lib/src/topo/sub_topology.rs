@@ -6,6 +6,7 @@ use include_dir::{DirEntry, include_dir};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    utils,
     OS,
     topo::config::{NodeType, Service, SubTopologyParameters},
 };
@@ -19,6 +20,12 @@ pub struct SubTopology {
     pub router_node: SubTopologyNode,
     pub services: HashMap<Service, bool>,
     pub os: HashMap<OS, bool>,
+}
+
+#[derive(Debug, Clone)]
+pub enum SubTopologyOrInternet {
+    SubTopo(SubTopology),
+    Internet,
 }
 
 impl SubTopology {
@@ -64,6 +71,10 @@ impl SubTopology {
             services,
             os,
         })
+    }
+
+    pub fn is_public(&self) -> bool {
+        utils::is_global(&self.subnet)
     }
 
     pub fn contains_service(&self, service: &Service) -> bool {

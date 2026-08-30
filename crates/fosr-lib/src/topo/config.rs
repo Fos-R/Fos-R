@@ -9,6 +9,8 @@ use crate::{L7Proto, OS};
 /// Parameters of the generator.
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct GenerationParameters {
+    /// Whether to include at least one public subnet
+    pub no_internet_access: bool,
     /// Minimal number of sub topology to generate, hard constraint
     pub minimum_sub_topology: usize,
     /// Minimal number of node to generate, hard constraint

@@ -222,6 +222,7 @@ fn main() -> Result<(), String> {
             min_subnets,
             min_nodes,
             tree_depth,
+            no_internet_access,
             with_web_server,
             with_ftp_server,
             with_mail_server,
@@ -272,14 +273,13 @@ fn main() -> Result<(), String> {
             let gen_params = topo::config::GenerationParameters {
                 minimum_sub_topology: min_subnets,
                 minimum_node_count: min_nodes,
+                no_internet_access,
                 tree_depth,
                 services,
             };
-            let mut generator =
-                topo::generator::TopologyGenerator::new(topo::sub_topology::get_default_subtopos());
             log::info!("Starting the topology generation");
             log::info!("Depending on the contraints, it can take up to 10 minutes");
-            let topology = network::NetworkYaml::from(generator.generate_topologies(&gen_params)?);
+            let topology = network::NetworkYaml::from(topo::generator::generate_topology(&topo::sub_topology::get_default_subtopos(), &gen_params)?);
             let mut file =
                 File::create(&outfile).expect("Failed to create or open the topology file");
             file.write_all(
