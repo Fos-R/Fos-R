@@ -7,7 +7,7 @@ use crate::network::{
     HostType, HostYaml, INTERNET_NETWORK_NAME, InterfaceYaml, Metadata, Network, NetworkYaml,
     SubNetworkYaml, next_ui_id,
 };
-use crate::topo::sub_topology::{SubTopologyNode, SubTopologyOrInternet};
+use crate::topo::subtopo::{SubTopologyNode, SubTopologyOrInternet};
 use std::net::Ipv4Addr;
 
 impl From<Vec<SubTopologyOrInternet>> for NetworkYaml {
