@@ -13,6 +13,7 @@ use std::io::BufWriter;
 use std::io::Write;
 use std::net::Ipv4Addr;
 use std::time::Duration;
+use rand::Rng;
 
 const DURATION_THRESHOLD: Duration = Duration::from_secs(600);
 
@@ -508,3 +509,25 @@ pub fn untaint_file(input: &str, output: &str) {
     }
     pb.finish();
 }
+
+pub fn is_global(addr: &Ipv4Addr) -> bool {
+    addr.octets()[0] != 0
+        && !addr.is_multicast()
+        && !addr.is_broadcast()
+        && !addr.is_documentation()
+        && !addr.is_link_local()
+        && !addr.is_loopback()
+        && !addr.is_private()
+}
+
+pub fn sample_random_global_ip(rng: &mut impl Rng) -> Ipv4Addr {
+    let mut addr = Ipv4Addr::from_bits(rng.next_u32());
+    // rejection sampling
+    while !is_global(&addr) {
+        // while !addr.is_global() { // TODO: use when not experimental anymore
+        addr = Ipv4Addr::from_bits(rng.next_u32());
+    }
+    addr
+}
+
+

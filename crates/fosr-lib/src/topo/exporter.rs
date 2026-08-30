@@ -4,81 +4,96 @@
 
 use crate::L7Proto;
 use crate::network::{
-    HostType, HostYaml, InterfaceYaml, Metadata, Network, NetworkYaml, SubNetworkYaml, next_ui_id,
+    HostType, HostYaml, InterfaceYaml, Metadata, Network, NetworkYaml, SubNetworkYaml, next_ui_id, INTERNET_NETWORK_NAME
 };
-use crate::topo::sub_topology::{SubTopology, SubTopologyNode};
+use crate::topo::sub_topology::{SubTopologyNode, SubTopologyOrInternet};
+use std::net::Ipv4Addr;
 
-impl From<Vec<SubTopology>> for NetworkYaml {
-    fn from(topology: Vec<SubTopology>) -> Self {
+impl From<Vec<SubTopologyOrInternet>> for NetworkYaml {
+    fn from(topology: Vec<SubTopologyOrInternet>) -> Self {
         let mut networks = Vec::with_capacity(topology.len());
         for st in &topology {
-            let mut hosts = Vec::with_capacity(st.nodes.len() + 1);
+            match st {
+                SubTopologyOrInternet::Internet => {
+                    networks.push(SubNetworkYaml {
+                        ui_id: next_ui_id(),
+                        subnet: Ipv4Addr::UNSPECIFIED,
+                        mask: 0,
+                        name: INTERNET_NETWORK_NAME.to_string(),
+                        hosts: vec![],
+                    });
+                },
+                SubTopologyOrInternet::SubTopo(st) => {
 
-            if let SubTopologyNode::Router(router) = &st.router_node {
-                let mut interfaces = vec![InterfaceYaml {
-                    ip_addr: router.address.to_string(),
-                    mac_addr: None,
-                    services: None,
-                }];
-                if router.interco_address != router.address {
-                    interfaces.push(InterfaceYaml {
-                        ip_addr: router.interco_address.to_string(),
-                        mac_addr: None,
-                        services: None,
+                    let mut hosts = Vec::with_capacity(st.nodes.len() + 1);
+
+                    if let SubTopologyNode::Router(router) = &st.router_node {
+                        let mut interfaces = vec![InterfaceYaml {
+                            ip_addr: router.address.to_string(),
+                            mac_addr: None,
+                            services: None,
+                        }];
+                        if router.interco_address != router.address {
+                            interfaces.push(InterfaceYaml {
+                                ip_addr: router.interco_address.to_string(),
+                                mac_addr: None,
+                                services: None,
+                            });
+                        }
+
+                        hosts.push(HostYaml {
+                            ui_id: next_ui_id(),
+                            hostname: Some(router.name.clone()),
+                            os: None,
+                            host_type: Some(HostType::User),
+                            interfaces,
+                        });
+                    }
+
+                    for node in &st.nodes {
+                        let SubTopologyNode::Machine(machine) = node else {
+                            continue;
+                        };
+
+                        let services: Vec<String> = machine
+                            .services
+                            .iter()
+                            .flat_map(|s| Vec::<L7Proto>::from(s.clone()))
+                            .map(|p| format!("{p:?}").to_lowercase())
+                            .collect();
+
+                        let is_server = !services.is_empty();
+
+                        hosts.push(HostYaml {
+                            ui_id: next_ui_id(),
+                            hostname: Some(machine.name.clone()),
+                            os: Some(machine.os),
+                            host_type: Some(if is_server {
+                                HostType::Server
+                            } else {
+                                HostType::User
+                            }),
+                            interfaces: vec![InterfaceYaml {
+                                ip_addr: machine.address.to_string(),
+                                mac_addr: None,
+                                services: if services.is_empty() {
+                                    None
+                                } else {
+                                    Some(services)
+                                },
+                            }],
+                        });
+                    }
+
+                    networks.push(SubNetworkYaml {
+                        ui_id: next_ui_id(),
+                        subnet: st.subnet,
+                        mask: st.mask as u8,
+                        name: st.name.clone(),
+                        hosts,
                     });
                 }
-
-                hosts.push(HostYaml {
-                    ui_id: next_ui_id(),
-                    hostname: Some(router.name.clone()),
-                    os: None,
-                    host_type: Some(HostType::User),
-                    interfaces,
-                });
             }
-
-            for node in &st.nodes {
-                let SubTopologyNode::Machine(machine) = node else {
-                    continue;
-                };
-
-                let services: Vec<String> = machine
-                    .services
-                    .iter()
-                    .flat_map(|s| Vec::<L7Proto>::from(s.clone()))
-                    .map(|p| format!("{p:?}").to_lowercase())
-                    .collect();
-
-                let is_server = !services.is_empty();
-
-                hosts.push(HostYaml {
-                    ui_id: next_ui_id(),
-                    hostname: Some(machine.name.clone()),
-                    os: Some(machine.os),
-                    host_type: Some(if is_server {
-                        HostType::Server
-                    } else {
-                        HostType::User
-                    }),
-                    interfaces: vec![InterfaceYaml {
-                        ip_addr: machine.address.to_string(),
-                        mac_addr: None,
-                        services: if services.is_empty() {
-                            None
-                        } else {
-                            Some(services)
-                        },
-                    }],
-                });
-            }
-
-            networks.push(SubNetworkYaml {
-                ui_id: next_ui_id(),
-                subnet: st.subnet,
-                mask: st.mask as u8,
-                name: st.name.clone(),
-                hosts,
-            });
         }
 
         NetworkYaml {
@@ -96,8 +111,8 @@ impl From<Vec<SubTopology>> for NetworkYaml {
     }
 }
 
-impl From<Vec<SubTopology>> for Network {
-    fn from(topology: Vec<SubTopology>) -> Self {
+impl From<Vec<SubTopologyOrInternet>> for Network {
+    fn from(topology: Vec<SubTopologyOrInternet>) -> Self {
         NetworkYaml::from(topology).into()
     }
 }

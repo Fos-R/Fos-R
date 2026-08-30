@@ -302,6 +302,8 @@ pub enum Command {
             help = "Target depth of the topology"
         )]
         tree_depth: usize,
+        #[arg(long, default_value_t = false, help = "The topology has no Internet access")]
+        no_internet_access: bool,
         #[arg(long, default_value_t = false, help = "At least one Web server")]
         with_web_server: bool,
         #[arg(long, default_value_t = false, help = "At least one FTP server")]
