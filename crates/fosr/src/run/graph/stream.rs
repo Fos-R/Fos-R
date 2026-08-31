@@ -293,21 +293,11 @@ impl FlowStreamer {
     /// If `config_content` is `Some`, applies the config to remap IPs.
     /// Speed controls how fast flows are emitted (1.0 = real-time) - can be updated at runtime.
     pub fn new(
+        model: models::ArcModels,
         config_content: Option<&str>,
         speed: Arc<RwLock<f32>>,
         sender: Sender<FlowEvent>,
     ) -> Result<Self, String> {
-        let source = models::ModelsSource::CUPID;
-        let model = if let Some(config) = config_content {
-            models::Models::from_source_with_string_network(&source, config)
-                .map_err(|e| format!("Failed to load ML models: {}", e))?
-        } else {
-            models::Models::from_source(&source)
-                .map_err(|e| format!("Failed to load ML models: {}", e))?
-        };
-
-        let _automata_library = Arc::new(model.automata);
-        let bn = Arc::new(model.bn);
 
         let initial_ts = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -325,7 +315,7 @@ impl FlowStreamer {
             tz_offset,
         );
 
-        let s1 = BNGenerator::new(bn, false);
+        let s1 = BNGenerator::new(model.bn, false);
 
         Ok(Self {
             s0,

@@ -50,7 +50,7 @@ fn legend_item_with_image(ui: &mut egui::Ui, label: &str, image: egui::ImageSour
 }
 
 /// Render overlay buttons in the top-left corner of the graph.
-pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState) {
+pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState, models: Option<fosr_lib::models::ArcModels>) {
     let local_rect = ui.max_rect();
 
     egui::Area::new(egui::Id::new("viz_overlay_buttons"))
@@ -61,7 +61,7 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
                 .shadow(egui::epaint::Shadow::NONE)
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        render_playback_controls(ui, state);
+                        render_playback_controls(ui, state, models);
                         render_view_controls(ui, state);
                         ui.separator();
                         render_speed_controls(ui, state);
@@ -71,14 +71,21 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState)
 }
 
 /// Render play/stop/restart buttons based on current state.
-fn render_playback_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
-    if !state.flow.running {
-        render_play_button(ui, state);
-        if state.user_has_started {
-            render_restart_button(ui, state);
+fn render_playback_controls(ui: &mut egui::Ui, state: &mut VisualizationState, models: Option<fosr_lib::models::ArcModels>) {
+    match models {
+        Some(models) => {
+            if !state.flow.running {
+                render_play_button(ui, state, models.clone());
+                if state.user_has_started {
+                    render_restart_button(ui, state, models);
+                }
+            } else {
+                render_stop_button(ui, state);
+            }
+        },
+        None => {
+            ui.label("Loading models...");
         }
-    } else {
-        render_stop_button(ui, state);
     }
 }
 
@@ -86,7 +93,7 @@ fn render_playback_controls(ui: &mut egui::Ui, state: &mut VisualizationState) {
 ///
 /// Resumes visualization without resetting flow counts. Uses "Start" label
 /// initially, then "Continue" after the user has started at least once.
-fn render_play_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
+fn render_play_button(ui: &mut egui::Ui, state: &mut VisualizationState, models: fosr_lib::models::ArcModels) {
     let (play_text, play_tooltip) = if state.user_has_started {
         (
             "Continue",
@@ -106,7 +113,7 @@ fn render_play_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
         state.user_has_started = true;
         let config = state.config_content.clone();
         let speed = state.flow.speed.clone();
-        if let Err(e) = state.start_visualization(config.as_deref(), speed, false) {
+        if let Err(e) = state.start_visualization(models, config.as_deref(), speed, false) {
             log::error!("Failed to start flow streamer: {}", e);
         }
     }
@@ -116,7 +123,7 @@ fn render_play_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
 ///
 /// Resets all flow counts and starts fresh. Only visible after the user
 /// has started at least once (otherwise the Play button shows "Start").
-fn render_restart_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
+fn render_restart_button(ui: &mut egui::Ui, state: &mut VisualizationState, models: fosr_lib::models::ArcModels) {
     if ui
         .button(ICON_RESTART_ALT)
         .on_hover_text("Restart - reset all statistics and edges")
@@ -124,7 +131,7 @@ fn render_restart_button(ui: &mut egui::Ui, state: &mut VisualizationState) {
     {
         let config = state.config_content.clone();
         let speed = state.flow.speed.clone();
-        if let Err(e) = state.start_visualization(config.as_deref(), speed, true) {
+        if let Err(e) = state.start_visualization(models, config.as_deref(), speed, true) {
             log::error!("Failed to start flow streamer: {}", e);
         }
     }

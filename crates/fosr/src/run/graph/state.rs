@@ -721,6 +721,7 @@ impl VisualizationState {
     /// If `reset` is `true`, flow counts are reset to zero before starting.
     pub fn start_visualization(
         &mut self,
+        models: fosr_lib::models::ArcModels,
         config_content: Option<&str>,
         speed: Arc<RwLock<f32>>,
         reset: bool,
@@ -739,7 +740,7 @@ impl VisualizationState {
 
         let (sender, receiver) = std::sync::mpsc::channel();
 
-        let streamer = FlowStreamer::new(config_content, speed.clone(), sender)?;
+        let streamer = FlowStreamer::new(models, config_content, speed.clone(), sender)?;
         streamer.start();
 
         self.flow.streamer = Some(streamer);

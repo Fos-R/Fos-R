@@ -87,7 +87,8 @@ pub fn render_graph_view(ui: &mut egui::Ui, state: &mut RunTabState) {
 
             // Hide overlays during export to get clean screenshot
             if state.visualization.screenshot_export == ScreenshotStateMachine::Idle {
-                render_overlay_buttons(ui, &mut state.visualization);
+                let models = state.get_models();
+                render_overlay_buttons(ui, &mut state.visualization, models);
                 render_overlay_stats(ui, &state.visualization);
                 render_overlay_node_legend(ui);
                 render_overlay_edge_legend(ui);
