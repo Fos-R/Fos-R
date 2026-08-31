@@ -383,6 +383,7 @@ impl BayesianNetwork {
 }
 
 /// The model with all the data
+#[derive(Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum BayesianModel {
     DatasetSpecific {
