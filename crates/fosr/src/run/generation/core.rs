@@ -7,6 +7,7 @@ use fosr_lib::{
 };
 use indicatif::HumanBytes;
 use std::sync::Arc;
+use std::sync::RwLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use std::time::UNIX_EPOCH as STD_UNIX_EPOCH;
@@ -67,7 +68,10 @@ pub fn generate(
         Some(parsed_duration),
         tz_offset,
     );
-    let s1 = stage2::bayesian_networks::BNGenerator::new(model.bn, false);
+    // We duplicate the BN so the user can change the network while the generation is ongoing
+    // without perturbating the generation
+    let bn = model.bn.write().unwrap().clone();
+    let s1 = stage2::bayesian_networks::BNGenerator::new(Arc::new(RwLock::new(bn)), false);
     let s2 = TadamGenerator::new(model.automata);
     let s3 = stage4::Stage4::new(taint);
     log::info!("Run single thread");
