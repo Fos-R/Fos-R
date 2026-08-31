@@ -454,7 +454,7 @@ impl BayesianModel {
         })
     }
 
-    pub fn with_network(self, network: &network::Network) -> Result<Self, String> {
+    pub fn with_network(&self, network: &network::Network) -> Result<Self, String> {
         match self {
             BayesianModel::WaitingForNetwork {
                 base_bn, bin_count, ..
@@ -630,9 +630,9 @@ impl BayesianModel {
                 };
 
                 Ok(BayesianModel::ForTransferLearning {
-                    base_bn,
+                    base_bn: base_bn.clone(),
                     bn,
-                    bin_count,
+                    bin_count: *bin_count,
                     transfer_learning: tl_extra_data,
                 })
             }

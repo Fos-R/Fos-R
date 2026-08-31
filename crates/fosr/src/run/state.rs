@@ -15,17 +15,33 @@ pub struct RunTabState {
     pub panel_open: bool,
     models_receiver: Receiver<models::ArcModels>,
     models: Option<models::ArcModels>,
+    // next_config is used when "update_config" is called before the model is ready
+    // it is never used otherwise
+    next_config: Option<fosr_lib::network::Network>,
 }
 
 impl RunTabState {
+    pub fn update_config(&mut self, network: &fosr_lib::network::Network) {
+        if let Some(ref models) = self.models {
+            let mut bn = models.bn.write().unwrap();
+            *bn = bn.with_network(network).unwrap();
+        } else {
+            self.next_config = Some(network.clone());
+        }
+    }
+
     pub fn get_models(&mut self) -> Option<models::ArcModels> {
-        if self.models.is_some() {
+        if let Some(ref models) = self.models {
+            if let Some(config) = self.next_config.take() {
+                self.update_config(&config);
+                self.next_config = None;
+            }
             self.models.clone()
         } else {
             match self.models_receiver.try_recv() {
                 Ok(models) => {
                     self.models = Some(models);
-                    self.models.clone()
+                    self.get_models()
                 }
                 Err(TryRecvError::Disconnected) =>
                     panic!("Error during models loading"),
@@ -50,6 +66,7 @@ impl Default for RunTabState {
             visualization: VisualizationState::default(),
             generation: GenerationState::default(),
             panel_open: true,
+            next_config: None,
         }
     }
 }

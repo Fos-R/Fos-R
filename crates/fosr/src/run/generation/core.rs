@@ -18,7 +18,6 @@ use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 pub fn generate(
     model: models::ArcModels,
     seed: Option<u64>,
-    profile: Option<String>,
     order_pcap: bool,
     start_time: Option<String>,
     duration: String,
