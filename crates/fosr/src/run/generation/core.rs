@@ -16,6 +16,7 @@ use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 ///
 /// Returns `Ok(())` on success, or `Err(message)` if generation fails.
 pub fn generate(
+    model: models::ArcModels,
     seed: Option<u64>,
     profile: Option<String>,
     order_pcap: bool,
@@ -43,9 +44,8 @@ pub fn generate(
     };
 
     // Load the models
-    let model = load_models(&profile)?;
-    let automata_library = Arc::new(model.automata);
-    let bayesian_network = Arc::new(model.bn);
+    // let automata_library = Arc::new(model.automata);
+    // let bayesian_network = Arc::new(model.bn);
 
     // Handle the parameters: either there is a packet count target or a duration
     let parsed_duration = humantime::parse_duration(&duration)
@@ -68,8 +68,8 @@ pub fn generate(
         Some(parsed_duration),
         tz_offset,
     );
-    let s1 = stage2::bayesian_networks::BNGenerator::new(bayesian_network, false);
-    let s2 = TadamGenerator::new(automata_library);
+    let s1 = stage2::bayesian_networks::BNGenerator::new(model.bn, false);
+    let s2 = TadamGenerator::new(model.automata);
     let s3 = stage4::Stage4::new(taint);
     log::info!("Run single thread");
     execute_generation_pipeline(
@@ -83,19 +83,6 @@ pub fn generate(
         throughput_sender,
         cancelled,
     )
-}
-
-/// Loads ML models from bundled assets, optionally applying a config profile.
-fn load_models(profile: &Option<String>) -> Result<models::Models, String> {
-    let source = models::ModelsSource::CUPID;
-    let model = if let Some(config) = profile {
-        models::Models::from_source_with_string_network(&source, config)
-            .map_err(|e| format!("Failed to load ML models: {}", e))?
-    } else {
-        models::Models::from_source(&source)
-            .map_err(|e| format!("Failed to load ML models: {}", e))?
-    };
-    Ok(model)
 }
 
 /// Parses start time from RFC3339 string, Unix timestamp, or returns current time if None.

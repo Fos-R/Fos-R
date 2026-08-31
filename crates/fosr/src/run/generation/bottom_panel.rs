@@ -117,7 +117,8 @@ fn render_generate_button(
     ctx: &egui::Context,
     can_generate: bool,
 ) {
-    ui.add_enabled_ui(can_generate, |ui| {
+    let models = state.get_models();
+    ui.add_enabled_ui(can_generate && models.is_some(), |ui| {
         let accent = ui.visuals().selection.bg_fill;
         let button = egui::Button::new(
             egui::RichText::new(format!("{} Generate", ICON_PLAY_ARROW)).size(TEXT_SIZE_MD),
@@ -130,7 +131,7 @@ fn render_generate_button(
             .on_hover_text("Generate PCAP from configuration")
             .clicked()
         {
-            start_generation(state, configuration_file_state, ctx);
+            start_generation(state, configuration_file_state, models.unwrap(), ctx);
         }
     });
 }

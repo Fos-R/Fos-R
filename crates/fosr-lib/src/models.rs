@@ -32,6 +32,7 @@ pub enum ModelsSource {
 }
 
 /// The models, wrapped in Arc
+#[derive(Clone)]
 pub struct ArcModels {
     /// The time model of stage 0
     pub time_bins: Arc<stage1::TimeModel>,

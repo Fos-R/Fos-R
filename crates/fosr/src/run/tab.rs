@@ -23,7 +23,8 @@ pub fn render_run_tab(
     load_config_file_contents(configuration_file_state);
     handle_config_changes(&mut state.visualization, configuration_file_state);
 
-    handle_auto_start_visualization(&mut state.visualization);
+    let models = state.get_models();
+    handle_auto_start_visualization(&mut state.visualization, models);
     handle_delayed_fit_to_screen(&mut state.visualization.view);
 
     process_flow_events(&mut state.visualization);
@@ -45,14 +46,14 @@ pub fn render_run_tab(
 /// Waits for the countdown to reach zero before starting the visualization.
 /// This allows the UI to render at least one frame before starting,
 /// preventing visual glitches on initial load.
-fn handle_auto_start_visualization(state: &mut VisualizationState) {
+fn handle_auto_start_visualization(state: &mut VisualizationState, models: Option<fosr_lib::models::ArcModels>) {
     if let Some(countdown) = state.auto_start_countdown {
         if countdown > 0 {
             state.auto_start_countdown = Some(countdown - 1);
-        } else if !state.flow.running {
+        } else if !state.flow.running && let Some(models) = models {
             let config = state.config_content.clone();
             let speed = state.flow.speed.clone();
-            if let Err(e) = state.start_visualization(config.as_deref(), speed, true) {
+            if let Err(e) = state.start_visualization(models, config.as_deref(), speed, true) {
                 log::error!("Failed to auto-start visualization: {}", e);
             }
             state.auto_start_countdown = None;

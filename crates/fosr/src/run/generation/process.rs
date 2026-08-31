@@ -18,6 +18,7 @@ use std::sync::mpsc::channel;
 pub fn start_generation(
     state: &mut RunTabState,
     configuration_file_state: &ConfigFileState,
+    models: fosr_lib::models::ArcModels,
     ctx: &egui::Context,
 ) {
     // Reset state
@@ -43,6 +44,7 @@ pub fn start_generation(
     let ctx = ctx.clone();
 
     spawn_generation_task(
+        models,
         params,
         progress_sender,
         pcap_sender,
@@ -123,6 +125,7 @@ fn parse_seed(input: &str) -> Option<u64> {
 
 /// Spawns the generation task on the appropriate platform (WASM future or native thread).
 fn spawn_generation_task(
+    models: fosr_lib::models::ArcModels,
     params: PcapGenerationParams,
     progress_sender: std::sync::mpsc::Sender<f32>,
     pcap_sender: std::sync::mpsc::Sender<Vec<u8>>,
@@ -133,6 +136,7 @@ fn spawn_generation_task(
 ) {
     let task = move || {
         let result = generate(
+            models,
             params.seed,
             params.config_content,
             params.order_pcap,
