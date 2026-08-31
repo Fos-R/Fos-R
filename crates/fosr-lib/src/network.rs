@@ -26,7 +26,7 @@ pub fn get_default_topologies() -> Vec<NetworkYaml> {
 }
 
 /// The configuration file of the network and the hosts
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Network {
     /// The metadata of the configuration
     pub metadata: Metadata,
@@ -73,11 +73,10 @@ impl Network {
             .unwrap_or(&vec![])
             .clone()
     }
-
 }
 
 /// A network in the simulation, containing resolved hosts.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SubNetwork {
     pub subnet: Ipv4Addr,
     pub mask: u8,
@@ -123,7 +122,7 @@ pub enum HostType {
 
 /// A host in the network
 /// TODO: clean useless attributes
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 #[serde(from = "HostYaml")]
 pub struct Host {
@@ -148,7 +147,7 @@ impl Host {
 }
 
 /// A network interface of an host.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 #[serde(try_from = "InterfaceYaml")]
 pub struct Interface {
@@ -362,7 +361,7 @@ impl From<NetworkYaml> for Network {
                 v.push(*s);
             }
         }
- 
+
         let all_hosts = internet
             .iter()
             .chain(networks.iter().flat_map(|n| n.hosts.iter()));
@@ -496,4 +495,3 @@ pub fn reversibly_import_network(config_string: &str) -> NetworkYaml {
     log::trace!("Network: {config:?}");
     config
 }
-

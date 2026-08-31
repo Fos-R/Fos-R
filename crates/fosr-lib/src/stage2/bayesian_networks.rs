@@ -18,6 +18,7 @@ use std::iter;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::sync::RwLock;
 use std::time::Duration;
 use strum::EnumString;
 
@@ -404,7 +405,7 @@ pub enum BayesianModel {
 #[derive(Clone)]
 #[allow(unused)]
 pub struct BNGenerator {
-    model: Arc<BayesianModel>,
+    model: Arc<RwLock<BayesianModel>>,
     online: bool, // used to generate the TTL, either initial or at the capture point
 }
 
@@ -496,7 +497,9 @@ impl BayesianModel {
                                 }
                             }
                         }
-                    } else if !network.has_internet_access && let Feature::SrcIpRole(v) = &mut node.feature {
+                    } else if !network.has_internet_access
+                        && let Feature::SrcIpRole(v) = &mut node.feature
+                    {
                         // No internet access? Then set the probability of the Internet role to
                         // zero
                         let weight_update: Vec<(usize, &f64)> = v
@@ -520,7 +523,9 @@ impl BayesianModel {
                                 }
                             }
                         }
-                    } else if !network.has_internet_access && let Feature::DstIpRole(v) = &mut node.feature {
+                    } else if !network.has_internet_access
+                        && let Feature::DstIpRole(v) = &mut node.feature
+                    {
                         // Same for DstIpRole
                         let weight_update: Vec<(usize, &f64)> = v
                             .iter()
@@ -543,13 +548,10 @@ impl BayesianModel {
                                 }
                             }
                         }
-
                     }
                 }
 
                 bn.remove_impossible_values()?;
-
-
 
                 let mut rng = Pcg32::seed_from_u64(12345);
                 let mut local_src_ip_users: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)> =
@@ -973,7 +975,7 @@ fn bn_from_bif(network: bifxml::Network) -> Result<(BayesianNetwork, usize), Str
 }
 
 impl BNGenerator {
-    pub fn new(model: Arc<BayesianModel>, online: bool) -> Self {
+    pub fn new(model: Arc<RwLock<BayesianModel>>, online: bool) -> Self {
         BNGenerator { model, online }
     }
 }
@@ -988,9 +990,10 @@ impl Stage2 for BNGenerator {
         let mut domain_vector: IntermediateVector = IntermediateVector::default();
         let mut discrete_vector: Vec<usize> = vec![];
 
-        let bin_count = self.model.get_bin_count();
+        let model = self.model.read().unwrap();
+        let bin_count = model.get_bin_count();
         let mut restart = true;
-        let bn = self.model.get_bn()?;
+        let bn = model.get_bn()?;
         while restart {
             restart = false;
             let time = min(
@@ -1018,7 +1021,7 @@ impl Stage2 for BNGenerator {
                 },
             );
 
-            if let Some(tl) = self.model.get_tl()? {
+            if let Some(tl) = model.get_tl()? {
                 // if let Some(ref tl) = self.model.transfer_learning {
                 // Sample the destination IP
                 domain_vector.dst_ip = Some(match domain_vector.dst_ip_role.unwrap() {
