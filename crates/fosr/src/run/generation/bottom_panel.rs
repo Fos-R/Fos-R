@@ -9,7 +9,6 @@ use super::validation::first_invalid_param;
 #[cfg(not(target_arch = "wasm32"))]
 use super::wireshark::open_in_wireshark;
 use crate::run::state::RunTabState;
-use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::{COLOR_ERROR, COLOR_STOP, COLOR_SUCCESS};
 use crate::shared::constants::ui::{
     BOTTOM_BAR_INNER_MARGIN, BUTTON_HEIGHT, BUTTON_MIN_WIDTH_LG, BUTTON_MIN_WIDTH_SM,
@@ -34,15 +33,11 @@ use std::sync::atomic::Ordering;
 /// The panel consists of:
 /// - Options panel (shown when expanded): generation parameters
 /// - Action bar (always visible): Generate/Stop/Save buttons, progress bar
-pub fn render_bottom_panel(
-    ctx: &egui::Context,
-    state: &mut RunTabState,
-    configuration_file_state: &ConfigFileState,
-) {
+pub fn render_bottom_panel(ctx: &egui::Context, state: &mut RunTabState) {
     if state.panel_open {
         render_options_panel(ctx, state);
     }
-    render_action_bar(ctx, state, configuration_file_state);
+    render_action_bar(ctx, state);
 }
 
 /// Options panel shown above the action bar when expanded.
@@ -63,11 +58,7 @@ fn render_options_panel(ctx: &egui::Context, state: &mut RunTabState) {
 }
 
 /// Action bar with Generate/Stop/Save buttons and progress indicators.
-fn render_action_bar(
-    ctx: &egui::Context,
-    state: &mut RunTabState,
-    configuration_file_state: &ConfigFileState,
-) {
+fn render_action_bar(ctx: &egui::Context, state: &mut RunTabState) {
     egui::TopBottomPanel::bottom("run_bottom_bar")
         .frame(
             egui::Frame::side_top_panel(&ctx.style()).inner_margin(egui::Margin::symmetric(
@@ -83,7 +74,7 @@ fn render_action_bar(
             ui.horizontal(|ui| {
                 // Left side: action buttons
                 if !is_generating {
-                    render_generate_button(ui, state, configuration_file_state, ctx, can_generate);
+                    render_generate_button(ui, state, ctx, can_generate);
                 }
                 if is_generating {
                     render_stop_button(ui, state);
@@ -113,7 +104,6 @@ fn render_action_bar(
 fn render_generate_button(
     ui: &mut egui::Ui,
     state: &mut RunTabState,
-    configuration_file_state: &ConfigFileState,
     ctx: &egui::Context,
     can_generate: bool,
 ) {
@@ -131,7 +121,7 @@ fn render_generate_button(
             .on_hover_text("Generate PCAP from configuration")
             .clicked()
         {
-            start_generation(state, configuration_file_state, models.unwrap(), ctx);
+            start_generation(state, models.unwrap(), ctx);
         }
     });
 }

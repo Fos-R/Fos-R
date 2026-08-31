@@ -121,10 +121,10 @@ fn render_file_save_button(ui: &mut egui::Ui, state: &mut ConfigFileState) {
     };
     let button_text = format!("{} {label}", ICON_SAVE_AS);
     if ui.button(&button_text).on_hover_text(tooltip).clicked() {
-        if let Some(model) = state.config_model.as_mut() {
+        if let Some(model) = state.get_mut_config_model() {
             enforce_metadata_defaults(model);
         }
-        let content = match &state.config_model {
+        let content = match &state.get_config_model() {
             Some(model) => serde_yaml::to_string(model).unwrap_or_default(),
             None => state.config_file_content.clone().unwrap_or_default(),
         };

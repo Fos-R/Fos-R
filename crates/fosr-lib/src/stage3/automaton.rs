@@ -645,6 +645,7 @@ impl TryFrom<JsonPayload> for PayloadType {
             Ok(PayloadType::Empty)
         } else {
             let weights = p.weights.unwrap_or_else(|| vec![1; p.content.len()]);
+            // payloads are leaked so they can be easily shared among automata
             Ok(PayloadType::Binary(
                 Box::leak(Box::new(
                     p.content

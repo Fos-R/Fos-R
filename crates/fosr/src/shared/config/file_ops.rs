@@ -24,7 +24,6 @@ pub fn trigger_file_import(state: &mut ConfigFileState, ctx: &egui::Context) {
         let file = show_file_picker_desktop();
         if file.is_some() {
             state.picked_config_file = file;
-            state.config_chosen = true;
             clear_loaded_config(state);
         }
     }
@@ -53,7 +52,6 @@ pub fn poll_file_import(state: &mut ConfigFileState) {
         if let Ok(file) = receiver.try_recv() {
             if file.is_some() {
                 state.picked_config_file = file;
-                state.config_chosen = true;
                 clear_loaded_config(state);
             }
             state.config_file_receiver = None;
@@ -122,7 +120,7 @@ pub fn load_config_file_contents(configuration_file_state: &mut ConfigFileState)
 /// Clear all loaded config state to allow loading a new file.
 fn clear_loaded_config(configuration_file_state: &mut ConfigFileState) {
     configuration_file_state.config_file_content = None;
-    configuration_file_state.config_model = None;
+    configuration_file_state.clear_config_model();
     configuration_file_state.config_error = None;
     configuration_file_state.is_dirty = false;
     configuration_file_state.clean_snapshot = None;

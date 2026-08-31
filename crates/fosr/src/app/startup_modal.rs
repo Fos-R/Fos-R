@@ -242,7 +242,6 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
         )
         .fill(accent);
 
-
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
             if ui
                 .add_enabled(state.topo_receiver.is_none(), button)

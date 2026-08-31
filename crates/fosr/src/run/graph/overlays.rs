@@ -50,7 +50,11 @@ fn legend_item_with_image(ui: &mut egui::Ui, label: &str, image: egui::ImageSour
 }
 
 /// Render overlay buttons in the top-left corner of the graph.
-pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState, models: Option<fosr_lib::models::ArcModels>) {
+pub fn render_overlay_buttons(
+    ui: &mut egui::Ui,
+    state: &mut VisualizationState,
+    models: Option<fosr_lib::models::ArcModels>,
+) {
     let local_rect = ui.max_rect();
 
     egui::Area::new(egui::Id::new("viz_overlay_buttons"))
@@ -71,7 +75,11 @@ pub fn render_overlay_buttons(ui: &mut egui::Ui, state: &mut VisualizationState,
 }
 
 /// Render play/stop/restart buttons based on current state.
-fn render_playback_controls(ui: &mut egui::Ui, state: &mut VisualizationState, models: Option<fosr_lib::models::ArcModels>) {
+fn render_playback_controls(
+    ui: &mut egui::Ui,
+    state: &mut VisualizationState,
+    models: Option<fosr_lib::models::ArcModels>,
+) {
     match models {
         Some(models) => {
             if !state.flow.running {
@@ -82,7 +90,7 @@ fn render_playback_controls(ui: &mut egui::Ui, state: &mut VisualizationState, m
             } else {
                 render_stop_button(ui, state);
             }
-        },
+        }
         None => {
             ui.label("Loading models...");
         }
@@ -93,7 +101,11 @@ fn render_playback_controls(ui: &mut egui::Ui, state: &mut VisualizationState, m
 ///
 /// Resumes visualization without resetting flow counts. Uses "Start" label
 /// initially, then "Continue" after the user has started at least once.
-fn render_play_button(ui: &mut egui::Ui, state: &mut VisualizationState, models: fosr_lib::models::ArcModels) {
+fn render_play_button(
+    ui: &mut egui::Ui,
+    state: &mut VisualizationState,
+    models: fosr_lib::models::ArcModels,
+) {
     let (play_text, play_tooltip) = if state.user_has_started {
         (
             "Continue",
@@ -111,9 +123,8 @@ fn render_play_button(ui: &mut egui::Ui, state: &mut VisualizationState, models:
 
     if ui.add(play_button).on_hover_text(play_tooltip).clicked() {
         state.user_has_started = true;
-        let config = state.config_content.clone();
         let speed = state.flow.speed.clone();
-        if let Err(e) = state.start_visualization(models, config.as_deref(), speed, false) {
+        if let Err(e) = state.start_visualization(models, speed, false) {
             log::error!("Failed to start flow streamer: {}", e);
         }
     }
@@ -123,15 +134,18 @@ fn render_play_button(ui: &mut egui::Ui, state: &mut VisualizationState, models:
 ///
 /// Resets all flow counts and starts fresh. Only visible after the user
 /// has started at least once (otherwise the Play button shows "Start").
-fn render_restart_button(ui: &mut egui::Ui, state: &mut VisualizationState, models: fosr_lib::models::ArcModels) {
+fn render_restart_button(
+    ui: &mut egui::Ui,
+    state: &mut VisualizationState,
+    models: fosr_lib::models::ArcModels,
+) {
     if ui
         .button(ICON_RESTART_ALT)
         .on_hover_text("Restart - reset all statistics and edges")
         .clicked()
     {
-        let config = state.config_content.clone();
         let speed = state.flow.speed.clone();
-        if let Err(e) = state.start_visualization(models, config.as_deref(), speed, true) {
+        if let Err(e) = state.start_visualization(models, speed, true) {
             log::error!("Failed to start flow streamer: {}", e);
         }
     }

@@ -294,11 +294,10 @@ impl FlowStreamer {
     /// Speed controls how fast flows are emitted (1.0 = real-time) - can be updated at runtime.
     pub fn new(
         model: models::ArcModels,
-        config_content: Option<&str>,
+        // config_content: Option<&str>,
         speed: Arc<RwLock<f32>>,
         sender: Sender<FlowEvent>,
     ) -> Result<Self, String> {
-
         let initial_ts = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| format!("Failed to get time: {}", e))?;
