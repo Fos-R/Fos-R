@@ -4,7 +4,6 @@
 
 use super::core::generate;
 use crate::run::state::RunTabState;
-use crate::shared::config::state::ConfigFileState;
 use eframe::egui;
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
@@ -17,7 +16,6 @@ use std::sync::mpsc::channel;
 /// The generation runs asynchronously (native thread or WASM future).
 pub fn start_generation(
     state: &mut RunTabState,
-    configuration_file_state: &ConfigFileState,
     models: fosr_lib::models::ArcModels,
     ctx: &egui::Context,
 ) {
@@ -39,10 +37,9 @@ pub fn start_generation(
     let (error_sender, error_receiver) = channel();
     state.generation.error_receiver = Some(error_receiver);
 
-    let params = PcapGenerationParams::from_state(state, configuration_file_state);
+    let params = PcapGenerationParams::from_state(state);
     let cancelled = state.generation.cancelled.clone();
     let ctx = ctx.clone();
-
 
     spawn_generation_task(
         models,
@@ -68,7 +65,7 @@ struct PcapGenerationParams {
 
 impl PcapGenerationParams {
     /// Extracts parameters from the UI state and config file.
-    fn from_state(state: &RunTabState, config_state: &ConfigFileState) -> Self {
+    fn from_state(state: &RunTabState) -> Self {
         let seed = if state.generation.use_seed {
             parse_seed(&state.generation.seed_input)
         } else {
@@ -99,7 +96,6 @@ impl PcapGenerationParams {
             duration: state.generation.duration_str.clone(),
             taint: state.generation.taint,
             timezone,
-            // config_content,
         }
     }
 }
@@ -134,7 +130,6 @@ fn spawn_generation_task(
     cancelled: Arc<AtomicBool>,
     ctx: egui::Context,
 ) {
-    
     let task = move || {
         let result = generate(
             models,

@@ -33,7 +33,7 @@ pub fn render_run_tab(
 
     poll_generation_receivers(ui.ctx(), state);
 
-    render_bottom_panel(ui.ctx(), state, configuration_file_state);
+    render_bottom_panel(ui.ctx(), state);
 
     render_graph_view(ui, state);
     process_graph_events(&mut state.visualization, configuration_file_state);
@@ -46,14 +46,18 @@ pub fn render_run_tab(
 /// Waits for the countdown to reach zero before starting the visualization.
 /// This allows the UI to render at least one frame before starting,
 /// preventing visual glitches on initial load.
-fn handle_auto_start_visualization(state: &mut VisualizationState, models: Option<fosr_lib::models::ArcModels>) {
+fn handle_auto_start_visualization(
+    state: &mut VisualizationState,
+    models: Option<fosr_lib::models::ArcModels>,
+) {
     if let Some(countdown) = state.auto_start_countdown {
         if countdown > 0 {
             state.auto_start_countdown = Some(countdown - 1);
-        } else if !state.flow.running && let Some(models) = models {
-            let config = state.config_content.clone();
+        } else if !state.flow.running
+            && let Some(models) = models
+        {
             let speed = state.flow.speed.clone();
-            if let Err(e) = state.start_visualization(models, config.as_deref(), speed, true) {
+            if let Err(e) = state.start_visualization(models, speed, true) {
                 log::error!("Failed to auto-start visualization: {}", e);
             }
             state.auto_start_countdown = None;

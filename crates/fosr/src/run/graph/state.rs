@@ -722,7 +722,6 @@ impl VisualizationState {
     pub fn start_visualization(
         &mut self,
         models: fosr_lib::models::ArcModels,
-        config_content: Option<&str>,
         speed: Arc<RwLock<f32>>,
         reset: bool,
     ) -> Result<(), String> {
@@ -740,22 +739,14 @@ impl VisualizationState {
 
         let (sender, receiver) = std::sync::mpsc::channel();
 
-        let streamer = FlowStreamer::new(models, config_content, speed.clone(), sender)?;
+        let streamer = FlowStreamer::new(models, speed.clone(), sender)?;
         streamer.start();
 
         self.flow.streamer = Some(streamer);
         self.flow.receiver = Some(receiver);
         self.flow.running = true;
         self.flow.visualization_start = Some(Instant::now());
-        log::info!(
-            "Flow visualization started (config: {}, speed: {}x)",
-            if config_content.is_some() {
-                "user-provided"
-            } else {
-                "default BN model"
-            },
-            *speed.read().unwrap()
-        );
+        log::info!("Flow visualization started");
 
         Ok(())
     }

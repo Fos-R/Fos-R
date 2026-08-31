@@ -21,7 +21,7 @@ use close_dialog::render_close_confirmation_dialog;
 use eframe::egui;
 use fosr_lib::topo::config::GenerationParameters;
 use fosr_lib::topo::config::Service;
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Receiver, channel};
 
 #[derive(Debug, Default, Clone)]
 pub struct TopologyGeneration {
@@ -123,7 +123,7 @@ impl FosrApp {
 
     fn has_hosts_in_config(&self) -> bool {
         self.config_file_state
-            .config_model
+            .get_config_model()
             .as_ref()
             .is_some_and(|m| m.count_hosts() > 0)
     }
@@ -180,6 +180,7 @@ impl FosrApp {
             ..Default::default()
         };
 
+        let (send, recv) = channel();
         let app = FosrApp {
             topo_receiver: None,
             default_subtopo: fosr_lib::topo::subtopo::get_default_subtopos(),
@@ -187,9 +188,9 @@ impl FosrApp {
             view_state: ViewState::Welcome,
             // view_options: ViewOptions { zoom_factor: ZOOM_DEFAULT },
             extra_modals: ExtraModals::default(),
-            config_file_state: ConfigFileState::default(),
+            config_file_state: ConfigFileState::new(send),
             configuration_tab_state: ConfigurationTabState::default(),
-            run_tab_state: RunTabState::default(),
+            run_tab_state: RunTabState::new(recv),
             #[cfg(not(target_arch = "wasm32"))]
             allowed_to_close: false,
             default_topologies: fosr_lib::network::get_default_topologies(),
@@ -300,7 +301,7 @@ impl FosrApp {
 impl eframe::App for FosrApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.clamp_zoom(ctx);
-
+        self.run_tab_state.check_config_update();
         // Handle close confirmation (native only)
         #[cfg(not(target_arch = "wasm32"))]
         self.handle_close_confirmation(ctx);

@@ -27,40 +27,38 @@ pub fn render_configuration_tab(ui: &mut egui::Ui, state: &mut FosrApp) {
 
     ui.separator();
 
-    if file_state.config_chosen {
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            if !state.configuration_tab_state.is_code_mode {
-                // Visual mode
-                if let Some(model) = file_state.config_model.as_mut() {
-                    host::render_hosts_section(ui, model);
-                    ui.separator();
-                    let meta_id = ui.make_persistent_id("metadata_section");
-                    egui::collapsing_header::CollapsingState::load_with_default_open(
-                        ui.ctx(),
-                        meta_id,
-                        false,
-                    )
-                    .show_header(ui, |ui| {
-                        ui.heading("Metadata");
-                    })
-                    .body(|ui| {
-                        render_metadata_section(ui, model);
-                    });
-                }
-
-                sync_model_to_yaml_state(file_state);
-            } else {
-                yaml_editor::render_yaml_editor(ui, file_state);
+    egui::ScrollArea::vertical().show(ui, |ui| {
+        if !state.configuration_tab_state.is_code_mode {
+            // Visual mode
+            if let Some(model) = file_state.get_mut_config_model() {
+                host::render_hosts_section(ui, model);
+                ui.separator();
+                let meta_id = ui.make_persistent_id("metadata_section");
+                egui::collapsing_header::CollapsingState::load_with_default_open(
+                    ui.ctx(),
+                    meta_id,
+                    false,
+                )
+                .show_header(ui, |ui| {
+                    ui.heading("Metadata");
+                })
+                .body(|ui| {
+                    render_metadata_section(ui, model);
+                });
             }
 
-            // Update error flag (parse errors + host validation errors)
-            file_state.has_errors = file_state.config_error.is_some()
-                || file_state
-                    .config_model
-                    .as_ref()
-                    .is_some_and(host_validation::has_model_errors);
-        });
-    }
+            sync_model_to_yaml_state(file_state);
+        } else {
+            yaml_editor::render_yaml_editor(ui, file_state);
+        }
+
+        // Update error flag (parse errors + host validation errors)
+        file_state.has_errors = file_state.config_error.is_some()
+            || file_state
+                .get_config_model()
+                .as_ref()
+                .is_some_and(host_validation::has_model_errors);
+    });
 }
 
 /// Sync model state to YAML content and update dirty flag.

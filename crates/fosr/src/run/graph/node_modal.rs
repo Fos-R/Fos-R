@@ -54,7 +54,7 @@ pub fn process_graph_events(
             let host_pos = state.network.node_to_host.get(&node_idx).copied();
             state.modal.edit_buffer = host_pos.and_then(|pos| {
                 configuration_file_state
-                    .config_model
+                    .get_config_model()
                     .as_ref()
                     .and_then(|c| get_host_by_pos(c, pos).cloned())
             });
@@ -272,7 +272,7 @@ fn apply_changes_to_config(
 ) {
     if let (Some(pos), Some(buffer)) = (host_pos, state.modal.edit_buffer.take()) {
         let host_found = config_file_state
-            .config_model
+            .get_mut_config_model()
             .as_mut()
             .and_then(|c| get_host_by_pos_mut(c, pos))
             .map(|host| {

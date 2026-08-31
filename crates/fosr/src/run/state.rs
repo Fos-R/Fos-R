@@ -3,7 +3,7 @@
 use super::generation::state::GenerationState;
 use super::graph::state::VisualizationState;
 use fosr_lib::models;
-use std::sync::mpsc::{channel,Receiver,TryRecvError};
+use std::sync::mpsc::{Receiver, TryRecvError, channel};
 use std::thread;
 
 /// State for the unified Run tab.
@@ -17,25 +17,26 @@ pub struct RunTabState {
     models: Option<models::ArcModels>,
     // next_config is used when "update_config" is called before the model is ready
     // it is never used otherwise
-    next_config: Option<fosr_lib::network::Network>,
+    // next_config: Option<fosr_lib::network::Network>,
+    next_config: Receiver<fosr_lib::network::Network>,
 }
 
 impl RunTabState {
-    pub fn update_config(&mut self, network: &fosr_lib::network::Network) {
+    pub fn check_config_update(&mut self) {
         if let Some(ref models) = self.models {
-            let mut bn = models.bn.write().unwrap();
-            *bn = bn.with_network(network).unwrap();
-        } else {
-            self.next_config = Some(network.clone());
+            if let Ok(network) = self.next_config.try_recv() {
+                let mut bn = models.bn.write().unwrap();
+                *bn = bn.with_network(&network).unwrap();
+            }
         }
     }
 
     pub fn get_models(&mut self) -> Option<models::ArcModels> {
-        if let Some(ref models) = self.models {
-            if let Some(config) = self.next_config.take() {
-                self.update_config(&config);
-                self.next_config = None;
-            }
+        if self.models.is_some() {
+            // if let Some(config) = self.next_config.take() {
+            //     self.update_config(&config);
+            //     self.next_config = None;
+            // }
             self.models.clone()
         } else {
             match self.models_receiver.try_recv() {
@@ -43,21 +44,25 @@ impl RunTabState {
                     self.models = Some(models);
                     self.get_models()
                 }
-                Err(TryRecvError::Disconnected) =>
-                    panic!("Error during models loading"),
+                Err(TryRecvError::Disconnected) => panic!("Error during models loading"),
                 Err(TryRecvError::Empty) => None, // still waiting
             }
         }
     }
 }
 
-impl Default for RunTabState {
-    fn default() -> Self {
+impl RunTabState {
+    pub fn new(next_config: Receiver<fosr_lib::network::Network>) -> Self {
         let (send, recv) = channel();
         // TODO wasm
         thread::spawn(move || {
             let source = models::ModelsSource::CCD;
-            send.send(models::Models::from_source_for_transfer_learning(&source).unwrap().into()).unwrap();
+            send.send(
+                models::Models::from_source_for_transfer_learning(&source)
+                    .unwrap()
+                    .into(),
+            )
+            .unwrap();
         });
 
         Self {
@@ -66,7 +71,7 @@ impl Default for RunTabState {
             visualization: VisualizationState::default(),
             generation: GenerationState::default(),
             panel_open: true,
-            next_config: None,
+            next_config,
         }
     }
 }

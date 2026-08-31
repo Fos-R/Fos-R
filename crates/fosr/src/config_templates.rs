@@ -20,10 +20,9 @@ fn apply_template_to_state(state: &mut ConfigFileState, model: &NetworkYaml, sna
     state.picked_config_file = None;
     state.config_file_content = Some(snapshot.clone());
     state.loaded_template_id = Some(model.metadata.title.clone());
-    state.config_model = Some(model.clone());
+    state.set_config_model(model.clone());
     state.clean_snapshot = Some(snapshot);
     state.config_error = None;
-    state.config_chosen = true;
     state.is_dirty = false;
 }
 
@@ -44,10 +43,9 @@ pub fn load_empty_config(state: &mut ConfigFileState) {
     let yaml = serde_yaml::to_string(&model).unwrap_or_default();
     state.picked_config_file = None;
     state.config_file_content = Some(yaml.clone());
-    state.config_model = Some(model);
+    state.set_config_model(model.clone());
     state.clean_snapshot = Some(yaml);
     state.config_error = None;
-    state.config_chosen = true;
     state.is_dirty = false;
     state.loaded_template_id = None;
 }
