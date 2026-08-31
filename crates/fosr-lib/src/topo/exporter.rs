@@ -4,8 +4,7 @@
 
 use crate::L7Proto;
 use crate::network::{
-    HostType, HostYaml, InterfaceYaml, Metadata, Network, NetworkYaml,
-    SubNetworkYaml, next_ui_id,
+    HostType, HostYaml, InterfaceYaml, Metadata, Network, NetworkYaml, SubNetworkYaml, next_ui_id,
 };
 use crate::topo::subtopo::{SubTopologyNode, SubTopologyOrInternet};
 
