@@ -106,7 +106,7 @@ fn get_poisson(lambdas: &[f64], dest_tz_offset: FixedOffset, ts: Duration) -> Op
 /// Compute the parameters of the Poisson distribution from the bins
 /// If "flow_per_day" is None, then simply reuse the values of the bins
 /// Otherwise, normalize the bins so their sum is "flow_per_day"
-fn get_lambdas(flow_per_day: Option<u64>, bins: Vec<u64>) -> Vec<f64> {
+fn get_lambdas(flow_per_day: Option<u64>, bins: &Vec<u64>) -> Vec<f64> {
     let bin_count: f64 = bins.len() as f64;
     let window_per_bin: f64 = 60. * 60. * 24. / (WINDOW_WIDTH_IN_SECS as f64) / bin_count;
     match flow_per_day {
@@ -115,13 +115,13 @@ fn get_lambdas(flow_per_day: Option<u64>, bins: Vec<u64>) -> Vec<f64> {
             // Lambda is equal to the expected value of the Poisson distribution
             // First, we normalize the bin so the sum of all bins is flow_per_day
             // Then, we divide by the number of windows in one bin
-            bins.into_iter()
-                .map(|val| (val as f64) / sum * (flow_per_day as f64) / window_per_bin)
+            bins.iter()
+                .map(|val| (*val as f64) / sum * (flow_per_day as f64) / window_per_bin)
                 .collect()
         }
         None => bins
-            .into_iter()
-            .map(|val| (val as f64) / window_per_bin)
+            .iter()
+            .map(|val| (*val as f64) / window_per_bin)
             .collect(),
     }
 }
@@ -131,7 +131,7 @@ impl BinBasedGenerator {
         seed: Option<u64>,
         net_injection: bool,
         flow_per_day: Option<u64>,
-        profile: TimeModel,
+        profile: Arc<TimeModel>,
         initial_ts: Duration,
         total_duration: Option<Duration>,
         dest_tz_offset: FixedOffset,
@@ -151,7 +151,7 @@ impl BinBasedGenerator {
                 .ceil() as u64
         });
 
-        let lambdas = get_lambdas(flow_per_day, profile.bins);
+        let lambdas = get_lambdas(flow_per_day, &profile.bins);
 
         let mut generator = BinBasedGenerator {
             net_injection,

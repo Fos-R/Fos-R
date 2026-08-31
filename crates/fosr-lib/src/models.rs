@@ -7,6 +7,7 @@ use include_dir::{Dir, DirEntry};
 use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
 
 /// The source of models
 pub enum ModelsSource {
@@ -28,6 +29,26 @@ pub enum ModelsSource {
     CCD,
     /// Models defined by the user
     UserDefined(String),
+}
+
+/// The models, wrapped in Arc
+pub struct ArcModels {
+    /// The time model of stage 0
+    pub time_bins: Arc<stage1::TimeModel>,
+    /// The Bayesian network of stage 1
+    pub bn: Arc<stage2::bayesian_networks::BayesianModel>,
+    /// The automata of stage 2
+    pub automata: Arc<stage3::tadam::AutomataLibrary>,
+}
+
+impl From<Models> for ArcModels {
+    fn from(m: Models) -> Self {
+        ArcModels {
+            time_bins: Arc::new(m.time_bins),
+            bn: Arc::new(m.bn),
+            automata: Arc::new(m.automata),
+        }
+    }
 }
 
 /// The models

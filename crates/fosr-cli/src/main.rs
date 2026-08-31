@@ -308,8 +308,10 @@ fn generate_pcap(
     taint: bool,
     model: models::Models,
 ) -> Result<(), String> {
-    let automata_library = Arc::new(model.automata);
-    let bn = Arc::new(model.bn);
+    let model: models::ArcModels = model.into();
+
+    // let automata_library = Arc::new(model.automata);
+    // let bn = Arc::new(model.bn);
     let duration = humantime::parse_duration(&duration).expect("Duration could not be parsed.");
     let target = stats::Target::GenerationDuration(duration);
 
@@ -386,8 +388,8 @@ fn generate_pcap(
         Some(duration),
         tz_offset,
     );
-    let s2 = stage2::bayesian_networks::BNGenerator::new(bn, false);
-    let s3 = stage3::tadam::TadamGenerator::new(automata_library);
+    let s2 = stage2::bayesian_networks::BNGenerator::new(model.bn, false);
+    let s3 = stage3::tadam::TadamGenerator::new(model.automata);
     let s4 = stage4::Stage4::new(taint); //, model.network);
     let jobs = jobs.unwrap_or(max(1, num_cpus::get() / 2));
 
