@@ -21,6 +21,7 @@ use close_dialog::render_close_confirmation_dialog;
 use eframe::egui;
 use fosr_lib::topo::config::GenerationParameters;
 use fosr_lib::topo::config::Service;
+use std::sync::mpsc::Receiver;
 
 #[derive(Debug, Default, Clone)]
 pub struct TopologyGeneration {
@@ -139,13 +140,14 @@ pub struct ExtraModals {
     about: bool,
 }
 
+// TODO: sous-état pour la génération de topologie
 /// Main application state managing tabs, configuration, and PCAP generation.
-/// // TODO: découpler la vue (machine à état) et le modèle
 pub struct FosrApp {
     // View
     pub topology_generation: TopologyGeneration,
     pub view_state: ViewState,
     pub extra_modals: ExtraModals,
+    pub topo_receiver: Option<Receiver<fosr_lib::network::NetworkYaml>>,
     // pub network_generation_options: GenerationParameters,
     // view_options: ViewOptions,
     #[cfg(not(target_arch = "wasm32"))]
@@ -179,6 +181,7 @@ impl FosrApp {
         };
 
         let app = FosrApp {
+            topo_receiver: None,
             default_subtopo: fosr_lib::topo::subtopo::get_default_subtopos(),
             topology_generation,
             view_state: ViewState::Welcome,

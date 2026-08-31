@@ -8,11 +8,13 @@ use crate::shared::config::file_ops::poll_file_import;
 use crate::shared::config::file_ops::trigger_file_import;
 use crate::shared::constants::colors::COLOR_TEXT_MUTED;
 use crate::shared::constants::ui::*;
+use crate::shared::widgets::helpers::info_icon_with_tooltip;
 use eframe::egui;
 use egui_material_icons::icons::{
     ICON_ARROW_BACK, ICON_EDIT, ICON_LAN, ICON_MAGIC_BUTTON, ICON_PLAY_ARROW, ICON_UPLOAD_FILE,
 };
-use crate::shared::widgets::helpers::info_icon_with_tooltip;
+use std::sync::mpsc::{TryRecvError, channel};
+use std::thread;
 
 /// Builds the frame style for a startup card based on hover state.
 fn card_frame_for_hover(ui: &egui::Ui, is_hovered: bool) -> egui::Frame {
@@ -213,7 +215,10 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
                 &mut state.topology_generation.internet_access,
                 "Internet access",
             );
-            info_icon_with_tooltip(ui, "Ensure the network has a public IP and generate flows to and from the Internet.");
+            info_icon_with_tooltip(
+                ui,
+                "Ensure the network has a public IP and generate flows to and from the Internet.",
+            );
         });
 
         ui.add_space(SPACING_XL);
@@ -237,29 +242,55 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
         )
         .fill(accent);
 
-        if state.topology_generation.generation_failed {
-            ui.label("Generation failed!");
-        }
 
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
             if ui
-                .add(button)
+                .add_enabled(state.topo_receiver.is_none(), button)
                 .on_hover_text("Generate topology from constraints")
                 .clicked()
             {
-                match fosr_lib::topo::generator::generate_topology(
-                    &state.default_subtopo,
-                    &state.topology_generation.get_generation_parameters(),
-                ) {
-                    Ok(topo) => {
-                        load_template(
-                            &mut state.config_file_state,
-                            &fosr_lib::network::NetworkYaml::from(topo),
-                        );
-                        state.change_view(ViewState::GraphTab);
+                let (send, recv) = channel();
+                state.topology_generation.generation_failed = false;
+                state.topo_receiver = Some(recv);
+                let default_subtopo = state.default_subtopo.clone();
+                let params = state.topology_generation.get_generation_parameters();
+                // TODO wasm !
+                thread::spawn(move || {
+                    match fosr_lib::topo::generator::generate_topology(&default_subtopo, &params) {
+                        Ok(topo) => {
+                            send.send(fosr_lib::network::NetworkYaml::from(topo))
+                                .unwrap();
+                        }
+                        Err(_) => {
+                            drop(send);
+                        }
                     }
-                    Err(_) => state.topology_generation.generation_failed = true,
+                });
+            }
+
+            ui.add_space(SPACING_XXL);
+            if state.topology_generation.generation_failed {
+                ui.label("Generation failed!");
+            }
+
+            let mut delete_recv = false;
+            if let Some(ref recv) = state.topo_receiver {
+                ui.label(egui::RichText::new("Generation in progress, please wait...").italics());
+                match recv.try_recv() {
+                    Ok(topo) => {
+                        load_template(&mut state.config_file_state, &topo);
+                        state.change_view(ViewState::GraphTab);
+                        delete_recv = true;
+                    }
+                    Err(TryRecvError::Disconnected) => {
+                        state.topology_generation.generation_failed = true;
+                        delete_recv = true;
+                    }
+                    Err(TryRecvError::Empty) => {} // still waiting
                 }
+            }
+            if delete_recv {
+                state.topo_receiver = None;
             }
         });
     });
