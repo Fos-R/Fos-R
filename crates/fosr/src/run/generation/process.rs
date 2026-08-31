@@ -43,6 +43,7 @@ pub fn start_generation(
     let cancelled = state.generation.cancelled.clone();
     let ctx = ctx.clone();
 
+
     spawn_generation_task(
         models,
         params,
@@ -63,7 +64,6 @@ struct PcapGenerationParams {
     duration: String,
     taint: bool,
     timezone: Option<String>,
-    config_content: Option<String>,
 }
 
 impl PcapGenerationParams {
@@ -90,7 +90,7 @@ impl PcapGenerationParams {
         };
         // Prefer in-memory config content (reflects edits from Configuration tab)
         // over re-reading the file from disk
-        let config_content = config_state.config_file_content.clone();
+        // let config_content = config_state.config_file_content.clone();
 
         Self {
             seed,
@@ -99,7 +99,7 @@ impl PcapGenerationParams {
             duration: state.generation.duration_str.clone(),
             taint: state.generation.taint,
             timezone,
-            config_content,
+            // config_content,
         }
     }
 }
@@ -134,11 +134,12 @@ fn spawn_generation_task(
     cancelled: Arc<AtomicBool>,
     ctx: egui::Context,
 ) {
+    
     let task = move || {
         let result = generate(
             models,
             params.seed,
-            params.config_content,
+            // params.config_content,
             params.order_pcap,
             params.start_time,
             params.duration,
