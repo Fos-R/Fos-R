@@ -19,17 +19,21 @@
 - Added `--jobs` option
 - Two generation profiles: "fast" or "efficient" (can be "auto")
 - New `generate-topology` command
+- New unstable `create-pcap` command
 
 #### fosr
 
-- New crate with an unstable GUI
+- New crate with a GUI
+- Live flow visualization
+- Pcap generation
+- Network editor
 
 #### other
 
-- Evaluation pipeline
+- Evaluation pipeline (will be improved)
 - Added a Zeek script for feature extraction
-- TADAM: noise includes substitution
 - TADAM: include payload types from tshark
+- Many other tweaks to TADAM
 - Reworked learning algorithms
 
 ### Changed
@@ -49,7 +53,6 @@
 #### fosr-cli
 
 - No network injection by default
-- `create-pcap` is behind the `unstable` feature
 - Pcap files are now sorted by default
 - Bugfixes
 
