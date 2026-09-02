@@ -44,7 +44,11 @@ pub fn render_about_modal(ui: &mut egui::Ui) {
         );
     });
     ui.add_space(SPACING_SM);
-    ui.label("Contributors: Pierre-François Gimenez (Inria), Adrien Schoen (Inria), Pol Jaouen (Inria), Lénaïg Cornanguer (CISPA), Joscha Cüppers (CISPA), Dorian Bachelot (CentraleSupélec), Evan Morin (CentraleSupélec), Florentin Labelle (CentraleSupélec), Samuel Cordon (CentraleSupélec), Quentin Blin (CentraleSupélec)");
+    ui.label("Contributors:");
+    ui.label("• From Inria: Pierre-François Gimenez, Adrien Schoen, Pol Jaouen");
+    ui.label("• From CISPA: Lénaïg Cornanguer, Joscha Cüppers");
+    ui.label("• From CentraleSupélec: Dorian Bachelot, Evan Morin, Florentin Labelle, Samuel Cordon, Quentin Blin");
+    ui.label("The topology generator is based on the work of Fabien Autrel and Léo Lavaur from IMT Atlantique.");
 
     ui.add_space(SPACING_XXL);
 

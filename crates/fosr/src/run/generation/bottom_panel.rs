@@ -111,7 +111,7 @@ fn render_generate_button(
     ui.add_enabled_ui(can_generate && models.is_some(), |ui| {
         let accent = ui.visuals().selection.bg_fill;
         let button = egui::Button::new(
-            egui::RichText::new(format!("{} Generate", ICON_PLAY_ARROW)).size(TEXT_SIZE_MD),
+            egui::RichText::new(format!("{} Generate a PCAP file", ICON_PLAY_ARROW)).size(TEXT_SIZE_MD),
         )
         .fill(accent)
         .min_size(egui::vec2(BUTTON_MIN_WIDTH_LG, BUTTON_HEIGHT));
