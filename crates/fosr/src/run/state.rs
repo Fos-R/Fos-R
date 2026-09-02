@@ -2,6 +2,7 @@
 
 use super::generation::state::GenerationState;
 use super::graph::state::VisualizationState;
+use eframe::egui;
 use fosr_lib::models;
 use std::sync::mpsc::{Receiver, TryRecvError, channel};
 use std::thread;
@@ -52,9 +53,10 @@ impl RunTabState {
 }
 
 impl RunTabState {
-    pub fn new(next_config: Receiver<fosr_lib::network::Network>) -> Self {
+    pub fn new(next_config: Receiver<fosr_lib::network::Network>, ctx: &egui::Context) -> Self {
         let (send, recv) = channel();
         // TODO wasm
+        let ctx = ctx.clone();
         thread::spawn(move || {
             let source = models::ModelsSource::CCD;
             send.send(
@@ -63,6 +65,7 @@ impl RunTabState {
                     .into(),
             )
             .unwrap();
+            ctx.request_repaint();
         });
 
         Self {
