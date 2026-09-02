@@ -218,7 +218,7 @@ impl Display for BayesianNetwork {
             } else {
                 writeln!(f, "Node {index}: {:?}, parents:", n.feature)?;
             }
-            for p in n.parents.iter() {
+            for p in &n.parents {
                 writeln!(f, "   Node {p}: {:?}", self.nodes[*p].feature)?;
             }
         }
@@ -242,7 +242,7 @@ impl BayesianNetwork {
             try_again = false;
             new_discrete_vector.clone_from(discrete_vector);
             domain_vector = IntermediateVector::default();
-            for v in self.nodes.iter() {
+            for v in &self.nodes {
                 // log::info!("Sampling {:?} (index: {index})", v.feature);
                 // println!("Discrete vector: {:?}", new_discrete_vector);
                 if !matches!(v.feature, Feature::TimeBin(_)) {
@@ -418,7 +418,7 @@ fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), Stri
             node.feature
         ))
     } else if let Some(cpt) = node.cpt.as_mut() {
-        for cpt in cpt.iter_mut() {
+        for cpt in cpt {
             if let Some(weights) = cpt {
                 let result = weights.update_weights(&[(index, &0.0f64)]);
                 if result.is_err() {
@@ -464,11 +464,11 @@ impl BayesianModel {
             } => {
                 let mut bn = base_bn.clone();
 
-                for node in bn.nodes.iter_mut() {
+                for node in &mut bn.nodes {
                     // we set the probability of absent services to 0
                     if let Feature::L7Proto(v) = &mut node.feature {
                         // get services present in the network
-                        for s in network.services.iter() {
+                        for s in &network.services {
                             if !v.contains(s) {
                                 log::warn!(
                                     "Service {s:?} is not present in the original dataset and will not be generated"
@@ -488,7 +488,7 @@ impl BayesianModel {
                             })
                             .collect();
                         // modify all the probability distributions
-                        for cpt in node.cpt.as_mut().unwrap().iter_mut() {
+                        for cpt in node.cpt.as_mut().unwrap() {
                             if let Some(weights) = cpt {
                                 let result = weights.update_weights(&weight_update);
                                 // log::error!("Valeur impossible après mise à jour des distributions");
@@ -514,7 +514,7 @@ impl BayesianModel {
                             })
                             .collect();
                         // modify all the probability distributions
-                        for cpt in node.cpt.as_mut().unwrap().iter_mut() {
+                        for cpt in node.cpt.as_mut().unwrap() {
                             if let Some(weights) = cpt {
                                 let result = weights.update_weights(&weight_update);
                                 // log::error!("Valeur impossible après mise à jour des distributions");
@@ -539,7 +539,7 @@ impl BayesianModel {
                             })
                             .collect();
                         // modify all the probability distributions
-                        for cpt in node.cpt.as_mut().unwrap().iter_mut() {
+                        for cpt in node.cpt.as_mut().unwrap() {
                             if let Some(weights) = cpt {
                                 let result = weights.update_weights(&weight_update);
                                 // log::error!("Valeur impossible après mise à jour des distributions");
@@ -563,7 +563,7 @@ impl BayesianModel {
                 let mut local_dst_ip: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)> =
                     HashMap::new();
 
-                for s in network.services.iter() {
+                for s in &network.services {
                     // Use a Zipf distribution for clients activity
                     // We assume all clients can use any service
                     let mut weights: Vec<f64> = iter::repeat_n(1, network.users.len())
@@ -671,8 +671,8 @@ impl BayesianModel {
 
     fn get_bn(&self) -> Result<&BayesianNetwork, String> {
         match self {
-            BayesianModel::DatasetSpecific { bn, .. } => Ok(bn),
-            BayesianModel::ForTransferLearning { bn, .. } => Ok(bn),
+            BayesianModel::DatasetSpecific { bn, .. }
+            | BayesianModel::ForTransferLearning { bn, .. } => Ok(bn),
             BayesianModel::WaitingForNetwork { .. } => {
                 Err("A network must be specified before this model can be used".to_string())
             }
@@ -721,9 +721,9 @@ fn bn_from_bif(network: bifxml::Network) -> Result<(BayesianNetwork, usize), Str
         }
     }
 
-    for def in network.definition.iter() {
+    for def in &network.definition {
         if let Some(given) = &def.given {
-            for v in given.iter() {
+            for v in given {
                 nodes
                     .get_mut(&def.variable)
                     .unwrap()
@@ -1118,7 +1118,7 @@ impl Stage2 for BNGenerator {
                 });
                 domain_vector.dst_ttl = Some(match domain_vector.dst_ip_role.unwrap() {
                     DstIpRole::Internet => Uniform::new(52, 108).unwrap().sample(&mut rng),
-                    _ => *tl.local_ttl.get(&domain_vector.src_ip.unwrap()).unwrap(),
+                    DstIpRole::Server => *tl.local_ttl.get(&domain_vector.src_ip.unwrap()).unwrap(),
                 });
             }
         }

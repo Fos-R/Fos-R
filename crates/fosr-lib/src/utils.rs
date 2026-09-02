@@ -336,7 +336,7 @@ pub fn export_stats(file: &str, stats: Vec<FlowStats>, include_payloads: bool) {
         "timestamp,duration,protocol,src_ip,dst_ip,src_port,dst_port,ttl_client,ttl_server,fwd_packets_count,bwd_packets_count,fwd_bytes,bwd_bytes,directions,flags,iat"
     };
     writeln!(output, "{header}").expect("Error during CSV writing");
-    for f in stats.into_iter() {
+    for f in stats {
         let iat: Vec<u128> = f.iat.iter().map(Duration::as_millis).collect();
         if include_payloads {
             writeln!(
@@ -510,6 +510,7 @@ pub fn untaint_file(input: &str, output: &str) {
     pb.finish();
 }
 
+/// Verify whether a IP address is global (i.e., public)
 pub fn is_global(addr: &Ipv4Addr) -> bool {
     addr.octets()[0] != 0
         && !addr.is_multicast()
@@ -520,6 +521,7 @@ pub fn is_global(addr: &Ipv4Addr) -> bool {
         && !addr.is_private()
 }
 
+/// Sample a random global (i.e., public) IP address
 pub fn sample_random_global_ip(rng: &mut impl Rng) -> Ipv4Addr {
     let mut addr = Ipv4Addr::from_bits(rng.next_u32());
     // rejection sampling

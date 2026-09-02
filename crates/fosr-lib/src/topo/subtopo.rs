@@ -53,7 +53,7 @@ impl SubTopology {
         let mut os = HashMap::new();
 
         // Fill hashmaps
-        for node in nodes.iter() {
+        for node in &nodes {
             if let SubTopologyNode::Machine(node) = node {
                 for service in &node.services {
                     services.insert(service.clone(), true);
@@ -146,7 +146,7 @@ impl MachineNode {
             name: name.to_string(),
             address,
             services: Vec::new(),
-            os: Default::default(),
+            os: OS::default(),
         }
     }
 }

@@ -83,17 +83,17 @@ pub enum Service {
 impl From<Service> for Vec<L7Proto> {
     fn from(value: Service) -> Self {
         match value {
-            Service::WebServer => vec![L7Proto::HTTPS],
             Service::FtpServer => vec![L7Proto::FTP],
             Service::MailServer => vec![L7Proto::IMAPS, L7Proto::SMTP],
-            Service::CloudStorage => vec![L7Proto::HTTPS],
-            Service::LogServer => vec![L7Proto::HTTPS],
-            Service::DbmsServer => vec![L7Proto::HTTPS],
-            Service::CmsServer => vec![L7Proto::HTTPS],
-            Service::ProxyServer => vec![L7Proto::HTTPS],
             Service::LdapServer => vec![L7Proto::LDAP],
             Service::DnsServer => vec![L7Proto::DNS],
             Service::SshServer => vec![L7Proto::SSH],
+            Service::WebServer
+            | Service::CloudStorage
+            | Service::LogServer
+            | Service::DbmsServer
+            | Service::CmsServer
+            | Service::ProxyServer => vec![L7Proto::HTTPS],
         }
     }
 }

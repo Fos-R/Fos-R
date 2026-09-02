@@ -1,6 +1,6 @@
-//! # Topology
+//! Topology generator
 
 pub mod config;
-pub mod exporter;
+mod exporter;
 pub mod generator;
 pub mod subtopo;

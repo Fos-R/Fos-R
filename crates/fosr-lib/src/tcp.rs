@@ -1,4 +1,4 @@
-use crate::structs::*;
+use crate::structs::{EdgeType, PacketDirection, PacketInfo, Payload, PayloadType};
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
@@ -57,7 +57,7 @@ impl EdgeType for TCPEdgeTuple {
     }
 }
 
-pub fn parse_tcp_symbol(symbol: String, p: PayloadType) -> TCPEdgeTuple {
+pub fn parse_tcp_symbol(symbol: &str, p: PayloadType) -> TCPEdgeTuple {
     let strings: Vec<&str> = symbol.split('_').collect();
     TCPEdgeTuple {
         direction: match strings[1] {

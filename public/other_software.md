@@ -21,7 +21,7 @@ zeek -C -r /tmp/fifo-fosr
 and:
 
 ```console
-fosr augment-dataset [your parameters] -o /tmp/fifo-fosr
+fosr create-pcap [your parameters] -o /tmp/fifo-fosr
 ```
 
 This method does _not_ work with tshark with the `-2` parameter that requires to seek backwards on the input.

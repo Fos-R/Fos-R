@@ -39,9 +39,9 @@ impl EdgeType for ICMPEdgeTuple {
 }
 
 #[allow(unused)]
-pub fn parse_icmp_symbol(symbol: String, _t: PayloadType) -> ICMPEdgeTuple {
+pub fn parse_icmp_symbol(symbol: &str, _t: PayloadType) -> ICMPEdgeTuple {
     ICMPEdgeTuple {
-        direction: match symbol.as_str() {
+        direction: match symbol {
             ">" => PacketDirection::Forward,
             _ => PacketDirection::Backward,
         },

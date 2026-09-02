@@ -447,7 +447,7 @@ impl Stage4 {
 // fn insert_noise(data: &mut SeededData<Packets>) {
 //     todo!()
 // }
-
+/// Send the packets through an interface
 pub fn send_online(
     local_interfaces: &[Ipv4Addr],
     mut flow_packets: Packets,
