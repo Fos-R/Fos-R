@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """ROUGE metric implementation.
 
 From https://github.com/tensorflow/nmt/blob/master/nmt/scripts/rouge.py
