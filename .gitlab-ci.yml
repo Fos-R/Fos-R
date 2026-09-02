@@ -174,7 +174,7 @@ test-publish:
     - cargo publish --dry-run
   allow_failure: true # it can fail on new version update
 
-generate:
+.generate:
   tags:
     - ci.inria.fr
     - large
@@ -222,7 +222,7 @@ tests:
 
 ### ANALYZE
 
-analyze-dataset:
+.analyze-dataset:
   image: zeek/zeek
   tags:
     - ci.inria.fr
@@ -259,7 +259,7 @@ analyze-dataset:
 
 ### EVALUATE
 
-evaluate-dataset:
+.evaluate-dataset:
   image: python
   tags:
     - ci.inria.fr
