@@ -43,7 +43,7 @@ pub async fn start(canvas_id: &str) -> Result<(), JsValue> {
             web_options,
             Box::new(|cc| {
                 egui_material_icons::initialize(&cc.egui_ctx);
-                Ok(Box::new(FosrApp::default()))
+                Ok(Box::new(FosrApp::new(&cc.egui_ctx)))
             }),
         )
         .await?;

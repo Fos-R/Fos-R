@@ -143,7 +143,7 @@ pub fn render_initial_modal(ctx: &egui::Context, state: &mut FosrApp) -> bool {
             });
 
             #[cfg(target_arch = "wasm32")]
-            poll_file_import(state);
+            poll_file_import(&mut state.config_file_state);
         })
         .should_close()
 }
@@ -229,7 +229,7 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
         );
         ui.add_space(SPACING_SM);
         ui.add(
-            egui::Slider::new(&mut state.topology_generation.min_nodes, 1..=1000)
+            egui::Slider::new(&mut state.topology_generation.min_nodes, 1..=500)
                 .text("Minimum number of machines")
                 .logarithmic(true),
         );
@@ -249,21 +249,26 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
                 .clicked()
             {
                 let (send, recv) = channel();
+                let ctx = ctx.clone();
                 state.topology_generation.generation_failed = false;
                 state.topo_receiver = Some(recv);
                 let default_subtopo = state.default_subtopo.clone();
+                log::info!("Starting topology generation");
                 let params = state.topology_generation.get_generation_parameters();
                 // TODO wasm !
                 thread::spawn(move || {
                     match fosr_lib::topo::generator::generate_topology(&default_subtopo, &params) {
                         Ok(topo) => {
+                            log::info!("Successful topology generation");
                             send.send(fosr_lib::network::NetworkYaml::from(topo))
                                 .unwrap();
                         }
-                        Err(_) => {
+                        Err(e) => {
+                            log::error!("Error during topology generation: {e}");
                             drop(send);
                         }
                     }
+                    ctx.request_repaint();
                 });
             }
 

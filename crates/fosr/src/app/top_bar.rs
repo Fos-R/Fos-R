@@ -2,7 +2,6 @@
 
 use crate::app::{AppTab, FosrApp, ViewState};
 use crate::shared::constants::colors::COLOR_ERROR;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::shared::constants::ui::*;
 use eframe::egui;
 use eframe::egui::global_theme_preference_switch;

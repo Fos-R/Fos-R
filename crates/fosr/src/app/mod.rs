@@ -190,7 +190,7 @@ impl FosrApp {
             extra_modals: ExtraModals::default(),
             config_file_state: ConfigFileState::new(send),
             configuration_tab_state: ConfigurationTabState::default(),
-            run_tab_state: RunTabState::new(recv),
+            run_tab_state: RunTabState::new(recv, ctx),
             #[cfg(not(target_arch = "wasm32"))]
             allowed_to_close: false,
             default_topologies: fosr_lib::network::get_default_topologies(),
