@@ -5,7 +5,7 @@ use crate::structs::{SeededData, TimePoint};
 use chrono::FixedOffset;
 use chrono::{DateTime, Timelike};
 use crossbeam_channel::Sender;
-use rand_core::*;
+use rand_core::{Rng, SeedableRng};
 use rand_distr::Distribution;
 use rand_distr::Poisson;
 use rand_distr::Uniform;

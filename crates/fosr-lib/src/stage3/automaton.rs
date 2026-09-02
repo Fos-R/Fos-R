@@ -118,7 +118,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
         let mut max_bwd: u32 = 1;
         let mut available_clusters: Vec<bool> = vec![];
 
-        for c in automaton.clusters.iter() {
+        for c in &automaton.clusters {
             let fwd =
                 (c.mean().unwrap()[0] + 3f64 * c.variance().unwrap()[0].sqrt()).round() as u32;
             // dbg!(&c.mean().unwrap());
@@ -231,7 +231,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
 
         let mut accepting_states_per_cluster: Vec<Vec<u32>> = Vec::new();
         let mut marginal_weights_per_cluster: Vec<Vec<f64>> = Vec::new();
-        for _ in automaton.clusters.iter() {
+        for _ in &automaton.clusters {
             accepting_states_per_cluster.push(Vec::new());
             marginal_weights_per_cluster.push(Vec::new());
         }
@@ -356,7 +356,7 @@ impl<T: EdgeType> CrossProductTimedAutomaton<T> {
         }
         output.reverse();
         let mut current_ts = fd.timestamp;
-        for p in output.iter_mut() {
+        for p in &mut output {
             current_ts += p.get_ts();
             p.set_ts(current_ts);
         }
@@ -480,7 +480,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
 
                     // Finalize the timestamps
                     let mut current_ts = fd.timestamp;
-                    for p in output.iter_mut() {
+                    for p in &mut output {
                         current_ts += p.get_ts();
                         p.set_ts(current_ts);
                     }
@@ -663,7 +663,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
     pub fn import_timed_automaton(
         a: JsonAutomaton,
         clusters: Vec<MultivariateNormal<nalgebra::Const<2>>>,
-        symbol_parser: impl Fn(String, PayloadType) -> T,
+        symbol_parser: impl Fn(&str, PayloadType) -> T,
     ) -> Result<Self, String> {
         let mut nodes_nb = 0;
         let mut graph: Vec<TimedNode<T>> = vec![];
@@ -679,7 +679,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
                 None
             } else {
                 Some(Arc::new(symbol_parser(
-                    e.symbol,
+                    &e.symbol,
                     e.payloads
                         .unwrap_or(JsonPayload {
                             weights: None,
@@ -698,7 +698,7 @@ impl<T: EdgeType> TimedAutomaton<T> {
             graph[e.src as usize].out_edges.push(new_edge);
             nodes_nb = nodes_nb.max(e.src + 1).max(e.dst + 1);
         }
-        for s in graph.iter_mut() {
+        for s in &mut graph {
             if s.out_edges.len() > 1 {
                 s.dist = Some(
                     WeightedIndex::new(

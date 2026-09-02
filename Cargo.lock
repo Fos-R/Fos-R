@@ -1802,7 +1802,7 @@ dependencies = [
 
 [[package]]
 name = "fosr"
-version = "0.1.0-dev"
+version = "1.0.0-dev"
 dependencies = [
  "chrono",
  "chrono-tz",

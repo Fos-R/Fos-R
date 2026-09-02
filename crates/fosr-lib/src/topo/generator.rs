@@ -79,7 +79,7 @@ struct TopologyTreeNode {
     depth: usize,
 }
 
-/// Generate a topology according to the given parameters: select the sub-topologies with the LP, then build every depth-limited tree over them
+/// Generate a topology according to the given parameters
 pub fn generate_topology(
     sub_topologies: &[SubTopology],
     topo_generation_parameters: &GenerationParameters,
@@ -97,7 +97,7 @@ fn solve_with_microlp(
 ) -> Result<Vec<SubTopology>, String> {
     // Machines + the router of each sub-topology.
     let node_count = |st: &SubTopology| st.nodes.len() + 1;
-    let is_topo_public = |st: &SubTopology| if st.is_public() { 1 } else { 0 };
+    let is_topo_public = |st: &SubTopology| i32::from(st.is_public());
 
     if candidates.is_empty() {
         return Err("no candidate sub-topologies to select from".to_string());
@@ -221,7 +221,7 @@ fn generate_tree(
     let max_children_n = 2;
 
     // put subnet with public IP at the end of the Vec
-    nodes.sort_by_key(|x| x.is_public());
+    nodes.sort_by_key(super::subtopo::SubTopology::is_public);
 
     let mut tree = if internet_access {
         // Internet access: the root is the Internet

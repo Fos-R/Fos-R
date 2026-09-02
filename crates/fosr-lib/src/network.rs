@@ -4,7 +4,6 @@ use crate::utils;
 use include_dir::Dir;
 use include_dir::include_dir;
 use pnet::util::MacAddr;
-use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -15,11 +14,12 @@ use std::sync::atomic::{AtomicU64, Ordering};
 /// Name of the synthetic Internet network.
 pub const INTERNET_NETWORK_NAME: &str = "Internet";
 
+/// Import the default topologies
 pub fn get_default_topologies() -> Vec<NetworkYaml> {
     let d: Dir = include_dir!("$CARGO_MANIFEST_DIR/default_topologies");
     d.files()
         .inspect(|e| {
-            log::debug!("Loading default template {:?}", e.path());
+            log::debug!("Loading default template {}", e.path().display());
         })
         .map(|f: &include_dir::File| reversibly_import_network(f.contents_utf8().unwrap()))
         .collect()
@@ -115,6 +115,7 @@ pub struct Metadata {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 #[serde(rename_all = "lowercase")]
+/// The type of a host, either Server or User
 pub enum HostType {
     Server,
     User,
@@ -261,6 +262,7 @@ impl Default for HostYaml {
     }
 }
 
+/// The Yaml version of the network interface of an host.
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
 pub struct InterfaceYaml {
@@ -315,7 +317,7 @@ impl From<NetworkYaml> for Network {
             .flat_map(|n| n.hosts.iter())
             .chain(&internet)
         {
-            for interface in host.interfaces.iter() {
+            for interface in &host.interfaces {
                 os_map.insert(interface.ip_addr, host.os);
             }
         }
@@ -351,7 +353,7 @@ impl From<NetworkYaml> for Network {
             //         *interface.open_ports.get(k).unwrap(),
             //     );
             // }
-            for s in interface.services.iter() {
+            for s in &interface.services {
                 services.insert(s.get_proto());
                 let v = servers_per_service.entry(s.get_proto()).or_default();
                 v.push(interface.ip_addr);
@@ -366,8 +368,8 @@ impl From<NetworkYaml> for Network {
             .iter()
             .chain(networks.iter().flat_map(|n| n.hosts.iter()));
         for host in all_hosts {
-            for s in services.iter() {
-                for interface in host.interfaces.iter() {
+            for s in &services {
+                for interface in &host.interfaces {
                     users_per_service
                         .entry(*s)
                         .or_default()
@@ -376,7 +378,7 @@ impl From<NetworkYaml> for Network {
             }
         }
 
-        for service in services.iter() {
+        for service in &services {
             assert!(servers_per_service.contains_key(service));
             assert!(users_per_service.contains_key(service));
         }
@@ -454,13 +456,8 @@ impl TryFrom<InterfaceYaml> for Interface {
 
         let mut rng = rand::rng(); //TODO: déterminisme
         let ip_addr = match i.ip_addr.as_str() {
-            "auto" => Ipv4Addr::new(0, 0, 0, 0),
-            "internet" => Ipv4Addr::new(
-                rng.random::<u8>(),
-                rng.random::<u8>(),
-                rng.random::<u8>(),
-                rng.random::<u8>(),
-            ), // TODO: ne pas générer complètement au hasard pour éviter les collisions et permettre d'utiliser une seed
+            // "auto" => Ipv4Addr::new(0, 0, 0, 0),
+            "internet" => utils::sample_random_global_ip(&mut rng),
             _ => i.ip_addr.parse().expect("Cannot parse IP address"),
         };
         Ok(Interface {

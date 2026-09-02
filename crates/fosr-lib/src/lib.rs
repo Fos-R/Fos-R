@@ -14,7 +14,7 @@ pub mod structs;
 #[doc(inline)]
 pub use structs::*;
 
-/// The default models included in the binary
+/// Default models included in the binary
 pub mod models;
 
 /// ICMP-specific fonctions
@@ -52,5 +52,5 @@ pub mod export;
 /// Network injection
 pub mod inject;
 
-/// Network topology
+/// Network topology generator
 pub mod topo;

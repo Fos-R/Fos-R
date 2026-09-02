@@ -39,7 +39,7 @@ impl EdgeType for UDPEdgeTuple {
     }
 }
 
-pub fn parse_udp_symbol(symbol: String, p: PayloadType) -> UDPEdgeTuple {
+pub fn parse_udp_symbol(symbol: &str, p: PayloadType) -> UDPEdgeTuple {
     let strings: Vec<&str> = symbol.split('_').collect();
     UDPEdgeTuple {
         direction: match strings[0] {

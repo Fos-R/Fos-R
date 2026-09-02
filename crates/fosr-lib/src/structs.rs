@@ -134,7 +134,7 @@ pub enum L7Proto {
     DCERPC,
     SMB,
     // TODO complete
-    // Joker variant for everything else
+    /// Joker variant for everything else
     // &'static str costs a little leak (a few bytes) but make this enum
     // Copy, which is very convenient
     NonDefault(&'static str),
@@ -146,7 +146,7 @@ impl FromStr for L7Proto {
     // TODO: ssl ok pour plusieurs protocoles (idem pour http si on a des sous-usages)
 
     fn from_str(original_s: &str) -> Result<Self, String> {
-        let binding = original_s.to_uppercase().replace(" ", "");
+        let binding = original_s.to_uppercase().replace(' ', "");
         let s = binding.as_str().trim();
         Ok(if s.contains("HTTPS") || s.contains("SSL") {
             L7Proto::HTTPS
@@ -240,8 +240,7 @@ impl L7Proto {
     pub fn get_default_dst_port(&self) -> Option<Port> {
         match self {
             L7Proto::HTTP => Some(Port::Fixed(80)),
-            L7Proto::HTTPS => Some(Port::Fixed(443)),
-            L7Proto::QUIC => Some(Port::Fixed(443)),
+            L7Proto::HTTPS | L7Proto::QUIC => Some(Port::Fixed(443)),
             L7Proto::SSH => Some(Port::Fixed(22)),
             L7Proto::DNS => Some(Port::Fixed(53)),
             L7Proto::DHCP => Some(Port::Fixed(67)),
@@ -264,13 +263,16 @@ impl L7Proto {
 }
 
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
+/// A default port
 pub enum Port {
+    /// A fixed port
     Fixed(u16),
+    /// A random port
     Random, // TODO: range ? weights ?
 }
 
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
-/// A list of application layer protocol
+/// A list of application layer protocol with their default port
 pub struct L7ProtoWithPort {
     proto: L7Proto,
     port: Port,
@@ -295,7 +297,7 @@ impl FromStr for L7ProtoWithPort {
             None
         };
         let proto: L7Proto =
-            L7Proto::from_str(v[0].to_uppercase().replace(" ", "").as_str().trim()).unwrap();
+            L7Proto::from_str(v[0].to_uppercase().replace(' ', "").as_str().trim()).unwrap();
         if port.is_none() && proto.get_default_dst_port().is_none() {
             Err(format!(
                 "Non-default protocol {s} must include a port number"
@@ -480,6 +482,7 @@ impl Payload {
     }
 }
 
+/// A trait for obtaining indicators from a packet
 pub trait PacketInfo: Clone + Debug {
     #[allow(unused)]
     fn get_direction(&self) -> PacketDirection;
@@ -553,7 +556,7 @@ impl Packets {
     }
 
     pub fn reverse(&mut self) {
-        for d in self.directions.iter_mut() {
+        for d in &mut self.directions {
             *d = d.into_reverse();
         }
         let data = self.flow.get_data_mut();
