@@ -178,7 +178,7 @@ fn render_filename(ui: &mut egui::Ui, state: &ConfigFileState) {
     let filename = if let Some(file) = &state.picked_config_file {
         file.file_name()
     } else if let Some(template_id) = &state.loaded_template_id {
-        format!("{}.yaml (built-in template)", template_id)
+        format!("{}.yaml (built-in network)", template_id)
     } else {
         "No file selected".to_string()
     };
