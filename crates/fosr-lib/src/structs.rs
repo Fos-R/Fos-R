@@ -617,7 +617,7 @@ pub struct FlowId {
 }
 
 impl FlowId {
-    /// Check whether a given flow is compatible with the current FlowId.
+    /// Check whether a given flow is compatible with the current `FlowId`.
     /// Compatibility is based on matching source IP, destination IP, source port, and destination port.
     pub fn is_compatible(&self, f: &Flow) -> bool {
         let d = f.get_data();

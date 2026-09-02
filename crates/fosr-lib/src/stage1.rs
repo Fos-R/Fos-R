@@ -28,7 +28,7 @@ pub trait Stage1:
 }
 
 /// The generator generates timestamp from bins
-/// In net_injection mode, it trickles the generation
+/// In `net_injection` mode, it trickles the generation
 #[derive(Debug, Clone)]
 pub struct BinBasedGenerator {
     next_ts: Duration, // the start of the *next* generation window
@@ -104,8 +104,8 @@ fn get_poisson(lambdas: &[f64], dest_tz_offset: FixedOffset, ts: Duration) -> Op
 }
 
 /// Compute the parameters of the Poisson distribution from the bins
-/// If "flow_per_day" is None, then simply reuse the values of the bins
-/// Otherwise, normalize the bins so their sum is "flow_per_day"
+/// If "`flow_per_day`" is None, then simply reuse the values of the bins
+/// Otherwise, normalize the bins so their sum is "`flow_per_day`"
 fn get_lambdas(flow_per_day: Option<u64>, bins: &[u64]) -> Vec<f64> {
     let bin_count: f64 = bins.len() as f64;
     let window_per_bin: f64 = 60. * 60. * 24. / (WINDOW_WIDTH_IN_SECS as f64) / bin_count;

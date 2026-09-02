@@ -1,8 +1,8 @@
 use crate::icmp::ICMPPacketInfo;
 use crate::stats::Stats;
-use crate::structs::*;
-use crate::tcp::*;
-use crate::udp::*;
+use crate::structs::{EdgeType, L7Proto, TCPConnState, L4Proto, PacketInfo, FlowData, PacketDirection, SeededData, PacketsIR, Flow};
+use crate::tcp::{TCPEdgeTuple, parse_tcp_symbol, TCPPacketInfo, create_tcp_header};
+use crate::udp::{UDPEdgeTuple, parse_udp_symbol, UDPPacketInfo, create_udp_header};
 use crossbeam_channel::{Receiver, Sender};
 use std::sync::Arc;
 

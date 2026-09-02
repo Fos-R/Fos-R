@@ -1,4 +1,4 @@
-use crate::structs::*;
+use crate::structs::{EdgeType, PacketInfo, PacketDirection, FlowData, Payload, PayloadType, TCPConnState, L4Proto};
 use base64::Engine;
 use derivative::Derivative;
 use nalgebra::OVector;
@@ -40,7 +40,7 @@ impl<T: EdgeType> TimedNode<T> {
     fn get_likelihood(&self, edge_index: usize) -> f64 {
         match &self.dist {
             None => 0.,
-            Some(d) => (d.weight(edge_index).unwrap() as f64) / (d.total_weight() as f64),
+            Some(d) => f64::from(d.weight(edge_index).unwrap()) / f64::from(d.total_weight()),
         }
     }
 }
@@ -255,7 +255,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                 let mut max_value: Option<f64> = None;
                 for (j, cluster) in automaton.clusters.iter().enumerate() {
                     if available_clusters[j] {
-                        let p = cluster.ln_pdf(&Vector2::new(node.fwd as f64, node.bwd as f64));
+                        let p = cluster.ln_pdf(&Vector2::new(f64::from(node.fwd), f64::from(node.bwd)));
                         if let Some(val) = max_value {
                             if val < p {
                                 max_value = Some(p);
@@ -277,7 +277,7 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
 
                     accepting_states_per_cluster[max as usize].push(i as u32);
                     marginal_weights_per_cluster[max as usize]
-                        .push(node.likelihood * (u32::MAX as f64));
+                        .push(node.likelihood * f64::from(u32::MAX));
                 } else {
                     unreachable!();
                 }

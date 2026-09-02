@@ -373,7 +373,7 @@ impl From<NetworkYaml> for Network {
                     users_per_service
                         .entry(*s)
                         .or_default()
-                        .push(interface.ip_addr)
+                        .push(interface.ip_addr);
                 }
             }
         }
