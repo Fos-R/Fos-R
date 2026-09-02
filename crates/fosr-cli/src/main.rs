@@ -10,7 +10,7 @@ use fosr_lib::stage4;
 use fosr_lib::stats;
 use fosr_lib::topo;
 use fosr_lib::utils;
-use fosr_lib::*;
+use fosr_lib::{inject, SeededData, TimePoint, Flow, PacketsIR, TCPPacketInfo, UDPPacketInfo, ICMPPacketInfo, L4Proto, Packets, PacketsRecycler};
 mod cmd;
 
 use std::cmp::max;
@@ -174,7 +174,7 @@ fn main() -> Result<(), String> {
                 jobs,
                 taint,
                 model,
-            )?
+            )?;
         }
         cmd::Command::AugmentDataset {
             seed,
@@ -210,7 +210,7 @@ fn main() -> Result<(), String> {
                 jobs,
                 taint,
                 model,
-            )?
+            )?;
         }
 
         cmd::Command::Untaint { input, output } => {
@@ -293,7 +293,7 @@ fn main() -> Result<(), String> {
             .expect("Failed to write to the file");
             log::info!("Topology has been successfully generated into {outfile}");
         }
-    };
+    }
     Ok(())
 }
 
@@ -344,29 +344,26 @@ fn generate_pcap(
             )
         };
 
-    let tz_offset = match tz {
-        Some(tz_str) => {
-            let tz: Tz = tz_str.parse().expect("Could not parse the timezone");
-            let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
-                .unwrap()
-                .naive_utc();
-            let tz = tz.offset_from_utc_datetime(&date).fix();
-            log::info!("Using {tz_str} timezone (UTC{tz})");
-            tz
-        }
-        None => {
-            let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
-                .unwrap()
-                .naive_utc();
-            let tz = chrono::Local::now()
-                .timezone()
-                .offset_from_local_datetime(&date)
-                .single()
-                .expect("Ambiguous local date from timestamp")
-                .fix();
-            log::info!("Using local timezone (UTC{tz})");
-            tz
-        }
+    let tz_offset = if let Some(tz_str) = tz {
+        let tz: Tz = tz_str.parse().expect("Could not parse the timezone");
+        let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
+            .unwrap()
+            .naive_utc();
+        let tz = tz.offset_from_utc_datetime(&date).fix();
+        log::info!("Using {tz_str} timezone (UTC{tz})");
+        tz
+    } else {
+        let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
+            .unwrap()
+            .naive_utc();
+        let tz = chrono::Local::now()
+            .timezone()
+            .offset_from_local_datetime(&date)
+            .single()
+            .expect("Ambiguous local date from timestamp")
+            .fix();
+        log::info!("Using local timezone (UTC{tz})");
+        tz
     };
 
     // the initial timestamp was computed assuming that the timezone is UTC.
@@ -445,7 +442,7 @@ fn generate_pcap(
                 None::<InjectParam<inject::DummyNetEnabler>>,
             )?;
         }
-    };
+    }
     Ok(())
 }
 
@@ -960,7 +957,7 @@ fn run_fast(
         log::info!(
             "Generation throughput: {}/s, {:.3}/MPPS",
             HumanBytes(((total_size as f64) / gen_duration) as u64),
-            ((pkt_number as f64) / (1_000_000f64 * gen_duration))
+            (f64::from(pkt_number) / (1_000_000f64 * gen_duration))
         );
     }
     Ok(())

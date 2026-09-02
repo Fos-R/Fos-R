@@ -60,7 +60,7 @@ impl TcpPacketData {
 
 impl Stage4 {
     /// Configures the Ethernet frame by setting the source, destination MAC addresses,
-    /// and setting the EtherType to IPv4.
+    /// and setting the `EtherType` to IPv4.
     fn setup_ethernet_frame(&self, packet: &mut [u8], src_mac: MacAddr, dst_mac: MacAddr) {
         // the size is already computed, it cannot fail
         let mut eth_packet = MutableEthernetPacket::new(packet).unwrap();
@@ -70,7 +70,7 @@ impl Stage4 {
     }
 
     /// Sets up the IPv4 packet inside a given buffer.
-    /// It assigns generic fields (version, header_length, total_length, protocol, identification)
+    /// It assigns generic fields (version, `header_length`, `total_length`, protocol, identification)
     /// and adjusts source, destination, and TTL based on the packet direction;
     /// then calculates and sets the IPv4 header checksum.
     fn setup_ip_packet<P: PacketInfo>(
@@ -122,7 +122,7 @@ impl Stage4 {
     /// and simulates congestion behavior (including CWR flag if needed). Finally,
     /// it computes and sets the TCP checksum.
     ///
-    /// Returns an updated TcpPacketData structure for further packet generation.
+    /// Returns an updated `TcpPacketData` structure for further packet generation.
     fn setup_tcp_packet(
         &self,
         rng: &mut impl Rng,
@@ -196,12 +196,12 @@ impl Stage4 {
 
         // Set the s | a | f | r | u | p flags
         tcp_packet.set_flags(
-            (packet_info.s_flag as u8 * TcpFlags::SYN)
-                | (packet_info.a_flag as u8 * TcpFlags::ACK)
-                | (packet_info.f_flag as u8 * TcpFlags::FIN)
-                | (packet_info.r_flag as u8 * TcpFlags::RST)
-                | (packet_info.u_flag as u8 * TcpFlags::URG)
-                | (packet_info.p_flag as u8 * TcpFlags::PSH),
+            (u8::from(packet_info.s_flag) * TcpFlags::SYN)
+                | (u8::from(packet_info.a_flag) * TcpFlags::ACK)
+                | (u8::from(packet_info.f_flag) * TcpFlags::FIN)
+                | (u8::from(packet_info.r_flag) * TcpFlags::RST)
+                | (u8::from(packet_info.u_flag) * TcpFlags::URG)
+                | (u8::from(packet_info.p_flag) * TcpFlags::PSH),
         );
 
         // Simulate the congestion window
@@ -297,6 +297,7 @@ impl Stage4 {
         ));
     }
 
+    #[must_use] 
     pub fn new(taint: bool /*config: Hosts*/) -> Self {
         Stage4 {
             taint,
@@ -309,7 +310,7 @@ impl Stage4 {
     /// For each packet info entry, it:
     ///   - Calculates the packet size.
     ///   - Configures the Ethernet, IPv4, and TCP layers.
-    ///   - Updates TCP sequence numbers using TcpPacketData.
+    ///   - Updates TCP sequence numbers using `TcpPacketData`.
     ///   - Captures the packet timestamp and header.
     ///
     /// Returns a Packets struct encapsulating the packet data, directions, timestamps, and flow.
@@ -489,7 +490,7 @@ fn send_pcap(flow_packets: thingbuf::mpsc::blocking::SendRef<Packets>) {
 
 /// Runs stage 4 of the pipeline, processing incoming seeded packet representations.
 ///
-/// This function receives intermediate packet data from rx_s4, generates complete
+/// This function receives intermediate packet data from `rx_s4`, generates complete
 /// packets using the provided generator function, and then sends the generated flows
 /// to appropriate channels based on the configuration (online transmission and/or pcap export).
 pub fn run_channel<T: PacketInfo>(

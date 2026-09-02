@@ -129,7 +129,7 @@ fn solve_with_microlp(
         let public_expr: Vec<(Variable, f64)> = vars
             .iter()
             .zip(candidates)
-            .map(|(&v, st)| (v, is_topo_public(st) as f64))
+            .map(|(&v, st)| (v, f64::from(is_topo_public(st))))
             .collect();
 
         problem.add_constraint(
@@ -286,7 +286,7 @@ fn alloc_ip_in_subnet(
 
     // Usable host range: exclude the network and broadcast addresses
     for offset in 1..(size - 1) {
-        let candidate = Ipv4Addr::from((network as u64 + offset) as u32);
+        let candidate = Ipv4Addr::from((u64::from(network) + offset) as u32);
         if !used.contains(&candidate) {
             return Ok(candidate);
         }

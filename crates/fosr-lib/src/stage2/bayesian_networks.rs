@@ -1,6 +1,6 @@
 use crate::models;
 use crate::network;
-use crate::stage2::*;
+use crate::stage2::{L7Proto, L4Proto, TCPConnState, Flow, FlowData, L7ProtoWithPort, Rng, bifxml, SeedableRng, Stage2, SeededData, TimePoint, OS, Port};
 use crate::utils;
 
 use chrono::Timelike;
@@ -998,7 +998,7 @@ impl Stage2 for BNGenerator {
             restart = false;
             let time = min(
                 bin_count - 1,
-                ((ts.data.date_time.num_seconds_from_midnight() as f64 / (3600. * 24.)).fract()
+                ((f64::from(ts.data.date_time.num_seconds_from_midnight()) / (3600. * 24.)).fract()
                     * (bin_count as f64)) as usize,
             );
             discrete_vector.clear();

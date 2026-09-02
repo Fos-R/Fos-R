@@ -27,7 +27,7 @@ pub fn run_export(
     if order_pcap {
         let mut all_packets: Vec<Packet> = vec![];
         while let Some(packets) = rx_pcap.recv_ref() {
-            for packet in packets.packets.iter() {
+            for packet in &packets.packets {
                 all_packets.push(packet.clone());
             }
         }
