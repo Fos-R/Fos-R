@@ -5,6 +5,7 @@ use super::graph::state::VisualizationState;
 use eframe::egui;
 use fosr_lib::models;
 use std::sync::mpsc::{Receiver, TryRecvError, channel};
+#[cfg(not(target_arch = "wasm32"))]
 use std::thread;
 
 /// State for the unified Run tab.
@@ -55,9 +56,8 @@ impl RunTabState {
 impl RunTabState {
     pub fn new(next_config: Receiver<fosr_lib::network::Network>, ctx: &egui::Context) -> Self {
         let (send, recv) = channel();
-        // TODO wasm
         let ctx = ctx.clone();
-        thread::spawn(move || {
+        let task = move || {
             let source = models::ModelsSource::CCD;
             send.send(
                 models::Models::from_source_for_transfer_learning(&source)
@@ -66,7 +66,13 @@ impl RunTabState {
             )
             .unwrap();
             ctx.request_repaint();
-        });
+        };
+
+        #[cfg(target_arch = "wasm32")]
+        wasm_bindgen_futures::spawn_local(async move { task() });
+
+        #[cfg(not(target_arch = "wasm32"))]
+        std::thread::spawn(task);
 
         Self {
             models_receiver: recv,
