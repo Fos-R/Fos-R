@@ -309,10 +309,10 @@ impl eframe::App for FosrApp {
         match self.view_state {
             ViewState::Welcome => {
                 egui::CentralPanel::default().show(ctx, |_ui| {});
-                let should_close = startup_modal::render_initial_modal(ctx, self);
-                if should_close {
-                    self.view_state = ViewState::Exit;
-                }
+                startup_modal::render_initial_modal(ctx, self);
+                // if should_close {
+                //     self.view_state = ViewState::Exit;
+                // }
             }
             ViewState::TemplateSelection => {
                 egui::CentralPanel::default().show(ctx, |_ui| {});
