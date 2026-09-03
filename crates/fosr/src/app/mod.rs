@@ -94,7 +94,6 @@ pub enum ViewState {
     TemplateGeneration,
     GraphTab,
     ConfigTab,
-    Exit,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -340,7 +339,6 @@ impl eframe::App for FosrApp {
                     });
                 });
             }
-            ViewState::Exit => todo!(),
         }
 
         if self.extra_modals.about {

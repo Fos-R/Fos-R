@@ -10,8 +10,6 @@ use rand_distr::{Distribution, Gamma};
 use serde::Deserialize;
 use statrs::distribution::Continuous;
 use statrs::distribution::MultivariateNormal;
-use statrs::rand::SeedableRng;
-use statrs::rand::distributions::Distribution as StatRsDistribution;
 use statrs::statistics::{MeanN, VarianceN};
 use std::cmp::max;
 use std::collections::HashMap;
@@ -431,11 +429,8 @@ impl<T: EdgeType> TimedAutomaton<T> {
         fd: &FlowData,
         header_creator: impl Fn(Payload, Duration, &T) -> U,
     ) -> Option<Vec<U>> {
-        // statrs do not use the same version of rand as the rest, so we have to create a structure
-        // just for it
-        let mut rng_statrs = statrs::rand::rngs::StdRng::seed_from_u64(rng.next_u64());
         let vec: OVector<f64, nalgebra::Const<2>> =
-            self.clusters[fd.packets_count_cluster].sample(&mut rng_statrs);
+            self.clusters[fd.packets_count_cluster].sample(rng);
 
         let min_fwd: u32 = vec[0].round().max(0.) as u32;
         let min_bwd: u32 = vec[1].round().max(0.) as u32;
