@@ -5,8 +5,6 @@ use super::graph::state::VisualizationState;
 use eframe::egui;
 use fosr_lib::models;
 use std::sync::mpsc::{Receiver, TryRecvError, channel};
-#[cfg(not(target_arch = "wasm32"))]
-use std::thread;
 
 /// State for the unified Run tab.
 /// Combines visualization (live preview) and generation state.

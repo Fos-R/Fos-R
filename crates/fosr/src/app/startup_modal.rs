@@ -14,8 +14,6 @@ use egui_material_icons::icons::{
     ICON_ARROW_BACK, ICON_EDIT, ICON_LAN, ICON_MAGIC_BUTTON, ICON_PLAY_ARROW, ICON_UPLOAD_FILE,
 };
 use std::sync::mpsc::{TryRecvError, channel};
-#[cfg(not(target_arch = "wasm32"))]
-use std::thread;
 
 /// Builds the frame style for a startup card based on hover state.
 fn card_frame_for_hover(ui: &egui::Ui, is_hovered: bool) -> egui::Frame {
