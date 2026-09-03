@@ -274,7 +274,7 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
 
             ui.add_space(SPACING_XXL);
             if state.topology_generation.generation_failed {
-                ui.label("Generation failed!");
+                ui.label(egui::RichText::new("Generation failed!").italics());
             }
 
             let mut delete_recv = false;
