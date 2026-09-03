@@ -13,6 +13,7 @@ use std::io::BufReader;
 use std::io::BufWriter;
 use std::io::Write;
 use std::net::Ipv4Addr;
+use std::path::Path;
 use std::time::Duration;
 
 const DURATION_THRESHOLD: Duration = Duration::from_secs(600);
@@ -463,6 +464,70 @@ pub fn process_file(file: &str) -> Vec<FlowStats> {
     }
 
     finished_flows
+}
+
+/// Split a pcap file between original and Fos-R packets
+pub fn split_untaint(input: &str) {
+    let path = Path::new(input);
+    let mut s_original = String::from(path.file_stem().unwrap().to_str().unwrap());
+    let mut s_fosr = s_original.clone();
+    s_original.push_str("-original.pcap");
+    s_fosr.push_str("-fosr.pcap");
+
+    let file_out_original = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(path.with_file_name(s_original))
+        .expect("Error opening or creating file");
+    let file_out_fosr = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(path.with_file_name(s_fosr))
+        .expect("Error opening or creating file");
+
+    let mut pcap_writer_original =
+        pcap::PcapWriter::new(BufWriter::new(file_out_original)).expect("Error writing file");
+    let mut pcap_writer_fosr =
+        pcap::PcapWriter::new(BufWriter::new(file_out_fosr)).expect("Error writing file");
+
+    let mut count = 0;
+    {
+        // count the number of packet so we can put a progress bar
+        let file_in = BufReader::new(File::open(input).expect("Error opening file"));
+        let mut pcap_reader = pcap::PcapReader::new(file_in).unwrap();
+        while pcap_reader.next_packet().is_some() {
+            count += 1;
+        }
+    }
+    let file_in = BufReader::new(File::open(input).expect("Error opening file"));
+    let mut pcap_reader = pcap::PcapReader::new(file_in).unwrap();
+
+    // setup the progress bar
+    let pb = ProgressBar::new(count);
+    pb.set_style(
+        ProgressStyle::with_template("{spinner:.green} Untainting [{wide_bar}] ({eta})").unwrap(),
+    );
+
+    while let Some(packet) = pcap_reader.next_packet() {
+        let mut packet = packet.expect("Error during packet parsing");
+        // let packet = packet.into_owned();
+        let data = packet.data.to_mut();
+        // let mut eth_packet = ethernet::MutableEthernetPacket::new(&mut data).unwrap();
+        let ip_start = ethernet::MutableEthernetPacket::minimum_packet_size();
+        let mut ipv4_packet = ipv4::MutableIpv4Packet::new(&mut data[ip_start..]).unwrap();
+        let ip_flags = ipv4_packet.get_flags();
+        if ipv4_packet.get_flags() & 0b100 > 0 {
+            ipv4_packet.set_flags(ip_flags & 0b011);
+            ipv4_packet.set_checksum(ipv4::checksum(&ipv4_packet.to_immutable()));
+            pcap_writer_fosr.write_packet(&packet).unwrap();
+        } else {
+            pcap_writer_original.write_packet(&packet).unwrap();
+        }
+        pb.inc(1);
+    }
+    pb.finish();
 }
 
 /// Remove the Fos-R taint (i.e., the third IP flag bit) from a pcap file
