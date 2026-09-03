@@ -64,8 +64,8 @@ build-linux-crosscompile:
     - rustup target add $TARGET
     - cargo build --target=$TARGET --config target.$TARGET.linker=\"$GCC\" -p fosr-cli -r
     - cargo deb --target=$TARGET -p fosr-cli -- --config target.$TARGET.linker=\"$GCC\"
-    - cargo build --target=$TARGET --config target.$TARGET.linker=\"$GCC\" -p fosr -r
-    - cargo deb --target=$TARGET -p fosr -- --config target.$TARGET.linker=\"$GCC\"
+    - if [ $TARGET != "arm-unknown-linux-musleabihf" ]; then cargo build --target=$TARGET --config target.$TARGET.linker=\"$GCC\" -p fosr -r; fi
+    - if [ $TARGET != "arm-unknown-linux-musleabihf" ]; then cargo deb --target=$TARGET -p fosr -- --config target.$TARGET.linker=\"$GCC\"; fi
     - if [ $TARGET = "arm-unknown-linux-musleabihf" ]; then cd target/debian; debname=$(ls *.deb); mv $debname rpi_$debname; fi
   parallel:
     matrix:
