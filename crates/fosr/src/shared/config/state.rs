@@ -1,6 +1,6 @@
 //! Configuration file state management.
 
-use fosr_lib::network::NetworkYaml;
+use fosr_lib::network::{Network, NetworkYaml};
 use rfd::FileHandle;
 #[cfg(target_arch = "wasm32")]
 use std::sync::mpsc::Receiver;
@@ -15,6 +15,7 @@ pub struct ConfigFileState {
     #[cfg(target_arch = "wasm32")]
     pub config_file_content_receiver: Option<Receiver<Result<String, String>>>,
     config_model: Option<NetworkYaml>,
+    processed_config_model: Option<Network>,
     pub config_error: Option<String>,
     pub is_dirty: bool,
     /// YAML snapshot of the clean state (for dirty detection).
@@ -28,6 +29,10 @@ pub struct ConfigFileState {
 }
 
 impl ConfigFileState {
+    pub fn get_processed_config_model(&self) -> &Option<Network> {
+        &self.processed_config_model
+    }
+
     pub fn get_config_model(&self) -> &Option<NetworkYaml> {
         &self.config_model
     }
@@ -38,6 +43,7 @@ impl ConfigFileState {
 
     pub fn set_config_model(&mut self, network: NetworkYaml) {
         self.next_config.send(network.clone().into()).unwrap();
+        self.processed_config_model = Some(network.clone().into());
         self.config_model = Some(network);
     }
 
@@ -55,6 +61,7 @@ impl ConfigFileState {
             #[cfg(target_arch = "wasm32")]
             config_file_content_receiver: None,
             config_model: None,
+            processed_config_model: None,
             config_error: None,
             is_dirty: false,
             clean_snapshot: None,

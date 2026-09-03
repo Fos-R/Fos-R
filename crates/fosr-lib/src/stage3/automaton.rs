@@ -1,4 +1,6 @@
-use crate::structs::{EdgeType, PacketInfo, PacketDirection, FlowData, Payload, PayloadType, TCPConnState, L4Proto};
+use crate::structs::{
+    EdgeType, FlowData, L4Proto, PacketDirection, PacketInfo, Payload, PayloadType, TCPConnState,
+};
 use base64::Engine;
 use derivative::Derivative;
 use nalgebra::OVector;
@@ -253,7 +255,8 @@ impl<T: EdgeType> From<TimedAutomaton<T>> for CrossProductTimedAutomaton<T> {
                 let mut max_value: Option<f64> = None;
                 for (j, cluster) in automaton.clusters.iter().enumerate() {
                     if available_clusters[j] {
-                        let p = cluster.ln_pdf(&Vector2::new(f64::from(node.fwd), f64::from(node.bwd)));
+                        let p =
+                            cluster.ln_pdf(&Vector2::new(f64::from(node.fwd), f64::from(node.bwd)));
                         if let Some(val) = max_value {
                             if val < p {
                                 max_value = Some(p);

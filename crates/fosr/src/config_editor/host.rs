@@ -315,6 +315,7 @@ fn render_host_tooltip(ui: &mut egui::Ui, host: &HostYaml) {
     let host_type = host.host_type.map_or("<auto>", |ht| match ht {
         HostType::Server => "server",
         HostType::User => "user",
+        HostType::Router => "router",
     });
     ui.horizontal(|ui| {
         ui.label("Type :");
@@ -421,6 +422,7 @@ fn render_type_dropdown(ui: &mut egui::Ui, key: (usize, usize), host: &mut HostY
         let selected_text = host.host_type.map_or("<auto>", |ht| match ht {
             HostType::Server => "server",
             HostType::User => "user",
+            HostType::Router => "router",
         });
 
         egui::ComboBox::from_id_salt((key, "host_type"))
@@ -443,6 +445,12 @@ fn render_type_dropdown(ui: &mut egui::Ui, key: (usize, usize), host: &mut HostY
                     .clicked()
                 {
                     host.host_type = Some(HostType::User);
+                }
+                if ui
+                    .selectable_label(host.host_type == Some(HostType::Router), "router")
+                    .clicked()
+                {
+                    host.host_type = Some(HostType::Router);
                 }
             });
 

@@ -67,6 +67,7 @@ pub enum NodeType {
     Server,
     User,
     Internet,
+    Router,
 }
 
 impl From<HostType> for NodeType {
@@ -74,6 +75,7 @@ impl From<HostType> for NodeType {
         match host_type {
             HostType::Server => NodeType::Server,
             HostType::User => NodeType::User,
+            HostType::Router => NodeType::Router,
         }
     }
 }

@@ -35,7 +35,7 @@ pub fn render_run_tab(
 
     render_bottom_panel(ui.ctx(), state);
 
-    render_graph_view(ui, state);
+    render_graph_view(ui, state, configuration_file_state);
     process_graph_events(&mut state.visualization, configuration_file_state);
 
     render_node_info_modal(ui.ctx(), &mut state.visualization, configuration_file_state);

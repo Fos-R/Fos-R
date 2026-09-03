@@ -297,7 +297,7 @@ impl Stage4 {
         ));
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn new(taint: bool /*config: Hosts*/) -> Self {
         Stage4 {
             taint,

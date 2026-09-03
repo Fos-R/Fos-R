@@ -2,6 +2,7 @@
 
 use super::state::{ScreenshotStateMachine, SubnetDisplayMode, VisualizationState};
 use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
+use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::{
     COLOR_EDGE_INACTIVE, COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT, COLOR_STOP,
     color_for_protocol,
@@ -15,7 +16,6 @@ use egui_material_icons::icons::{
     ICON_ADD, ICON_AUTORENEW, ICON_FIT_SCREEN, ICON_IMAGE, ICON_LAN, ICON_PLAY_ARROW, ICON_REMOVE,
     ICON_RESTART_ALT, ICON_STOP,
 };
-use fosr_lib::structs::L7Proto;
 use strum::IntoEnumIterator;
 
 /// Render a legend item with a colored circle (for edge protocols).
@@ -300,9 +300,9 @@ pub fn render_overlay_node_legend(ui: &mut egui::Ui) {
 }
 
 /// Render edge legend in the bottom-right corner of the graph.
-pub fn render_overlay_edge_legend(ui: &mut egui::Ui) {
+pub fn render_overlay_edge_legend(ui: &mut egui::Ui, network: &ConfigFileState) {
     let local_rect = ui.max_rect();
-
+    let network = network.get_processed_config_model().as_ref().unwrap();
     egui::Area::new(egui::Id::new("viz_overlay_edge_legend"))
         .pivot(egui::Align2::RIGHT_BOTTOM)
         .fixed_pos(local_rect.right_bottom() + egui::vec2(-OVERLAY_MARGIN, -OVERLAY_MARGIN))
@@ -312,8 +312,8 @@ pub fn render_overlay_edge_legend(ui: &mut egui::Ui) {
                 .shadow(egui::epaint::Shadow::NONE)
                 .show(ui, |ui| {
                     legend_item_inline(ui, "Inactive", COLOR_EDGE_INACTIVE);
-                    for proto in L7Proto::iter() {
-                        legend_item_inline(ui, proto.ui_label(), color_for_protocol(&proto));
+                    for proto in &network.services {
+                        legend_item_inline(ui, proto.ui_label(), color_for_protocol(proto));
                     }
                 })
                 .response
