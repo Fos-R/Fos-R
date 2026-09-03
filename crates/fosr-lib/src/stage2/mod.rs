@@ -1,5 +1,8 @@
 use crate::stats::Stats;
-use crate::structs::{L7Proto, L4Proto, TCPConnState, Flow, FlowData, L7ProtoWithPort, SeededData, TimePoint, OS, Port};
+use crate::structs::{
+    Flow, FlowData, L4Proto, L7Proto, L7ProtoWithPort, OS, Port, SeededData, TCPConnState,
+    TimePoint,
+};
 use crossbeam_channel::{Receiver, Sender};
 use rand_core::{Rng, SeedableRng};
 use std::net::Ipv4Addr;

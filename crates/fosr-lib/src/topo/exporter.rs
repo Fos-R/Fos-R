@@ -37,7 +37,7 @@ impl From<Vec<SubTopologyOrInternet>> for NetworkYaml {
                             ui_id: next_ui_id(),
                             hostname: Some(router.name.clone()),
                             os: None,
-                            host_type: Some(HostType::User),
+                            host_type: Some(HostType::Router),
                             interfaces,
                         });
                     }

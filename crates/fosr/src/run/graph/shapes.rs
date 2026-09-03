@@ -9,7 +9,7 @@
 use super::state::{
     EdgeState, LinkDirection, NetworkEdge, NetworkNode, NodeType, SubnetDisplayMode, ZoneDisplay,
 };
-use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
+use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_ROUTER, IMG_SERVER};
 use crate::shared::constants::colors::{
     COLOR_EDGE_INACTIVE, COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT, COLOR_TEXT_MUTED,
     ZONE_ACCENT_ALPHA_DARK, ZONE_ACCENT_ALPHA_LIGHT, ZONE_ACCENT_BRIGHTEN, ZONE_UNIFORM_RGB,
@@ -201,6 +201,7 @@ impl NetworkNodeShape {
             NodeType::Internet => IMG_INTERNET,
             NodeType::Server => IMG_SERVER,
             NodeType::User => IMG_COMPUTER,
+            NodeType::Router => IMG_ROUTER,
         }
     }
 

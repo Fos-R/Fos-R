@@ -1,7 +1,7 @@
 //! Node click handling and info/edit modal for the visualization graph.
 
 use super::state::{INTERNET_HOST_SENTINEL, NetworkNode, NodeType, VisualizationState};
-use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_SERVER};
+use crate::shared::assets::{IMG_COMPUTER, IMG_INTERNET, IMG_ROUTER, IMG_SERVER};
 use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::colors::{COLOR_ICON_TINT_DARK, COLOR_ICON_TINT_LIGHT};
 use crate::shared::constants::ui::{
@@ -130,6 +130,7 @@ fn render_modal_header(ui: &mut egui::Ui, node_data: &NetworkNode, has_edit_buff
         let (image, type_str) = match node_data.node_type {
             NodeType::Server => (IMG_SERVER, "Server"),
             NodeType::User => (IMG_COMPUTER, "User"),
+            NodeType::Router => (IMG_ROUTER, "Router"),
             NodeType::Internet => (IMG_INTERNET, "Internet"),
         };
         let tint = if ui.style().visuals.dark_mode {

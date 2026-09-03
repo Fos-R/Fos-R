@@ -23,11 +23,11 @@ pub struct RunTabState {
 
 impl RunTabState {
     pub fn check_config_update(&mut self) {
-        if let Some(ref models) = self.models {
-            if let Ok(network) = self.next_config.try_recv() {
-                let mut bn = models.bn.write().unwrap();
-                *bn = bn.with_network(&network).unwrap();
-            }
+        if let Some(ref models) = self.models
+            && let Ok(network) = self.next_config.try_recv()
+        {
+            let mut bn = models.bn.write().unwrap();
+            *bn = bn.with_network(&network).unwrap();
         }
     }
 

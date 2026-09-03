@@ -44,7 +44,7 @@ build-linux-x86-64:
       - target/debian/*.deb
       - doc
 
-build-linux-crosscompile:
+.build-linux-crosscompile:
   tags:
     - ci.inria.fr
     - large

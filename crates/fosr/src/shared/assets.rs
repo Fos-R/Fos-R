@@ -8,6 +8,7 @@ use eframe::egui::{ImageSource, include_image};
 pub const IMG_SERVER: ImageSource = include_image!("../../assets/server.png");
 pub const IMG_COMPUTER: ImageSource = include_image!("../../assets/computer.png");
 pub const IMG_INTERNET: ImageSource = include_image!("../../assets/internet.png");
+pub const IMG_ROUTER: ImageSource = include_image!("../../assets/router.png");
 
 // Logos
 pub const IMG_LOGO: ImageSource = include_image!("../../../../public/logo.png");

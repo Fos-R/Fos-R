@@ -13,6 +13,7 @@ use super::state::{
     GraphViewState, NetworkEdge, NetworkNode, ScreenshotStateMachine, SubnetDisplayMode,
 };
 use crate::run::state::RunTabState;
+use crate::shared::config::state::ConfigFileState;
 use crate::shared::constants::ui::{FIT_TO_SCREEN_PADDING_FLAT, FIT_TO_SCREEN_PADDING_WITH_ZONES};
 use eframe::egui;
 
@@ -24,7 +25,7 @@ use eframe::egui;
 /// 3. Disables force-directed layout (uses circle layout)
 /// 4. Handles screenshot export state machine
 /// 5. Renders UI overlays (buttons, stats, legends)
-pub fn render_graph_view(ui: &mut egui::Ui, state: &mut RunTabState) {
+pub fn render_graph_view(ui: &mut egui::Ui, state: &mut RunTabState, network: &ConfigFileState) {
     let inner_response = egui::CentralPanel::default()
         .frame(egui::Frame::NONE) // No frame, this avoids having white borders around the pane
         .show(ui.ctx(), |ui| {
@@ -91,7 +92,7 @@ pub fn render_graph_view(ui: &mut egui::Ui, state: &mut RunTabState) {
                 render_overlay_buttons(ui, &mut state.visualization, models);
                 render_overlay_stats(ui, &state.visualization);
                 render_overlay_node_legend(ui);
-                render_overlay_edge_legend(ui);
+                render_overlay_edge_legend(ui, network);
             }
         });
 

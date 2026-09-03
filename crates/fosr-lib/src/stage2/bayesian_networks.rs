@@ -1,6 +1,9 @@
 use crate::models;
 use crate::network;
-use crate::stage2::{L7Proto, L4Proto, TCPConnState, Flow, FlowData, L7ProtoWithPort, Rng, bifxml, SeedableRng, Stage2, SeededData, TimePoint, OS, Port};
+use crate::stage2::{
+    Flow, FlowData, L4Proto, L7Proto, L7ProtoWithPort, OS, Port, Rng, SeedableRng, SeededData,
+    Stage2, TCPConnState, TimePoint, bifxml,
+};
 use crate::utils;
 
 use chrono::Timelike;

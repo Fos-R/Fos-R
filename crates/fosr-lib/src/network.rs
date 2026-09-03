@@ -115,10 +115,11 @@ pub struct Metadata {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 #[serde(rename_all = "lowercase")]
-/// The type of a host, either Server or User
+/// The type of a host, either Server (proposes services), User (uses services) or Router (neither)
 pub enum HostType {
     Server,
     User,
+    Router,
 }
 
 /// A host in the network
@@ -297,7 +298,7 @@ impl From<NetworkYaml> for Network {
             .chain(&internet)
             .filter_map(|h| match h.host_type {
                 HostType::User => Some(h.get_ip_addr()),
-                HostType::Server => None,
+                HostType::Server | HostType::Router => None,
             })
             .flatten()
             .collect();
@@ -307,7 +308,7 @@ impl From<NetworkYaml> for Network {
             .chain(&internet)
             .filter_map(|h| match h.host_type {
                 HostType::Server => Some(h.get_ip_addr()),
-                HostType::User => None,
+                HostType::User | HostType::Router => None,
             })
             .flatten()
             .collect();

@@ -1,5 +1,10 @@
 use crate::models;
-use crate::stage3::{EdgeType, automaton, L7Proto, TCPConnState, TCPEdgeTuple, UDPEdgeTuple, L4Proto, parse_tcp_symbol, parse_udp_symbol, PacketInfo, FlowData, PacketDirection, Stage3, SeededData, PacketsIR, TCPPacketInfo, create_tcp_header, Flow, UDPPacketInfo, create_udp_header, ICMPPacketInfo};
+use crate::stage3::{
+    EdgeType, Flow, FlowData, ICMPPacketInfo, L4Proto, L7Proto, PacketDirection, PacketInfo,
+    PacketsIR, SeededData, Stage3, TCPConnState, TCPEdgeTuple, TCPPacketInfo, UDPEdgeTuple,
+    UDPPacketInfo, automaton, create_tcp_header, create_udp_header, parse_tcp_symbol,
+    parse_udp_symbol,
+};
 
 // use indicatif::{ProgressBar, ProgressStyle};
 use nalgebra::{matrix, vector};
