@@ -1,0 +1,34 @@
+mask: 24
+name: st117
+nodes:
+- ip: 23.6.96.1
+  name: r117_1
+  type: router
+- ip: 23.6.96.2
+  name: n117_2
+  os: linux
+  services: web_server
+  type: machine
+- ip: 23.6.96.3
+  name: n117_3
+  os: linux
+  type: machine
+- ip: 23.6.96.4
+  name: n117_4
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 23.6.96.5
+  name: n117_5
+  os: windows
+  type: machine
+- ip: 23.6.96.6
+  name: n117_6
+  os: windows
+  services: mail_server
+  type: machine
+- ip: 23.6.96.7
+  name: n117_7
+  os: linux
+  type: machine
+subnet: 23.6.96.0

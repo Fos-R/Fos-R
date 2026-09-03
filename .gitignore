@@ -4,6 +4,10 @@
 *.pdf
 *.dot
 *.png
+*.log
+*.json
+*.txt
+*.csv
 learning/tadam_*
 public/fosr_gui.js
 public/fosr_gui_bg.wasm

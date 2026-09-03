@@ -125,7 +125,7 @@ build-wasm32:
     - rustup target add wasm32-unknown-unknown
     # pinning the version so it is consistent with the version in Cargo.toml
     - cargo install wasm-bindgen-cli --version 0.2.122
-    - cargo build -p fosr -r --target wasm32-unknown-unknown --no-default-features
+    - cargo build -p fosr -r --target wasm32-unknown-unknown
     - wasm-bindgen --out-dir public --target web target/wasm32-unknown-unknown/release/fosr.wasm --no-typescript
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
