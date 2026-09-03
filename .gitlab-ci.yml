@@ -20,16 +20,18 @@ build-linux-x86-64:
     - git checkout $CI_COMMIT_REF_NAME
     # version without network injection
     - cargo build -p fosr-cli
+    - cargo build -p fosr
     # version without ebpf and with iptables
     # - cargo build --features iptables -p fosr
     # version with ebpf
-    - rustup toolchain install nightly --component rust-src
-    - cargo install cargo-binstall --locked
-    - cargo binstall bpf-linker
+    # - rustup toolchain install nightly --component rust-src
+    # - cargo install cargo-binstall --locked
+    # - cargo binstall bpf-linker
     - cargo install cargo-deb
     # - cargo build --features ebpf # version with ebpf only
     # - cargo build --features "iptables,ebpf" --release # version with ebpf + iptables
     - cargo deb -p fosr-cli
+    - cargo deb -p fosr
     - mkdir target/x86_64-unknown-linux-gnu
     - mv target/release target/x86_64-unknown-linux-gnu
     - cargo doc
@@ -38,6 +40,7 @@ build-linux-x86-64:
     expire_in: 3 days
     paths:
       - target/*/release/fosr-cli
+      - target/*/release/fosr
       - target/debian/*.deb
       - doc
 
@@ -52,15 +55,17 @@ build-linux-crosscompile:
     GIT_CHECKOUT: "false"
   script:
     - git checkout $CI_COMMIT_REF_NAME
-    - rustup toolchain install nightly --component rust-src
-    - cargo install cargo-binstall --locked
-    - cargo binstall bpf-linker
+    # - rustup toolchain install nightly --component rust-src
+    # - cargo install cargo-binstall --locked
+    # - cargo binstall bpf-linker
     - cargo install cargo-deb
     - apt update
     - apt install -y $DEPENDENCIES
     - rustup target add $TARGET
     - cargo build --target=$TARGET --config target.$TARGET.linker=\"$GCC\" -p fosr-cli -r
     - cargo deb --target=$TARGET -p fosr-cli -- --config target.$TARGET.linker=\"$GCC\"
+    - cargo build --target=$TARGET --config target.$TARGET.linker=\"$GCC\" -p fosr -r
+    - cargo deb --target=$TARGET -p fosr -- --config target.$TARGET.linker=\"$GCC\"
     - if [ $TARGET = "arm-unknown-linux-musleabihf" ]; then cd target/debian; debname=$(ls *.deb); mv $debname rpi_$debname; fi
   parallel:
     matrix:
@@ -82,6 +87,7 @@ build-linux-crosscompile:
     expire_in: 3 days
     paths:
       - target/*/release/fosr-cli
+      - target/*/release/fosr
       - target/debian/*.deb
 
 build-win-x86:
@@ -99,6 +105,7 @@ build-win-x86:
     - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
     - rustup target add $TARGET
     - cargo build --target=$TARGET -p fosr-cli -r
+    - cargo build --target=$TARGET -p fosr -r
   parallel:
     matrix:
       - TARGET:
@@ -110,6 +117,7 @@ build-win-x86:
     expire_in: 3 days
     paths:
       - target/*/release/fosr-cli.exe
+      - target/*/release/fosr.exe
 
 build-wasm32:
   tags:
@@ -167,9 +175,9 @@ test-publish:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
     - git checkout $CI_COMMIT_REF_NAME
-    - rustup toolchain install nightly --component rust-src
-    - cargo install cargo-binstall --locked
-    - cargo binstall bpf-linker
+    # - rustup toolchain install nightly --component rust-src
+    # - cargo install cargo-binstall --locked
+    # - cargo binstall bpf-linker
     - cargo build --release
     - cargo publish --dry-run
   allow_failure: true # it can fail on new version update
@@ -326,9 +334,9 @@ pages:
     GIT_STRATEGY: clone
     GIT_CHECKOUT: "false"
   script:
-    - git checkout $CI_COMMIT_REF_NAME
     - apt update
-    - apt install -y pandoc
+    - apt install -y pandoc git
+    - git checkout $CI_COMMIT_REF_NAME
     - mv doc public/
     - mv target public/bin
     - cat CHANGELOG.md >> public/changelog.md
@@ -348,6 +356,7 @@ pages:
     # update the deb file paths
     - sed -i -e "s/FOSR_VERSION/$(./bin/x86_64-unknown-linux-gnu/release/fosr-cli -V | cut -d" " -f 2)/g" compile.md
     - pandoc intro.md compile.md howto-create-pcap.md howto-pcap.md howto-untaint.md config_doc.md other_software.md schema.md lib.md usecases.md limitations.md refs.md footer.md -o index.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
+    - touch cupid.md cicids17.md dedale.md
     - pandoc changelog.md -o changelog.html --template template.html --include-after-body footer.html --standalone --toc
     - pandoc cupid.md -o cupid.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
     - pandoc cicids17.md -o cicids17.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
