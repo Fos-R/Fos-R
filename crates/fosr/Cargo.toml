@@ -28,8 +28,9 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 # By default, we are compiling for native.
-# If we want to compile for wasm32, we need to use the --no-default-features flag.
+# If we want to compile for wasm32, we need to use the --no-default-features --features web flag.
 default = ["native", "models"]
+web = ["models"]
 models = ["fosr-lib/models_cupid", "fosr-lib/models_cicids17", "fosr-lib/models_dedale"]
 native = []
 
