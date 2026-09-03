@@ -118,7 +118,7 @@ fn render_generate_button(
 
         if ui
             .add(button)
-            .on_hover_text("Generate PCAP from configuration")
+            .on_hover_text("Generate a PCAP with some options")
             .clicked()
         {
             start_generation(state, models.unwrap(), ctx);

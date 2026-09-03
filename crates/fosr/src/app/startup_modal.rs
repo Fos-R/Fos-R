@@ -14,6 +14,7 @@ use egui_material_icons::icons::{
     ICON_ARROW_BACK, ICON_EDIT, ICON_LAN, ICON_MAGIC_BUTTON, ICON_PLAY_ARROW, ICON_UPLOAD_FILE,
 };
 use std::sync::mpsc::{TryRecvError, channel};
+#[cfg(not(target_arch = "wasm32"))]
 use std::thread;
 
 /// Builds the frame style for a startup card based on hover state.
@@ -255,8 +256,7 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
                 let default_subtopo = state.default_subtopo.clone();
                 log::info!("Starting topology generation");
                 let params = state.topology_generation.get_generation_parameters();
-                // TODO wasm !
-                thread::spawn(move || {
+                let task = move || {
                     match fosr_lib::topo::generator::generate_topology(&default_subtopo, &params) {
                         Ok(topo) => {
                             log::info!("Successful topology generation");
@@ -269,7 +269,13 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
                         }
                     }
                     ctx.request_repaint();
-                });
+                };
+
+                #[cfg(target_arch = "wasm32")]
+                wasm_bindgen_futures::spawn_local(async move { task() });
+
+                #[cfg(not(target_arch = "wasm32"))]
+                std::thread::spawn(task);
             }
 
             ui.add_space(SPACING_XXL);
