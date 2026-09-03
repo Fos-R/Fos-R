@@ -10,7 +10,10 @@ use fosr_lib::stage4;
 use fosr_lib::stats;
 use fosr_lib::topo;
 use fosr_lib::utils;
-use fosr_lib::{inject, SeededData, TimePoint, Flow, PacketsIR, TCPPacketInfo, UDPPacketInfo, ICMPPacketInfo, L4Proto, Packets, PacketsRecycler};
+use fosr_lib::{
+    Flow, ICMPPacketInfo, L4Proto, Packets, PacketsIR, PacketsRecycler, SeededData, TCPPacketInfo,
+    TimePoint, UDPPacketInfo, inject,
+};
 mod cmd;
 
 use std::cmp::max;
@@ -215,6 +218,10 @@ fn main() -> Result<(), String> {
 
         cmd::Command::Untaint { input, output } => {
             utils::untaint_file(&input, &output);
+        }
+
+        cmd::Command::SplitUntaint { input } => {
+            utils::split_untaint(&input);
         }
 
         cmd::Command::GenerateTopology {

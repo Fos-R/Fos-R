@@ -407,4 +407,9 @@ pub enum Command {
         #[arg(short, long, required = true, help = "Pcap file output")]
         output: String,
     },
+    /// Split a pcap file between original and Fos-R packets
+    SplitUntaint {
+        #[arg(required = true, help = "Pcap file to untaint", index = 1)]
+        input: String,
+    },
 }
