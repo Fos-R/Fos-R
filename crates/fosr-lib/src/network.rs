@@ -29,8 +29,7 @@ pub fn get_default_topologies() -> Vec<NetworkYaml> {
     #[cfg(not(debug_assertions))]
     let archive = NamedArchive::load(include_dir!(
         "default_topologies",
-        compression = "zstd",
-        level = 19
+        compression = "lz4"
     ));
     archive
         .assets()

@@ -2578,8 +2578,6 @@ dependencies = [
  "hexhex",
  "lz4_flex",
  "smartstring",
- "yazi",
- "zstd",
 ]
 
 [[package]]
@@ -6380,12 +6378,6 @@ checksum = "56c1936c4cc7a1c9ab21a1ebb602eb942ba868cbd44a99cb7cdc5892335e1c85"
 dependencies = [
  "linked-hash-map",
 ]
-
-[[package]]
-name = "yazi"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c94451ac9513335b5e23d7a8a2b61a7102398b8cca5160829d313e84c9d98be1"
 
 [[package]]
 name = "yoke"
