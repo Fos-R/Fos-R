@@ -122,7 +122,7 @@ pub fn get_default_subtopos() -> Vec<SubTopology> {
     #[cfg(debug_assertions)]
     let archive = NamedArchive::load(include_dir!("subtopo", compression = "uncompressed"));
     #[cfg(not(debug_assertions))]
-    let archive = NamedArchive::load(include_dir!("subtopo", compression = "zstd", level = 19));
+    let archive = NamedArchive::load(include_dir!("subtopo", compression = "lz4"));
     archive
         .assets()
         .filter_map(|(name, f)| {

@@ -126,8 +126,7 @@ impl ModelsSource {
                 #[cfg(not(debug_assertions))]
                 let archive = NamedArchive::load(include_dir!(
                     "default_models/cicids17/automata/",
-                    compression = "zstd",
-                    level = 19
+                    compression = "lz4"
                 ));
                 archive
                     .assets()
@@ -150,8 +149,7 @@ impl ModelsSource {
                 #[cfg(not(debug_assertions))]
                 let archive = NamedArchive::load(include_dir!(
                     "default_models/cupid/automata/",
-                    compression = "zstd",
-                    level = 19
+                    compression = "lz4"
                 ));
                 archive
                     .assets()
@@ -174,8 +172,7 @@ impl ModelsSource {
                 #[cfg(not(debug_assertions))]
                 let archive = NamedArchive::load(include_dir!(
                     "default_models/dedale/automata/",
-                    compression = "zstd",
-                    level = 19
+                    compression = "lz4"
                 ));
                 archive
                     .assets()
