@@ -20,6 +20,7 @@
 - Two generation profiles: "fast" or "efficient" (can be "auto")
 - New `generate-topology` command
 - New unstable `create-pcap` command
+- New `split-untaint` command
 
 #### fosr
 
