@@ -363,7 +363,7 @@ pages:
     - pandoc cupid.md -o cupid.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
     - pandoc cicids17.md -o cicids17.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
     - pandoc dedale.md -o dedale.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
-    - rm *.md
+    - rm *.md template.html
   artifacts:
     expire_in: 3 days
     paths:

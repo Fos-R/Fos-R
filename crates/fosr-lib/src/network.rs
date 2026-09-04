@@ -1,8 +1,7 @@
 use crate::structs::{L7Proto, L7ProtoWithPort, OS};
 use crate::utils;
 
-use include_dir::Dir;
-use include_dir::include_dir;
+use include_assets::{NamedArchive, include_dir};
 use pnet::util::MacAddr;
 use rand::Rng;
 use rand_core::SeedableRng;
@@ -22,12 +21,26 @@ pub const INTERNET_NETWORK_NAME: &str = "Internet";
 
 /// Import the default topologies
 pub fn get_default_topologies() -> Vec<NetworkYaml> {
-    let d: Dir = include_dir!("$CARGO_MANIFEST_DIR/default_topologies");
-    d.files()
-        .inspect(|e| {
-            log::debug!("Loading default template {}", e.path().display());
+    #[cfg(debug_assertions)]
+    let archive = NamedArchive::load(include_dir!(
+        "default_topologies",
+        compression = "uncompressed"
+    ));
+    #[cfg(not(debug_assertions))]
+    let archive = NamedArchive::load(include_dir!(
+        "default_topologies",
+        compression = "zstd",
+        level = 19
+    ));
+    archive
+        .assets()
+        .filter_map(|(name, f)| {
+            if name.ends_with(".yaml") {
+                Some(reversibly_import_network(str::from_utf8(f).unwrap()))
+            } else {
+                None
+            }
         })
-        .map(|f: &include_dir::File| reversibly_import_network(f.contents_utf8().unwrap()))
         .collect()
 }
 

@@ -7,7 +7,6 @@ description = "The library of Fos-R (Forger Of Security Records), the ML-based s
 homepage = "https://fosr.inria.fr"
 repository = "https://gitlab.inria.fr/pirat-public/Fos-R"
 license = "GPL-3.0"
-rust-version = "1.85.1"
 categories = ["network-programming","security","science"]
 keywords = ["networking", "ai", "security"]
 
@@ -18,7 +17,7 @@ crossbeam-channel = "0.5.16"
 derivative = "2.2.0"
 fosr-ebpf = { version = "0.1.1", path = "../fosr-ebpf", optional = true }
 include-bytes-zstd = "0.1.0"
-include_dir = { version = "0.7.4", features = ["glob"] }
+include_assets = "1.0.0"
 indicatif = "0.18.6"
 log = "0.4.34"
 log-once = "0.4.1"

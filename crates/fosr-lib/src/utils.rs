@@ -398,56 +398,56 @@ pub fn process_file(file: &str) -> Vec<FlowStats> {
     let mut finished_flows: Vec<FlowStats> = vec![];
 
     while let Some(packet) = pcap_reader.next_packet() {
-        if let Ok(packet) = packet {
-            if let Some(mut flow_id) = flow_id_from_packet(&packet.data) {
-                flow_id.normalize();
+        if let Ok(packet) = packet
+            && let Some(mut flow_id) = flow_id_from_packet(&packet.data)
+        {
+            flow_id.normalize();
 
-                let packet_info: PacketInfo = packet.into();
+            let packet_info: PacketInfo = packet.into();
 
-                match packet_info {
-                    PacketInfo::TCP(packet) => {
-                        let mut flow = tcp_ongoing_flows.entry(flow_id).or_default();
-                        if let Some(last_packet) = flow.last() {
-                            // check if the flow is already finished
-                            if last_packet.ts + DURATION_THRESHOLD < packet.ts {
-                                // TODO
-                                finished_flows.push(FlowStats::new_from_tcp(
-                                    flow_id,
-                                    tcp_ongoing_flows.remove(&flow_id).unwrap(),
-                                ));
-                                flow = tcp_ongoing_flows.entry(flow_id).or_default();
-                            }
+            match packet_info {
+                PacketInfo::TCP(packet) => {
+                    let mut flow = tcp_ongoing_flows.entry(flow_id).or_default();
+                    if let Some(last_packet) = flow.last() {
+                        // check if the flow is already finished
+                        if last_packet.ts + DURATION_THRESHOLD < packet.ts {
+                            // TODO
+                            finished_flows.push(FlowStats::new_from_tcp(
+                                flow_id,
+                                tcp_ongoing_flows.remove(&flow_id).unwrap(),
+                            ));
+                            flow = tcp_ongoing_flows.entry(flow_id).or_default();
                         }
-                        flow.push(packet); // TODO réordonner si on voit "SYN"
                     }
-                    PacketInfo::UDP(packet) => {
-                        let mut flow = udp_ongoing_flows.entry(flow_id).or_default();
-                        if let Some(last_packet) = flow.last() {
-                            // check if the flow is already finished
-                            if last_packet.ts + DURATION_THRESHOLD < packet.ts {
-                                finished_flows.push(FlowStats::new_from_udp(
-                                    flow_id,
-                                    udp_ongoing_flows.remove(&flow_id).unwrap(),
-                                ));
-                                flow = udp_ongoing_flows.entry(flow_id).or_default();
-                            }
+                    flow.push(packet); // TODO réordonner si on voit "SYN"
+                }
+                PacketInfo::UDP(packet) => {
+                    let mut flow = udp_ongoing_flows.entry(flow_id).or_default();
+                    if let Some(last_packet) = flow.last() {
+                        // check if the flow is already finished
+                        if last_packet.ts + DURATION_THRESHOLD < packet.ts {
+                            finished_flows.push(FlowStats::new_from_udp(
+                                flow_id,
+                                udp_ongoing_flows.remove(&flow_id).unwrap(),
+                            ));
+                            flow = udp_ongoing_flows.entry(flow_id).or_default();
                         }
-                        flow.push(packet);
                     }
-                    PacketInfo::ICMP(packet) => {
-                        let mut flow = icmp_ongoing_flows.entry(flow_id).or_default();
-                        if let Some(last_packet) = flow.last() {
-                            // check if the flow is already finished
-                            if last_packet.ts + DURATION_THRESHOLD < packet.ts {
-                                finished_flows.push(FlowStats::new_from_icmp(
-                                    flow_id,
-                                    icmp_ongoing_flows.remove(&flow_id).unwrap(),
-                                ));
-                                flow = icmp_ongoing_flows.entry(flow_id).or_default();
-                            }
+                    flow.push(packet);
+                }
+                PacketInfo::ICMP(packet) => {
+                    let mut flow = icmp_ongoing_flows.entry(flow_id).or_default();
+                    if let Some(last_packet) = flow.last() {
+                        // check if the flow is already finished
+                        if last_packet.ts + DURATION_THRESHOLD < packet.ts {
+                            finished_flows.push(FlowStats::new_from_icmp(
+                                flow_id,
+                                icmp_ongoing_flows.remove(&flow_id).unwrap(),
+                            ));
+                            flow = icmp_ongoing_flows.entry(flow_id).or_default();
                         }
-                        flow.push(packet);
                     }
+                    flow.push(packet);
                 }
             }
         }
