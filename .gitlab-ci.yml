@@ -356,7 +356,7 @@ pages:
     - echo "\`\`\`" >> howto-untaint.md
     # update the deb file paths
     - sed -i -e "s/FOSR_VERSION/$(./bin/x86_64-unknown-linux-gnu/release/fosr-cli -V | cut -d" " -f 2)/g" compile.md
-    - pandoc intro.md compile.md howto-create-pcap.md howto-pcap.md howto-untaint.md howto-split-untaint config_doc.md other_software.md schema.md lib.md usecases.md limitations.md refs.md footer.md -o index.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
+    - pandoc intro.md compile.md howto-create-pcap.md howto-pcap.md howto-untaint.md howto-split-untaint.md config_doc.md other_software.md schema.md lib.md usecases.md limitations.md refs.md footer.md -o index.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
     - touch cupid.md cicids17.md dedale.md
     - pandoc changelog.md -o changelog.html --template template.html --include-after-body footer.html --standalone --toc
     - pandoc cupid.md -o cupid.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
