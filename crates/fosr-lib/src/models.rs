@@ -131,7 +131,7 @@ impl ModelsSource {
                 archive
                     .assets()
                     .filter_map(|(name, f)| {
-                        if name.ends_with(".json") {
+                        if name.ends_with(".json") && !name.contains("language") {
                             Some(str::from_utf8(f).unwrap().to_string())
                         } else {
                             None
@@ -154,7 +154,7 @@ impl ModelsSource {
                 archive
                     .assets()
                     .filter_map(|(name, f)| {
-                        if name.ends_with(".json") {
+                        if name.ends_with(".json") && !name.contains("language") {
                             Some(str::from_utf8(f).unwrap().to_string())
                         } else {
                             None
@@ -177,7 +177,7 @@ impl ModelsSource {
                 archive
                     .assets()
                     .filter_map(|(name, f)| {
-                        if name.ends_with(".json") {
+                        if name.ends_with(".json") && !name.contains("language") {
                             Some(str::from_utf8(f).unwrap().to_string())
                         } else {
                             None

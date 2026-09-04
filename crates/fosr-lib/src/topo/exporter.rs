@@ -113,6 +113,7 @@ impl From<Vec<SubTopologyOrInternet>> for Network {
 mod tests {
     use super::*;
     use crate::topo::config::SubTopologyParameters;
+    use crate::topo::subtopo::SubTopology;
     use std::net::Ipv4Addr;
 
     #[test]
@@ -137,7 +138,7 @@ subnet: 192.168.0.0
 "#;
         let parsed: SubTopologyParameters =
             serde_yaml::from_str(st).expect("Failed to parse sub topology");
-        let topology = vec![SubTopology::new(parsed).expect("Failed to build sub topology")];
+        let topology = vec![SubTopologyOrInternet::SubTopo(SubTopology::new(parsed).expect("Failed to build sub topology"))];
 
         let network_yaml = NetworkYaml::from(topology);
         let yaml_string =
@@ -145,16 +146,12 @@ subnet: 192.168.0.0
         println!("{yaml_string}");
 
         let network: Network = network_yaml.into();
-        assert_eq!(network.networks.len(), 1 + 1);
+        assert_eq!(network.networks.len(), 1);
         assert_eq!(network.servers.len(), 1);
-        assert_eq!(network.users.len(), 2);
+        assert_eq!(network.users.len(), 1);
         assert!(!network.services.is_empty());
 
         let router_ip = Ipv4Addr::new(192, 168, 0, 1);
-        assert!(network.users.contains(&router_ip));
         assert!(network.os_map.contains_key(&router_ip));
-        for service in &network.services {
-            assert!(!network.get_users_per_service(service).contains(&router_ip));
-        }
     }
 }

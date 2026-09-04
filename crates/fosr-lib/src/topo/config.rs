@@ -100,7 +100,7 @@ impl From<Service> for Vec<L7Proto> {
 
 #[cfg(test)]
 mod tests {
-    use crate::topo::sub_topology::SubTopology;
+    use crate::topo::subtopo::SubTopology;
 
     use super::*;
 
@@ -108,6 +108,7 @@ mod tests {
     fn test_config_parsing() {
         let config = r#"
 minimum_sub_topology: 2
+no_internet_access: true
 minimum_node_count: 10
 minimum_subnet_count: 2
 tree_depth: 0
