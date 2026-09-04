@@ -118,6 +118,10 @@ fn solve_with_microlp(
 
     let mut problem = Problem::new(OptimizationDirection::Minimize);
 
+    if let Some(time_limit) = params.time_limit {
+        problem.set_time_limit(time_limit);
+    }
+
     // One variable per candidate
     let vars: Vec<Variable> = candidates
         .iter()

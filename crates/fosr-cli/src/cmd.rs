@@ -295,6 +295,8 @@ pub enum Command {
             help = "Minimum number of nodes in the topology"
         )]
         min_nodes: usize,
+        #[arg(short, long, help = "Time limit for the solver (in seconds)")]
+        time_limit: Option<u64>,
         // #[arg(
         //     short = 'd',
         //     long,

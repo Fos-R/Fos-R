@@ -99,7 +99,10 @@ fn render_network_section(
     let host_count = network.hosts.len();
     let header_text = format!(
         "{} ({}/{}) - {} host{}",
-        network.name.clone().unwrap_or("Unnamed network".to_string()),
+        network
+            .name
+            .clone()
+            .unwrap_or("Unnamed network".to_string()),
         network.subnet,
         network.mask,
         host_count,
@@ -124,12 +127,11 @@ fn render_network_section(
                 ui.colored_label(COLOR_ERROR, error_text);
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                let hover_text =
-                    if let Some(ref name) = network.name {
+                let hover_text = if let Some(ref name) = network.name {
                     format!("Remove network '{}' and all its hosts", name)
-                    } else {
+                } else {
                     format!("Remove network and all its hosts")
-                    };
+                };
                 if ui.button(ICON_DELETE).on_hover_text(hover_text).clicked() {
                     *network_to_remove = Some(net_idx);
                 }

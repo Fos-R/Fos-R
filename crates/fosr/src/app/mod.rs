@@ -22,6 +22,7 @@ use eframe::egui;
 use fosr_lib::topo::config::GenerationParameters;
 use fosr_lib::topo::config::Service;
 use std::sync::mpsc::{Receiver, channel};
+use std::time::Duration;
 
 #[derive(Debug, Default, Clone)]
 pub struct TopologyGeneration {
@@ -84,6 +85,7 @@ impl TopologyGeneration {
             minimum_node_count: self.min_nodes,
             services,
             no_internet_access: !self.internet_access,
+            time_limit: Some(Duration::from_secs(5)),
         }
     }
 }

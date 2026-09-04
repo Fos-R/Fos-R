@@ -228,6 +228,7 @@ fn main() -> Result<(), String> {
             outfile,
             min_subnets,
             min_nodes,
+            time_limit,
             // tree_depth,
             no_internet_access,
             with_web_server,
@@ -283,9 +284,14 @@ fn main() -> Result<(), String> {
                 no_internet_access,
                 // tree_depth,
                 services,
+                time_limit: time_limit.map(|n| Duration::from_secs(n)),
             };
             log::info!("Starting the topology generation");
-            log::info!("Depending on the contraints, it can take up to 10 minutes");
+            if time_limit.is_none() {
+                log::info!(
+                    "Depending on the contraints, it can take up to 10 minutes. Consider adding a time limit."
+                );
+            }
             let topology = network::NetworkYaml::from(topo::generator::generate_topology(
                 &topo::subtopo::get_default_subtopos(),
                 &gen_params,

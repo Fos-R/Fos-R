@@ -138,7 +138,9 @@ subnet: 192.168.0.0
 "#;
         let parsed: SubTopologyParameters =
             serde_yaml::from_str(st).expect("Failed to parse sub topology");
-        let topology = vec![SubTopologyOrInternet::SubTopo(SubTopology::new(parsed).expect("Failed to build sub topology"))];
+        let topology = vec![SubTopologyOrInternet::SubTopo(
+            SubTopology::new(parsed).expect("Failed to build sub topology"),
+        )];
 
         let network_yaml = NetworkYaml::from(topology);
         let yaml_string =

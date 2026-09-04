@@ -1,8 +1,8 @@
 //! Configure/Structures
 
-use std::net::Ipv4Addr;
-
 use serde::{Deserialize, Serialize};
+use std::net::Ipv4Addr;
+use std::time::Duration;
 
 use crate::{L7Proto, OS};
 
@@ -20,6 +20,8 @@ pub struct GenerationParameters {
     /// List of services to include in the topology
     /// A service to include in the topology (e.g. http server, mailing server...)
     pub services: Vec<Service>,
+    /// Time limit for the solver
+    pub time_limit: Option<Duration>,
 }
 
 /// Defines a sub topology parameters
