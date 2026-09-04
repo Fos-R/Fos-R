@@ -218,9 +218,9 @@ impl ModelsSource {
         match &self {
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
-                // #[cfg(debug_assertions)]
-                // include_str!("../default_models/cicids17/bn/bn_tl.bifxml").to_string(),
-                // #[cfg(not(debug_assertions))]
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/cicids17/bn/bn_tl.bifxml").to_string(),
+                #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cicids17/bn/bn_tl.bifxml",
@@ -232,9 +232,9 @@ impl ModelsSource {
 
             #[cfg(feature = "models_cupid")]
             ModelsSource::CUPID => Ok(
-                // #[cfg(debug_assertions)]
-                // include_str!("../default_models/cupid/bn/bn_tl.bifxml").to_string(),
-                // #[cfg(not(debug_assertions))]
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/cupid/bn/bn_tl.bifxml").to_string(),
+                #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cupid/bn/bn_tl.bifxml",
@@ -246,9 +246,9 @@ impl ModelsSource {
 
             #[cfg(feature = "models_dedale")]
             ModelsSource::DEDALE => Ok(
-                // #[cfg(debug_assertions)]
-                // include_str!("../default_models/dedale/bn/bn_tl.bifxml").to_string(),
-                // #[cfg(not(debug_assertions))]
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/dedale/bn/bn_tl.bifxml").to_string(),
+                #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/dedale/bn/bn_tl.bifxml",
@@ -264,9 +264,9 @@ impl ModelsSource {
                 feature = "models_dedale"
             ))]
             ModelsSource::CCD => Ok(
-                // #[cfg(debug_assertions)]
-                // include_str!("../default_models/ccd/bn/bn_tl.bifxml").to_string(),
-                // #[cfg(not(debug_assertions))]
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/ccd/bn/bn_tl.bifxml").to_string(),
+                #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/ccd/bn/bn_tl.bifxml",
@@ -289,9 +289,9 @@ impl ModelsSource {
         match &self {
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
-                // #[cfg(debug_assertions)]
-                // include_str!("../default_models/cicids17/bn/bn.bifxml").to_string(),
-                // #[cfg(not(debug_assertions))]
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/cicids17/bn/bn.bifxml").to_string(),
+                #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cicids17/bn/bn.bifxml",
@@ -303,9 +303,9 @@ impl ModelsSource {
 
             #[cfg(feature = "models_cupid")]
             ModelsSource::CUPID => Ok(
-                // #[cfg(debug_assertions)]
-                // include_str!("../default_models/cupid/bn/bn.bifxml").to_string(),
-                // #[cfg(not(debug_assertions))]
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/cupid/bn/bn.bifxml").to_string(),
+                #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cupid/bn/bn.bifxml",
@@ -317,9 +317,9 @@ impl ModelsSource {
 
             #[cfg(feature = "models_dedale")]
             ModelsSource::DEDALE => Ok(
-                // #[cfg(debug_assertions)]
-                // include_str!("../default_models/dedale/bn/bn.bifxml").to_string(),
-                // #[cfg(not(debug_assertions))]
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/dedale/bn/bn.bifxml").to_string(),
+                #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/dedale/bn/bn.bifxml",
@@ -349,9 +349,9 @@ impl ModelsSource {
         match &self {
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
-                // #[cfg(debug_assertions)]
-                // include_str!("../default_models/cicids17/pkt_count_clusters.json").to_string(),
-                // #[cfg(not(debug_assertions))]
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/cicids17/pkt_count_clusters.json").to_string(),
+                #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cicids17/pkt_count_clusters.json",
@@ -363,9 +363,9 @@ impl ModelsSource {
 
             #[cfg(feature = "models_cupid")]
             ModelsSource::CUPID => Ok(
-                // #[cfg(debug_assertions)]
-                // include_str!("../default_models/cupid/pkt_count_clusters.json").to_string(),
-                // #[cfg(not(debug_assertions))]
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/cupid/pkt_count_clusters.json").to_string(),
+                #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cupid/pkt_count_clusters.json",
@@ -377,9 +377,9 @@ impl ModelsSource {
 
             #[cfg(feature = "models_dedale")]
             ModelsSource::DEDALE => Ok(
-                // #[cfg(debug_assertions)]
-                // include_str!("../default_models/dedale/pkt_count_clusters.json").to_string(),
-                // #[cfg(not(debug_assertions))]
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/dedale/pkt_count_clusters.json").to_string(),
+                #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/dedale/pkt_count_clusters.json",
@@ -395,9 +395,9 @@ impl ModelsSource {
                 feature = "models_dedale"
             ))]
             ModelsSource::CCD => Ok(
-                // #[cfg(debug_assertions)]
-                // include_str!("../default_models/ccd/pkt_count_clusters_tl.json").to_string(),
-                // #[cfg(not(debug_assertions))]
+                #[cfg(debug_assertions)]
+                include_str!("../default_models/ccd/pkt_count_clusters_tl.json").to_string(),
+                #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/ccd/pkt_count_clusters_tl.json",
@@ -421,9 +421,9 @@ impl ModelsSource {
         match &self {
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
-                // #[cfg(debug_assertions)]
-                // vec![include_str!("../default_models/cicids17/time_profile.json").to_string()],
-                // #[cfg(not(debug_assertions))]
+                #[cfg(debug_assertions)]
+                vec![include_str!("../default_models/cicids17/time_profile.json").to_string()],
+                #[cfg(not(debug_assertions))]
                 {
                     vec![
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
@@ -436,9 +436,9 @@ impl ModelsSource {
             ),
             #[cfg(feature = "models_cupid")]
             ModelsSource::CUPID => Ok(
-                // #[cfg(debug_assertions)]
-                // vec![include_str!("../default_models/cupid/time_profile.json").to_string()],
-                // #[cfg(not(debug_assertions))]
+                #[cfg(debug_assertions)]
+                vec![include_str!("../default_models/cupid/time_profile.json").to_string()],
+                #[cfg(not(debug_assertions))]
                 {
                     vec![
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
@@ -451,9 +451,9 @@ impl ModelsSource {
             ),
             #[cfg(feature = "models_dedale")]
             ModelsSource::DEDALE => Ok(
-                // #[cfg(debug_assertions)]
-                // vec![include_str!("../default_models/dedale/time_profile.json").to_string()],
-                // #[cfg(not(debug_assertions))]
+                #[cfg(debug_assertions)]
+                vec![include_str!("../default_models/dedale/time_profile.json").to_string()],
+                #[cfg(not(debug_assertions))]
                 {
                     vec![
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(

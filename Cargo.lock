@@ -2563,8 +2563,7 @@ dependencies = [
 [[package]]
 name = "include_assets"
 version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9badf4157b160be80341f0a54c971391b0d838e12b8e9ca2c1ffcc0673fec1cb"
+source = "git+https://github.com/william-gooch/include_assets.git#09bad4498dec8da9712693925f59b53ad7cb35a4"
 dependencies = [
  "include_assets_decode",
  "include_assets_encode",
@@ -2573,8 +2572,7 @@ dependencies = [
 [[package]]
 name = "include_assets_decode"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7219e8860914007bb392ac4f9e243c76966017647beeda3b011342957cc2b772"
+source = "git+https://github.com/william-gooch/include_assets.git#09bad4498dec8da9712693925f59b53ad7cb35a4"
 dependencies = [
  "blake2",
  "hexhex",
@@ -2587,8 +2585,7 @@ dependencies = [
 [[package]]
 name = "include_assets_encode"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3fbf11abe726d9b2d7c021b1cc87de5de08f0cd82b7ff1cb683cd51561cd27c"
+source = "git+https://github.com/william-gooch/include_assets.git#09bad4498dec8da9712693925f59b53ad7cb35a4"
 dependencies = [
  "anyhow",
  "include_assets_decode",
