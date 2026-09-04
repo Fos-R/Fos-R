@@ -7,7 +7,6 @@ description = "Fos-R (Forger Of Security Records) is an ML-based synthetic netwo
 homepage = "https://fosr.inria.fr"
 repository = "https://gitlab.inria.fr/pirat-public/Fos-R"
 license = "GPL-3.0"
-rust-version = "1.85.1"
 categories = ["network-programming","security","science"]
 keywords = ["cli", "networking", "ai", "security"]
 

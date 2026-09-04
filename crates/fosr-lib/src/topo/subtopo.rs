@@ -1,9 +1,8 @@
 //! Sub Topology
 
-use std::{collections::HashMap, net::Ipv4Addr};
-
-use include_dir::{DirEntry, include_dir};
+use include_assets::{NamedArchive, include_dir};
 use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, net::Ipv4Addr};
 
 use crate::{
     OS,
@@ -120,14 +119,24 @@ impl From<super::config::SubTopologyNode> for SubTopologyNode {
 }
 
 pub fn get_default_subtopos() -> Vec<SubTopology> {
-    include_dir!("$CARGO_MANIFEST_DIR/subtopo")
-        .find("**/*.yml")
-        .unwrap()
-        .filter_map(|e: &DirEntry| e.as_file())
-        .map(|f: &include_dir::File| f.contents_utf8().unwrap().to_string())
-        .map(|s: String| {
-            SubTopology::new(serde_yaml::from_str(&s).expect("Failed to parse sub topology config"))
-                .unwrap()
+    #[cfg(debug_assertions)]
+    let archive = NamedArchive::load(include_dir!("subtopo", compression = "uncompressed"));
+    #[cfg(not(debug_assertions))]
+    let archive = NamedArchive::load(include_dir!("subtopo", compression = "zstd", level = 19));
+    archive
+        .assets()
+        .filter_map(|(name, f)| {
+            if name.ends_with(".yml") {
+                Some(
+                    SubTopology::new(
+                        serde_yaml::from_str(str::from_utf8(f).unwrap())
+                            .expect("Failed to parse sub topology config"),
+                    )
+                    .unwrap(),
+                )
+            } else {
+                None
+            }
         })
         .collect()
 }

@@ -1,9 +1,6 @@
 use crate::network::Network;
 use crate::{network, stage1, stage2, stage3};
-#[allow(unused_imports)]
-use include_dir::include_dir;
-#[allow(unused_imports)]
-use include_dir::{Dir, DirEntry};
+use include_assets::{NamedArchive, include_dir};
 use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
@@ -120,385 +117,77 @@ impl ModelsSource {
     pub(crate) fn get_automata(&self) -> std::io::Result<Vec<String>> {
         match &self {
             #[cfg(feature = "models_cicids17")]
-            ModelsSource::CICIDS17 => Ok(
-                // #[cfg(debug_assertions)]
-                {
-                    let d: Dir =
-                        include_dir!("$CARGO_MANIFEST_DIR/default_models/cicids17/automata/");
-                    d.find("**/*.json")
-                        .unwrap()
-                        .filter_map(|e: &DirEntry| e.as_file())
-                        .filter(|e| !e.path().to_str().unwrap().ends_with("-language.json"))
-                        .inspect(|e| {
-                            log::debug!("Including automata file {:?}", e.path());
-                        })
-                        .map(|f: &include_dir::File| f.contents_utf8().unwrap().to_string())
-                        .collect()
-                },
-                // #[cfg(not(debug_assertions))]
-                // {
-                //     vec![
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/dce_rpc,gssapi,krb-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/dce_rpc,gssapi,smb-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/dce_rpc-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/dns.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/ftp-data-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/ftp-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/gssapi,krb,smb-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/gssapi,ntlm,smb-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/http-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/http-S0.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/http-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/krb.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/krb_tcp-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/ldap_tcp-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/ldap_udp.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/ntp.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/ssl-REJ.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/ssl-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/ssl-S0.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cicids17/automata/ssl-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //     ]
-                // },
-            ),
+            ModelsSource::CICIDS17 => Ok({
+                #[cfg(debug_assertions)]
+                let archive = NamedArchive::load(include_dir!(
+                    "default_models/cicids17/automata/",
+                    compression = "uncompressed"
+                ));
+                #[cfg(not(debug_assertions))]
+                let archive = NamedArchive::load(include_dir!(
+                    "default_models/cicids17/automata/",
+                    compression = "zstd",
+                    level = 19
+                ));
+                archive
+                    .assets()
+                    .filter_map(|(name, f)| {
+                        if name.ends_with(".json") {
+                            Some(str::from_utf8(f).unwrap().to_string())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            }),
             #[cfg(feature = "models_cupid")]
-            ModelsSource::CUPID => Ok(
-                // #[cfg(debug_assertions)]
-                {
-                    let d: Dir = include_dir!("$CARGO_MANIFEST_DIR/default_models/cupid/automata/");
-                    d.find("**/*.json")
-                        .unwrap()
-                        .filter_map(|e: &DirEntry| e.as_file())
-                        .filter(|e| !e.path().to_str().unwrap().ends_with("-language.json"))
-                        .inspect(|e| {
-                            log::debug!("Including automata file {:?}", e.path());
-                        })
-                        .map(|f: &include_dir::File| f.contents_utf8().unwrap().to_string())
-                        .collect()
-                },
-                // #[cfg(not(debug_assertions))]
-                // {
-                //     vec![
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/dce_rpc,gssapi,krb,ntlm-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/dce_rpc,gssapi,krb-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/dce_rpc,gssapi,krb,smb-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/dce_rpc,gssapi,smb-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/dce_rpc,ntlm-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/dce_rpc-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/dhcp.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/dns.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/gssapi,krb,smb-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/gssapi,krb,smb-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/gssapi,ntlm,smb-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/gssapi,ntlm,smb-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/gssapi,smb-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/gssapi,smb-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/http-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/http-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/krb.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/krb_tcp-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/ldap_tcp-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/ldap_udp.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/ntp.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/smtp-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/ssl-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/cupid/automata/ssl-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //     ]
-                // },
-            ),
+            ModelsSource::CUPID => Ok({
+                #[cfg(debug_assertions)]
+                let archive = NamedArchive::load(include_dir!(
+                    "default_models/cupid/automata/",
+                    compression = "uncompressed"
+                ));
+                #[cfg(not(debug_assertions))]
+                let archive = NamedArchive::load(include_dir!(
+                    "default_models/cupid/automata/",
+                    compression = "zstd",
+                    level = 19
+                ));
+                archive
+                    .assets()
+                    .filter_map(|(name, f)| {
+                        if name.ends_with(".json") {
+                            Some(str::from_utf8(f).unwrap().to_string())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            }),
             #[cfg(feature = "models_dedale")]
-            ModelsSource::DEDALE => Ok(
-                // #[cfg(debug_assertions)]
-                {
-                    let d: Dir =
-                        include_dir!("$CARGO_MANIFEST_DIR/default_models/dedale/automata/");
-                    d.find("**/*.json")
-                        .unwrap()
-                        .filter_map(|e: &DirEntry| e.as_file())
-                        .filter(|e| !e.path().to_str().unwrap().ends_with("-language.json"))
-                        .inspect(|e| {
-                            log::debug!("Including automata file {:?}", e.path());
-                        })
-                        .map(|f: &include_dir::File| f.contents_utf8().unwrap().to_string())
-                        .collect()
-                },
-                // #[cfg(not(debug_assertions))]
-                // {
-                //     vec![
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/dce_rpc,gssapi,krb-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/dce_rpc,gssapi,krb-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/dce_rpc-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/dce_rpc-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/dhcp.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/dns.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/dns-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/gssapi,krb,smb-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/http-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/http-S0.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/http-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/ldap_tcp-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/ldap_udp.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/ntp.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/quic,ssl.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/smtp,ssl-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/ssl-RST.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/ssl-S0.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                //             "default_models/dedale/automata/ssl-SF.json",
-                //             1
-                //         ))
-                //         .unwrap(),
-                //     ]
-                // },
-            ),
+            ModelsSource::DEDALE => Ok({
+                #[cfg(debug_assertions)]
+                let archive = NamedArchive::load(include_dir!(
+                    "default_models/dedale/automata/",
+                    compression = "uncompressed"
+                ));
+                #[cfg(not(debug_assertions))]
+                let archive = NamedArchive::load(include_dir!(
+                    "default_models/dedale/automata/",
+                    compression = "zstd",
+                    level = 19
+                ));
+                archive
+                    .assets()
+                    .filter_map(|(name, f)| {
+                        if name.ends_with(".json") {
+                            Some(str::from_utf8(f).unwrap().to_string())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            }),
             #[cfg(all(
                 feature = "models_cicids17",
                 feature = "models_cupid",
@@ -529,9 +218,9 @@ impl ModelsSource {
         match &self {
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
-                #[cfg(debug_assertions)]
-                include_str!("../default_models/cicids17/bn/bn_tl.bifxml").to_string(),
-                #[cfg(not(debug_assertions))]
+                // #[cfg(debug_assertions)]
+                // include_str!("../default_models/cicids17/bn/bn_tl.bifxml").to_string(),
+                // #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cicids17/bn/bn_tl.bifxml",
@@ -543,9 +232,9 @@ impl ModelsSource {
 
             #[cfg(feature = "models_cupid")]
             ModelsSource::CUPID => Ok(
-                #[cfg(debug_assertions)]
-                include_str!("../default_models/cupid/bn/bn_tl.bifxml").to_string(),
-                #[cfg(not(debug_assertions))]
+                // #[cfg(debug_assertions)]
+                // include_str!("../default_models/cupid/bn/bn_tl.bifxml").to_string(),
+                // #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cupid/bn/bn_tl.bifxml",
@@ -557,9 +246,9 @@ impl ModelsSource {
 
             #[cfg(feature = "models_dedale")]
             ModelsSource::DEDALE => Ok(
-                #[cfg(debug_assertions)]
-                include_str!("../default_models/dedale/bn/bn_tl.bifxml").to_string(),
-                #[cfg(not(debug_assertions))]
+                // #[cfg(debug_assertions)]
+                // include_str!("../default_models/dedale/bn/bn_tl.bifxml").to_string(),
+                // #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/dedale/bn/bn_tl.bifxml",
@@ -575,9 +264,9 @@ impl ModelsSource {
                 feature = "models_dedale"
             ))]
             ModelsSource::CCD => Ok(
-                #[cfg(debug_assertions)]
-                include_str!("../default_models/ccd/bn/bn_tl.bifxml").to_string(),
-                #[cfg(not(debug_assertions))]
+                // #[cfg(debug_assertions)]
+                // include_str!("../default_models/ccd/bn/bn_tl.bifxml").to_string(),
+                // #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/ccd/bn/bn_tl.bifxml",
@@ -600,9 +289,9 @@ impl ModelsSource {
         match &self {
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
-                #[cfg(debug_assertions)]
-                include_str!("../default_models/cicids17/bn/bn.bifxml").to_string(),
-                #[cfg(not(debug_assertions))]
+                // #[cfg(debug_assertions)]
+                // include_str!("../default_models/cicids17/bn/bn.bifxml").to_string(),
+                // #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cicids17/bn/bn.bifxml",
@@ -614,9 +303,9 @@ impl ModelsSource {
 
             #[cfg(feature = "models_cupid")]
             ModelsSource::CUPID => Ok(
-                #[cfg(debug_assertions)]
-                include_str!("../default_models/cupid/bn/bn.bifxml").to_string(),
-                #[cfg(not(debug_assertions))]
+                // #[cfg(debug_assertions)]
+                // include_str!("../default_models/cupid/bn/bn.bifxml").to_string(),
+                // #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cupid/bn/bn.bifxml",
@@ -628,9 +317,9 @@ impl ModelsSource {
 
             #[cfg(feature = "models_dedale")]
             ModelsSource::DEDALE => Ok(
-                #[cfg(debug_assertions)]
-                include_str!("../default_models/dedale/bn/bn.bifxml").to_string(),
-                #[cfg(not(debug_assertions))]
+                // #[cfg(debug_assertions)]
+                // include_str!("../default_models/dedale/bn/bn.bifxml").to_string(),
+                // #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/dedale/bn/bn.bifxml",
@@ -660,9 +349,9 @@ impl ModelsSource {
         match &self {
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
-                #[cfg(debug_assertions)]
-                include_str!("../default_models/cicids17/pkt_count_clusters.json").to_string(),
-                #[cfg(not(debug_assertions))]
+                // #[cfg(debug_assertions)]
+                // include_str!("../default_models/cicids17/pkt_count_clusters.json").to_string(),
+                // #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cicids17/pkt_count_clusters.json",
@@ -674,9 +363,9 @@ impl ModelsSource {
 
             #[cfg(feature = "models_cupid")]
             ModelsSource::CUPID => Ok(
-                #[cfg(debug_assertions)]
-                include_str!("../default_models/cupid/pkt_count_clusters.json").to_string(),
-                #[cfg(not(debug_assertions))]
+                // #[cfg(debug_assertions)]
+                // include_str!("../default_models/cupid/pkt_count_clusters.json").to_string(),
+                // #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/cupid/pkt_count_clusters.json",
@@ -688,9 +377,9 @@ impl ModelsSource {
 
             #[cfg(feature = "models_dedale")]
             ModelsSource::DEDALE => Ok(
-                #[cfg(debug_assertions)]
-                include_str!("../default_models/dedale/pkt_count_clusters.json").to_string(),
-                #[cfg(not(debug_assertions))]
+                // #[cfg(debug_assertions)]
+                // include_str!("../default_models/dedale/pkt_count_clusters.json").to_string(),
+                // #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/dedale/pkt_count_clusters.json",
@@ -706,9 +395,9 @@ impl ModelsSource {
                 feature = "models_dedale"
             ))]
             ModelsSource::CCD => Ok(
-                #[cfg(debug_assertions)]
-                include_str!("../default_models/ccd/pkt_count_clusters_tl.json").to_string(),
-                #[cfg(not(debug_assertions))]
+                // #[cfg(debug_assertions)]
+                // include_str!("../default_models/ccd/pkt_count_clusters_tl.json").to_string(),
+                // #[cfg(not(debug_assertions))]
                 {
                     String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
                         "default_models/ccd/pkt_count_clusters_tl.json",
@@ -732,9 +421,9 @@ impl ModelsSource {
         match &self {
             #[cfg(feature = "models_cicids17")]
             ModelsSource::CICIDS17 => Ok(
-                #[cfg(debug_assertions)]
-                vec![include_str!("../default_models/cicids17/time_profile.json").to_string()],
-                #[cfg(not(debug_assertions))]
+                // #[cfg(debug_assertions)]
+                // vec![include_str!("../default_models/cicids17/time_profile.json").to_string()],
+                // #[cfg(not(debug_assertions))]
                 {
                     vec![
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
@@ -747,9 +436,9 @@ impl ModelsSource {
             ),
             #[cfg(feature = "models_cupid")]
             ModelsSource::CUPID => Ok(
-                #[cfg(debug_assertions)]
-                vec![include_str!("../default_models/cupid/time_profile.json").to_string()],
-                #[cfg(not(debug_assertions))]
+                // #[cfg(debug_assertions)]
+                // vec![include_str!("../default_models/cupid/time_profile.json").to_string()],
+                // #[cfg(not(debug_assertions))]
                 {
                     vec![
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
@@ -762,9 +451,9 @@ impl ModelsSource {
             ),
             #[cfg(feature = "models_dedale")]
             ModelsSource::DEDALE => Ok(
-                #[cfg(debug_assertions)]
-                vec![include_str!("../default_models/dedale/time_profile.json").to_string()],
-                #[cfg(not(debug_assertions))]
+                // #[cfg(debug_assertions)]
+                // vec![include_str!("../default_models/dedale/time_profile.json").to_string()],
+                // #[cfg(not(debug_assertions))]
                 {
                     vec![
                         String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
