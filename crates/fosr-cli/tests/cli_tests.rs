@@ -3,8 +3,6 @@ use assert_cmd::prelude::*;
 use sha2::Digest;
 use sha2::Sha256;
 use std::fs;
-use std::fs::File;
-use std::io;
 use std::process::Command;
 use std::{thread, time};
 
@@ -23,7 +21,7 @@ fn deterministic_fast_generation() -> Result<(), Box<dyn std::error::Error>> {
         .args(["-p", "fast"])
         .args(["--tz", "UTC"])
         .args(["-m", "cupid"])
-        .env("RUST_LOG", "trace")
+        // .env("RUST_LOG", "trace")
         .spawn()?;
     cmd.assert().success();
     thread::sleep(time::Duration::from_millis(500));
@@ -51,7 +49,7 @@ fn deterministic_efficient_generation() -> Result<(), Box<dyn std::error::Error>
         .args(["-p", "fast"])
         .args(["--tz", "UTC"])
         .args(["-m", "cupid"])
-        .env("RUST_LOG", "trace")
+        // .env("RUST_LOG", "trace")
         .spawn()?;
     cmd.assert().success();
     thread::sleep(time::Duration::from_millis(500));
