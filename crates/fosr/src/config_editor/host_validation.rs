@@ -23,9 +23,9 @@ pub fn count_addresses(config: &NetworkYaml) -> AddressCounts {
         .chain(&config.internet)
     {
         for interface in &host.interfaces {
-            // Skip "auto" and empty IPs - they are placeholders resolved at generation time
+            // Skip "public" and empty IPs - they are placeholders resolved at generation time
             // and should not participate in duplicate detection.
-            if !interface.ip_addr.is_empty() && interface.ip_addr != "auto" {
+            if !interface.ip_addr.is_empty() && interface.ip_addr != "public" {
                 *ip_counts.entry(interface.ip_addr.clone()).or_insert(0) += 1;
             }
             if let Some(mac) = &interface.mac_addr {
@@ -130,8 +130,8 @@ pub fn validate_host_network_placement(
     let net_mask = !((1u32 << (32 - mask as u32)) - 1);
 
     let has_matching_ip = host.interfaces.iter().any(|iface| {
-        // "auto" IPs are assigned from the subnet at generation time
-        if iface.ip_addr == "auto" {
+        // "public" IPs are assigned from the subnet at generation time
+        if iface.ip_addr == "public" {
             return true;
         }
         iface
