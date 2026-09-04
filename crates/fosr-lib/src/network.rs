@@ -216,7 +216,8 @@ pub struct SubNetworkYaml {
 
     pub mask: u8,
 
-    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub hosts: Vec<HostYaml>,
@@ -297,7 +298,7 @@ impl From<NetworkYaml> for Network {
             .map(|n| SubNetwork {
                 subnet: n.subnet,
                 mask: n.mask,
-                name: n.name,
+                name: n.name.unwrap_or("Unnamed subnet".to_string()),
                 hosts: n
                     .hosts
                     .into_iter()

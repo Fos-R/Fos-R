@@ -81,7 +81,7 @@ impl From<Vec<SubTopologyOrInternet>> for NetworkYaml {
                         ui_id: next_ui_id(),
                         subnet: st.subnet,
                         mask: st.mask as u8,
-                        name: st.name.clone(),
+                        name: Some(st.name.clone()),
                         hosts,
                     });
                 }

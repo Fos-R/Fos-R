@@ -138,6 +138,7 @@ pub fn render_initial_modal(ctx: &egui::Context, state: &mut FosrApp) -> bool {
                     STARTUP_CARD_INITIAL_HEIGHT,
                 ) {
                     trigger_file_import(&mut state.config_file_state, cols[1].ctx());
+                    state.change_view(ViewState::GraphTab);
                 }
             });
 

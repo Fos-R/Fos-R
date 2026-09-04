@@ -45,7 +45,7 @@ pub fn render_hosts_section(ui: &mut egui::Ui, model: &mut NetworkYaml) {
             ui_id: next_ui_id(),
             subnet,
             mask: 24,
-            name: format!("Network {}", net_count + 1),
+            name: Some(format!("Network {}", net_count + 1)),
             hosts: vec![],
         });
     }
@@ -99,7 +99,7 @@ fn render_network_section(
     let host_count = network.hosts.len();
     let header_text = format!(
         "{} ({}/{}) - {} host{}",
-        network.name,
+        network.name.clone().unwrap_or("Unnamed network".to_string()),
         network.subnet,
         network.mask,
         host_count,
@@ -124,7 +124,12 @@ fn render_network_section(
                 ui.colored_label(COLOR_ERROR, error_text);
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                let hover_text = format!("Remove network '{}' and all its hosts", network.name);
+                let hover_text =
+                    if let Some(ref name) = network.name {
+                    format!("Remove network '{}' and all its hosts", name)
+                    } else {
+                    format!("Remove network and all its hosts")
+                    };
                 if ui.button(ICON_DELETE).on_hover_text(hover_text).clicked() {
                     *network_to_remove = Some(net_idx);
                 }
@@ -189,8 +194,8 @@ fn render_network_fields(ui: &mut egui::Ui, network: &mut SubNetworkYaml) {
             network.mask = mask_val as u8;
         }
 
-        ui.label("Name");
-        ui.text_edit_singleline(&mut network.name);
+        // ui.label("Name");
+        // ui.text_edit_singleline(&mut network.name);
     });
 }
 
