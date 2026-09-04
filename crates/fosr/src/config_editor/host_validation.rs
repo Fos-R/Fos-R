@@ -50,7 +50,7 @@ pub fn validate_host(
     }
 
     for interface in &host.interfaces {
-        if interface.ip_addr != "auto" && interface.ip_addr.parse::<Ipv4Addr>().is_err() {
+        if interface.ip_addr != "public" && interface.ip_addr.parse::<Ipv4Addr>().is_err() {
             errors.push("Invalid IP format".to_string());
         } else if ip_counts.get(&interface.ip_addr).copied().unwrap_or(0) > 1 {
             errors.push("IP conflict".to_string());
