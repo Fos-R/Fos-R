@@ -15,24 +15,22 @@ networks:
         type: server
         interfaces:
           - ip_addr: 192.168.1.1
-            mac_addr: 00:14:2A:3F:01:01
             services:
-              - dns:53
-              - https:443
+              - dns
+              - http
+          - ip_addr: public
 
       - hostname: workstation
         os: windows
         type: user
         interfaces:
           - ip_addr: 192.168.1.10
-            mac_addr: AA:BB:CC:DD:EE:01
 
       - hostname: nas
         os: linux
         type: server
         interfaces:
           - ip_addr: 192.168.1.20
-            mac_addr: 00:14:2A:3F:01:02
             services:
-              - https:443
-              - ssh:22
+              - https
+              - ssh

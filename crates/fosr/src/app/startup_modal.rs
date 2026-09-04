@@ -150,7 +150,7 @@ pub fn render_initial_modal(ctx: &egui::Context, state: &mut FosrApp) -> bool {
 pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
     // Use the same modal ID as initial modal to avoid flicker when transitioning
     egui::Modal::new(egui::Id::new("startup_modal")).show(ctx, |ui| {
-        ui.set_width(MODAL_WIDTH_MD_TEMPLATE_GENERATION);
+        ui.set_width(MODAL_WIDTH_MD);
 
         // Header with back button
         ui.horizontal(|ui| {
@@ -161,13 +161,6 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
         });
         ui.separator();
 
-        // ui.horizontal(|ui| {
-        //     ui.checkbox(&mut state.network_generation_options, "");
-        //     info_icon_with_tooltip(ui, "Beginning time of the pcap. By default, use the current time. For deterministic generation, you must specify this along with duration, timezone and seed.");
-        //     ui.checkbox(&mut state.network_generation_options, "");
-        //     info_icon_with_tooltip(ui, "Beginning time of the pcap. By default, use the current time. For deterministic generation, you must specify this along with duration, timezone and seed.");
-
-        // });
         ui.label("Services present in the network");
         ui.add_space(SPACING_SM);
         ui.columns(3, |cols| {
@@ -308,7 +301,7 @@ pub fn render_template_generation(ctx: &egui::Context, state: &mut FosrApp) {
 pub fn render_template_selection_modal(ctx: &egui::Context, state: &mut FosrApp) {
     // Use the same modal ID as initial modal to avoid flicker when transitioning
     egui::Modal::new(egui::Id::new("startup_modal")).show(ctx, |ui| {
-        ui.set_width(MODAL_WIDTH_MD_TEMPLATE_SELECTION);
+        ui.set_width(MODAL_WIDTH_MD);
 
         // Header with back button
         ui.horizontal(|ui| {

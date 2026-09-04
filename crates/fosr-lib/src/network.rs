@@ -4,9 +4,15 @@ use crate::utils;
 use include_dir::Dir;
 use include_dir::include_dir;
 use pnet::util::MacAddr;
+use rand::Rng;
+use rand_core::SeedableRng;
+use rand_pcg::Pcg32;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::hash::DefaultHasher;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -124,9 +130,7 @@ pub enum HostType {
 
 /// A host in the network
 /// TODO: clean useless attributes
-#[derive(Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-#[serde(from = "HostYaml")]
+#[derive(Debug, Clone)]
 pub struct Host {
     /// Its hostname
     pub hostname: Option<String>,
@@ -149,9 +153,7 @@ impl Host {
 }
 
 /// A network interface of an host.
-#[derive(Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-#[serde(try_from = "InterfaceYaml")]
+#[derive(Debug, Clone)]
 pub struct Interface {
     /// Its MAC address
     pub mac_addr: Option<MacAddr>,
@@ -279,8 +281,16 @@ pub struct InterfaceYaml {
 
 impl From<NetworkYaml> for Network {
     fn from(c: NetworkYaml) -> Self {
+        let mut hasher = DefaultHasher::new();
+        c.metadata.title.hash(&mut hasher);
+        let mut rng = Pcg32::seed_from_u64(hasher.finish());
+
         // Convert YAML structs to runtime structs
-        let internet: Vec<Host> = c.internet.into_iter().map(Host::from).collect();
+        let internet: Vec<Host> = c
+            .internet
+            .into_iter()
+            .map(|h| Host::from(h, &mut rng))
+            .collect();
         let networks_yaml = c.networks;
         let networks: Vec<SubNetwork> = networks_yaml
             .into_iter()
@@ -288,7 +298,11 @@ impl From<NetworkYaml> for Network {
                 subnet: n.subnet,
                 mask: n.mask,
                 name: n.name,
-                hosts: n.hosts.into_iter().map(Host::from).collect(),
+                hosts: n
+                    .hosts
+                    .into_iter()
+                    .map(|h| Host::from(h, &mut rng))
+                    .collect(),
             })
             .collect();
 
@@ -411,8 +425,8 @@ impl From<NetworkYaml> for Network {
     }
 }
 
-impl From<HostYaml> for Host {
-    fn from(h: HostYaml) -> Self {
+impl Host {
+    fn from(h: HostYaml, mut rng: &mut impl Rng) -> Self {
         let host_type = h.host_type.unwrap_or(
             // if there is at least one service, the type is "server"
             if h.interfaces
@@ -431,7 +445,7 @@ impl From<HostYaml> for Host {
             interfaces: h
                 .interfaces
                 .into_iter()
-                .map(Interface::try_from)
+                .map(|i| Interface::try_from(i, &mut rng))
                 .filter_map(|r| {
                     if let Err(e) = &r {
                         log::warn!("Skipping interface: {e}");
@@ -444,10 +458,8 @@ impl From<HostYaml> for Host {
     }
 }
 
-impl TryFrom<InterfaceYaml> for Interface {
-    type Error = String;
-
-    fn try_from(i: InterfaceYaml) -> Result<Self, String> {
+impl Interface {
+    fn try_from(i: InterfaceYaml, mut rng: &mut impl Rng) -> Result<Self, String> {
         // let mut open_ports: HashMap<L7Proto, u16> = HashMap::new();
         let mut services = vec![];
         for s in i.services.unwrap_or_default() {
@@ -455,10 +467,9 @@ impl TryFrom<InterfaceYaml> for Interface {
             services.push(service);
         }
 
-        let mut rng = rand::rng(); //TODO: déterminisme
         let ip_addr = match i.ip_addr.as_str() {
             // "auto" => Ipv4Addr::new(0, 0, 0, 0),
-            "internet" => utils::sample_random_global_ip(&mut rng),
+            "public" => utils::sample_random_global_ip(&mut rng),
             _ => i.ip_addr.parse().expect("Cannot parse IP address"),
         };
         Ok(Interface {

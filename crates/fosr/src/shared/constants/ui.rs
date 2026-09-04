@@ -76,12 +76,6 @@ pub const MODAL_WIDTH_SM: f32 = 370.0;
 /// Default modal width (px) - startup
 pub const MODAL_WIDTH_MD: f32 = 400.0;
 
-/// Default modal width (px) - template selection
-pub const MODAL_WIDTH_MD_TEMPLATE_SELECTION: f32 = 670.0;
-
-/// Default modal width (px) - template generation
-pub const MODAL_WIDTH_MD_TEMPLATE_GENERATION: f32 = 350.0;
-
 /// Node info modal width (px)
 pub const NODE_MODAL_WIDTH: f32 = 250.0;
 
@@ -162,7 +156,7 @@ pub const STARTUP_CARD_TEMPLATE_HEIGHT: f32 = 125.0;
 pub const STARTUP_COLUMNS_INITIAL: usize = 2;
 
 /// Number of columns in template selection modal
-pub const STARTUP_COLUMNS_TEMPLATES: usize = 5;
+pub const STARTUP_COLUMNS_TEMPLATES: usize = 3;
 
 // ============================================================================
 // ABOUT TAB
