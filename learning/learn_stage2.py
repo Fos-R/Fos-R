@@ -80,12 +80,17 @@ def computeCPTfromDF(bn,df,name):
     parents.pop()
 
     if (len(parents)>0):
-        c=pd.crosstab(df[name],[df[parent] for parent in parents], dropna=False)
-        s=c/c.sum().apply(np.float32)
+        s = pd.crosstab(df[name],[df[parent] for parent in parents], dropna=False)
+        s[s > 0] += 1
     else:
-        s=df[name].value_counts(normalize=True, sort=False)
+        s = df[name]
+        s = s.value_counts(normalize=False, sort=False)
 
+    # Add a Laplace smoothing, but only when at least one observation has been made
+    s[s > 0] += 1
     s.fillna(0, inplace=True)
+    s = s.apply(np.float64)
+    # We do *not* normalize the counts so we can add pseudocounts in Rust
     bn.cpt(id)[:]=np.array((s).transpose()).reshape(*domains)
 
 def parameters_learning(bn,df):
@@ -109,7 +114,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Learn a Bayesian network for Fos-R.')
     parser.add_argument('--input', required=True, help="Select the input configuration.", nargs='+')
     parser.add_argument('--output', help="Select the output directory.")
-    parser.add_argument('--offset', help="Offset from UTC (in hours).", type=float)
     args = parser.parse_args()
     random.seed(0)
 
@@ -121,6 +125,7 @@ if __name__ == '__main__':
         file = open(args.input[0], 'r')
         config = yaml.safe_load(file)
         offset = config["offset"] or 0 # default: consider it’s UTC
+        print("Offset:",offset)
         if not os.path.isabs(config["train_set"]):
             config["train_set"] = os.path.join(os.path.dirname(args.input[0]), config["train_set"])
         conn_input = os.path.join(config["train_set"], "conn.log")
@@ -369,57 +374,59 @@ if __name__ == '__main__':
         full_domains[c].sort()
     full_domains["Time"] = ["bin-"+f'{n:03}' for n in range(bin_count)] # use all theoretical values
 
-    print("Model learning (for transfer learning)")
-    all_vars = ["Time", "Applicative Proto", "Proto", "Connection State", "Cat Packet", "Src IP Role", "Dst IP Role"]
-    common_data = flow[all_vars]
-    for c in all_vars:
-        common_data[c] = common_data[c].astype('category')
-        common_data[c] = common_data[c].cat.set_categories(full_domains[c])
+    if not unique_dataset:
+        print("Model learning (for transfer learning)")
 
-    learner = gum.BNLearner(common_data)
-    # add the weight of each record (=row)
-    for (i,(_,r)) in enumerate(flow.iterrows()):
-        learner.setRecordWeight(i,r["weight"])
+        all_vars = ["Time", "Applicative Proto", "Proto", "Connection State", "Cat Packet", "Src IP Role", "Dst IP Role"]
+        common_data = flow[all_vars]
+        for c in all_vars:
+            common_data[c] = common_data[c].astype('category')
+            common_data[c] = common_data[c].cat.set_categories(full_domains[c])
 
-    # Time must have no parent because it will be sampled from the stage 1
-    learner.addNoParentNode("Time")
+        learner = gum.BNLearner(common_data)
+        # add the weight of each record (=row)
+        for (i,(_,r)) in enumerate(flow.iterrows()):
+            learner.setRecordWeight(i,r["weight"])
 
-    # The categories of packet number depend on the applicative protocol and the connection state, so we ensure that both "Applicative Proto" and "Connection State" are parents of Cat Packet
-    learner.addMandatoryArc("Applicative Proto", "Cat Packet")
-    learner.addMandatoryArc("Connection State", "Cat Packet")
+        # Time must have no parent because it will be sampled from the stage 1
+        learner.addNoParentNode("Time")
 
-    # After some experimentations, the impact of the method and score is negligible
-    learner.useMIIC()
+        # The categories of packet number depend on the applicative protocol and the connection state, so we ensure that both "Applicative Proto" and "Connection State" are parents of Cat Packet
+        learner.addMandatoryArc("Applicative Proto", "Cat Packet")
+        learner.addMandatoryArc("Connection State", "Cat Packet")
 
-    bn = learner.learnBN()
+        # After some experimentations, the impact of the method and score is negligible
+        learner.useMIIC()
 
-    # we recreate the bayesian network with the same structure but the full domain
-    bn_full = gum.BayesNet('Fos-R model (TL)')
-    for i in bn.nodes():
-        var = bn.variable(i).name()
-        bn_full.add(gum.LabelizedVariable(var, var, full_domains[var]))
+        bn = learner.learnBN()
 
-    for i in bn.nodes():
-        parents = bn.parents(i)
-        for p in parents:
-            bn_full.addArc(p, i)
+        # we recreate the bayesian network with the same structure but the full domain
+        bn_full = gum.BayesNet('Fos-R model (TL)')
+        for i in bn.nodes():
+            var = bn.variable(i).name()
+            bn_full.add(gum.LabelizedVariable(var, var, full_domains[var]))
 
-    parameters_learning(bn_full, common_data)
-    bn = bn_full
+        for i in bn.nodes():
+            parents = bn.parents(i)
+            for p in parents:
+                bn_full.addArc(p, i)
 
-    print("Learning time:", time.time() - start)
-    print("Model export")
+        parameters_learning(bn_full, common_data)
+        bn = bn_full
 
-    gumimage.export(bn, os.path.join(args.output, "bn/bn_tl.png"))
-    gumimage.export(bn, os.path.join(args.output, "bn/bn_tl.ps"))
-    bn.saveBIFXML(os.path.join(args.output, "bn/bn_tl.bifxml"))
+        print("Learning time:", time.time() - start)
+        print("Model export")
 
-    try:
-        out_file = open(os.path.join(args.output, "pkt_count_clusters.json"), "w")
-        json.dump(output, out_file, indent=1)
-        print("JSON file successfully created")
-    except Exception as e:
-        print("Error during json save:",e)
+        gumimage.export(bn, os.path.join(args.output, "bn/bn_tl.png"))
+        gumimage.export(bn, os.path.join(args.output, "bn/bn_tl.ps"))
+        bn.saveBIFXML(os.path.join(args.output, "bn/bn_tl.bifxml"))
+
+        try:
+            out_file = open(os.path.join(args.output, "pkt_count_clusters.json"), "w")
+            json.dump(output, out_file, indent=1)
+            print("JSON file successfully created")
+        except Exception as e:
+            print("Error during json save:",e)
 
     if unique_dataset:
         print("Model learning")
