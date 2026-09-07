@@ -69,10 +69,13 @@ impl Models {
         })
     }
 
-    pub fn from_source_for_transfer_learning(source: &ModelsSource) -> Result<Self, String> {
+    pub fn from_source_for_transfer_learning(
+        source: &ModelsSource,
+        alpha: u64,
+    ) -> Result<Self, String> {
         Ok(Models {
             bn: stage2::bayesian_networks::BayesianModel::from_source_for_transfer_learning(
-                source,
+                source, alpha,
             )?,
             time_bins: stage1::TimeModel::from_source(source)?,
             automata: stage3::tadam::AutomataLibrary::from_source(source)?,
@@ -82,34 +85,36 @@ impl Models {
     pub fn from_source_with_network(
         source: &ModelsSource,
         network: Network,
+        alpha: u64,
     ) -> Result<Self, String> {
-        let m = Models {
+        Ok(Models {
             bn: stage2::bayesian_networks::BayesianModel::from_source_for_transfer_learning(
-                source,
+                source, alpha,
             )?
             .with_network(&network)?,
             time_bins: stage1::TimeModel::from_source(source)?,
             automata: stage3::tadam::AutomataLibrary::from_source(source)?,
-        };
-        Ok(m)
+        })
     }
 
     pub fn from_source_with_path_network(
         source: &ModelsSource,
         path: &str,
+        alpha: u64,
     ) -> Result<Self, String> {
         let network = network::import_network(
             &fs::read_to_string(Path::new(path))
                 .map_err(|e| format!("Cannot open the network file: {e}"))?,
         );
-        Self::from_source_with_network(source, network)
+        Self::from_source_with_network(source, network, alpha)
     }
 
     pub fn from_source_with_string_network(
         source: &ModelsSource,
         network: &str,
+        alpha: u64,
     ) -> Result<Self, String> {
-        Self::from_source_with_network(source, network::import_network(network))
+        Self::from_source_with_network(source, network::import_network(network), alpha)
     }
 }
 
@@ -214,47 +219,11 @@ impl ModelsSource {
     pub(crate) fn get_tl_bn(&self) -> std::io::Result<String> {
         match &self {
             #[cfg(feature = "models_cicids17")]
-            ModelsSource::CICIDS17 => Ok(
-                #[cfg(debug_assertions)]
-                include_str!("../default_models/cicids17/bn/bn_tl.bifxml").to_string(),
-                #[cfg(not(debug_assertions))]
-                {
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/cicids17/bn/bn_tl.bifxml",
-                        1
-                    ))
-                    .unwrap()
-                },
-            ),
-
+            ModelsSource::CICIDS17 => todo!("Not a source for transfer learning"),
             #[cfg(feature = "models_cupid")]
-            ModelsSource::CUPID => Ok(
-                #[cfg(debug_assertions)]
-                include_str!("../default_models/cupid/bn/bn_tl.bifxml").to_string(),
-                #[cfg(not(debug_assertions))]
-                {
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/cupid/bn/bn_tl.bifxml",
-                        1
-                    ))
-                    .unwrap()
-                },
-            ),
-
+            ModelsSource::CUPID => todo!("Not a source for transfer learning"),
             #[cfg(feature = "models_dedale")]
-            ModelsSource::DEDALE => Ok(
-                #[cfg(debug_assertions)]
-                include_str!("../default_models/dedale/bn/bn_tl.bifxml").to_string(),
-                #[cfg(not(debug_assertions))]
-                {
-                    String::from_utf8(include_bytes_zstd::include_bytes_zstd!(
-                        "default_models/dedale/bn/bn_tl.bifxml",
-                        1
-                    ))
-                    .unwrap()
-                },
-            ),
-
+            ModelsSource::DEDALE => todo!("Not a source for transfer learning"),
             #[cfg(all(
                 feature = "models_cicids17",
                 feature = "models_cupid",
@@ -404,6 +373,7 @@ impl ModelsSource {
                 },
             ),
 
+            // TODO: plutôt TL ou pas TL ?
             ModelsSource::UserDefined(path) => Ok(fs::read_to_string(
                 Path::new(path)
                     .join("pkt_count_clusters.json")

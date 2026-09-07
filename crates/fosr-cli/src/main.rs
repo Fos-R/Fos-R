@@ -151,6 +151,7 @@ fn main() -> Result<(), String> {
             flow_per_day,
             tz,
             jobs,
+            alpha,
             network,
             taint,
             default_models,
@@ -163,7 +164,7 @@ fn main() -> Result<(), String> {
                 default_models.unwrap().get_source() // we are sure it contains something
             };
 
-            let model = models::Models::from_source_with_path_network(&source, &network)?;
+            let model = models::Models::from_source_with_path_network(&source, &network, alpha)?;
 
             generate_pcap(
                 duration,
@@ -284,7 +285,7 @@ fn main() -> Result<(), String> {
                 no_internet_access,
                 // tree_depth,
                 services,
-                time_limit: time_limit.map(|n| Duration::from_secs(n)),
+                time_limit: time_limit.map(Duration::from_secs),
             };
             log::info!("Starting the topology generation");
             if time_limit.is_none() {

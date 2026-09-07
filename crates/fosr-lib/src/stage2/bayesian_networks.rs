@@ -182,7 +182,7 @@ impl Feature {
 
 #[allow(clippy::upper_case_acronyms)]
 /// A conditional probability table
-type CPT = Vec<Option<WeightedIndex<f64>>>; // some combination may be impossible
+type CPT = Vec<Option<WeightedIndex<u64>>>; // some combination may be impossible
 
 impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
@@ -309,7 +309,7 @@ impl BayesianNetwork {
 
     // Used to remove impossible values
     fn condition_cpt(&self, node: usize, index_parent: usize, parent_val: usize) -> CPT {
-        let mut output: Vec<Option<WeightedIndex<f64>>> = vec![];
+        let mut output: Vec<Option<WeightedIndex<u64>>> = vec![];
         assert!(
             self.nodes[node].parents_cardinality[index_parent] > parent_val,
             "Parent val is too large: {parent_val}"
@@ -424,7 +424,7 @@ fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), Stri
     } else if let Some(cpt) = node.cpt.as_mut() {
         for cpt in cpt {
             if let Some(weights) = cpt {
-                let result = weights.update_weights(&[(index, &0.0f64)]);
+                let result = weights.update_weights(&[(index, &0)]);
                 if result.is_err() {
                     *cpt = None;
                 }
@@ -438,7 +438,10 @@ fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), Stri
 }
 
 impl BayesianModel {
-    pub fn from_source_for_transfer_learning(m: &models::ModelsSource) -> Result<Self, String> {
+    pub fn from_source_for_transfer_learning(
+        m: &models::ModelsSource,
+        alpha: u64,
+    ) -> Result<Self, String> {
         // We use a seeded RNG so everything is deterministic
 
         let bn_string: String = m
@@ -449,13 +452,10 @@ impl BayesianModel {
         let bif_common = bifxml::from_str(&bn_string)?;
 
         log::trace!("Converting from BIF");
-        let (bn, bin_count) = bn_from_bif(bif_common)?;
+        let (base_bn, bin_count) = bn_from_bif(bif_common, alpha)?;
 
         log::info!("Bayesian network has been loaded");
-        Ok(BayesianModel::WaitingForNetwork {
-            base_bn: bn,
-            bin_count,
-        })
+        Ok(BayesianModel::WaitingForNetwork { base_bn, bin_count })
     }
 
     pub fn with_network(&self, network: &network::Network) -> Result<Self, String> {
@@ -480,14 +480,14 @@ impl BayesianModel {
                             }
                         }
                         // create a list of all the indices to set the probability to 0
-                        let weight_update: Vec<(usize, &f64)> = v
+                        let weight_update: Vec<(usize, &u64)> = v
                             .iter()
                             .enumerate()
                             .filter_map(|(index, proto)| {
                                 if network.services.contains(proto) {
                                     None
                                 } else {
-                                    Some((index, &0.0f64))
+                                    Some((index, &0))
                                 }
                             })
                             .collect();
@@ -506,12 +506,12 @@ impl BayesianModel {
                     {
                         // No internet access? Then set the probability of the Internet role to
                         // zero
-                        let weight_update: Vec<(usize, &f64)> = v
+                        let weight_update: Vec<(usize, &u64)> = v
                             .iter()
                             .enumerate()
                             .filter_map(|(index, role)| {
                                 if role == &SrcIpRole::Internet {
-                                    Some((index, &0.0f64))
+                                    Some((index, &0))
                                 } else {
                                     None
                                 }
@@ -531,12 +531,12 @@ impl BayesianModel {
                         && let Feature::DstIpRole(v) = &mut node.feature
                     {
                         // Same for DstIpRole
-                        let weight_update: Vec<(usize, &f64)> = v
+                        let weight_update: Vec<(usize, &u64)> = v
                             .iter()
                             .enumerate()
                             .filter_map(|(index, role)| {
                                 if role == &DstIpRole::Internet {
-                                    Some((index, &0.0f64))
+                                    Some((index, &0))
                                 } else {
                                     None
                                 }
@@ -656,7 +656,7 @@ impl BayesianModel {
         let bif_common = bifxml::from_str(&bn_string)?;
 
         log::trace!("Converting from BIF");
-        let (mut bn, bin_count) = bn_from_bif(bif_common)?;
+        let (mut bn, bin_count) = bn_from_bif(bif_common, 1)?;
 
         log::info!("Bayesian network has been loaded");
         bn.remove_impossible_values()?;
@@ -696,7 +696,10 @@ impl BayesianModel {
     }
 }
 
-fn bn_from_bif(network: bifxml::Network) -> Result<(BayesianNetwork, usize), String> {
+fn bn_from_bif(network: bifxml::Network, alpha: u64) -> Result<(BayesianNetwork, usize), String> {
+
+    assert!(alpha >= 1); // by default, a pseudo-count is already included
+
     // Used only for computing the topological order
     struct TopologicalNode {
         parents: HashSet<String>,
@@ -812,11 +815,8 @@ fn bn_from_bif(network: bifxml::Network) -> Result<(BayesianNetwork, usize), Str
         let cpt: CPT = def
             .table
             .split_ascii_whitespace()
-            .map(|s| {
-                let n = s.parse::<f64>().expect("Cannot parse the CPT");
-                if n < 1e-9 { 0.0f64 } else { n } // we remove impossible combination with non-zero
-                // probability due to the use of a prior
-            })
+            .map(|s| s.parse::<u64>().expect("Cannot parse the CPT"))
+            .map(|l| if l == 0 { l } else { l + alpha - 1 }) // leave zeros as is
             .collect::<Vec<_>>()
             .chunks(v.outcome.len())
             .map(|l| WeightedIndex::new(l).ok()) // some lines are only 0. In that case, insert a
@@ -960,9 +960,6 @@ fn bn_from_bif(network: bifxml::Network) -> Result<(BayesianNetwork, usize), Str
             } else {
                 Some(cpt)
             };
-            // if matches!(feature, Feature::L7Proto(_)) {
-            //     println!("{cpt:?}");
-            // }
             let node = BayesianNetworkNode {
                 feature,
                 parents, // indices in the Bayesian network’s nodes
