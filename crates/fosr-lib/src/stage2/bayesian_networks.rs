@@ -382,7 +382,7 @@ impl BayesianNetwork {
         for index in (0..self.nodes.len()).rev() {
             let node = &self.nodes[index];
             if !node.removed_values.is_empty() {
-                log::debug!(
+                log::info!(
                     "Removed unnecessary values {:?} of {:?}",
                     node.removed_values
                         .iter()
@@ -480,8 +480,40 @@ impl BayesianModel {
                 let mut bn = base_bn.clone();
 
                 for node in &mut bn.nodes {
+                    // we set the probability of absent OS to 0
+                    if let Feature::SrcOs(v) = &mut node.feature {
+                        // get OS present in the network
+                        for s in &network.present_os {
+                            if !v.contains(s) {
+                                log::warn!(
+                                    "OS {s:?} is not present in the original dataset and will not be generated"
+                                );
+                            }
+                        }
+                        // create a list of all the indices to set the probability to 0
+                        let weight_update: Vec<(usize, &u64)> = v
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(index, os)| {
+                                if network.present_os.contains(os) {
+                                    None
+                                } else {
+                                    Some((index, &0))
+                                }
+                            })
+                            .collect();
+                        // modify all the probability distributions
+                        for cpt in node.cpt.as_mut().unwrap() {
+                            if let Some(weights) = cpt {
+                                let result = weights.update_weights(&weight_update);
+                                // log::error!("Valeur impossible après mise à jour des distributions");
+                                if result.is_err() {
+                                    *cpt = None;
+                                }
+                            }
+                        }
                     // we set the probability of absent services to 0
-                    if let Feature::L7Proto(v) = &mut node.feature {
+                    } if let Feature::L7Proto(v) = &mut node.feature {
                         // get services present in the network
                         for s in &network.services {
                             if !v.contains(s) {
@@ -889,13 +921,13 @@ fn bn_from_bif(network: bifxml::Network, alpha: u64) -> Result<(BayesianNetwork,
                     })
                     .collect(),
             )),
-            "Applicative Proto" => Some(Feature::L7Proto(
+            "Applicative Proto" => { dbg!(&v); Some(Feature::L7Proto(
                 v.outcome
                     .clone()
                     .into_iter()
                     .map(|s| L7Proto::from_str(&s).unwrap())
                     .collect(),
-            )),
+            )) },
             "Proto" => Some(Feature::L4Proto(
                 v.outcome
                     .clone()
