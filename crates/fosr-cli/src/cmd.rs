@@ -388,6 +388,12 @@ pub enum Command {
         seed: Option<u64>,
         #[arg(short = 'm', long, help = "Use a default model")]
         default_models: Option<DefaultModels>,
+        #[arg(
+            long,
+            default_value_t = 1,
+            help = "Pseudo-counts for the Bayesian network. Increase to artificially favor diversity. Must be at least 1."
+        )]
+        alpha: u64,
         #[arg(long, help = "Use a custom model")]
         custom_models: Option<String>,
         #[arg(
