@@ -58,7 +58,7 @@ impl RunTabState {
         let task = move || {
             let source = models::ModelsSource::CCD;
             send.send(
-                models::Models::from_source_for_transfer_learning(&source)
+                models::Models::from_source_for_transfer_learning(&source, 1)
                     .unwrap()
                     .into(),
             )

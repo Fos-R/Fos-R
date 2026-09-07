@@ -330,6 +330,17 @@ pub enum OS {
     Router,
 }
 
+impl Display for OS {
+    // TODO: strum
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            OS::Linux => write!(f, "Linux"),
+            OS::Windows => write!(f, "Windows"),
+            OS::Router => write!(f, "Router"),
+        }
+    }
+}
+
 impl OS {
     pub fn get_initial_ttl(&self) -> u8 {
         match self {
