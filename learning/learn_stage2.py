@@ -18,10 +18,12 @@ import yaml
 
 pd.options.mode.copy_on_write = True
 
+
 def reorder_services(value):
     l = value.split(",")
     l.sort()
     return ",".join(l)
+
 
 def remove_public_ip(value, local_ips):
     if value in local_ips:
@@ -29,8 +31,10 @@ def remove_public_ip(value, local_ips):
     else:
         return "Internet"
 
+
 def get_os(ip, os_dict):
     return os_dict.get(ip, "Unknown")
+
 
 def get_network_src_role(ip, clients, servers):
     if ip in clients:
@@ -40,6 +44,7 @@ def get_network_src_role(ip, clients, servers):
     else:
         return "Internet"
 
+
 def get_network_dst_role(ip, clients, servers):
     # by definition, only server can be a destination
     if ip in clients or ip in servers:
@@ -47,43 +52,50 @@ def get_network_dst_role(ip, clients, servers):
     else:
         return "Internet"
 
+
 def ttl_to_string(n):
     if n == "":
         return ""
     n = int(n)
-    return "ttl-"+f'{n:03}'
+    return "ttl-" + f"{n:03}"
+
 
 def port_to_string(n, rare_ports):
     if n in rare_ports:
         return "unique"
-    return "port-"+f'{n:05}'
+    return "port-" + f"{n:05}"
+
 
 def cluster_to_string(n):
     # to ensure alphabetical order = numerical order
-    return "cluster-"+f'{n:03}'
+    return "cluster-" + f"{n:03}"
+
 
 bin_count = 24
 
+
 def categorize_time(offset, t):
-    n = int((t + 60 * 60 * offset) % (60*60*24) // (60*60*24 / bin_count))
+    n = int((t + 60 * 60 * offset) % (60 * 60 * 24) // (60 * 60 * 24 / bin_count))
     # to ensure alphabetical order = numerical order
-    return "bin-"+f'{n:03}'
+    return "bin-" + f"{n:03}"
+
 
 full_domains = {}
 
+
 # Adapted from https://pyagrum.readthedocs.io/en/1.13.0/notebooks/17-Examples_parametersLearningWithPandas.html#A-global-method-for-estimating-Bayesian-network-parameters-from-CSV-file-using-PANDAS
-def computeCPTfromDF(bn,df,name):
+def computeCPTfromDF(bn, df, name):
     """
     Compute the CPT of variable "name" in the BN bn from the database df
     """
-    id=bn.idFromName(name)
-    parents=list(reversed(bn.cpt(id).names))
+    id = bn.idFromName(name)
+    parents = list(reversed(bn.cpt(id).names))
     domains = [len(full_domains[name]) for name in parents]
 
     parents.pop()
 
-    if (len(parents)>0):
-        s = pd.crosstab(df[name],[df[parent] for parent in parents], dropna=False)
+    if len(parents) > 0:
+        s = pd.crosstab(df[name], [df[parent] for parent in parents], dropna=False)
         s[s > 0] += 1
     else:
         s = df[name]
@@ -94,29 +106,33 @@ def computeCPTfromDF(bn,df,name):
     s.fillna(0, inplace=True)
     s = s.apply(np.float64)
     # We do *not* normalize the counts so we can add pseudocounts in Rust
-    bn.cpt(id)[:]=np.array((s).transpose()).reshape(*domains)
+    bn.cpt(id)[:] = np.array((s).transpose()).reshape(*domains)
 
-def parameters_learning(bn,df):
+
+def parameters_learning(bn, df):
     """
     Compute the CPTs of every varaible in the BN bn from the database df
     Use no prior and replace NaN with 0.
     """
     for name in bn.names():
-        computeCPTfromDF(bn,df,name)
+        computeCPTfromDF(bn, df, name)
+
 
 def complete_proto(l, port):
-    if ":" in port: # already a service
+    if ":" in port:  # already a service
         return port.split(":")[0]
     for service in l:
-        if service.endswith(":"+port):
+        if service.endswith(":" + port):
             return service.split(":")[0]
     return pd.NA
 
-if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='Learn a Bayesian network for Fos-R.')
-    parser.add_argument('--input', required=True, help="Select the input configuration.", nargs='+')
-    parser.add_argument('--output', help="Select the output directory.")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Learn a Bayesian network for Fos-R.")
+    parser.add_argument(
+        "--input", required=True, help="Select the input configuration.", nargs="+"
+    )
+    parser.add_argument("--output", help="Select the output directory.")
     args = parser.parse_args()
     random.seed(0)
 
@@ -125,12 +141,14 @@ if __name__ == '__main__':
     unique_dataset = len(args.input) == 1
     # Learn from only one dataset
     if unique_dataset:
-        file = open(args.input[0], 'r')
+        file = open(args.input[0], "r")
         config = yaml.safe_load(file)
-        offset = config["tz_offset"] or 0 # default: consider it’s UTC
-        print("Dataset timezone offset:",offset)
+        offset = config["tz_offset"] or 0  # default: consider it’s UTC
+        print("Dataset timezone offset:", offset)
         if not os.path.isabs(config["train_set"]):
-            config["train_set"] = os.path.join(os.path.dirname(args.input[0]), config["train_set"])
+            config["train_set"] = os.path.join(
+                os.path.dirname(args.input[0]), config["train_set"]
+            )
         conn_input = os.path.join(config["train_set"], "conn.log")
 
         tcp_input = os.path.join(config["train_set"], "fosr_tcp.log")
@@ -138,31 +156,99 @@ if __name__ == '__main__':
 
         print("Loading files")
 
-        csv.field_size_limit(sys.maxsize) # payload is too long
+        csv.field_size_limit(sys.maxsize)  # payload is too long
         try:
-            flow = pd.read_csv(conn_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"])
-            flow["weight"] = 1.
+            flow = pd.read_csv(
+                conn_input,
+                header=8,
+                engine="python",
+                skipfooter=1,
+                sep="\t",
+                names=[
+                    "ts",
+                    "uid",
+                    "id.orig_h",
+                    "id.orig_p",
+                    "id.resp_h",
+                    "id.resp_p",
+                    "proto",
+                    "service",
+                    "duration",
+                    "orig_bytes",
+                    "resp_bytes",
+                    "conn_state",
+                    "local_orig",
+                    "local_resp",
+                    "missed_bytes",
+                    "history",
+                    "orig_pkts",
+                    "orig_ip_bytes",
+                    "resp_pkts",
+                    "resp_ip_bytes",
+                    "tunnel_parents",
+                    "ip_proto",
+                ],
+            )
+            flow["weight"] = 1.0
             flow["Time"] = flow["ts"].apply(functools.partial(categorize_time, offset))
         except Exception as e:
-            print(f"Cannot find conn.log in {args.input}!",e)
+            print(f"Cannot find conn.log in {args.input}!", e)
             exit(1)
 
         tcp_fosr = None
         try:
-            tcp_fosr = pd.read_csv(tcp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service", "flags", "conn_state"])
+            tcp_fosr = pd.read_csv(
+                tcp_input,
+                header=8,
+                engine="python",
+                skipfooter=1,
+                sep="\t",
+                names=[
+                    "ts",
+                    "uid",
+                    "payloads",
+                    "iat",
+                    "forward_list",
+                    "orig_l2_addr",
+                    "resp_l2_addr",
+                    "orig_ttl",
+                    "resp_ttl",
+                    "service",
+                    "flags",
+                    "conn_state",
+                ],
+            )
         except Exception as e:
-            print("No TCP data:",e)
+            print("No TCP data:", e)
         udp_fosr = None
         try:
-            udp_fosr = pd.read_csv(udp_input, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service"])
+            udp_fosr = pd.read_csv(
+                udp_input,
+                header=8,
+                engine="python",
+                skipfooter=1,
+                sep="\t",
+                names=[
+                    "ts",
+                    "uid",
+                    "payloads",
+                    "iat",
+                    "forward_list",
+                    "orig_l2_addr",
+                    "resp_l2_addr",
+                    "orig_ttl",
+                    "resp_ttl",
+                    "service",
+                ],
+            )
         except Exception as e:
             print("No UDP data", e)
 
     else:
-        configs = [yaml.safe_load(open(i, 'r')) for i in args.input]
-        offsets = [c["tz_offset"] or 0 for c in configs] # default: consider it’s UTC
+        configs = [yaml.safe_load(open(i, "r")) for i in args.input]
+        offsets = [c["tz_offset"] or 0 for c in configs]  # default: consider it’s UTC
 
-        for (c,i) in zip(configs,args.input):
+        for c, i in zip(configs, args.input):
             if not os.path.isabs(c["train_set"]):
                 c["train_set"] = os.path.join(os.path.dirname(i), c["train_set"])
 
@@ -173,49 +259,133 @@ if __name__ == '__main__':
 
         print("Loading files")
 
-        csv.field_size_limit(sys.maxsize) # payload is too long
+        csv.field_size_limit(sys.maxsize)  # payload is too long
         try:
-            flow = [pd.read_csv(i, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto", "service", "duration", "orig_bytes", "resp_bytes", "conn_state", "local_orig", "local_resp", "missed_bytes", "history", "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes", "tunnel_parents", "ip_proto"]) for i in conn_input]
-            for (i,f) in enumerate(flow): # all input should have the same weight, no matter their size
-                f["weight"] = 1000000. / len(f)
-                f["Time"] = f["ts"].apply(functools.partial(categorize_time, offsets[i]))
+            flow = [
+                pd.read_csv(
+                    i,
+                    header=8,
+                    engine="python",
+                    skipfooter=1,
+                    sep="\t",
+                    names=[
+                        "ts",
+                        "uid",
+                        "id.orig_h",
+                        "id.orig_p",
+                        "id.resp_h",
+                        "id.resp_p",
+                        "proto",
+                        "service",
+                        "duration",
+                        "orig_bytes",
+                        "resp_bytes",
+                        "conn_state",
+                        "local_orig",
+                        "local_resp",
+                        "missed_bytes",
+                        "history",
+                        "orig_pkts",
+                        "orig_ip_bytes",
+                        "resp_pkts",
+                        "resp_ip_bytes",
+                        "tunnel_parents",
+                        "ip_proto",
+                    ],
+                )
+                for i in conn_input
+            ]
+            for i, f in enumerate(
+                flow
+            ):  # all input should have the same weight, no matter their size
+                f["weight"] = 1000000.0 / len(f)
+                f["Time"] = f["ts"].apply(
+                    functools.partial(categorize_time, offsets[i])
+                )
             flow = pd.concat(flow, ignore_index=True)
         except Exception as e:
-            print(f"Cannot find conn.log in {args.input}!",e)
+            print(f"Cannot find conn.log in {args.input}!", e)
             exit(1)
 
         tcp_fosr = None
         try:
-            tcp_fosr = [pd.read_csv(i, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service", "flags", "conn_state"]) for i in tcp_input]
+            tcp_fosr = [
+                pd.read_csv(
+                    i,
+                    header=8,
+                    engine="python",
+                    skipfooter=1,
+                    sep="\t",
+                    names=[
+                        "ts",
+                        "uid",
+                        "payloads",
+                        "iat",
+                        "forward_list",
+                        "orig_l2_addr",
+                        "resp_l2_addr",
+                        "orig_ttl",
+                        "resp_ttl",
+                        "service",
+                        "flags",
+                        "conn_state",
+                    ],
+                )
+                for i in tcp_input
+            ]
             tcp_fosr = pd.concat(tcp_fosr, ignore_index=True)
         except Exception as e:
-            print("No TCP data:",e)
+            print("No TCP data:", e)
         udp_fosr = None
         try:
-            udp_fosr = [pd.read_csv(i, header = 8, engine = "python", skipfooter = 1, sep = "\t", names = ["ts", "uid", "payloads", "iat", "forward_list", "orig_l2_addr", "resp_l2_addr", "orig_ttl", "resp_ttl", "service"]) for i in udp_input]
+            udp_fosr = [
+                pd.read_csv(
+                    i,
+                    header=8,
+                    engine="python",
+                    skipfooter=1,
+                    sep="\t",
+                    names=[
+                        "ts",
+                        "uid",
+                        "payloads",
+                        "iat",
+                        "forward_list",
+                        "orig_l2_addr",
+                        "resp_l2_addr",
+                        "orig_ttl",
+                        "resp_ttl",
+                        "service",
+                    ],
+                )
+                for i in udp_input
+            ]
             udp_fosr = pd.concat(udp_fosr, ignore_index=True)
         except Exception as e:
             print("No UDP data", e)
 
-
-    print("Services in the TCP file:\n",tcp_fosr["service"].value_counts())
-    print("Services in the UDP file:\n",udp_fosr["service"].value_counts())
+    print("Services in the TCP file:\n", tcp_fosr["service"].value_counts())
+    print("Services in the UDP file:\n", udp_fosr["service"].value_counts())
 
     print("Extracting")
 
     flow["Proto"] = flow["proto"].str.upper()
 
     # Remove non-UDP and non-TCP flows
-    flow = flow[(flow["Proto"]=="TCP") | (flow["Proto"]=="UDP")]
+    flow = flow[(flow["Proto"] == "TCP") | (flow["Proto"] == "UDP")]
 
     if tcp_fosr is not None:
         flow = flow.join(tcp_fosr.set_index("uid"), on="uid", rsuffix="_tcp_fosr")
-        flow['Connection State'] = flow['conn_state_tcp_fosr']
-        flow = flow[(flow["Connection State"]!="other")] # remove rare and OTH connection states
+        flow["Connection State"] = flow["conn_state_tcp_fosr"]
+        flow = flow[
+            (flow["Connection State"] != "other")
+        ]  # remove rare and OTH connection states
         for v in ["service_tcp_fosr", "orig_l2_addr", "resp_l2_addr"]:
-            flow[v] = flow[v].fillna("") # prepare fields for concatenation
+            flow[v] = flow[v].fillna("")  # prepare fields for concatenation
         for v in ["orig_ttl", "resp_ttl"]:
-            flow[v] = flow[v].replace("-", "999") # marker for absent TTL (for example, no answer in a flow)
+            flow[v] = flow[v].replace(
+                "-", "999"
+            )  # marker for absent TTL (for example, no answer in a flow)
             flow[v] = flow[v].fillna("")
 
     if udp_fosr is not None:
@@ -225,48 +395,79 @@ if __name__ == '__main__':
             flow[v] = flow[v].fillna("")
         for v in ["orig_ttl_udp_fosr", "resp_ttl_udp_fosr"]:
             # TODO: autocomplete: when there is no TTL, fill automatically based on other examples of this IP
-            flow[v] = flow[v].replace("-", "64") # default TTL value
+            flow[v] = flow[v].replace("-", "64")  #  default TTL value
             flow[v] = flow[v].fillna("")
 
     # one or the other will be empty
-    flow['Applicative Proto'] = flow['service_tcp_fosr'] + flow['service_udp_fosr']
-    flow['Src MAC'] = flow["orig_l2_addr"] + flow["orig_l2_addr_udp_fosr"]
-    flow['Dst MAC'] = (flow["resp_l2_addr"] + flow["resp_l2_addr_udp_fosr"])
-    flow['Src TTL'] = flow["orig_ttl"].apply(ttl_to_string) + flow["orig_ttl_udp_fosr"].apply(ttl_to_string)
-    flow['Dst TTL'] = (flow["resp_ttl"].apply(ttl_to_string) + flow["resp_ttl_udp_fosr"].apply(ttl_to_string))
+    flow["Applicative Proto"] = flow["service_tcp_fosr"] + flow["service_udp_fosr"]
+    flow["Src MAC"] = flow["orig_l2_addr"] + flow["orig_l2_addr_udp_fosr"]
+    flow["Dst MAC"] = flow["resp_l2_addr"] + flow["resp_l2_addr_udp_fosr"]
+    flow["Src TTL"] = flow["orig_ttl"].apply(ttl_to_string) + flow[
+        "orig_ttl_udp_fosr"
+    ].apply(ttl_to_string)
+    flow["Dst TTL"] = flow["resp_ttl"].apply(ttl_to_string) + flow[
+        "resp_ttl_udp_fosr"
+    ].apply(ttl_to_string)
 
     # remove flows with unknown service
     flow = flow[flow["Applicative Proto"] != ""]
 
     # get all the services detected
-    services = [s for s in flow['Applicative Proto'].unique() if ":" in s]
+    services = [s for s in flow["Applicative Proto"].unique() if ":" in s]
     # print("Recognized services:",services)
     # some flow’s protocols may not be corrected infered (S0’s for example). We use the other flows to infer the service
-    flow["Applicative Proto"] = flow["Applicative Proto"].apply(functools.partial(complete_proto,services))
+    flow["Applicative Proto"] = flow["Applicative Proto"].apply(
+        functools.partial(complete_proto, services)
+    )
     # we remove flows with unknown service
     flow = flow.dropna(subset="Applicative Proto")
-    flow['Applicative Proto'] = flow['Applicative Proto'].apply(reorder_services)
+    flow["Applicative Proto"] = flow["Applicative Proto"].apply(reorder_services)
 
-    m = 20 # at least 20 examples
-    print("Removed rare services:\n",flow["Applicative Proto"].value_counts()[flow["Applicative Proto"].value_counts() < m])
-    flow = flow[flow["Applicative Proto"].isin(flow["Applicative Proto"].value_counts()[flow["Applicative Proto"].value_counts() >= m].index)]
+    m = 20  # at least 20 examples
+    print(
+        "Removed rare services:\n",
+        flow["Applicative Proto"].value_counts()[
+            flow["Applicative Proto"].value_counts() < m
+        ],
+    )
+    flow = flow[
+        flow["Applicative Proto"].isin(
+            flow["Applicative Proto"]
+            .value_counts()[flow["Applicative Proto"].value_counts() >= m]
+            .index
+        )
+    ]
 
     # Export for automata learning
 
     print("Export for automata learning")
     automata = []
     for s in flow["Applicative Proto"].unique():
-        for conn_state in flow[flow["Applicative Proto"] == s]["Connection State"].unique():
+        for conn_state in flow[flow["Applicative Proto"] == s][
+            "Connection State"
+        ].unique():
             if str(conn_state) != "NaN":
-                flows = list(flow[(flow["Applicative Proto"] == s) & (flow["Connection State"] == conn_state) & (flow["Proto"] == "TCP")]["uid"])
+                flows = list(
+                    flow[
+                        (flow["Applicative Proto"] == s)
+                        & (flow["Connection State"] == conn_state)
+                        & (flow["Proto"] == "TCP")
+                    ]["uid"]
+                )
                 if len(flows) >= m:
-                    d = { "service": s, "conn_state": conn_state, "flows": flows, "proto": "tcp" }
+                    d = {
+                        "service": s,
+                        "conn_state": conn_state,
+                        "flows": flows,
+                        "proto": "tcp",
+                    }
                     automata.append(d)
-        flows = list(flow[(flow["Applicative Proto"] == s) & (flow["Proto"] == "UDP")]["uid"])
+        flows = list(
+            flow[(flow["Applicative Proto"] == s) & (flow["Proto"] == "UDP")]["uid"]
+        )
         if len(flows) >= m:
-            d = { "service": s, "flows": flows, "proto": "udp" }
+            d = {"service": s, "flows": flows, "proto": "udp"}
             automata.append(d)
-
 
     args.output = args.output or "."
     os.makedirs(os.path.join(args.output, "bn"), exist_ok=True)
@@ -278,18 +479,26 @@ if __name__ == '__main__':
     flow = flow[flow["Pkts count"] <= 200]
 
     # get all the local IP addresses
-    ips = list(set(flow[flow["local_orig"] == "T"]["id.orig_h"].tolist()).union(set(flow[flow["local_resp"] == "T"]["id.resp_h"].tolist())))
+    ips = list(
+        set(flow[flow["local_orig"] == "T"]["id.orig_h"].tolist()).union(
+            set(flow[flow["local_resp"] == "T"]["id.resp_h"].tolist())
+        )
+    )
     ips.sort()
 
     # anonymise public IP
-    flow['Src IP Addr'] = flow['id.orig_h'].apply(remove_public_ip, local_ips=ips)
-    flow['Dst IP Addr'] = flow['id.resp_h'].apply(remove_public_ip, local_ips=ips)
+    flow["Src IP Addr"] = flow["id.orig_h"].apply(remove_public_ip, local_ips=ips)
+    flow["Dst IP Addr"] = flow["id.resp_h"].apply(remove_public_ip, local_ips=ips)
 
     os_dict = {}
     # broadcast IP will be have no TTL
     # identify most common TTL for each IP
-    for src_ip in flow['Src IP Addr'].unique():
-        ttl = int(flow[flow["Src IP Addr"] == src_ip]["Src TTL"].mode()[0].removeprefix("ttl-"))
+    for src_ip in flow["Src IP Addr"].unique():
+        ttl = int(
+            flow[flow["Src IP Addr"] == src_ip]["Src TTL"]
+            .mode()[0]
+            .removeprefix("ttl-")
+        )
         if ttl <= 64:
             os_dict[src_ip] = "Linux"
         elif ttl <= 128:
@@ -297,8 +506,12 @@ if __name__ == '__main__':
         else:
             os_dict[src_ip] = "Router"
 
-    for dst_ip in flow['Dst IP Addr'].unique():
-        ttl = int(flow[flow["Dst IP Addr"] == dst_ip]["Dst TTL"].mode()[0].removeprefix("ttl-"))
+    for dst_ip in flow["Dst IP Addr"].unique():
+        ttl = int(
+            flow[flow["Dst IP Addr"] == dst_ip]["Dst TTL"]
+            .mode()[0]
+            .removeprefix("ttl-")
+        )
         if ttl <= 64:
             os_dict[dst_ip] = "Linux"
         elif ttl <= 128:
@@ -310,7 +523,7 @@ if __name__ == '__main__':
 
     # Modify destination ports that only appears once in their own category
     rare_ports = flow["id.resp_p"].value_counts()[flow["id.resp_p"].value_counts() == 1]
-    flow['Dst Pt'] = flow['id.resp_p'].apply(port_to_string, rare_ports=rare_ports)
+    flow["Dst Pt"] = flow["id.resp_p"].apply(port_to_string, rare_ports=rare_ports)
 
     clients = []
     servers = []
@@ -318,9 +531,9 @@ if __name__ == '__main__':
     # ttl = {}
 
     for ip in ips:
-        occurrences_dst = sum(flow["Dst IP Addr"]==ip)
-        occurrences_src = sum(flow["Src IP Addr"]==ip)
-        if occurrences_src >= 3*occurrences_dst: # at least 75% of flows as a source
+        occurrences_dst = sum(flow["Dst IP Addr"] == ip)
+        occurrences_src = sum(flow["Src IP Addr"] == ip)
+        if occurrences_src >= 3 * occurrences_dst:  # at least 75% of flows as a source
             # print(ip,"is a client")
             clients.append(ip)
         else:
@@ -333,26 +546,34 @@ if __name__ == '__main__':
     #         ttl[ip] = int(ttl_fosr[ttl_fosr["ip"] == ip]["ttl"].mode()[0])
 
     # output["ttl"] = ttl
-    print("Local clients:",list(clients))
-    print("Local servers:",list(servers))
+    print("Local clients:", list(clients))
+    print("Local servers:", list(servers))
 
-    flow['Src OS'] = flow['Src IP Addr'].apply(get_os, os_dict=os_dict)
-    flow['Dst OS'] = flow['Dst IP Addr'].apply(get_os, os_dict=os_dict)
+    flow["Src OS"] = flow["Src IP Addr"].apply(get_os, os_dict=os_dict)
+    flow["Dst OS"] = flow["Dst IP Addr"].apply(get_os, os_dict=os_dict)
 
-# only for local addresses
-    flow['Src IP Role'] = flow['Src IP Addr'].apply(get_network_src_role, clients=clients, servers=servers)
-    flow['Dst IP Role'] = flow['Dst IP Addr'].apply(get_network_dst_role, clients=clients, servers=servers)
+    # only for local addresses
+    flow["Src IP Role"] = flow["Src IP Addr"].apply(
+        get_network_src_role, clients=clients, servers=servers
+    )
+    flow["Dst IP Role"] = flow["Dst IP Addr"].apply(
+        get_network_dst_role, clients=clients, servers=servers
+    )
 
     def categorize(out_pkt_count, in_pkt_count):
         best_bic = None
-        pkt_count = [[out_pkt_count[i][0],in_pkt_count[i][0]] for i in range(len(out_pkt_count))]
-        unique_counts = len(list(set([(l[0],l[1]) for l in pkt_count])))
+        pkt_count = [
+            [out_pkt_count[i][0], in_pkt_count[i][0]] for i in range(len(out_pkt_count))
+        ]
+        unique_counts = len(list(set([(l[0], l[1]) for l in pkt_count])))
         pkt_count = np.array(pkt_count)
-        for i in range(1,10): # limit on the number of components
-            if i > unique_counts: # at most as many components as the number of points
+        for i in range(1, 10):  # limit on the number of components
+            if i > unique_counts:  # at most as many components as the number of points
                 break
             try:
-                m = GaussianMixture(n_components=i, random_state=42, covariance_type="full")
+                m = GaussianMixture(
+                    n_components=i, random_state=42, covariance_type="full"
+                )
                 labels = m.fit_predict(pkt_count)
                 bic = m.bic(pkt_count)
                 if best_bic is None or best_bic > bic:
@@ -360,62 +581,117 @@ if __name__ == '__main__':
                     best_bic = bic
                     best_labels = labels
             except Exception as e:
-                print("Error during GaussianMixture:",e)
+                print("Error during GaussianMixture:", e)
 
-        assert best_bic is not None # at least i==1
-        best_labels = list(map(cluster_to_string,best_labels)) # make the variable discrete
+        assert best_bic is not None  # at least i==1
+        best_labels = list(
+            map(cluster_to_string, best_labels)
+        )  # make the variable discrete
         return best_model.means_.tolist(), best_model.covariances_.tolist(), best_labels
 
     start = time.time()
     output = []
 
     for s in flow["Applicative Proto"].unique():
-        for conn_state in flow[flow["Applicative Proto"] == s]["Connection State"].unique():
+        for conn_state in flow[flow["Applicative Proto"] == s][
+            "Connection State"
+        ].unique():
             if str(conn_state) != "NaN":
-                local_flows = flow[(flow["Applicative Proto"] == s) & (flow["Connection State"] == conn_state) & (flow["Proto"] == "TCP")]
+                local_flows = flow[
+                    (flow["Applicative Proto"] == s)
+                    & (flow["Connection State"] == conn_state)
+                    & (flow["Proto"] == "TCP")
+                ]
                 flows = list(local_flows["uid"])
                 if len(flows) >= m:
-                    out_pkt_count = np.array(local_flows["orig_pkts"]).reshape(-1,1)
-                    in_pkt_count = np.array(local_flows["resp_pkts"]).reshape(-1,1)
+                    out_pkt_count = np.array(local_flows["orig_pkts"]).reshape(-1, 1)
+                    in_pkt_count = np.array(local_flows["resp_pkts"]).reshape(-1, 1)
                     means, covar, labels = categorize(out_pkt_count, in_pkt_count)
-                    flow.loc[(flow['Applicative Proto'] == s) & (flow["Connection State"] == conn_state) & (flow["Proto"] == "TCP"), ["Cat Packet"]] = labels
-                    output.append({ "service": s, "conn_state": conn_state, "proto": "TCP", "mu": means, "cov": covar })
+                    flow.loc[
+                        (flow["Applicative Proto"] == s)
+                        & (flow["Connection State"] == conn_state)
+                        & (flow["Proto"] == "TCP"),
+                        ["Cat Packet"],
+                    ] = labels
+                    output.append(
+                        {
+                            "service": s,
+                            "conn_state": conn_state,
+                            "proto": "TCP",
+                            "mu": means,
+                            "cov": covar,
+                        }
+                    )
         local_flows = flow[(flow["Applicative Proto"] == s) & (flow["Proto"] == "UDP")]
         flows = list(local_flows["uid"])
         if len(flows) >= m:
-            out_pkt_count = np.array(local_flows["orig_pkts"]).reshape(-1,1)
-            in_pkt_count = np.array(local_flows["resp_pkts"]).reshape(-1,1)
+            out_pkt_count = np.array(local_flows["orig_pkts"]).reshape(-1, 1)
+            in_pkt_count = np.array(local_flows["resp_pkts"]).reshape(-1, 1)
             means, covar, labels = categorize(out_pkt_count, in_pkt_count)
-            flow.loc[(flow['Applicative Proto'] == s) & (flow["Proto"] == "UDP"), ["Cat Packet"]] = labels
-            output.append({ "service": s, "proto": "UDP", "mu": means, "cov": covar })
+            flow.loc[
+                (flow["Applicative Proto"] == s) & (flow["Proto"] == "UDP"),
+                ["Cat Packet"],
+            ] = labels
+            output.append({"service": s, "proto": "UDP", "mu": means, "cov": covar})
 
     # flows with less than m examples will be removed that way
     flow = flow.dropna(subset=["Cat Packet"])
 
-    flow = flow.replace("-", "none") # "-" causes pyagrum to parse the value as a number, leading to an exception
+    flow = flow.replace(
+        "-", "none"
+    )  # "-" causes pyagrum to parse the value as a number, leading to an exception
 
     flow["Connection State"] = flow["Connection State"].fillna("none")
 
-    all_vars = ["Time", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Connection State", "Src TTL", "Dst TTL", "Src MAC", "Dst MAC", "Cat Packet", "Src IP Role", "Dst IP Role", "Src OS", "Dst OS"]
+    all_vars = [
+        "Time",
+        "Applicative Proto",
+        "Proto",
+        "Src IP Addr",
+        "Dst IP Addr",
+        "Dst Pt",
+        "Connection State",
+        "Src TTL",
+        "Dst TTL",
+        "Src MAC",
+        "Dst MAC",
+        "Cat Packet",
+        "Src IP Role",
+        "Dst IP Role",
+        "Src OS",
+        "Dst OS",
+    ]
     # Extract domains
     for c in all_vars:
         full_domains[c] = [str(s) for s in pd.unique(flow[c])]
         full_domains[c].sort()
-    full_domains["Time"] = ["bin-"+f'{n:03}' for n in range(bin_count)] # use all theoretical values
+    full_domains["Time"] = [
+        "bin-" + f"{n:03}" for n in range(bin_count)
+    ]  # use all theoretical values
 
     if not unique_dataset:
         print("Model learning (for transfer learning)")
 
-        all_vars = ["Time", "Applicative Proto", "Proto", "Connection State", "Cat Packet", "Src IP Role", "Dst IP Role", "Src OS", "Dst OS"]
+        all_vars = [
+            "Time",
+            "Applicative Proto",
+            "Proto",
+            "Connection State",
+            "Cat Packet",
+            "Src IP Role",
+            "Dst IP Role",
+            "Src OS",
+            "Dst OS",
+        ]
         common_data = flow[all_vars]
         for c in all_vars:
-            common_data[c] = common_data[c].astype('category')
+            common_data[c] = common_data[c].astype("category")
             common_data[c] = common_data[c].cat.set_categories(full_domains[c])
 
         learner = gum.BNLearner(common_data)
         # add the weight of each record (=row)
-        for (i,(_,r)) in enumerate(flow.iterrows()):
-            learner.setRecordWeight(i,r["weight"])
+        for i, (_, r) in enumerate(flow.iterrows()):
+            learner.setRecordWeight(i, r["weight"])
 
         # Time must have no parent because it will be sampled from the stage 1
         learner.addNoParentNode("Time")
@@ -430,7 +706,7 @@ if __name__ == '__main__':
         bn = learner.learnBN()
 
         # we recreate the bayesian network with the same structure but the full domain
-        bn_full = gum.BayesNet('Fos-R model (TL)')
+        bn_full = gum.BayesNet("Fos-R model (TL)")
         for i in bn.nodes():
             var = bn.variable(i).name()
             bn_full.add(gum.LabelizedVariable(var, var, full_domains[var]))
@@ -455,15 +731,30 @@ if __name__ == '__main__':
             json.dump(output, out_file, indent=1)
             print("JSON file successfully created")
         except Exception as e:
-            print("Error during json save:",e)
+            print("Error during json save:", e)
 
     if unique_dataset:
         print("Model learning")
 
-        all_vars = ["Time", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Connection State", "Src TTL", "Dst TTL", "Src MAC", "Dst MAC", "Cat Packet", "Src OS", "Dst OS"]
+        all_vars = [
+            "Time",
+            "Applicative Proto",
+            "Proto",
+            "Src IP Addr",
+            "Dst IP Addr",
+            "Dst Pt",
+            "Connection State",
+            "Src TTL",
+            "Dst TTL",
+            "Src MAC",
+            "Dst MAC",
+            "Cat Packet",
+            "Src OS",
+            "Dst OS",
+        ]
         common_data = flow[all_vars]
         for c in all_vars:
-            common_data[c] = common_data[c].astype('category')
+            common_data[c] = common_data[c].astype("category")
             common_data[c] = common_data[c].cat.set_categories(full_domains[c])
 
         learner = gum.BNLearner(common_data)
@@ -481,7 +772,7 @@ if __name__ == '__main__':
         bn = learner.learnBN()
 
         # we recreate the bayesian network with the same structure but the full domain
-        bn_full = gum.BayesNet('Fos-R model')
+        bn_full = gum.BayesNet("Fos-R model")
         for i in bn.nodes():
             var = bn.variable(i).name()
             bn_full.add(gum.LabelizedVariable(var, var, full_domains[var]))
@@ -506,6 +797,8 @@ if __name__ == '__main__':
             json.dump(output, out_file, indent=1)
             print("JSON file successfully created")
         except Exception as e:
-            print("Error during json save:",e)
+            print("Error during json save:", e)
     else:
-        print("Multiple input datasets have been selected, so only the transfer-learning model has been learned.")
+        print(
+            "Multiple input datasets have been selected, so only the transfer-learning model has been learned."
+        )
