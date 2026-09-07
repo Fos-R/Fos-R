@@ -185,9 +185,9 @@ impl FromStr for L7Proto {
             L7Proto::LDAP
         } else if s.contains("NTP") {
             L7Proto::NTP
-        } else if s.contains("DCE_RPC") {
+        } else if s.contains("DCE_RPC") || s.contains("DCERPC") {
             L7Proto::DCERPC
-        } else if s.contains("KRB") {
+        } else if s.contains("KRB") || s.contains("KERBEROS") {
             L7Proto::Kerberos
         } else if s.contains("SMB") {
             L7Proto::SMB
@@ -303,7 +303,7 @@ impl FromStr for L7ProtoWithPort {
                 "Non-default protocol {s} must include a port number"
             ))
         } else {
-            let port = port.unwrap_or(proto.get_default_dst_port().unwrap());
+            let port = port.unwrap_or_else(|| proto.get_default_dst_port().unwrap());
             Ok(L7ProtoWithPort { proto, port })
         }
     }
@@ -331,7 +331,6 @@ pub enum OS {
 }
 
 impl Display for OS {
-    // TODO: strum
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             OS::Linux => write!(f, "Linux"),

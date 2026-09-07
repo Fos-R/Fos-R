@@ -58,6 +58,9 @@ pub struct Network {
     /// A hashmap that maps an IP to an OS (if it is defined in the config file)
     pub os_map: HashMap<Ipv4Addr, OS>,
 
+    /// A list of OS that are present
+    pub present_os: Vec<OS>,
+
     /// The list of "users" IPs
     pub users: Vec<Ipv4Addr>,
 
@@ -337,6 +340,7 @@ impl From<NetworkYaml> for Network {
             .flatten()
             .collect();
         let mut os_map: HashMap<Ipv4Addr, OS> = HashMap::new();
+        let mut present_os: HashSet<OS> = HashSet::new();
         for host in networks
             .iter()
             .flat_map(|n| n.hosts.iter())
@@ -344,6 +348,9 @@ impl From<NetworkYaml> for Network {
         {
             for interface in &host.interfaces {
                 os_map.insert(interface.ip_addr, host.os);
+            }
+            if !present_os.contains(&host.os) {
+                present_os.insert(host.os);
             }
         }
 
@@ -422,6 +429,7 @@ impl From<NetworkYaml> for Network {
             metadata: c.metadata,
             networks: all_networks,
             os_map,
+            present_os: present_os.into_iter().collect(),
             mac_addr_map,
             users,
             servers,
