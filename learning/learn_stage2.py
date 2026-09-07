@@ -29,6 +29,9 @@ def remove_public_ip(value, local_ips):
     else:
         return "Internet"
 
+def get_os(ip, os_dict):
+    return os_dict.get(ip, "Unknown")
+
 def get_network_src_role(ip, clients, servers):
     if ip in clients:
         return "User"
@@ -124,8 +127,8 @@ if __name__ == '__main__':
     if unique_dataset:
         file = open(args.input[0], 'r')
         config = yaml.safe_load(file)
-        offset = config["offset"] or 0 # default: consider it’s UTC
-        print("Offset:",offset)
+        offset = config["tz_offset"] or 0 # default: consider it’s UTC
+        print("Dataset timezone offset:",offset)
         if not os.path.isabs(config["train_set"]):
             config["train_set"] = os.path.join(os.path.dirname(args.input[0]), config["train_set"])
         conn_input = os.path.join(config["train_set"], "conn.log")
@@ -157,7 +160,7 @@ if __name__ == '__main__':
 
     else:
         configs = [yaml.safe_load(open(i, 'r')) for i in args.input]
-        offsets = [c["offset"] or 0 for c in configs] # default: consider it’s UTC
+        offsets = [c["tz_offset"] or 0 for c in configs] # default: consider it’s UTC
 
         for (c,i) in zip(configs,args.input):
             if not os.path.isabs(c["train_set"]):
@@ -282,6 +285,29 @@ if __name__ == '__main__':
     flow['Src IP Addr'] = flow['id.orig_h'].apply(remove_public_ip, local_ips=ips)
     flow['Dst IP Addr'] = flow['id.resp_h'].apply(remove_public_ip, local_ips=ips)
 
+    os_dict = {}
+    # broadcast IP will be have no TTL
+    # identify most common TTL for each IP
+    for src_ip in flow['Src IP Addr'].unique():
+        ttl = int(flow[flow["Src IP Addr"] == src_ip]["Src TTL"].mode()[0].removeprefix("ttl-"))
+        if ttl <= 64:
+            os_dict[src_ip] = "Linux"
+        elif ttl <= 128:
+            os_dict[src_ip] = "Windows"
+        else:
+            os_dict[src_ip] = "Router"
+
+    for dst_ip in flow['Dst IP Addr'].unique():
+        ttl = int(flow[flow["Dst IP Addr"] == dst_ip]["Dst TTL"].mode()[0].removeprefix("ttl-"))
+        if ttl <= 64:
+            os_dict[dst_ip] = "Linux"
+        elif ttl <= 128:
+            os_dict[dst_ip] = "Windows"
+        else:
+            os_dict[dst_ip] = "Router"
+
+    print(os_dict)
+
     # Modify destination ports that only appears once in their own category
     rare_ports = flow["id.resp_p"].value_counts()[flow["id.resp_p"].value_counts() == 1]
     flow['Dst Pt'] = flow['id.resp_p'].apply(port_to_string, rare_ports=rare_ports)
@@ -309,6 +335,9 @@ if __name__ == '__main__':
     # output["ttl"] = ttl
     print("Local clients:",list(clients))
     print("Local servers:",list(servers))
+
+    flow['Src OS'] = flow['Src IP Addr'].apply(get_os, os_dict=os_dict)
+    flow['Dst OS'] = flow['Dst IP Addr'].apply(get_os, os_dict=os_dict)
 
 # only for local addresses
     flow['Src IP Role'] = flow['Src IP Addr'].apply(get_network_src_role, clients=clients, servers=servers)
@@ -367,7 +396,7 @@ if __name__ == '__main__':
 
     flow["Connection State"] = flow["Connection State"].fillna("none")
 
-    all_vars = ["Time", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Connection State", "Src TTL", "Dst TTL", "Src MAC", "Dst MAC", "Cat Packet", "Src IP Role", "Dst IP Role"]
+    all_vars = ["Time", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Connection State", "Src TTL", "Dst TTL", "Src MAC", "Dst MAC", "Cat Packet", "Src IP Role", "Dst IP Role", "Src OS", "Dst OS"]
     # Extract domains
     for c in all_vars:
         full_domains[c] = [str(s) for s in pd.unique(flow[c])]
@@ -377,7 +406,7 @@ if __name__ == '__main__':
     if not unique_dataset:
         print("Model learning (for transfer learning)")
 
-        all_vars = ["Time", "Applicative Proto", "Proto", "Connection State", "Cat Packet", "Src IP Role", "Dst IP Role"]
+        all_vars = ["Time", "Applicative Proto", "Proto", "Connection State", "Cat Packet", "Src IP Role", "Dst IP Role", "Src OS", "Dst OS"]
         common_data = flow[all_vars]
         for c in all_vars:
             common_data[c] = common_data[c].astype('category')
@@ -431,7 +460,7 @@ if __name__ == '__main__':
     if unique_dataset:
         print("Model learning")
 
-        all_vars = ["Time", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Connection State", "Src TTL", "Dst TTL", "Src MAC", "Dst MAC", "Cat Packet"]
+        all_vars = ["Time", "Applicative Proto", "Proto", "Src IP Addr", "Dst IP Addr", "Dst Pt", "Connection State", "Src TTL", "Dst TTL", "Src MAC", "Dst MAC", "Cat Packet", "Src OS", "Dst OS"]
         common_data = flow[all_vars]
         for c in all_vars:
             common_data[c] = common_data[c].astype('category')

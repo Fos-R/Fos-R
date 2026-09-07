@@ -327,16 +327,7 @@ pub enum OS {
     #[default]
     Linux,
     Windows,
-}
-
-impl Display for OS {
-    // TODO: strum
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            OS::Linux => write!(f, "Linux"),
-            OS::Windows => write!(f, "Windows"),
-        }
-    }
+    Router,
 }
 
 impl OS {
@@ -344,13 +335,14 @@ impl OS {
         match self {
             OS::Linux => 64,
             OS::Windows => 128,
+            OS::Router => 255,
         }
     }
 
     // Source: https://en.wikipedia.org/wiki/Ephemeral_port
     pub fn get_ephemeral_port_distr(&self) -> Uniform<u16> {
         match self {
-            OS::Linux => Uniform::new(32768, 60999).unwrap(),
+            OS::Linux | OS::Router => Uniform::new(32768, 60999).unwrap(),
             OS::Windows => Uniform::new(49152, 65535).unwrap(),
         }
     }
@@ -404,6 +396,8 @@ pub struct FlowData {
     // In online mode, the local IP will always be the source
     pub src_ip: Ipv4Addr,
     pub dst_ip: Ipv4Addr,
+    pub src_os: OS,
+    pub dst_os: OS,
     pub src_mac: MacAddr,
     pub dst_mac: MacAddr,
     pub src_port: u16,
@@ -577,6 +571,8 @@ impl Default for Packets {
             flow: Flow::UDP(FlowData {
                 src_ip: Ipv4Addr::UNSPECIFIED,
                 dst_ip: Ipv4Addr::UNSPECIFIED,
+                src_os: OS::Linux,
+                dst_os: OS::Linux,
                 src_mac: MacAddr::zero(),
                 dst_mac: MacAddr::zero(),
                 src_port: 0,
