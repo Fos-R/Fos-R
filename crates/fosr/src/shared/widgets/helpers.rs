@@ -17,6 +17,7 @@ pub fn os_display_name(os: Option<OS>) -> &'static str {
     match os {
         Some(OS::Linux) => "Linux",
         Some(OS::Windows) => "Windows",
+        Some(OS::Router) => "Router",
         None => "<none>",
     }
 }
