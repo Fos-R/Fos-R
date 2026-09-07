@@ -31,6 +31,8 @@ use strum::EnumString;
 struct IntermediateVector {
     src_ip_role: Option<SrcIpRole>,
     dst_ip_role: Option<DstIpRole>,
+    src_os: Option<OS>,
+    dst_os: Option<OS>,
     l7_proto: Option<L7Proto>,
     dst_port: Option<u16>,
     src_port: Option<u16>,
@@ -57,6 +59,8 @@ impl From<IntermediateVector> for Flow {
             dst_port: p.dst_port.unwrap(),
             src_ttl: p.src_ttl.unwrap(),
             dst_ttl: p.dst_ttl.unwrap(),
+            src_os: p.src_os.unwrap(),
+            dst_os: p.dst_os.unwrap(),
             packets_count_cluster: p.packets_count_cluster.unwrap(),
             fwd_packets_count: 0, //p.fwd_packets_count.unwrap(), FIXME
             bwd_packets_count: 0, //p.bwd_packets_count.unwrap(), FIXME
@@ -84,10 +88,11 @@ struct BayesianNetworkNode {
 #[derive(Debug, Clone)]
 pub struct TransferLearningExtraData {
     // TODO: différencier IP locales et IP connues
+    // TODO: prendre en compte les OS dans les hashmap
     local_src_ip_users: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)>,
     local_src_ip_servers: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)>,
     local_dst_ip: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)>,
-    local_ttl: HashMap<Ipv4Addr, u8>,
+    local_ttl_delta: HashMap<Ipv4Addr, u8>,
     services_per_server: HashMap<(Ipv4Addr, L7Proto), Vec<L7ProtoWithPort>>,
     mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
 }
@@ -132,6 +137,8 @@ enum Feature {
     TimeBin(usize), // cardinality only
     SrcIpRole(Vec<SrcIpRole>),
     DstIpRole(Vec<DstIpRole>),
+    SrcOs(Vec<OS>),
+    DstOs(Vec<OS>),
     SrcIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
     DstIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
     DstPt(Vec<DstPt>), // the port comes from the network file (must be chosen after the dest IP)
@@ -150,6 +157,7 @@ impl Feature {
         match &self {
             // Feature::SrcIpRole(v) | Feature::DstIpRole(v) => format!("{:?}", v[index]),
             Feature::SrcIp(v) | Feature::DstIp(v) => format!("{:?}", v[index]),
+            Feature::SrcOs(v) | Feature::DstOs(v) => format!("{:?}", v[index]),
             Feature::DstPt(v) => format!("{:?}", v[index]),
             Feature::PktCount(_) => format!("Cluster {index}"),
             Feature::SrcTTL(v) | Feature::DstTTL(v) => format!("{:?}", v[index]),
@@ -167,6 +175,7 @@ impl Feature {
         match &self {
             // Feature::SrcIpRole(v) | Feature::DstIpRole(v) => v.len(),
             Feature::SrcIp(v) | Feature::DstIp(v) => v.len(),
+            Feature::SrcOs(v) | Feature::DstOs(v) => v.len(),
             Feature::DstPt(v) => v.len(),
             Feature::PktCount(card) | Feature::TimeBin(card) => *card,
             Feature::SrcTTL(v) | Feature::DstTTL(v) => v.len(),
@@ -255,6 +264,8 @@ impl BayesianNetwork {
                         // println!("Sampled value for {:?}: {}", v.feature, i);
                         new_discrete_vector.push(i);
                         match &v.feature {
+                            Feature::SrcOs(v) => domain_vector.src_os = Some(v[i]),
+                            Feature::DstOs(v) => domain_vector.dst_os = Some(v[i]),
                             Feature::SrcIpRole(v) => domain_vector.src_ip_role = Some(v[i]),
                             Feature::DstIpRole(v) => domain_vector.dst_ip_role = Some(v[i]),
                             Feature::SrcTTL(v) => domain_vector.src_ttl = Some(v[i]),
@@ -603,11 +614,11 @@ impl BayesianModel {
                     local_dst_ip.insert(*s, (servers, WeightedIndex::new(&weights).unwrap()));
                 }
 
-                let mut local_ttl: HashMap<Ipv4Addr, u8> = HashMap::new();
+                let mut local_ttl_delta: HashMap<Ipv4Addr, u8> = HashMap::new();
                 let mut mac_addr_map = network.mac_addr_map.clone();
                 for ip in network.users.iter().chain(network.servers.iter()) {
                     // TODO ! TTL should be calculated from the topology
-                    local_ttl.insert(*ip, 255);
+                    local_ttl_delta.insert(*ip, (rng.next_u32() % 10) as u8);
                     if !mac_addr_map.contains_key(ip) {
                         mac_addr_map.insert(
                             *ip,
@@ -628,7 +639,7 @@ impl BayesianModel {
                     local_src_ip_users,
                     local_src_ip_servers,
                     local_dst_ip,
-                    local_ttl,
+                    local_ttl_delta,
                     services_per_server: network.services_per_server.clone(),
                     mac_addr_map,
                 };
@@ -697,7 +708,6 @@ impl BayesianModel {
 }
 
 fn bn_from_bif(network: bifxml::Network, alpha: u64) -> Result<(BayesianNetwork, usize), String> {
-
     assert!(alpha >= 1); // by default, a pseudo-count is already included
 
     // Used only for computing the topological order
@@ -831,6 +841,20 @@ fn bn_from_bif(network: bifxml::Network, alpha: u64) -> Result<(BayesianNetwork,
                 Some(Feature::TimeBin(v.outcome.len()))
             }
             "Cat Packet" => Some(Feature::PktCount(v.outcome.len())),
+            "Src OS" => Some(Feature::SrcOs(
+                v.outcome
+                    .clone()
+                    .into_iter()
+                    .map(|s| OS::from_str(&s).map_err(|e| format!("Unknown OS: {e} for {s}")))
+                    .collect::<Result<Vec<OS>, String>>()?,
+            )),
+            "Dst OS" => Some(Feature::DstOs(
+                v.outcome
+                    .clone()
+                    .into_iter()
+                    .map(|s| OS::from_str(&s).map_err(|e| format!("Unknown OS: {e} for {s}")))
+                    .collect::<Result<Vec<OS>, String>>()?,
+            )),
             "Src IP Role" => Some(Feature::SrcIpRole(
                 v.outcome
                     .clone()
@@ -1013,7 +1037,7 @@ impl Stage2 for BNGenerator {
             }
 
             domain_vector.timestamp = Some(ts.data.unix_time);
-            let uniform = OS::Windows.get_ephemeral_port_distr(); // TODO: use the actual OS
+            let uniform = domain_vector.src_os.unwrap().get_ephemeral_port_distr();
             // Use the default source port for that protocol if that exists
             domain_vector.src_port = Some(
                 match domain_vector.l7_proto.unwrap().get_default_src_port() {
@@ -1106,6 +1130,8 @@ impl Stage2 for BNGenerator {
                         .get_default_dst_port()
                         .unwrap(),
                 };
+                // TODO: Discutable...
+                let uniform = domain_vector.dst_os.unwrap().get_ephemeral_port_distr();
                 domain_vector.dst_port = Some(match port {
                     Port::Fixed(p) => p,
                     Port::Random => uniform.sample(&mut rng),
@@ -1115,11 +1141,23 @@ impl Stage2 for BNGenerator {
                 domain_vector.src_ttl = Some(match domain_vector.src_ip_role.unwrap() {
                     // TODO: we can do better
                     SrcIpRole::Internet => Uniform::new(52, 108).unwrap().sample(&mut rng),
-                    _ => *tl.local_ttl.get(&domain_vector.src_ip.unwrap()).unwrap(),
+                    _ => {
+                        domain_vector.src_os.unwrap().get_initial_ttl()
+                            - *tl
+                                .local_ttl_delta
+                                .get(&domain_vector.src_ip.unwrap())
+                                .unwrap()
+                    }
                 });
                 domain_vector.dst_ttl = Some(match domain_vector.dst_ip_role.unwrap() {
                     DstIpRole::Internet => Uniform::new(52, 108).unwrap().sample(&mut rng),
-                    DstIpRole::Server => *tl.local_ttl.get(&domain_vector.src_ip.unwrap()).unwrap(),
+                    DstIpRole::Server => {
+                        domain_vector.dst_os.unwrap().get_initial_ttl()
+                            - *tl
+                                .local_ttl_delta
+                                .get(&domain_vector.dst_ip.unwrap())
+                                .unwrap()
+                    }
                 });
             }
         }

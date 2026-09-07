@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     file = open(args.input, 'r')
     config = yaml.safe_load(file)
-    offset = config["offset"] or 0 # default: consider it’s UTC
+    offset = config["tz_offset"] or 0 # default: consider it’s UTC
     if not os.path.isabs(config["train_set"]):
         config["train_set"] = os.path.join(os.path.dirname(args.input), config["train_set"])
     conn_input = os.path.join(config["train_set"], "conn.log")
