@@ -122,7 +122,7 @@ impl ScheduledFlow {
             event: FlowEvent {
                 src_ip: flow_data.src_ip,
                 dst_ip: flow_data.dst_ip,
-                protocol: L7Proto::HTTP, // flow_data.l7_proto, FIXME!
+                protocol: flow_data.l7_proto,
                 timestamp: flow_data.timestamp,
             },
             scheduled_time,

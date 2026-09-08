@@ -610,6 +610,14 @@ impl BayesianModel {
                 let mut local_dst_ip: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)> =
                     HashMap::new();
 
+                if network.users.is_empty() {
+                    return Err("No client in the network".to_string());
+                }
+                if network.servers.is_empty() {
+                    return Err("No server in the network".to_string());
+                }
+                // TODO: plutôt que d’avoir une erreur, plutôt mettre à jour le réseau bayésien
+
                 for s in &network.services {
                     // Use a Zipf distribution for clients activity
                     // We assume all clients can use any service
@@ -921,13 +929,13 @@ fn bn_from_bif(network: bifxml::Network, alpha: u64) -> Result<(BayesianNetwork,
                     })
                     .collect(),
             )),
-            "Applicative Proto" => { dbg!(&v); Some(Feature::L7Proto(
+            "Applicative Proto" => Some(Feature::L7Proto(
                 v.outcome
                     .clone()
                     .into_iter()
                     .map(|s| L7Proto::from_str(&s).unwrap())
                     .collect(),
-            )) },
+            )),
             "Proto" => Some(Feature::L4Proto(
                 v.outcome
                     .clone()
