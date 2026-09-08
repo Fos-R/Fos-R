@@ -77,7 +77,7 @@ impl RunTabState {
             models: None,
             visualization: VisualizationState::default(),
             generation: GenerationState::default(),
-            panel_open: true,
+            panel_open: false,
             next_config,
         }
     }
