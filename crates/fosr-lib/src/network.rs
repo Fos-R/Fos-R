@@ -447,7 +447,9 @@ impl Host {
     fn from(h: HostYaml, mut rng: &mut impl Rng) -> Self {
         let host_type = h.host_type.unwrap_or(
             // if there is at least one service, the type is "server"
-            if h.interfaces
+            if h.interfaces.len() > 1 {
+                HostType::Router
+            } else if h.interfaces
                 .iter()
                 .any(|i| i.services.as_ref().is_some_and(|s| !s.is_empty()))
             {
