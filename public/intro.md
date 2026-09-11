@@ -24,7 +24,15 @@ Fos-R is a high-quality and high-throughput network traffic generator based on M
 
 <!-- Start of WASM GUI Integration -->
 <div id="gui_wrapper">
-<div id="gui_loading_text">Loading Application...</div>
+<div id="gui_loading_text">
+<center>
+<div class="loader">
+</div>
+<br/>
+Loading…
+</center>
+</div>
+
 <canvas class="gui_canvas" id="fosr_gui_canvas"></canvas>
 </div>
 <script type="module">
