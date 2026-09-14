@@ -1,5 +1,5 @@
 metadata:
-  title: Home Network Configuration
+  title: Home Network Examples
   desc: A simple home network with a router and workstations
   author: FosR
   version: 1.0.0
@@ -12,7 +12,6 @@ networks:
     hosts:
       - hostname: home-router
         os: linux
-        type: server
         interfaces:
           - ip_addr: 192.168.1.1
             services:
@@ -25,6 +24,18 @@ networks:
         type: user
         interfaces:
           - ip_addr: 192.168.1.10
+
+      - hostname: workstation
+        os: windows
+        type: user
+        interfaces:
+          - ip_addr: 192.168.1.11
+
+      - hostname: workstation
+        os: linux
+        type: user
+        interfaces:
+          - ip_addr: 192.168.1.12
 
       - hostname: nas
         os: linux
