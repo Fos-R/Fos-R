@@ -519,8 +519,6 @@ if __name__ == "__main__":
         else:
             os_dict[dst_ip] = "Router"
 
-    print(os_dict)
-
     # Modify destination ports that only appears once in their own category
     rare_ports = flow["id.resp_p"].value_counts()[flow["id.resp_p"].value_counts() == 1]
     flow["Dst Pt"] = flow["id.resp_p"].apply(port_to_string, rare_ports=rare_ports)
@@ -727,7 +725,9 @@ if __name__ == "__main__":
         bn.saveBIFXML(os.path.join(args.output, "bn/bn_tl.bifxml"))
 
         try:
-            out_file = open(os.path.join(args.output, "pkt_count_clusters.json"), "w")
+            out_file = open(
+                os.path.join(args.output, "pkt_count_clusters_tl.json"), "w"
+            )
             json.dump(output, out_file, indent=1)
             print("JSON file successfully created")
         except Exception as e:
