@@ -1,0 +1,118 @@
+metadata:
+  title: CUPID Dataset Network
+  desc: The topology of the testbed used for the CUPID dataset.
+  author: Pierre-François Gimenez
+  version: 1.0.0
+  format: 1
+
+networks:
+  - subnet: 192.168.1.0
+    mask: 24
+    name: "LAN"
+    hosts:
+      - interfaces: # TAP
+        - ip_addr: 192.168.1.109
+        - ip_addr: public
+      - interfaces: # NIC1
+        - ip_addr: 192.168.1.4
+        os: windows
+      - interfaces: # vEthernet
+        - ip_addr: 192.168.1.121
+        os: windows
+      - interfaces: # DroneVM01
+        - ip_addr: 192.168.1.31
+        os: windows
+      - interfaces: # DroneVM02
+        - ip_addr: 192.168.1.34
+        os: windows
+      - interfaces: # DroneVM03
+        - ip_addr: 192.168.1.35
+        os: windows
+      - interfaces: # DroneVM04
+        - ip_addr: 192.168.1.36
+        os: windows
+      - interfaces: # DroneVM05
+        - ip_addr: 192.168.1.37
+        os: windows
+      - interfaces: # DroneVM06
+        - ip_addr: 192.168.1.38
+        os: windows
+      - interfaces: # DroneVM07
+        - ip_addr: 192.168.1.43
+        os: windows
+      - interfaces: # DroneVM08
+        - ip_addr: 192.168.1.39
+        os: windows
+      - interfaces: # DroneVM09
+        - ip_addr: 192.168.1.40
+        os: windows
+      - interfaces: # DroneVM10
+        - ip_addr: 192.168.1.42
+        os: windows
+      - interfaces: # NIC_4
+        - ip_addr: 192.168.1.5
+        os: windows
+      - interfaces: # vEthernet
+        - ip_addr: 192.168.1.120
+        os: windows
+      - interfaces: # DroneVM23
+        - ip_addr: 192.168.1.108
+        os: windows
+      - interfaces: # DroneVM24
+        - ip_addr: 192.168.1.45
+        os: windows
+      - interfaces: # DroneVM25
+        - ip_addr: 192.168.1.46
+        os: windows
+      - interfaces: # DroneVM26
+        - ip_addr: 192.168.1.47
+        os: windows
+      - interfaces: # DroneVM27
+        - ip_addr: 192.168.1.48
+        os: windows
+      - interfaces: # DroneVM28
+        - ip_addr: 192.168.1.49
+        os: windows
+      - interfaces: # DroneVM29
+        - ip_addr: 192.168.1.50
+        os: windows
+      - interfaces: # DroneVM30
+        - ip_addr: 192.168.1.51
+        os: windows
+      - interfaces: # DroneVM31
+        - ip_addr: 192.168.1.52
+        os: windows
+      - interfaces: # DroneVM32
+        - ip_addr: 192.168.1.53
+        os: windows
+      - interfaces: # DroneVM33
+        - ip_addr: 192.168.1.54
+        os: windows
+      - interfaces: # DroneVM2
+        - ip_addr: 192.168.1.46
+        os: windows
+      - interfaces: # Exchange
+        - ip_addr: 192.168.1.9
+          services:
+            - smtp
+            - imap
+        os: windows
+      - interfaces: # Fileshare SMB
+        - ip_addr: 192.168.1.11
+          services:
+            - smb
+            - http
+            - https
+        os: windows
+      - interfaces: # Wiki
+        - ip_addr: 192.168.1.13
+          services:
+            - http
+            - https
+        os: windows
+      - interfaces: # NIC1
+        - ip_addr: 192.168.1.7
+          services:
+            - dns
+        os: windows
+
