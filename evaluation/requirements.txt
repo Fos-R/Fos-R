@@ -4,3 +4,4 @@ scikit-learn
 matplotlib
 vendi-score
 imblearn
+pyod
