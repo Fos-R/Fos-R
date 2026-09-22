@@ -8,6 +8,7 @@
 *.json
 *.txt
 *.csv
+*.ps
 *.pyc
 data/rules
 learning/tadam_*
