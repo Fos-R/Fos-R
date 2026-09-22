@@ -9,6 +9,7 @@
 - New stage 1 with realistic time distribution
 - New stage 2 with Bayesian networks
 - New default models (CICIDS17, CUPID and DEDALE)
+- New network description file format
 - New topology generator
 
 #### fosr-cli
@@ -25,13 +26,13 @@
 #### fosr
 
 - New crate with a GUI
+- WASM export for online demo
 - Live flow visualization
 - Pcap generation
 - Network editor
 
 #### other
 
-- Evaluation pipeline (will be improved)
 - Added a Zeek script for feature extraction
 - TADAM: include payload types from tshark
 - Many other tweaks to TADAM

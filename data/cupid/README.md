@@ -10,10 +10,10 @@ description: "Documentation on the CUPID dataset"
 
 The pcap files were downloaded from <https://cupid.directory/>.
 
-- cupid-train is 042219_1000.pcapng
-- cupid-eval is 042319_1000.pcapng
-- cupid-reference is 042419_1000.pcapng
-- cupid-data-augmentation is the concatenation of all automatically generated attacks
+- cupid-train is `042219_1000.pcapng`
+- cupid-eval is `042319_1000.pcapng`
+- cupid-reference is `042419_1000.pcapng`
+- cupid-data-augmentation is the concatenation of all (automatic and human-generated) attacks
 
 The pcap files were processed as follow:
 
