@@ -2492,7 +2492,7 @@
  "accepting_state": 13,
  "protocol": "tcp",
  "metadata": {
-  "service": "ldap_tcp",
+  "service": "gssapi,krb,ldap_tcp",
   "conn_state": "SF",
   "input_file": "dedale-train",
   "creation_time": "2026-04-10 08:50:37.902979"
