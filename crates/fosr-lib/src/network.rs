@@ -68,6 +68,12 @@ pub struct Network {
     /// List of servers
     pub servers: HashMap<(L7Proto, OS, DstIpRole), Vec<Ipv4Addr>>,
 
+    /// The list of "users" IPs
+    pub all_users: Vec<Ipv4Addr>,
+
+    /// The list of "servers" IPs
+    pub all_servers: Vec<Ipv4Addr>,
+
     /// List of all IPs defined in the network
     pub all_ips: Vec<Ipv4Addr>,
 
@@ -358,6 +364,27 @@ impl From<NetworkYaml> for Network {
             })
             .collect();
 
+        let all_users: Vec<Ipv4Addr> = networks
+            .iter()
+            .flat_map(|n| &n.hosts)
+            .chain(&internet)
+            .filter_map(|h| match h.host_type {
+                HostType::User => Some(h.get_ip_addr()),
+                HostType::Server | HostType::Router => None,
+            })
+            .flatten()
+            .collect();
+        let all_servers: Vec<Ipv4Addr> = networks
+            .iter()
+            .flat_map(|n| &n.hosts)
+            .chain(&internet)
+            .filter_map(|h| match h.host_type {
+                HostType::Server => Some(h.get_ip_addr()),
+                HostType::User | HostType::Router => None,
+            })
+            .flatten()
+            .collect();
+
         let mut os_map: HashMap<Ipv4Addr, OS> = HashMap::new();
         let mut present_os: HashSet<OS> = HashSet::new();
         for host in networks
@@ -560,6 +587,8 @@ impl From<NetworkYaml> for Network {
             mac_addr_map,
             users,
             servers,
+            all_users,
+            all_servers,
             all_ips,
             services: services.into_iter().collect(),
             services_per_server,

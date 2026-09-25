@@ -568,7 +568,7 @@ impl NetworkData {
         for service in &config.services {
             let servers = config.get_servers_per_service(service);
 
-            for &user_ip in &config.users {
+            for &user_ip in &config.all_users {
                 if let Some(&user_idx) = self.ip_to_node.get(&user_ip) {
                     for &server_ip in &servers {
                         if let Some(&server_idx) = self.ip_to_node.get(&server_ip) {
@@ -582,7 +582,7 @@ impl NetworkData {
         if let Some(internet_idx) = self.ip_to_node.get(&INTERNET_NODE_IP) {
             // Add edges from all user and server nodes to Internet
             let mut connected_to_internet: HashSet<NodeIndex> = HashSet::new();
-            for &ip in config.users.iter().chain(config.servers.iter()) {
+            for &ip in config.all_users.iter().chain(config.all_servers.iter()) {
                 if let Some(&idx) = self.ip_to_node.get(&ip)
                     && connected_to_internet.insert(idx)
                 {

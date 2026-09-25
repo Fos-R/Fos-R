@@ -44,6 +44,7 @@ pub fn render_hosts_section(ui: &mut egui::Ui, model: &mut NetworkYaml) {
         model.add_network(SubNetworkYaml {
             ui_id: next_ui_id(),
             subnet,
+            public: false,
             mask: 24,
             name: Some(format!("Network {}", net_count + 1)),
             hosts: vec![],
