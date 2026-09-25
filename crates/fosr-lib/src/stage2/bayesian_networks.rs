@@ -609,26 +609,8 @@ impl BayesianModel {
                                 src_ip.insert(
                                     (*s, os, role),
                                     match role {
-                                        SrcIpRole::User | SrcIpRole::Server => (
-                                            ips.clone()
-                                                .into_iter()
-                                                .map(AnonymizedIpv4Addr::Known)
-                                                .collect(),
-                                            get_zipf_weights(ips.len(), &mut rng),
-                                        ),
-                                        SrcIpRole::Internet if !network.has_internet_access =>
-                                        // Same as previously
-                                        {
-                                            (
-                                                ips.clone()
-                                                    .into_iter()
-                                                    .map(AnonymizedIpv4Addr::Known)
-                                                    .collect(),
-                                                get_zipf_weights(ips.len(), &mut rng),
-                                            )
-                                        }
-                                        SrcIpRole::Internet =>
-                                        // A known Internet host, or just "Internet"
+                                        SrcIpRole::Internet if network.has_internet_access =>
+                                        // It can be a known Internet host, or just "Internet"
                                         {
                                             (
                                                 ips.clone()
@@ -644,12 +626,17 @@ impl BayesianModel {
                                                 ),
                                             )
                                         }
+                                        _ => (
+                                            ips.clone()
+                                                .into_iter()
+                                                .map(AnonymizedIpv4Addr::Known)
+                                                .collect(),
+                                            get_zipf_weights(ips.len(), &mut rng),
+                                        ),
                                     },
                                 );
                             } else if network.has_internet_access {
                                 // Only Internet
-                                // If the role is Internet but there is no Internet-reachable IPs and
-                                // there is no Internet access, then there is no possible IPs
                                 src_ip.insert(
                                     (*s, os, role),
                                     (
@@ -657,7 +644,8 @@ impl BayesianModel {
                                         WeightedIndex::new([1.0]).unwrap(),
                                     ),
                                 );
-                            }
+                            } // No "else" arm: if the role is Internet but there is no Internet-reachable IPs and
+                            // there is no Internet access, then there is no possible IPs
                         }
 
                         for role in DstIpRole::iter() {
@@ -666,24 +654,7 @@ impl BayesianModel {
                                 dst_ip.insert(
                                     (*s, os, role),
                                     match role {
-                                        DstIpRole::Server => (
-                                            ips.clone()
-                                                .into_iter()
-                                                .map(AnonymizedIpv4Addr::Known)
-                                                .collect(),
-                                            get_zipf_weights(ips.len(), &mut rng),
-                                        ),
-                                        DstIpRole::Internet if !network.has_internet_access => {
-                                            // same as previously
-                                            (
-                                                ips.clone()
-                                                    .into_iter()
-                                                    .map(AnonymizedIpv4Addr::Known)
-                                                    .collect(),
-                                                get_zipf_weights(ips.len(), &mut rng),
-                                            )
-                                        }
-                                        DstIpRole::Internet => {
+                                        DstIpRole::Internet if network.has_internet_access => {
                                             // A known Internet host, or just "Internet"
                                             (
                                                 ips.clone()
@@ -699,6 +670,13 @@ impl BayesianModel {
                                                 ),
                                             )
                                         }
+                                        _ => (
+                                            ips.clone()
+                                                .into_iter()
+                                                .map(AnonymizedIpv4Addr::Known)
+                                                .collect(),
+                                            get_zipf_weights(ips.len(), &mut rng),
+                                        ),
                                     },
                                 );
                             } else if network.has_internet_access {

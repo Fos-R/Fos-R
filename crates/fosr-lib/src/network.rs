@@ -447,93 +447,53 @@ impl From<NetworkYaml> for Network {
 
         for os in OS::iter() {
             for role in SrcIpRole::iter() {
-                match role {
-                    SrcIpRole::User => {
-                        let ips: Vec<Ipv4Addr> = networks
-                            .iter()
-                            .flat_map(|n| &n.hosts)
-                            // check OS
-                            .filter(|h| h.os == os)
-                            // check type
-                            .filter_map(|h| match h.host_type {
-                                HostType::User => Some(h.get_private_ip_addr()),
-                                HostType::Server | HostType::Router => None,
-                            })
-                            .flatten()
-                            .collect();
-                        users.insert((os, role), ips);
-                    }
-                    SrcIpRole::Server => {
-                        let ips: Vec<Ipv4Addr> = networks
-                            .iter()
-                            .flat_map(|n| &n.hosts)
-                            // check OS
-                            .filter(|h| h.os == os)
-                            // check type
-                            .filter_map(|h| match h.host_type {
-                                HostType::Server => Some(h.get_private_ip_addr()),
-                                HostType::User | HostType::Router => None,
-                            })
-                            .flatten()
-                            .collect();
-                        users.insert((os, role), ips);
-                    }
-                    SrcIpRole::Internet => {
-                        let ips: Vec<Ipv4Addr> = networks
-                            .iter()
-                            .flat_map(|n| &n.hosts)
-                            // check OS
-                            .filter(|h| h.os == os)
-                            // check type
-                            .filter_map(|h| match h.host_type {
-                                HostType::User => Some(h.get_public_ip_addr()),
-                                HostType::Server | HostType::Router => None,
-                            })
-                            .flatten()
-                            .collect();
-                        users.insert((os, role), ips);
-                    }
+                let ips: Vec<Ipv4Addr> = networks
+                    .iter()
+                    .flat_map(|n| &n.hosts)
+                    // check OS
+                    .filter(|h| h.os == os)
+                    // check type
+                    .filter_map(|h| match role {
+                        SrcIpRole::User => match h.host_type {
+                            HostType::User => Some(h.get_private_ip_addr()),
+                            HostType::Server | HostType::Router => None,
+                        },
+                        SrcIpRole::Server => match h.host_type {
+                            HostType::Server => Some(h.get_private_ip_addr()),
+                            HostType::User | HostType::Router => None,
+                        },
+                        SrcIpRole::Internet => match h.host_type {
+                            HostType::User => Some(h.get_public_ip_addr()),
+                            HostType::Server | HostType::Router => None,
+                        },
+                    })
+                    .flatten()
+                    .collect();
+                if !ips.is_empty() {
+                    users.insert((os, role), ips);
                 }
             }
             for role in DstIpRole::iter() {
                 for s in &services {
-                    match role {
-                        DstIpRole::Server => {
-                            let ips: Vec<Ipv4Addr> = networks
-                                .iter()
-                                .flat_map(|n| &n.hosts)
-                                // check OS
-                                .filter(|h| h.os == os && matches!(h.host_type, HostType::Server))
-                                // check type
-                                .flat_map(|h| &h.interfaces)
-                                .filter_map(|i| {
-                                    if !i.public && i.provides_service(s) {
-                                        Some(i.ip_addr)
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect();
-                            servers.insert((*s, os, role), ips);
-                        }
-                        DstIpRole::Internet => {
-                            let ips: Vec<Ipv4Addr> = networks
-                                .iter()
-                                .flat_map(|n| &n.hosts)
-                                // check OS
-                                .filter(|h| h.os == os && matches!(h.host_type, HostType::Server))
-                                // check type
-                                .flat_map(|h| &h.interfaces)
-                                .filter_map(|i| {
-                                    if i.public && i.provides_service(s) {
-                                        Some(i.ip_addr)
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect();
-                            servers.insert((*s, os, role), ips);
-                        }
+                    let ips: Vec<Ipv4Addr> = networks
+                        .iter()
+                        .flat_map(|n| &n.hosts)
+                        // check OS
+                        .filter(|h| h.os == os && matches!(h.host_type, HostType::Server))
+                        // check type
+                        .flat_map(|h| &h.interfaces)
+                        .filter_map(|i| match role {
+                            DstIpRole::Server if !i.public && i.provides_service(s) => {
+                                Some(i.ip_addr)
+                            }
+                            DstIpRole::Internet if i.public && i.provides_service(s) => {
+                                Some(i.ip_addr)
+                            }
+                            _ => None,
+                        })
+                        .collect();
+                    if !ips.is_empty() {
+                        servers.insert((*s, os, role), ips);
                     }
                 }
             }
