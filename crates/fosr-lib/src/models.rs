@@ -1,5 +1,10 @@
 use crate::network::Network;
 use crate::{network, stage1, stage2, stage3};
+#[cfg(any(
+    feature = "models_cicids17",
+    feature = "models_cupid",
+    feature = "models_dedale"
+))]
 use include_assets::{NamedArchive, include_dir};
 use std::ffi::OsStr;
 use std::fs;
@@ -24,22 +29,13 @@ pub enum ModelsSource {
     ))]
     /// Models merged from CICIDS17, CUPID and DEDALE
     CCD,
-    #[cfg(all(
-        feature = "models_cicids17",
-        feature = "models_cupid",
-    ))]
+    #[cfg(all(feature = "models_cicids17", feature = "models_cupid",))]
     /// Models merged from CICIDS17 + CUPID
     CICCUP,
-    #[cfg(all(
-        feature = "models_cicids17",
-        feature = "models_dedale",
-    ))]
+    #[cfg(all(feature = "models_cicids17", feature = "models_dedale",))]
     /// Models merged from CICIDS17 + DEDALE
     DEDCIC,
-    #[cfg(all(
-        feature = "models_cupid",
-        feature = "models_dedale",
-    ))]
+    #[cfg(all(feature = "models_cupid", feature = "models_dedale",))]
     /// Models merged from CUPID + DEDALE
     DEDCUP,
     /// Models defined by the user
@@ -219,28 +215,19 @@ impl ModelsSource {
                 v.append(&mut ModelsSource::DEDALE.get_automata()?);
                 Ok(v)
             }
-            #[cfg(all(
-                feature = "models_cicids17",
-                feature = "models_cupid"
-            ))]
+            #[cfg(all(feature = "models_cicids17", feature = "models_cupid"))]
             ModelsSource::CICCUP => {
                 let mut v = ModelsSource::CICIDS17.get_automata()?;
                 v.append(&mut ModelsSource::CUPID.get_automata()?);
                 Ok(v)
             }
-            #[cfg(all(
-                feature = "models_cicids17",
-                feature = "models_dedale"
-            ))]
+            #[cfg(all(feature = "models_cicids17", feature = "models_dedale"))]
             ModelsSource::DEDCIC => {
                 let mut v = ModelsSource::CICIDS17.get_automata()?;
                 v.append(&mut ModelsSource::DEDALE.get_automata()?);
                 Ok(v)
             }
-            #[cfg(all(
-                feature = "models_cupid",
-                feature = "models_dedale"
-            ))]
+            #[cfg(all(feature = "models_cupid", feature = "models_dedale"))]
             ModelsSource::DEDCUP => {
                 let mut v = ModelsSource::CUPID.get_automata()?;
                 v.append(&mut ModelsSource::DEDALE.get_automata()?);
@@ -287,10 +274,7 @@ impl ModelsSource {
                     .unwrap()
                 },
             ),
-            #[cfg(all(
-                feature = "models_cicids17",
-                feature = "models_cupid",
-            ))]
+            #[cfg(all(feature = "models_cicids17", feature = "models_cupid",))]
             ModelsSource::CICCUP => Ok(
                 #[cfg(debug_assertions)]
                 include_str!("../default_models/ciccup/bn/bn_tl.bifxml").to_string(),
@@ -303,10 +287,7 @@ impl ModelsSource {
                     .unwrap()
                 },
             ),
-            #[cfg(all(
-                feature = "models_cicids17",
-                feature = "models_dedale"
-            ))]
+            #[cfg(all(feature = "models_cicids17", feature = "models_dedale"))]
             ModelsSource::DEDCIC => Ok(
                 #[cfg(debug_assertions)]
                 include_str!("../default_models/dedcic/bn/bn_tl.bifxml").to_string(),
@@ -319,10 +300,7 @@ impl ModelsSource {
                     .unwrap()
                 },
             ),
-            #[cfg(all(
-                feature = "models_cupid",
-                feature = "models_dedale"
-            ))]
+            #[cfg(all(feature = "models_cupid", feature = "models_dedale"))]
             ModelsSource::DEDCUP => Ok(
                 #[cfg(debug_assertions)]
                 include_str!("../default_models/dedcup/bn/bn_tl.bifxml").to_string(),
@@ -395,6 +373,7 @@ impl ModelsSource {
                     p.join("bn/bn.bifxml").to_str().unwrap(),
                 )?)
             }
+            #[allow(unreachable_patterns)]
             _ => todo!("CCD can only be used with transfer learning"),
         }
     }
@@ -460,10 +439,7 @@ impl ModelsSource {
                     .unwrap()
                 },
             ),
-            #[cfg(all(
-                feature = "models_cicids17",
-                feature = "models_cupid"
-            ))]
+            #[cfg(all(feature = "models_cicids17", feature = "models_cupid"))]
             ModelsSource::CICCUP => Ok(
                 #[cfg(debug_assertions)]
                 include_str!("../default_models/ciccup/pkt_count_clusters_tl.json").to_string(),
@@ -477,10 +453,7 @@ impl ModelsSource {
                 },
             ),
 
-            #[cfg(all(
-                feature = "models_cicids17",
-                feature = "models_dedale"
-            ))]
+            #[cfg(all(feature = "models_cicids17", feature = "models_dedale"))]
             ModelsSource::DEDCIC => Ok(
                 #[cfg(debug_assertions)]
                 include_str!("../default_models/dedcic/pkt_count_clusters_tl.json").to_string(),
@@ -494,10 +467,7 @@ impl ModelsSource {
                 },
             ),
 
-            #[cfg(all(
-                feature = "models_cupid",
-                feature = "models_dedale"
-            ))]
+            #[cfg(all(feature = "models_cupid", feature = "models_dedale"))]
             ModelsSource::DEDCUP => Ok(
                 #[cfg(debug_assertions)]
                 include_str!("../default_models/dedcup/pkt_count_clusters_tl.json").to_string(),
@@ -510,7 +480,6 @@ impl ModelsSource {
                     .unwrap()
                 },
             ),
-
 
             // TODO: plutôt TL ou pas TL ?
             ModelsSource::UserDefined(path) => Ok(fs::read_to_string(
@@ -583,30 +552,21 @@ impl ModelsSource {
                 Ok(v)
             }
 
-            #[cfg(all(
-                feature = "models_cicids17",
-                feature = "models_cupid"
-            ))]
+            #[cfg(all(feature = "models_cicids17", feature = "models_cupid"))]
             ModelsSource::CICCUP => {
                 let mut v = ModelsSource::CICIDS17.get_time_profiles()?;
                 v.append(&mut ModelsSource::CUPID.get_time_profiles()?);
                 Ok(v)
             }
 
-            #[cfg(all(
-                feature = "models_cicids17",
-                feature = "models_dedale"
-            ))]
+            #[cfg(all(feature = "models_cicids17", feature = "models_dedale"))]
             ModelsSource::DEDCIC => {
                 let mut v = ModelsSource::CICIDS17.get_time_profiles()?;
                 v.append(&mut ModelsSource::DEDALE.get_time_profiles()?);
                 Ok(v)
             }
 
-            #[cfg(all(
-                feature = "models_cupid",
-                feature = "models_dedale"
-            ))]
+            #[cfg(all(feature = "models_cupid", feature = "models_dedale"))]
             ModelsSource::DEDCUP => {
                 let mut v = ModelsSource::CUPID.get_time_profiles()?;
                 v.append(&mut ModelsSource::DEDALE.get_time_profiles()?);

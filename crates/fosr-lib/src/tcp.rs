@@ -1,4 +1,5 @@
 use crate::structs::{EdgeType, PacketDirection, PacketInfo, Payload, PayloadType};
+use pnet_packet::tcp::TcpFlags;
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
@@ -33,6 +34,17 @@ impl PacketInfo for TCPPacketInfo {
     }
     fn set_ts(&mut self, ts: Duration) {
         self.ts = ts;
+    }
+}
+
+impl TCPPacketInfo {
+    pub fn get_flag_byte(&self) -> u8 {
+        (u8::from(self.s_flag) * TcpFlags::SYN)
+            | (u8::from(self.a_flag) * TcpFlags::ACK)
+            | (u8::from(self.f_flag) * TcpFlags::FIN)
+            | (u8::from(self.r_flag) * TcpFlags::RST)
+            | (u8::from(self.u_flag) * TcpFlags::URG)
+            | (u8::from(self.p_flag) * TcpFlags::PSH)
     }
 }
 

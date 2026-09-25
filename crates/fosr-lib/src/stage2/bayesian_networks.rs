@@ -1,14 +1,15 @@
 use crate::models;
 use crate::network;
-use crate::stage2::{
-    Flow, FlowData, L4Proto, L7Proto, L7ProtoWithPort, OS, Port, Rng, SeedableRng, SeededData,
-    Stage2, TCPConnState, TimePoint, bifxml,
+use crate::stage2::{Stage2, TCPConnState, TimePoint, bifxml};
+use crate::structs::{
+    DstIpRole, Flow, FlowData, L4Proto, L7Proto, L7ProtoWithPort, OS, Port, SeededData, SrcIpRole,
 };
 use crate::utils;
 
 use chrono::Timelike;
 use pnet::util::MacAddr;
 use rand::prelude::SliceRandom;
+use rand_core::{Rng, SeedableRng};
 use rand_distr::Distribution;
 use rand_distr::Uniform;
 use rand_distr::weighted::WeightedIndex;
@@ -23,7 +24,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
-use strum::EnumString;
+use strum::IntoEnumIterator;
 
 #[derive(Debug, Clone, Default)]
 /// This structure holds the flow that is being built. Since we cannot instance all the variables
@@ -84,44 +85,30 @@ struct BayesianNetworkNode {
                          // in the cpt
 }
 
+// TODO: créer type pour (Vec<AnonymizedIpv4Addr>, WeightedIndex<f64>)
+type AnonymizedIpv4Distr = (Vec<AnonymizedIpv4Addr>, WeightedIndex<f64>);
+
 /// Extra information for the transfer learning
 #[derive(Debug, Clone)]
 pub struct TransferLearningExtraData {
-    // TODO: différencier IP locales et IP connues
-    // TODO: prendre en compte les OS dans les hashmap
-    local_src_ip_users: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)>,
-    local_src_ip_servers: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)>,
-    local_dst_ip: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)>,
+    /// Source IP node
+    src_ip: HashMap<(L7Proto, OS, SrcIpRole), AnonymizedIpv4Distr>,
+    /// Destination IP node
+    dst_ip: HashMap<(L7Proto, OS, DstIpRole), AnonymizedIpv4Distr>,
+    /// Difference between theoretical and actual TTL observations
     local_ttl_delta: HashMap<Ipv4Addr, u8>,
+    // internet_users: (Vec<AnonymizedIpv4Addr>, WeightedIndex<f64>)>,
+    // internet_servers: (Vec<AnonymizedIpv4Addr>, WeightedIndex<f64>)>,
     services_per_server: HashMap<(Ipv4Addr, L7Proto), Vec<L7ProtoWithPort>>,
     mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
 }
 
-#[derive(Debug, Clone, Copy, EnumString, PartialEq, Eq)]
-#[strum(
-    parse_err_fn = String::from,
-    parse_err_ty = String
-)]
-enum SrcIpRole {
-    User,
-    Server,
-    Internet,
-}
-
-#[derive(Debug, Clone, Copy, EnumString, PartialEq, Eq)]
-#[strum(
-    parse_err_fn = String::from,
-    parse_err_ty = String
-)]
-enum DstIpRole {
-    Server,
-    Internet,
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
+/// An anonynized IPv4 address
+/// Anonymized addresses are typically public addresses
 enum AnonymizedIpv4Addr {
     Public,
-    Local(Ipv4Addr),
+    Known(Ipv4Addr),
 }
 
 #[derive(Debug, Clone)]
@@ -274,14 +261,14 @@ impl BayesianNetwork {
                             Feature::DstMac(v) => domain_vector.dst_mac = Some(v[i]),
                             Feature::L7Proto(v) => domain_vector.l7_proto = Some(v[i]),
                             Feature::SrcIp(v) => match v[i] {
-                                AnonymizedIpv4Addr::Local(p) => domain_vector.src_ip = Some(p),
+                                AnonymizedIpv4Addr::Known(p) => domain_vector.src_ip = Some(p),
                                 AnonymizedIpv4Addr::Public => {
                                     domain_vector.src_ip =
                                         Some(utils::sample_random_global_ip(rng));
                                 }
                             },
                             Feature::DstIp(v) => match v[i] {
-                                AnonymizedIpv4Addr::Local(p) => domain_vector.dst_ip = Some(p),
+                                AnonymizedIpv4Addr::Known(p) => domain_vector.dst_ip = Some(p),
                                 AnonymizedIpv4Addr::Public => {
                                     domain_vector.dst_ip =
                                         Some(utils::sample_random_global_ip(rng));
@@ -512,8 +499,9 @@ impl BayesianModel {
                                 }
                             }
                         }
-                    // we set the probability of absent services to 0
-                    } if let Feature::L7Proto(v) = &mut node.feature {
+                        // we set the probability of absent services to 0
+                    }
+                    if let Feature::L7Proto(v) = &mut node.feature {
                         // get services present in the network
                         for s in &network.services {
                             if !v.contains(s) {
@@ -601,13 +589,9 @@ impl BayesianModel {
                 bn.remove_impossible_values()?;
 
                 let mut rng = Pcg32::seed_from_u64(12345);
-                let mut local_src_ip_users: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)> =
+                let mut src_ip: HashMap<(L7Proto, OS, SrcIpRole), AnonymizedIpv4Distr> =
                     HashMap::new();
-                let mut local_src_ip_servers: HashMap<
-                    L7Proto,
-                    (Vec<Ipv4Addr>, WeightedIndex<f64>),
-                > = HashMap::new();
-                let mut local_dst_ip: HashMap<L7Proto, (Vec<Ipv4Addr>, WeightedIndex<f64>)> =
+                let mut dst_ip: HashMap<(L7Proto, OS, DstIpRole), AnonymizedIpv4Distr> =
                     HashMap::new();
 
                 if network.users.is_empty() {
@@ -619,44 +603,121 @@ impl BayesianModel {
                 // TODO: plutôt que d’avoir une erreur, plutôt mettre à jour le réseau bayésien
 
                 for s in &network.services {
-                    // Use a Zipf distribution for clients activity
-                    // We assume all clients can use any service
-                    let mut weights: Vec<f64> = iter::repeat_n(1, network.users.len())
-                        .enumerate()
-                        .map(|(i, _)| 1. / ((i + 1) as f64))
-                        .collect();
-                    weights.shuffle(&mut rng);
-                    local_src_ip_users.insert(
-                        *s,
-                        (network.users.clone(), WeightedIndex::new(&weights).unwrap()),
-                    );
+                    for os in OS::iter() {
+                        for role in SrcIpRole::iter() {
+                            if let Some(ips) = network.users.get(&(os, role)) {
+                                src_ip.insert(
+                                    (*s, os, role),
+                                    match role {
+                                        SrcIpRole::User | SrcIpRole::Server => (
+                                            ips.clone()
+                                                .into_iter()
+                                                .map(AnonymizedIpv4Addr::Known)
+                                                .collect(),
+                                            get_zipf_weights(ips.len(), &mut rng),
+                                        ),
+                                        SrcIpRole::Internet if !network.has_internet_access =>
+                                        // Same as previously
+                                        {
+                                            (
+                                                ips.clone()
+                                                    .into_iter()
+                                                    .map(AnonymizedIpv4Addr::Known)
+                                                    .collect(),
+                                                get_zipf_weights(ips.len(), &mut rng),
+                                            )
+                                        }
+                                        SrcIpRole::Internet =>
+                                        // A known Internet host, or just "Internet"
+                                        {
+                                            (
+                                                ips.clone()
+                                                    .into_iter()
+                                                    .map(AnonymizedIpv4Addr::Known)
+                                                    // add Internet
+                                                    .chain(iter::once(AnonymizedIpv4Addr::Public))
+                                                    .collect(),
+                                                get_zipf_weights_with_extra_value(
+                                                    ips.len(),
+                                                    &mut rng,
+                                                    0.8, // TODO: do not hardcode
+                                                ),
+                                            )
+                                        }
+                                    },
+                                );
+                            } else if network.has_internet_access {
+                                // Only Internet
+                                // If the role is Internet but there is no Internet-reachable IPs and
+                                // there is no Internet access, then there is no possible IPs
+                                src_ip.insert(
+                                    (*s, os, role),
+                                    (
+                                        vec![AnonymizedIpv4Addr::Public],
+                                        WeightedIndex::new([1.0]).unwrap(),
+                                    ),
+                                );
+                            }
+                        }
 
-                    let mut weights: Vec<f64> = iter::repeat_n(1, network.servers.len())
-                        .enumerate()
-                        .map(|(i, _)| 1. / ((i + 1) as f64))
-                        .collect();
-                    weights.shuffle(&mut rng);
-                    local_src_ip_servers.insert(
-                        *s,
-                        (
-                            network.servers.clone(),
-                            WeightedIndex::new(&weights).unwrap(),
-                        ),
-                    );
-
-                    let servers = network.servers_per_service.get(s).unwrap().clone();
-                    // Use a Zipf distribution for servers activity
-                    let mut weights: Vec<f64> = iter::repeat_n(1, servers.len())
-                        .enumerate()
-                        .map(|(i, _)| 1. / ((i + 1) as f64))
-                        .collect();
-                    weights.shuffle(&mut rng);
-                    local_dst_ip.insert(*s, (servers, WeightedIndex::new(&weights).unwrap()));
+                        for role in DstIpRole::iter() {
+                            let ips = network.servers.get(&(*s, os, role));
+                            if let Some(ips) = ips {
+                                dst_ip.insert(
+                                    (*s, os, role),
+                                    match role {
+                                        DstIpRole::Server => (
+                                            ips.clone()
+                                                .into_iter()
+                                                .map(AnonymizedIpv4Addr::Known)
+                                                .collect(),
+                                            get_zipf_weights(ips.len(), &mut rng),
+                                        ),
+                                        DstIpRole::Internet if !network.has_internet_access => {
+                                            // same as previously
+                                            (
+                                                ips.clone()
+                                                    .into_iter()
+                                                    .map(AnonymizedIpv4Addr::Known)
+                                                    .collect(),
+                                                get_zipf_weights(ips.len(), &mut rng),
+                                            )
+                                        }
+                                        DstIpRole::Internet => {
+                                            // A known Internet host, or just "Internet"
+                                            (
+                                                ips.clone()
+                                                    .into_iter()
+                                                    .map(AnonymizedIpv4Addr::Known)
+                                                    // add Internet
+                                                    .chain(iter::once(AnonymizedIpv4Addr::Public))
+                                                    .collect(),
+                                                get_zipf_weights_with_extra_value(
+                                                    ips.len(),
+                                                    &mut rng,
+                                                    0.8, // TODO: do not hardcode
+                                                ),
+                                            )
+                                        }
+                                    },
+                                );
+                            } else if network.has_internet_access {
+                                // Only Internet
+                                dst_ip.insert(
+                                    (*s, os, role),
+                                    (
+                                        vec![AnonymizedIpv4Addr::Public],
+                                        WeightedIndex::new([1.0]).unwrap(),
+                                    ),
+                                );
+                            }
+                        }
+                    }
                 }
 
                 let mut local_ttl_delta: HashMap<Ipv4Addr, u8> = HashMap::new();
                 let mut mac_addr_map = network.mac_addr_map.clone();
-                for ip in network.users.iter().chain(network.servers.iter()) {
+                for ip in network.all_ips.iter() {
                     // TODO ! TTL should be calculated from the topology
                     local_ttl_delta.insert(*ip, (rng.next_u32() % 10) as u8);
                     if !mac_addr_map.contains_key(ip) {
@@ -676,9 +737,8 @@ impl BayesianModel {
                 }
 
                 let tl_extra_data = TransferLearningExtraData {
-                    local_src_ip_users,
-                    local_src_ip_servers,
-                    local_dst_ip,
+                    src_ip,
+                    dst_ip,
                     local_ttl_delta,
                     services_per_server: network.services_per_server.clone(),
                     mac_addr_map,
@@ -815,15 +875,6 @@ fn bn_from_bif(network: bifxml::Network, alpha: u64) -> Result<(BayesianNetwork,
         topo_order.insert(0, v); // insert at the start
     }
 
-    // If "Src IP" (or similar) is present, is must be at the end of the list because its parents may change
-    // Since it never has any children, the topological order will still be valid
-    // for var_name in ["Src IP Addr", "Dst IP Addr", "Dst Pt"] {
-    //     if let Some(p) = topo_order.iter().position(|s| s.as_str() == var_name) {
-    //         let v = topo_order.remove(p);
-    //         topo_order.push(v); // push at the end
-    //     }
-    // }
-
     // log::info!("Topological order: {topo_order:?}");
 
     let mut variable = vec![];
@@ -907,7 +958,7 @@ fn bn_from_bif(network: bifxml::Network, alpha: u64) -> Result<(BayesianNetwork,
                     .clone()
                     .into_iter()
                     .map(|v| match v.parse().ok() {
-                        Some(ip) => AnonymizedIpv4Addr::Local(ip),
+                        Some(ip) => AnonymizedIpv4Addr::Known(ip),
                         None => AnonymizedIpv4Addr::Public,
                     })
                     .collect(),
@@ -924,7 +975,7 @@ fn bn_from_bif(network: bifxml::Network, alpha: u64) -> Result<(BayesianNetwork,
                     .clone()
                     .into_iter()
                     .map(|v| match v.parse().ok() {
-                        Some(ip) => AnonymizedIpv4Addr::Local(ip),
+                        Some(ip) => AnonymizedIpv4Addr::Known(ip),
                         None => AnonymizedIpv4Addr::Public,
                     })
                     .collect(),
@@ -1087,64 +1138,55 @@ impl Stage2 for BNGenerator {
             );
 
             if let Some(tl) = model.get_tl()? {
-                // if let Some(ref tl) = self.model.transfer_learning {
                 // Sample the destination IP
-                domain_vector.dst_ip = Some(match domain_vector.dst_ip_role.unwrap() {
-                    DstIpRole::Server => {
-                        let (ips, weights) = tl
-                            .local_dst_ip
-                            .get(&domain_vector.l7_proto.unwrap())
-                            .unwrap();
-                        *ips.get(weights.sample(&mut rng)).unwrap()
-                    }
-                    // TODO: take into account Internet servers from the config
-                    DstIpRole::Internet => utils::sample_random_global_ip(&mut rng),
-                });
+                let dst_ips = tl.dst_ip.get(&(
+                    domain_vector.l7_proto.unwrap(),
+                    domain_vector.dst_os.unwrap(),
+                    domain_vector.dst_ip_role.unwrap(),
+                ));
+                if let Some((ips, weights)) = dst_ips {
+                    // This combinaison of L7 proto, OS and Role is known
+                    let ip = *ips.get(weights.sample(&mut rng)).unwrap();
+                    domain_vector.dst_ip = Some(match ip {
+                        AnonymizedIpv4Addr::Known(ip) => ip,
+                        AnonymizedIpv4Addr::Public => utils::sample_random_global_ip(&mut rng),
+                    });
+                } else {
+                    // This combinaison is not known: we cannot sample it
+                    log::error!(
+                        "No Destination IP for {}, {}, {:?}",
+                        domain_vector.l7_proto.unwrap(),
+                        domain_vector.dst_os.unwrap(),
+                        domain_vector.dst_ip_role.unwrap()
+                    );
+                    restart = true;
+                    continue;
+                };
 
-                domain_vector.src_ip = Some(match domain_vector.src_ip_role.unwrap() {
-                    SrcIpRole::User => {
-                        let (ips, weights) = tl
-                            .local_src_ip_users
-                            .get(&domain_vector.l7_proto.unwrap())
-                            .unwrap();
-                        match ips
-                            .iter()
-                            .position(|ip| ip == &domain_vector.dst_ip.unwrap())
-                        {
-                            Some(i) => {
-                                let mut new_weights = weights.clone();
-                                new_weights
-                                    .update_weights(&[(i, &0f64)])
-                                    .expect("Cannot enforce src IP != dst IP");
-                                // make it impossible to draw the same IP
-                                *ips.get(new_weights.sample(&mut rng)).unwrap()
-                            }
-                            None => *ips.get(weights.sample(&mut rng)).unwrap(),
-                        }
-                    }
-                    SrcIpRole::Server => {
-                        let (ips, weights) = tl
-                            .local_src_ip_servers
-                            .get(&domain_vector.l7_proto.unwrap())
-                            .unwrap();
-                        match ips
-                            .iter()
-                            .position(|ip| ip == &domain_vector.dst_ip.unwrap())
-                        {
-                            Some(i) => {
-                                let mut new_weights = weights.clone();
-                                new_weights
-                                    .update_weights(&[(i, &0f64)])
-                                    .expect("Cannot enforce src IP != dst IP");
-                                // make it impossible to draw the same IP
-                                *ips.get(new_weights.sample(&mut rng)).unwrap()
-                            }
-                            None => *ips.get(weights.sample(&mut rng)).unwrap(),
-                        }
-                    }
-                    // TODO: take into account Internet clients from the config
-                    SrcIpRole::Internet => utils::sample_random_global_ip(&mut rng),
-                });
+                // Sample the source IP
+                let src_ips = tl.src_ip.get(&(
+                    domain_vector.l7_proto.unwrap(),
+                    domain_vector.src_os.unwrap(),
+                    domain_vector.src_ip_role.unwrap(),
+                ));
+                if let Some((ips, weights)) = src_ips {
+                    // This combinaison of L7 proto, OS and Role is known
+                    let ip = *ips.get(weights.sample(&mut rng)).unwrap();
+                    domain_vector.src_ip = Some(match ip {
+                        AnonymizedIpv4Addr::Known(ip) => ip,
+                        AnonymizedIpv4Addr::Public => utils::sample_random_global_ip(&mut rng),
+                    });
+                } else {
+                    // This combinaison is not known: we cannot sample it
+                    log::error!(
+                        "No Source IP for {}, {}, {:?}",
+                        domain_vector.l7_proto.unwrap(),
+                        domain_vector.src_os.unwrap(),
+                        domain_vector.src_ip_role.unwrap()
+                    );
+                    restart = true;
+                    continue;
+                };
 
                 domain_vector.src_mac = Some(
                     *tl.mac_addr_map
@@ -1206,4 +1248,35 @@ impl Stage2 for BNGenerator {
             data: domain_vector.into(),
         }))
     }
+}
+
+/// A Zipf distribution for client and server activity
+fn get_zipf_weights(len: usize, rng: &mut impl Rng) -> WeightedIndex<f64> {
+    assert!(len > 0);
+    let mut weights: Vec<f64> = iter::repeat_n(1, len)
+        .enumerate()
+        .map(|(i, _)| 1. / ((i + 1) as f64))
+        .collect();
+    weights.shuffle(rng);
+    WeightedIndex::new(&weights).unwrap()
+}
+
+/// A Zipf distribution, except for one value that has a fixed probability.
+/// This extra value will alway be at the end of the list.
+fn get_zipf_weights_with_extra_value(
+    len: usize,
+    rng: &mut impl Rng,
+    probability: f64,
+) -> WeightedIndex<f64> {
+    assert!(len > 0);
+    assert!(probability >= 0.0);
+    assert!(probability < 1.0);
+    let mut weights: Vec<f64> = iter::repeat_n(1, len)
+        .enumerate()
+        .map(|(i, _)| 1. / ((i + 1) as f64))
+        .collect();
+    weights.shuffle(rng);
+    let extra_weight = weights.iter().sum::<f64>() * probability / (1.0 - probability);
+    weights.push(extra_weight);
+    WeightedIndex::new(&weights).unwrap()
 }

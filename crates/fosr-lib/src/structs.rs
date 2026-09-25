@@ -319,7 +319,9 @@ impl L7ProtoWithPort {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default, EnumString, Hash)]
+#[derive(
+    Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default, EnumString, EnumIter, Hash,
+)]
 #[strum(ascii_case_insensitive)]
 #[serde(rename_all = "lowercase")]
 /// The OS of an host. By default, assume Linux
@@ -356,6 +358,27 @@ impl OS {
             OS::Windows => Uniform::new(49152, 65535).unwrap(),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, EnumString, EnumIter, PartialEq, Eq, Hash)]
+#[strum(
+    parse_err_fn = String::from,
+    parse_err_ty = String
+)]
+pub enum SrcIpRole {
+    User,
+    Server,
+    Internet,
+}
+
+#[derive(Debug, Clone, Copy, EnumString, EnumIter, PartialEq, Eq, Hash)]
+#[strum(
+    parse_err_fn = String::from,
+    parse_err_ty = String
+)]
+pub enum DstIpRole {
+    Server,
+    Internet,
 }
 
 /// A wrapper for transport layer flow

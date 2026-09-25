@@ -1,4 +1,4 @@
-use crate::structs::{L7Proto, L7ProtoWithPort, OS};
+use crate::structs::{DstIpRole, L7Proto, L7ProtoWithPort, OS, SrcIpRole};
 use crate::utils;
 
 use include_assets::{NamedArchive, include_dir};
@@ -15,6 +15,7 @@ use std::hash::Hasher;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
+use strum::IntoEnumIterator;
 
 /// Name of the synthetic Internet network.
 pub const INTERNET_NETWORK_NAME: &str = "Internet";
@@ -61,11 +62,14 @@ pub struct Network {
     /// A list of OS that are present
     pub present_os: Vec<OS>,
 
-    /// The list of "users" IPs
-    pub users: Vec<Ipv4Addr>,
+    /// List of users
+    pub users: HashMap<(OS, SrcIpRole), Vec<Ipv4Addr>>,
 
-    /// The list of "servers" IPs
-    pub servers: Vec<Ipv4Addr>,
+    /// List of servers
+    pub servers: HashMap<(L7Proto, OS, DstIpRole), Vec<Ipv4Addr>>,
+
+    /// List of all IPs defined in the network
+    pub all_ips: Vec<Ipv4Addr>,
 
     /// The list of services proposed in the configuration
     pub services: Vec<L7Proto>,
@@ -100,6 +104,7 @@ pub struct SubNetwork {
     pub mask: u8,
     pub name: String,
     pub hosts: Vec<Host>,
+    pub public: bool,
 }
 
 /// Metadata of the configuration file.
@@ -162,6 +167,24 @@ impl Host {
     pub fn get_ip_addr(&self) -> Vec<Ipv4Addr> {
         self.interfaces.iter().map(|i| i.ip_addr).collect()
     }
+
+    /// Get the list of public IP addresses of an host.
+    pub fn get_public_ip_addr(&self) -> Vec<Ipv4Addr> {
+        self.interfaces
+            .iter()
+            .filter(|i| i.public)
+            .map(|i| i.ip_addr)
+            .collect()
+    }
+
+    /// Get the list of private IP addresses of an host.
+    pub fn get_private_ip_addr(&self) -> Vec<Ipv4Addr> {
+        self.interfaces
+            .iter()
+            .filter(|i| !i.public)
+            .map(|i| i.ip_addr)
+            .collect()
+    }
 }
 
 /// A network interface of an host.
@@ -173,6 +196,17 @@ pub struct Interface {
     pub services: Vec<L7ProtoWithPort>,
     /// Its IP address
     pub ip_addr: Ipv4Addr,
+    /// Whether this is a Internet-reachable interface
+    pub public: bool,
+}
+
+impl Interface {
+    fn provides_service(&self, service: &L7Proto) -> bool {
+        self.services
+            .iter()
+            .position(|s| &s.get_proto() == service)
+            .is_some()
+    }
 }
 
 /// Global counter for stable UI identifiers (not serialized to YAML).
@@ -223,6 +257,10 @@ pub struct SubNetworkYaml {
     // unique ID to be used in the GUI to uniquely identify UI elements.
     #[serde(skip, default = "next_ui_id")]
     pub ui_id: u64,
+
+    /// Whether the subnet is reachable from the internet (false by default)
+    #[serde(default)]
+    pub public: bool,
 
     pub subnet: Ipv4Addr,
 
@@ -302,7 +340,7 @@ impl From<NetworkYaml> for Network {
         let internet: Vec<Host> = c
             .internet
             .into_iter()
-            .map(|h| Host::from(h, &mut rng))
+            .map(|h| Host::from(h, &mut rng, true)) // public
             .collect();
         let networks_yaml = c.networks;
         let networks: Vec<SubNetwork> = networks_yaml
@@ -310,35 +348,16 @@ impl From<NetworkYaml> for Network {
             .map(|n| SubNetwork {
                 subnet: n.subnet,
                 mask: n.mask,
+                public: n.public,
                 name: n.name.unwrap_or("Unnamed subnet".to_string()),
                 hosts: n
                     .hosts
                     .into_iter()
-                    .map(|h| Host::from(h, &mut rng))
+                    .map(|h| Host::from(h, &mut rng, n.public))
                     .collect(),
             })
             .collect();
 
-        let users: Vec<Ipv4Addr> = networks
-            .iter()
-            .flat_map(|n| &n.hosts)
-            .chain(&internet)
-            .filter_map(|h| match h.host_type {
-                HostType::User => Some(h.get_ip_addr()),
-                HostType::Server | HostType::Router => None,
-            })
-            .flatten()
-            .collect();
-        let servers: Vec<Ipv4Addr> = networks
-            .iter()
-            .flat_map(|n| &n.hosts)
-            .chain(&internet)
-            .filter_map(|h| match h.host_type {
-                HostType::Server => Some(h.get_ip_addr()),
-                HostType::User | HostType::Router => None,
-            })
-            .flatten()
-            .collect();
         let mut os_map: HashMap<Ipv4Addr, OS> = HashMap::new();
         let mut present_os: HashSet<OS> = HashSet::new();
         for host in networks
@@ -396,9 +415,116 @@ impl From<NetworkYaml> for Network {
             }
         }
 
+        let mut users: HashMap<(OS, SrcIpRole), Vec<Ipv4Addr>> = HashMap::new();
+        let mut servers: HashMap<(L7Proto, OS, DstIpRole), Vec<Ipv4Addr>> = HashMap::new();
+
+        for os in OS::iter() {
+            for role in SrcIpRole::iter() {
+                match role {
+                    SrcIpRole::User => {
+                        let ips: Vec<Ipv4Addr> = networks
+                            .iter()
+                            .flat_map(|n| &n.hosts)
+                            // check OS
+                            .filter(|h| h.os == os)
+                            // check type
+                            .filter_map(|h| match h.host_type {
+                                HostType::User => Some(h.get_private_ip_addr()),
+                                HostType::Server | HostType::Router => None,
+                            })
+                            .flatten()
+                            .collect();
+                        users.insert((os, role), ips);
+                    }
+                    SrcIpRole::Server => {
+                        let ips: Vec<Ipv4Addr> = networks
+                            .iter()
+                            .flat_map(|n| &n.hosts)
+                            // check OS
+                            .filter(|h| h.os == os)
+                            // check type
+                            .filter_map(|h| match h.host_type {
+                                HostType::Server => Some(h.get_private_ip_addr()),
+                                HostType::User | HostType::Router => None,
+                            })
+                            .flatten()
+                            .collect();
+                        users.insert((os, role), ips);
+                    }
+                    SrcIpRole::Internet => {
+                        let ips: Vec<Ipv4Addr> = networks
+                            .iter()
+                            .flat_map(|n| &n.hosts)
+                            // check OS
+                            .filter(|h| h.os == os)
+                            // check type
+                            .filter_map(|h| match h.host_type {
+                                HostType::User => Some(h.get_public_ip_addr()),
+                                HostType::Server | HostType::Router => None,
+                            })
+                            .flatten()
+                            .collect();
+                        users.insert((os, role), ips);
+                    }
+                }
+            }
+            for role in DstIpRole::iter() {
+                for s in &services {
+                    match role {
+                        DstIpRole::Server => {
+                            let ips: Vec<Ipv4Addr> = networks
+                                .iter()
+                                .flat_map(|n| &n.hosts)
+                                // check OS
+                                .filter(|h| h.os == os && matches!(h.host_type, HostType::Server))
+                                // check type
+                                .flat_map(|h| &h.interfaces)
+                                .filter_map(|i| {
+                                    if !i.public && i.provides_service(s) {
+                                        Some(i.ip_addr)
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect();
+                            servers.insert((*s, os, role), ips);
+                        }
+                        DstIpRole::Internet => {
+                            let ips: Vec<Ipv4Addr> = networks
+                                .iter()
+                                .flat_map(|n| &n.hosts)
+                                // check OS
+                                .filter(|h| h.os == os && matches!(h.host_type, HostType::Server))
+                                // check type
+                                .flat_map(|h| &h.interfaces)
+                                .filter_map(|i| {
+                                    if i.public && i.provides_service(s) {
+                                        Some(i.ip_addr)
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect();
+                            servers.insert((*s, os, role), ips);
+                        }
+                    }
+                }
+            }
+        }
+
         let all_hosts = internet
             .iter()
             .chain(networks.iter().flat_map(|n| n.hosts.iter()));
+
+        let all_ips: Vec<Ipv4Addr> = all_hosts
+            .flat_map(|h| h.interfaces.iter())
+            .map(|i| i.ip_addr)
+            .collect();
+
+        let all_hosts = internet
+            .iter()
+            .chain(networks.iter().flat_map(|n| n.hosts.iter()));
+
         for host in all_hosts {
             for s in &services {
                 for interface in &host.interfaces {
@@ -422,6 +548,7 @@ impl From<NetworkYaml> for Network {
                 mask: 0,
                 name: INTERNET_NETWORK_NAME.to_string(),
                 hosts: internet,
+                public: true,
             });
         }
 
@@ -433,6 +560,7 @@ impl From<NetworkYaml> for Network {
             mac_addr_map,
             users,
             servers,
+            all_ips,
             services: services.into_iter().collect(),
             services_per_server,
             servers_per_service,
@@ -444,7 +572,7 @@ impl From<NetworkYaml> for Network {
 }
 
 impl Host {
-    fn from(h: HostYaml, mut rng: &mut impl Rng) -> Self {
+    fn from(h: HostYaml, mut rng: &mut impl Rng, public: bool) -> Self {
         let host_type = h.host_type.unwrap_or(
             // if there is at least one service, the type is "server"
             if h.interfaces
@@ -465,7 +593,7 @@ impl Host {
             interfaces: h
                 .interfaces
                 .into_iter()
-                .map(|i| Interface::try_from(i, &mut rng))
+                .map(|i| Interface::try_from(i, &mut rng, public))
                 .filter_map(|r| {
                     if let Err(e) = &r {
                         log::warn!("Skipping interface: {e}");
@@ -479,7 +607,11 @@ impl Host {
 }
 
 impl Interface {
-    fn try_from(i: InterfaceYaml, mut rng: &mut impl Rng) -> Result<Self, String> {
+    fn try_from(
+        i: InterfaceYaml,
+        mut rng: &mut impl Rng,
+        mut public: bool,
+    ) -> Result<Self, String> {
         // let mut open_ports: HashMap<L7Proto, u16> = HashMap::new();
         let mut services = vec![];
         for s in i.services.unwrap_or_default() {
@@ -489,7 +621,10 @@ impl Interface {
 
         let ip_addr = match i.ip_addr.as_str() {
             // "auto" => Ipv4Addr::new(0, 0, 0, 0),
-            "public" => utils::sample_random_global_ip(&mut rng),
+            "public" => {
+                public = true;
+                utils::sample_random_global_ip(&mut rng)
+            }
             _ => i.ip_addr.parse().expect("Cannot parse IP address"),
         };
         Ok(Interface {
@@ -499,7 +634,7 @@ impl Interface {
                 .map(|s| s.parse().expect("Cannot parse MAC address")),
             ip_addr,
             services,
-            // open_ports,
+            public, // open_ports,
         })
     }
 }
