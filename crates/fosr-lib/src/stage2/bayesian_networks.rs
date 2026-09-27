@@ -1115,6 +1115,14 @@ impl Stage2 for BNGenerator {
                 },
             );
 
+            let port = domain_vector.l7_proto.unwrap().get_default_dst_port().unwrap();
+            // TODO: discutable
+            let uniform = domain_vector.dst_os.unwrap().get_ephemeral_port_distr();
+            domain_vector.dst_port = Some(match port {
+                Port::Fixed(p) => p,
+                Port::Random => uniform.sample(&mut rng),
+            });
+
             if let Some(tl) = model.get_tl()? {
                 // Sample the destination IP
                 let dst_ips = tl.dst_ip.get(&(
