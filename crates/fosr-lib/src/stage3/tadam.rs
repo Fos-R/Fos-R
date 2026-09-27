@@ -66,7 +66,7 @@ impl AutomataLibrary {
         let a: automaton::JsonAutomaton =
             serde_json::from_str::<automaton::JsonAutomaton>(string.leak())
                 .map_err(|e| format!("Import error: {e}"))?;
-        let l7proto = a.metadata.service.clone().leak();
+        let l7proto = L7Proto::from_str(&a.metadata.service)?;
         let conn_state = a.metadata.conn_state;
         match a.protocol {
             L4Proto::TCP => {
@@ -79,7 +79,7 @@ impl AutomataLibrary {
                             service,
                             distr,
                         } = p
-                            && service == l7proto
+                            && *service == l7proto
                             && *conn_state == a.metadata.conn_state.unwrap()
                         {
                             Some(distr)
@@ -99,11 +99,11 @@ impl AutomataLibrary {
                     automata_clusters.clone(),
                     parse_tcp_symbol,
                 )?;
-                let proto = L7Proto::from_str(l7proto).unwrap();
-                log::debug!("Import TCP {a}, registered for {proto:?}");
+                // let proto = L7Proto::from_str(l7proto).unwrap();
+                log::debug!("Import TCP {a}, registered for {l7proto:?}");
                 let v = self
                     .tcp_automata
-                    .entry((proto, conn_state.unwrap()))
+                    .entry((l7proto, conn_state.unwrap()))
                     .or_default();
                 v.push(AutomataSet {
                     uncons_a: a.clone(),
@@ -115,7 +115,7 @@ impl AutomataLibrary {
                     .iter()
                     .find_map(|p| {
                         if let PacketDistr::UDP { service, distr } = p
-                            && service == l7proto
+                            && *service == l7proto
                         {
                             Some(distr)
                         } else {
@@ -130,9 +130,9 @@ impl AutomataLibrary {
                     automata_clusters.clone(),
                     parse_udp_symbol,
                 )?;
-                let proto = L7Proto::from_str(l7proto).unwrap();
-                log::debug!("Import UDP {a}, registered for {proto:?}");
-                let v = self.udp_automata.entry(proto).or_default();
+                // let proto = L7Proto::from_str(l7proto).unwrap();
+                log::debug!("Import UDP {a}, registered for {l7proto:?}");
+                let v = self.udp_automata.entry(l7proto).or_default();
                 v.push(AutomataSet {
                     uncons_a: a.clone(),
                     cons_a: a.into(),
@@ -149,11 +149,11 @@ impl AutomataLibrary {
 pub enum PacketDistr {
     TCP {
         conn_state: TCPConnState,
-        service: String,
+        service: L7Proto,
         distr: Vec<MultivariateNormal<nalgebra::Const<2>>>,
     },
     UDP {
-        service: String,
+        service: L7Proto,
         distr: Vec<MultivariateNormal<nalgebra::Const<2>>>,
     },
 }
@@ -169,7 +169,7 @@ impl From<PacketDistrJson> for PacketDistr {
                 cov,
             } => PacketDistr::TCP {
                 conn_state,
-                service,
+                service: L7Proto::from_str(&service).unwrap(),
                 distr: mu
                     .into_iter()
                     .zip(cov)
@@ -180,14 +180,14 @@ impl From<PacketDistrJson> for PacketDistr {
                         let mean = f64::midpoint(c[1], c[2]);
                         MultivariateNormal::new_from_nalgebra(
                             vector![m[0], m[1]],
-                            matrix![c[0],mean;mean,c[3]],
+                            matrix![c[0], mean ; mean, c[3]],
                         )
                         .expect("Could not create the multivariate normal of the cluster")
                     })
                     .collect(),
             },
             PacketDistrJson::UDP { service, mu, cov } => PacketDistr::UDP {
-                service,
+                service: L7Proto::from_str(&service).unwrap(),
                 distr: mu
                     .into_iter()
                     .zip(cov)
@@ -196,7 +196,7 @@ impl From<PacketDistrJson> for PacketDistr {
                         let mean = f64::midpoint(c[1], c[2]);
                         MultivariateNormal::new_from_nalgebra(
                             vector![m[0], m[1]],
-                            matrix![c[0],mean;mean,c[3]],
+                            matrix![c[0], mean ; mean, c[3]],
                         )
                         .expect("Could not create the multivariate normal of the cluster")
                     })

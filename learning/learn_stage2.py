@@ -18,6 +18,50 @@ import yaml
 
 pd.options.mode.copy_on_write = True
 
+def simplify_service(value):
+    # This code must stay synchronized with what is in struct.rs
+    s = value.upper().replace(" ", "").strip()
+    if "HTTPS" in s or "SSL" in s:
+        return "HTTPS"
+    elif "HTTP" in s:
+        return "HTTP"
+    elif "QUIC" in s:
+        return "QUIC"
+    elif "SSH" in s:
+        return "SSH"
+    elif "MULTICASTDNS" in s:
+        return "MulticastDNS"
+    elif "DNS" in s:
+        return "DNS"
+    elif "DHCP" in s:
+        return "DHCP"
+    elif "SMTP" in s:
+        return "SMTP"
+    elif "TELNET" in s:
+        return "Telnet"
+    elif "IMAP" in s:
+        return "IMAPS"
+    elif "MQTT" in s:
+        return "MQTT"
+    elif "KMS" in s:
+        return "KMS"
+    elif "FTP-DATA" in s:
+        return "FTP-Data"
+    elif "FTP" in s:
+        return "FTP"
+    elif "LDAP" in s:
+        return "LDAP"
+    elif "NTP" in s:
+        return "NTP"
+    elif "DCE_RPC" in s or "DCERPC" in s:
+        return "DCERPC"
+    elif "KRB" in s or "KERBEROS" in s:
+        return "Kerberos"
+    elif "SMB" in s:
+        return "SMB"
+    else:
+        print("Unknown protocol!",value)
+        return "Unknown"
 
 def reorder_services(value):
     l = value.split(",")
@@ -474,6 +518,8 @@ if __name__ == "__main__":
     out_file = open(os.path.join(args.output, "bn/automata-flows.json"), "w")
     json.dump(automata, out_file, indent=1)
 
+    flow["Applicative Proto"] = flow["Applicative Proto"].apply(simplify_service)
+
     # Remove flow with more than 200 packets
     flow["Pkts count"] = flow["orig_pkts"] + flow["resp_pkts"]
     flow = flow[flow["Pkts count"] <= 200]
@@ -594,6 +640,7 @@ if __name__ == "__main__":
         for conn_state in flow[flow["Applicative Proto"] == s][
             "Connection State"
         ].unique():
+            print(s, conn_state)
             if str(conn_state) != "NaN":
                 local_flows = flow[
                     (flow["Applicative Proto"] == s)
