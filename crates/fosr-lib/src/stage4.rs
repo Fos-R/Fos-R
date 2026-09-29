@@ -150,13 +150,11 @@ impl Stage4 {
                 }
 
                 // Increment forward ACK and backward SEQ
-                if packet_info.payload.get_payload_size() == 0
-                    && (packet_info.s_flag || packet_info.f_flag)
-                {
+                if packet_info.s_flag || packet_info.f_flag {
                     tcp_data.forward += 1;
-                } else {
-                    tcp_data.forward += packet_info.payload.get_payload_size() as u32;
                 }
+
+                tcp_data.forward += packet_info.payload.get_payload_size() as u32;
             }
             PacketDirection::Backward => {
                 // Set the source and destination ports
@@ -172,13 +170,11 @@ impl Stage4 {
                 }
 
                 // Increment forward ACK and backward SEQ
-                if packet_info.payload.get_payload_size() == 0
-                    && (packet_info.s_flag || packet_info.f_flag)
-                {
+                if packet_info.s_flag || packet_info.f_flag {
                     tcp_data.backward += 1;
-                } else {
-                    tcp_data.backward += packet_info.payload.get_payload_size() as u32;
                 }
+
+                tcp_data.backward += packet_info.payload.get_payload_size() as u32;
             }
         }
 
@@ -195,14 +191,7 @@ impl Stage4 {
         }
 
         // Set the s | a | f | r | u | p flags
-        tcp_packet.set_flags(
-            (u8::from(packet_info.s_flag) * TcpFlags::SYN)
-                | (u8::from(packet_info.a_flag) * TcpFlags::ACK)
-                | (u8::from(packet_info.f_flag) * TcpFlags::FIN)
-                | (u8::from(packet_info.r_flag) * TcpFlags::RST)
-                | (u8::from(packet_info.u_flag) * TcpFlags::URG)
-                | (u8::from(packet_info.p_flag) * TcpFlags::PSH),
-        );
+        tcp_packet.set_flags(packet_info.get_flag_byte());
 
         // Simulate the congestion window
         let mut cwr_flag = false;
