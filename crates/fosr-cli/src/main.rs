@@ -182,6 +182,7 @@ fn main() -> Result<(), String> {
         }
         cmd::Command::AugmentDataset {
             seed,
+            alpha,
             outfile,
             profile,
             no_order_pcap,
@@ -200,7 +201,7 @@ fn main() -> Result<(), String> {
                 default_models.unwrap().get_source() // we are sure it contains something
             };
 
-            let model = models::Models::from_source(&source)?;
+            let model = models::Models::from_source(&source, alpha)?;
 
             generate_pcap(
                 duration,

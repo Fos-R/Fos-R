@@ -736,7 +736,7 @@ impl BayesianModel {
         }
     }
 
-    pub fn from_source(m: &models::ModelsSource) -> Result<Self, String> {
+    pub fn from_source(m: &models::ModelsSource, alpha: u64) -> Result<Self, String> {
         let bn_string: String = m
             .get_bn()
             .map_err(|e| format!("Cannot find the Bayesian networks: {e}"))?;
@@ -745,7 +745,7 @@ impl BayesianModel {
         let bif_common = bifxml::from_str(&bn_string)?;
 
         log::trace!("Converting from BIF");
-        let (mut bn, bin_count) = bn_from_bif(bif_common, 1)?;
+        let (mut bn, bin_count) = bn_from_bif(bif_common, alpha)?;
 
         log::info!("Bayesian network has been loaded");
         bn.remove_impossible_values()?;
@@ -1115,7 +1115,11 @@ impl Stage2 for BNGenerator {
                 },
             );
 
-            let port = domain_vector.l7_proto.unwrap().get_default_dst_port().unwrap();
+            let port = domain_vector
+                .l7_proto
+                .unwrap()
+                .get_default_dst_port()
+                .unwrap();
             // TODO: discutable
             let uniform = domain_vector.dst_os.unwrap().get_ephemeral_port_distr();
             domain_vector.dst_port = Some(match port {
