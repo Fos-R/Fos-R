@@ -26,6 +26,8 @@ use std::sync::RwLock;
 use std::time::Duration;
 use strum::IntoEnumIterator;
 
+const GIBBS_BURN_IN: usize = 10;
+
 #[derive(Debug, Clone, Default)]
 /// This structure holds the flow that is being built. Since we cannot instance all the variables
 /// at the same time, each variable is an Option
@@ -85,7 +87,6 @@ struct BayesianNetworkNode {
                          // in the cpt
 }
 
-// TODO: créer type pour (Vec<AnonymizedIpv4Addr>, WeightedIndex<f64>)
 type AnonymizedIpv4Distr = (Vec<AnonymizedIpv4Addr>, WeightedIndex<f64>);
 
 /// Extra information for the transfer learning
@@ -97,8 +98,6 @@ pub struct TransferLearningExtraData {
     dst_ip: HashMap<(L7Proto, OS, DstIpRole), AnonymizedIpv4Distr>,
     /// Difference between theoretical and actual TTL observations
     local_ttl_delta: HashMap<Ipv4Addr, u8>,
-    // internet_users: (Vec<AnonymizedIpv4Addr>, WeightedIndex<f64>)>,
-    // internet_servers: (Vec<AnonymizedIpv4Addr>, WeightedIndex<f64>)>,
     services_per_server: HashMap<(Ipv4Addr, L7Proto), Vec<L7ProtoWithPort>>,
     mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
 }
@@ -201,6 +200,20 @@ impl BayesianNetworkNode {
             Some(cpt) => Ok(cpt[parents_index].as_ref().map(|w| w.sample(rng))),
         }
     }
+
+    /// Return the probability of this node being equal to "value" for some values of its parents
+    /// Used for computing the full conditional distribution
+    fn get_probability(&self, current: &[usize], value: usize) -> Option<f64> {
+        assert!(value < self.feature.get_cardinality());
+        let mut parents_index = 0;
+        for (index, card) in self.parents.iter().zip(self.parents_cardinality.iter()) {
+            parents_index = parents_index * card + current[*index];
+        }
+        match &self.cpt {
+            None => None,
+            Some(cpt) => cpt[parents_index].as_ref().map(|w| (w.weight(value).unwrap() as f64) / (w.total_weight() as f64)),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -227,20 +240,19 @@ impl Display for BayesianNetwork {
 
 impl BayesianNetwork {
     /// Sample a vector from the Bayesian network
-    fn sample(
+    /// We use a Bayesian network learned for this network, so it should 
+    fn sample_in_domain(
         &self,
         rng: &mut impl Rng,
-        discrete_vector: &mut Vec<usize>,
+        discrete_vector: Vec<usize>,
     ) -> Result<IntermediateVector, String> {
-        // println!("{self:?}");
+        // println!("{self:?}";
         let mut try_again = true;
         let mut rejected: u64 = 0;
-        let mut domain_vector: IntermediateVector = IntermediateVector::default();
         let mut new_discrete_vector = discrete_vector.clone();
         while try_again {
             try_again = false;
-            new_discrete_vector.clone_from(discrete_vector);
-            domain_vector = IntermediateVector::default();
+            new_discrete_vector.clone_from(&discrete_vector);
             for v in &self.nodes {
                 // log::info!("Sampling {:?} (index: {index})", v.feature);
                 // println!("Discrete vector: {:?}", new_discrete_vector);
@@ -250,44 +262,11 @@ impl BayesianNetwork {
                         assert!(i < v.feature.get_cardinality());
                         // println!("Sampled value for {:?}: {}", v.feature, i);
                         new_discrete_vector.push(i);
-                        match &v.feature {
-                            Feature::SrcOs(v) => domain_vector.src_os = Some(v[i]),
-                            Feature::DstOs(v) => domain_vector.dst_os = Some(v[i]),
-                            Feature::SrcIpRole(v) => domain_vector.src_ip_role = Some(v[i]),
-                            Feature::DstIpRole(v) => domain_vector.dst_ip_role = Some(v[i]),
-                            Feature::SrcTTL(v) => domain_vector.src_ttl = Some(v[i]),
-                            Feature::DstTTL(v) => domain_vector.dst_ttl = Some(v[i]),
-                            Feature::SrcMac(v) => domain_vector.src_mac = Some(v[i]),
-                            Feature::DstMac(v) => domain_vector.dst_mac = Some(v[i]),
-                            Feature::L7Proto(v) => domain_vector.l7_proto = Some(v[i]),
-                            Feature::SrcIp(v) => match v[i] {
-                                AnonymizedIpv4Addr::Known(p) => domain_vector.src_ip = Some(p),
-                                AnonymizedIpv4Addr::Public => {
-                                    domain_vector.src_ip =
-                                        Some(utils::sample_random_global_ip(rng));
-                                }
-                            },
-                            Feature::DstIp(v) => match v[i] {
-                                AnonymizedIpv4Addr::Known(p) => domain_vector.dst_ip = Some(p),
-                                AnonymizedIpv4Addr::Public => {
-                                    domain_vector.dst_ip =
-                                        Some(utils::sample_random_global_ip(rng));
-                                }
-                            },
-                            Feature::DstPt(v) => match v[i] {
-                                DstPt::Random => domain_vector.dst_port = None,
-                                DstPt::Fixed(p) => domain_vector.dst_port = Some(p),
-                            },
-                            Feature::PktCount(_) => domain_vector.packets_count_cluster = Some(i),
-                            Feature::L4Proto(v) => domain_vector.proto = Some(v[i]),
-                            Feature::EndFlags(v) => domain_vector.tcp_flags = Some(v[i]),
-                            Feature::TimeBin(_) => unreachable!(),
-                        }
                     } else {
                         // log::error!("Rejected");
                         rejected += 1;
                         if rejected > 10000 {
-                            return Err("Too many rejections during sampling. Maybe the network file is not compatible with the model learned.".to_string());
+                            return Err("Too many rejections during sampling.".to_string());
                         }
                         if rejected > 10 && (rejected as f64).log10().fract() == 0.0 {
                             log::warn!("Rejected sample ({rejected} times)");
@@ -301,9 +280,97 @@ impl BayesianNetwork {
         // if rejected >= 10 {
         //     log::info!("Accepted sample ({rejected} times)");
         // }
-        *discrete_vector = new_discrete_vector;
+        let domain_vector = self.discrete_to_domain(new_discrete_vector, rng);
         Ok(domain_vector)
     }
+
+    /// Sample a vector from the Bayesian network
+    fn sample_transfer_learning(
+        &self,
+        rng: &mut impl Rng,
+        discrete_vector: &mut Vec<usize>,
+    ) -> Result<IntermediateVector, String> {
+        // println!("{self:?}");
+        let mut new_discrete_vector = discrete_vector.clone();
+        new_discrete_vector.clone_from(discrete_vector);
+        for v in &self.nodes {
+            if !matches!(v.feature, Feature::TimeBin(_)) {
+                // TODO: avoid creating Uniform for just one value, better use Rng::random_range
+                // If there is no possible value (due to constraints in the BN), select a random one
+                // It will be later be fixed with the Gibbs sampling
+                let i = v.sample_index(rng, &new_discrete_vector)?.unwrap_or(Uniform::new(0, v.feature.get_cardinality()).unwrap().sample(rng));
+                    assert!(i < v.feature.get_cardinality());
+                    new_discrete_vector.push(i);
+            }
+        } // if it’s "Time", do not push any value (it was already done previously)
+        let domain_vector = self.discrete_to_domain(new_discrete_vector, rng);
+        Ok(domain_vector)
+    }
+
+    fn discrete_to_domain(&self, discrete_vector: Vec<usize>,
+        rng: &mut impl Rng,
+        ) -> IntermediateVector {
+        let mut domain_vector: IntermediateVector = IntermediateVector::default();
+        for (v_index,v) in self.nodes.iter().enumerate() {
+            if !matches!(v.feature, Feature::TimeBin(_)) {
+                let i = discrete_vector[v_index];
+                match &v.feature {
+                    Feature::SrcOs(v) => domain_vector.src_os = Some(v[i]),
+                    Feature::DstOs(v) => domain_vector.dst_os = Some(v[i]),
+                    Feature::SrcIpRole(v) => domain_vector.src_ip_role = Some(v[i]),
+                    Feature::DstIpRole(v) => domain_vector.dst_ip_role = Some(v[i]),
+                    Feature::SrcTTL(v) => domain_vector.src_ttl = Some(v[i]),
+                    Feature::DstTTL(v) => domain_vector.dst_ttl = Some(v[i]),
+                    Feature::SrcMac(v) => domain_vector.src_mac = Some(v[i]),
+                    Feature::DstMac(v) => domain_vector.dst_mac = Some(v[i]),
+                    Feature::L7Proto(v) => domain_vector.l7_proto = Some(v[i]),
+                    Feature::SrcIp(v) => match v[i] {
+                        AnonymizedIpv4Addr::Known(p) => domain_vector.src_ip = Some(p),
+                        AnonymizedIpv4Addr::Public => {
+                            domain_vector.src_ip =
+                                Some(utils::sample_random_global_ip(rng));
+                        }
+                    },
+                    Feature::DstIp(v) => match v[i] {
+                        AnonymizedIpv4Addr::Known(p) => domain_vector.dst_ip = Some(p),
+                        AnonymizedIpv4Addr::Public => {
+                            domain_vector.dst_ip =
+                                Some(utils::sample_random_global_ip(rng));
+                        }
+                    },
+                    Feature::DstPt(v) => match v[i] {
+                        DstPt::Random => domain_vector.dst_port = None,
+                        DstPt::Fixed(p) => domain_vector.dst_port = Some(p),
+                    },
+                    Feature::PktCount(_) => domain_vector.packets_count_cluster = Some(i),
+                    Feature::L4Proto(v) => domain_vector.proto = Some(v[i]),
+                    Feature::EndFlags(v) => domain_vector.tcp_flags = Some(v[i]),
+                    Feature::TimeBin(_) => unreachable!(), // by construction
+                }
+            }
+        }
+        domain_vector
+    }
+
+    /// Perform a Gibbs sampling from an already initialized vector
+    fn gibbs(
+        &self,
+        rng: &mut impl Rng,
+        discrete_vector: &mut Vec<usize>,
+    ) {
+        // println!("{self:?}");
+        for _ in 0..GIBBS_BURN_IN {
+            for (v_index,v) in self.nodes.iter().enumerate() {
+                if !matches!(v.feature, Feature::TimeBin(_)) {
+                    // TODO: tirage de i
+                    // TODO: si problème de tirage, refaire une itération
+                    let i = 0;
+                    discrete_vector[v_index] = i;
+                } // Do not modify the Time
+            }
+        }
+    }
+
 
     // Used to remove impossible values
     fn condition_cpt(&self, node: usize, index_parent: usize, parent_val: usize) -> CPT {
@@ -1082,22 +1149,21 @@ impl Stage2 for BNGenerator {
     ) -> Result<impl Iterator<Item = SeededData<Flow>>, String> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
         let mut domain_vector: IntermediateVector = IntermediateVector::default();
-        let mut discrete_vector: Vec<usize> = vec![];
 
         let model = self.model.read().unwrap();
         let bin_count = model.get_bin_count();
         let mut restart = true;
         let bn = model.get_bn()?;
-        while restart {
+        while restart { // TODO: idéalement, plus besoin de restart…
             restart = false;
             let time = min(
                 bin_count - 1,
                 ((f64::from(ts.data.date_time.num_seconds_from_midnight()) / (3600. * 24.)).fract()
                     * (bin_count as f64)) as usize,
             );
-            discrete_vector.clear();
+            let mut discrete_vector: Vec<usize> = vec![];
             discrete_vector.push(time);
-            domain_vector = bn.sample(&mut rng, &mut discrete_vector)?;
+            domain_vector = bn.sample_in_domain(&mut rng, discrete_vector)?;
 
             if domain_vector.src_ip.is_some() && domain_vector.src_ip == domain_vector.dst_ip {
                 log::trace!("Restart (identical IPs)");
@@ -1210,27 +1276,21 @@ impl Stage2 for BNGenerator {
                 });
 
                 // Complete TTL
-                domain_vector.src_ttl = Some(match domain_vector.src_ip_role.unwrap() {
+                domain_vector.src_ttl = Some(
                     // TODO: we can do better
-                    SrcIpRole::Internet => Uniform::new(52, 108).unwrap().sample(&mut rng),
-                    _ => {
-                        domain_vector.src_os.unwrap().get_initial_ttl()
-                            - *tl
-                                .local_ttl_delta
-                                .get(&domain_vector.src_ip.unwrap())
-                                .unwrap()
-                    }
-                });
-                domain_vector.dst_ttl = Some(match domain_vector.dst_ip_role.unwrap() {
-                    DstIpRole::Internet => Uniform::new(52, 108).unwrap().sample(&mut rng),
-                    DstIpRole::Server => {
-                        domain_vector.dst_os.unwrap().get_initial_ttl()
-                            - *tl
-                                .local_ttl_delta
-                                .get(&domain_vector.dst_ip.unwrap())
-                                .unwrap()
-                    }
-                });
+                    domain_vector.src_os.unwrap().get_initial_ttl()
+                        - *tl
+                            .local_ttl_delta
+                            .get(&domain_vector.src_ip.unwrap())
+                            .unwrap_or(&Uniform::new(0, 10).unwrap().sample(&mut rng)),
+                );
+                domain_vector.dst_ttl = Some(
+                    domain_vector.dst_os.unwrap().get_initial_ttl()
+                        - *tl
+                            .local_ttl_delta
+                            .get(&domain_vector.dst_ip.unwrap())
+                            .unwrap_or(&Uniform::new(0, 10).unwrap().sample(&mut rng)),
+                );
             }
         }
         Ok(iter::once(SeededData {
