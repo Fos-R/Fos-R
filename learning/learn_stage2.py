@@ -640,7 +640,6 @@ if __name__ == "__main__":
         for conn_state in flow[flow["Applicative Proto"] == s][
             "Connection State"
         ].unique():
-            print(s, conn_state)
             if str(conn_state) != "NaN":
                 local_flows = flow[
                     (flow["Applicative Proto"] == s)

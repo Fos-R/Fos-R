@@ -45,41 +45,74 @@ impl fmt::Display for InjectionAlgo {
 
 #[derive(ValueEnum, Debug, Clone)]
 #[allow(clippy::upper_case_acronyms)]
-pub enum DefaultModels {
+pub enum AugmentDefaultModels {
     #[cfg(feature = "models_cicids17")]
     CICIDS17,
     #[cfg(feature = "models_cupid")]
     CUPID,
     #[cfg(feature = "models_dedale")]
     DEDALE,
+}
+
+impl AugmentDefaultModels {
+    pub fn get_source(&self) -> models::ModelsSource {
+        match &self {
+            #[cfg(feature = "models_cicids17")]
+            AugmentDefaultModels::CICIDS17 => models::ModelsSource::CICIDS17,
+            #[cfg(feature = "models_cupid")]
+            AugmentDefaultModels::CUPID => models::ModelsSource::CUPID,
+            #[cfg(feature = "models_dedale")]
+            AugmentDefaultModels::DEDALE => models::ModelsSource::DEDALE,
+        }
+    }
+}
+
+impl fmt::Display for AugmentDefaultModels {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", format!("{self:?}").to_lowercase())
+    }
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+#[allow(clippy::upper_case_acronyms)]
+pub enum CreateDefaultModels {
     #[cfg(all(
         feature = "models_cicids17",
         feature = "models_cupid",
         feature = "models_dedale"
     ))]
     CCD,
+    #[cfg(all(feature = "models_cicids17", feature = "models_cupid",))]
+    /// Models merged from CICIDS17 + CUPID
+    CICCUP,
+    #[cfg(all(feature = "models_cicids17", feature = "models_dedale",))]
+    /// Models merged from CICIDS17 + DEDALE
+    DEDCIC,
+    #[cfg(all(feature = "models_cupid", feature = "models_dedale",))]
+    /// Models merged from CUPID + DEDALE
+    DEDCUP,
 }
 
-impl DefaultModels {
+impl CreateDefaultModels {
     pub fn get_source(&self) -> models::ModelsSource {
         match &self {
-            #[cfg(feature = "models_cicids17")]
-            DefaultModels::CICIDS17 => models::ModelsSource::CICIDS17,
-            #[cfg(feature = "models_cupid")]
-            DefaultModels::CUPID => models::ModelsSource::CUPID,
-            #[cfg(feature = "models_dedale")]
-            DefaultModels::DEDALE => models::ModelsSource::DEDALE,
             #[cfg(all(
                 feature = "models_cicids17",
                 feature = "models_cupid",
                 feature = "models_dedale"
             ))]
-            DefaultModels::CCD => models::ModelsSource::CCD,
+            CreateDefaultModels::CCD => models::ModelsSource::CCD,
+            #[cfg(all(feature = "models_cicids17", feature = "models_cupid",))]
+            CreateDefaultModels::CICCUP => models::ModelsSource::CICCUP,
+            #[cfg(all(feature = "models_cicids17", feature = "models_dedale",))]
+            CreateDefaultModels::DEDCIC => models::ModelsSource::DEDCIC,
+            #[cfg(all(feature = "models_cupid", feature = "models_dedale",))]
+            CreateDefaultModels::DEDCUP => models::ModelsSource::DEDCUP,
         }
     }
 }
 
-impl fmt::Display for DefaultModels {
+impl fmt::Display for CreateDefaultModels {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", format!("{self:?}").to_lowercase())
     }
@@ -107,7 +140,7 @@ pub enum Command {
         )]
         no_order_pcap: bool,
         #[arg(short = 'm', long, help = "Use a default model")]
-        default_models: Option<DefaultModels>,
+        default_models: Option<CreateDefaultModels>,
         #[arg(long, help = "Use a custom model")]
         custom_models: Option<String>,
         #[arg(short, long, help = "Path to the network file")]
@@ -184,7 +217,7 @@ pub enum Command {
         )]
         no_order_pcap: bool,
         #[arg(short = 'm', long, help = "Use a default model")]
-        default_models: Option<DefaultModels>,
+        default_models: Option<CreateDefaultModels>,
         #[arg(long, help = "Use a custom model")]
         custom_models: Option<String>,
         #[arg(short, long, help = "Path to the network file")]
@@ -262,7 +295,7 @@ pub enum Command {
         )]
         alpha: u64,
         #[arg(short = 'm', long, help = "Use a default model")]
-        default_models: Option<DefaultModels>,
+        default_models: Option<AugmentDefaultModels>,
         #[arg(long, help = "Use a custom model")]
         custom_models: Option<String>,
         #[arg(
@@ -393,7 +426,7 @@ pub enum Command {
         #[arg(short, long, help = "Seed for random number generation")]
         seed: Option<u64>,
         #[arg(short = 'm', long, help = "Use a default model")]
-        default_models: Option<DefaultModels>,
+        default_models: Option<CreateDefaultModels>,
         #[arg(
             long,
             default_value_t = 1,
