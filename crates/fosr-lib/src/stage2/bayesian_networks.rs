@@ -621,11 +621,58 @@ impl BayesianNetwork {
         ));
     }
 
-    // fn identify_possible_values(&mut self) -> Result<(), String> {
-    //     // TODO: also verify which conn_state / automata combination is possible
-    //     let mut m = selen::prelude::Model::default();
-    //     Ok(())
-    // }
+    pub fn identify_possible_values(&mut self) -> Result<(), String> {
+        // TODO: also verify which conn_state / automata combination is possible
+        let mut m = selen::prelude::Model::default();
+
+        let variables: Vec<selen::prelude::VarId> = self.nodes.iter().map(|n| m.int(0, (n.feature.get_cardinality() as i32) - 1)).collect();
+
+        let index_src_ip = self
+            .nodes
+            .iter()
+            .position(|n| matches!(n.feature, Feature::SrcIp(_)))
+            .unwrap();
+
+        let index_dst_ip = self
+            .nodes
+            .iter()
+            .position(|n| matches!(n.feature, Feature::DstIp(_)))
+            .unwrap();
+
+        // Source and destination IP must be different
+        m.ne_op(variables[index_src_ip], variables[index_dst_ip]);
+
+        for (i,n) in self.nodes.iter().enumerate() {
+            if let Some(ref cpt) = n.cpt { // Time is skipped
+                // Start with the last parents, i.e. the ones with the least significants bits in the CPT numbering
+                let mut vars: Vec<selen::prelude::VarId> = n.parents.iter().map(|p| variables[*p]).rev().collect();
+                vars.push(variables[i]);
+                let mut tuples: Vec<Vec<selen::prelude::Val>> = vec![];
+                for (mut parent_index, line) in cpt.iter().enumerate() {
+                    if let Some(line) = line {
+                        let mut parent_tuple: Vec<selen::prelude::Val> = vec![];
+                        for card in n.parents_cardinality.iter().rev() {
+                            parent_tuple.push(((parent_index % card) as i32).into());
+                            parent_index /= card;
+                        }
+                        for (value_index, weight) in line.weights().enumerate() {
+                            if weight > 0.0 { // this value is possible
+                                let mut line_tuple = parent_tuple.clone();
+                                line_tuple.push((value_index as i32).into());
+                                // tuples.push(line_tuple);
+                            }
+                        }
+                    } // if there is no line, then we add no allowed tuple
+                }
+                m.table(&vars, tuples);
+            }
+        }
+        let solution = m.solve();
+        match solution {
+            Ok(_) => Ok(()),
+            Err(e) => Err(format!("Cannot generate flows: no solution {e:?}"))
+        }
+    }
 }
 
 // remove a value from variable by setting its probability to zero
