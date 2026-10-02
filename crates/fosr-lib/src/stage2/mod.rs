@@ -16,10 +16,8 @@ mod bn_structs;
 /// A trait for Stage 2 that generates flow descriptions
 pub trait Stage2: Clone + std::marker::Send + 'static {
     /// Generate flow(s) from a starting timestamp
-    fn generate_flows(
-        &self,
-        ts: SeededData<TimePoint>,
-    ) -> Result<Option<SeededData<Flow>>, String>;
+    fn generate_flows(&self, ts: SeededData<TimePoint>)
+    -> Result<Option<SeededData<Flow>>, String>;
 }
 
 /// Generate flows from timestamps and sends them progressively to a channel

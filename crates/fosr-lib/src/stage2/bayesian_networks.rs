@@ -73,6 +73,30 @@ impl BayesianNetworkNode {
                 .unwrap_or(0.0)
         }
     }
+
+    // remove a value from variable by setting its probability to zero
+    fn remove_value(&mut self, index: usize) {
+        self.removed_values.insert(index);
+        assert!(self.removed_values.len() != self.feature.get_cardinality());
+        // if self.removed_values.len() == self.feature.get_cardinality() {
+        //     Err(format!(
+        //         "No value of {:?} can lead to a flow compatible with the network",
+        //         self.feature
+        //     ))
+        // } else
+        if let Some(cpt) = self.cpt.as_mut() {
+            for cpt in cpt {
+                if let Some(weights) = cpt {
+                    let result = weights.update_weights(&[(index, &0.0)]);
+                    if result.is_err() {
+                        *cpt = None;
+                    }
+                }
+            }
+        } else {
+            // We cannot remove values of Time since we do not sample it and it has no CPT
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -98,9 +122,8 @@ impl Display for BayesianNetwork {
 }
 
 impl BayesianNetwork {
-
     pub fn is_time_bin_possible(&self, index: usize) -> bool {
-        // TimeBin is always
+        // TimeBin is always the first variable in topological order
         assert!(matches!(self.nodes[0].feature, Feature::TimeBin(_)));
         self.nodes[0].removed_values.contains(&index)
     }
@@ -260,83 +283,6 @@ impl BayesianNetwork {
             }
         }
         // println!("End of Gibbs");
-    }
-
-    // Used to remove impossible values
-    fn condition_cpt(&self, node: usize, index_parent: usize, parent_val: usize) -> CPT {
-        let mut output: Vec<Option<WeightedIndex<f64>>> = vec![];
-        assert!(
-            self.nodes[node].parents_cardinality[index_parent] > parent_val,
-            "Parent val is too large: {parent_val}"
-        );
-        for (mut index_cpt, cpt) in self.nodes[node].cpt.as_ref().unwrap().iter().enumerate() {
-            for (index, card) in self.nodes[node]
-                .parents_cardinality
-                .iter()
-                .enumerate()
-                .rev()
-            {
-                if index == index_parent {
-                    if index_cpt % card == parent_val {
-                        output.push(cpt.clone());
-                    }
-                    break;
-                }
-                index_cpt /= card;
-            }
-        }
-        // log::info!("Initial CPT: {:?}", self.nodes[node].cpt.as_ref().unwrap());
-        // log::info!("Conditioned CPT: {output:?}");
-        assert_eq!(
-            self.nodes[node].cpt.as_ref().unwrap().len() / output.len(),
-            self.nodes[node].parents_cardinality[index_parent]
-        );
-        output
-    }
-
-    // find the values of parents that only lead to "None" CPTs
-    pub fn remove_impossible_values(&mut self) -> Result<(), String> {
-        log::trace!("Remove impossible values");
-        // traverse the network in reverse topological order
-        // indeed, children can modify their parents’ CPT
-        for index in (0..self.nodes.len()).rev() {
-            let node = &self.nodes[index];
-            // log::info!("{:?}", node.feature);
-            let parents = node.parents.clone();
-            let parents_card = node.parents_cardinality.clone();
-            for (index_parent, parent) in parents.iter().enumerate() {
-                // let mut removed: Vec<String> = vec![]; // only used for log
-                for v in 0..parents_card[index_parent] {
-                    // check each value of each parent
-                    if self
-                        .condition_cpt(index, index_parent, v)
-                        .iter()
-                        .all(Option::is_none)
-                    // is there only None? Then we delete that value
-                    {
-                        // removed.push(self.nodes[*parent].feature.get_value_string(v));
-                        let parent = self.nodes.get_mut(*parent).unwrap();
-                        if !parent.removed_values.contains(&v) {
-                            remove_value(parent, v)?;
-                        }
-                    }
-                }
-            }
-        }
-        for index in (0..self.nodes.len()).rev() {
-            let node = &self.nodes[index];
-            if !node.removed_values.is_empty() {
-                log::info!(
-                    "Removed unnecessary values {:?} of {:?}",
-                    node.removed_values
-                        .iter()
-                        .map(|v| node.feature.get_value_string(*v))
-                        .collect::<Vec<String>>(),
-                    node.feature
-                );
-            }
-        }
-        Ok(())
     }
 
     pub fn update_probabilities(&mut self, network: &network::Network) {
@@ -621,11 +567,20 @@ impl BayesianNetwork {
         ));
     }
 
-    pub fn identify_possible_values(&mut self) -> Result<(), String> {
+    fn get_solution(&self, values: &[(usize, i32)]) -> Option<Vec<usize>> {
         // TODO: also verify which conn_state / automata combination is possible
         let mut m = selen::prelude::Model::default();
 
-        let variables: Vec<selen::prelude::VarId> = self.nodes.iter().map(|n| m.int(0, (n.feature.get_cardinality() as i32) - 1)).collect();
+        let variables: Vec<selen::prelude::VarId> = self
+            .nodes
+            .iter()
+            .map(|n| m.int(0, (n.feature.get_cardinality() as i32) - 1))
+            .collect();
+
+        for (index, value) in values {
+            let new_var = m.int(*value, *value);
+            m.eq_op(variables[*index], new_var);
+        }
 
         let index_src_ip = self
             .nodes
@@ -642,10 +597,12 @@ impl BayesianNetwork {
         // Source and destination IP must be different
         m.ne_op(variables[index_src_ip], variables[index_dst_ip]);
 
-        for (i,n) in self.nodes.iter().enumerate() {
-            if let Some(ref cpt) = n.cpt { // Time is skipped
+        for (i, n) in self.nodes.iter().enumerate() {
+            if let Some(ref cpt) = n.cpt {
+                // Time is skipped
                 // Start with the last parents, i.e. the ones with the least significants bits in the CPT numbering
-                let mut vars: Vec<selen::prelude::VarId> = n.parents.iter().map(|p| variables[*p]).rev().collect();
+                let mut vars: Vec<selen::prelude::VarId> =
+                    n.parents.iter().map(|p| variables[*p]).rev().collect();
                 vars.push(variables[i]);
                 let mut tuples: Vec<Vec<selen::prelude::Val>> = vec![];
                 for (mut parent_index, line) in cpt.iter().enumerate() {
@@ -656,10 +613,11 @@ impl BayesianNetwork {
                             parent_index /= card;
                         }
                         for (value_index, weight) in line.weights().enumerate() {
-                            if weight > 0.0 { // this value is possible
+                            if weight > 0.0 {
+                                // this value is possible
                                 let mut line_tuple = parent_tuple.clone();
                                 line_tuple.push((value_index as i32).into());
-                                // tuples.push(line_tuple);
+                                tuples.push(line_tuple);
                             }
                         }
                     } // if there is no line, then we add no allowed tuple
@@ -667,34 +625,56 @@ impl BayesianNetwork {
                 m.table(&vars, tuples);
             }
         }
-        let solution = m.solve();
-        match solution {
-            Ok(_) => Ok(()),
-            Err(e) => Err(format!("Cannot generate flows: no solution {e:?}"))
-        }
+        m.solve().ok().map(|s| {
+            s.get_values(&variables)
+                .into_iter()
+                .map(|v| v.as_int().unwrap() as usize)
+                .collect::<Vec<usize>>()
+        })
     }
-}
 
-// remove a value from variable by setting its probability to zero
-fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), String> {
-    node.removed_values.insert(index);
-    if node.removed_values.len() == node.feature.get_cardinality() {
-        Err(format!(
-            "No value of {:?} can lead to a flow compatible with the network",
-            node.feature
-        ))
-    } else if let Some(cpt) = node.cpt.as_mut() {
-        for cpt in cpt {
-            if let Some(weights) = cpt {
-                let result = weights.update_weights(&[(index, &0.0)]);
-                if result.is_err() {
-                    *cpt = None;
+    pub fn remove_impossible_values(&mut self) -> Result<(), String> {
+        log::debug!("Computing possible values of the Bayesian network");
+        if self.get_solution(&[]).is_none() {
+            return Err("No solution to the Bayesian network".to_string());
+        }
+
+        let mut possible_values: Vec<HashSet<usize>> =
+            self.nodes.iter().map(|_| HashSet::new()).collect();
+        for (i, n) in self.nodes.iter().enumerate() {
+            for v in 0..n.feature.get_cardinality() {
+                // if we already obtained this value earlier, no need to try it
+                if !possible_values[i].contains(&v) {
+                    let solution = self.get_solution(&[(i, v as i32)]);
+                    if let Some(solution) = solution {
+                        let var_number = solution.len();
+                        for i2 in 0..var_number {
+                            // this value is possible for this variable
+                            possible_values[i2].insert(solution[i2]);
+                        }
+                    }
                 }
             }
         }
-        Ok(())
-    } else {
-        // We cannot remove values of Time since we do not sample it and it has no CPT
+
+        for (i, n) in self.nodes.iter_mut().enumerate() {
+            let card = n.feature.get_cardinality();
+            for v in 0..card {
+                if !possible_values[i].contains(&v) {
+                    n.remove_value(v);
+                }
+            }
+            if !n.removed_values.is_empty() {
+                log::info!(
+                    "Removed impossible values {:?} of {:?}",
+                    n.removed_values
+                        .iter()
+                        .map(|v| n.feature.get_value_string(*v))
+                        .collect::<Vec<String>>(),
+                    n.feature
+                );
+            }
+        }
         Ok(())
     }
 }
