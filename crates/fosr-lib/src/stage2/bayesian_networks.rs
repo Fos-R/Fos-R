@@ -81,10 +81,13 @@ impl From<IntermediateVector> for Flow {
 struct BayesianNetworkNode {
     feature: Feature,
     removed_values: HashSet<usize>,
-    cpt: Option<CPT>,    // TimeBin has no CPT
-    parents: Vec<usize>, // indices in the Bayesian network’s nodes
+    cpt: Option<CPT>,                // TimeBin has no CPT
+    parents: Vec<usize>,             // indices in the Bayesian network’s nodes
     parents_cardinality: Vec<usize>, // the cardinality of each parents. Used to compute the index
-                         // in the cpt
+    // in the cpt
+    children: Vec<usize>,
+    // Index of this node in the Bayesian network
+    index: usize,
 }
 
 type AnonymizedIpv4Distr = (Vec<AnonymizedIpv4Addr>, WeightedIndex<f64>);
@@ -181,7 +184,7 @@ type CPT = Vec<Option<WeightedIndex<u64>>>; // some combination may be impossibl
 
 impl BayesianNetworkNode {
     /// Sample the value of one variable and update the vector with it
-    fn sample_index(&self, rng: &mut impl Rng, current: &[usize]) -> Result<Option<usize>, String> {
+    fn sample_index(&self, rng: &mut impl Rng, current: &[usize]) -> Option<usize> {
         let mut parents_index = 0;
         // println!("Sample index of {:?}", self.feature);
         // println!("Sample index");
@@ -196,22 +199,24 @@ impl BayesianNetworkNode {
         }
         // println!("CPT: {:?}", self.cpt);
         match &self.cpt {
-            None => Err("No CPT!".to_string()),
-            Some(cpt) => Ok(cpt[parents_index].as_ref().map(|w| w.sample(rng))),
+            None => unreachable!(), // only happens with Time
+            Some(cpt) => cpt[parents_index].as_ref().map(|w| w.sample(rng)),
         }
     }
 
     /// Return the probability of this node being equal to "value" for some values of its parents
     /// Used for computing the full conditional distribution
-    fn get_probability(&self, current: &[usize], value: usize) -> Option<f64> {
-        assert!(value < self.feature.get_cardinality());
+    fn get_probability(&self, current: &[usize]) -> f64 {
         let mut parents_index = 0;
         for (index, card) in self.parents.iter().zip(self.parents_cardinality.iter()) {
             parents_index = parents_index * card + current[*index];
         }
         match &self.cpt {
-            None => None,
-            Some(cpt) => cpt[parents_index].as_ref().map(|w| (w.weight(value).unwrap() as f64) / (w.total_weight() as f64)),
+            None => unreachable!(), // only possible with Time
+            Some(cpt) => cpt[parents_index]
+                .as_ref()
+                .map(|w| (w.weight(current[self.index]).unwrap() as f64) / (w.total_weight() as f64))
+                .unwrap_or(0.0),
         }
     }
 }
@@ -240,7 +245,7 @@ impl Display for BayesianNetwork {
 
 impl BayesianNetwork {
     /// Sample a vector from the Bayesian network
-    /// We use a Bayesian network learned for this network, so it should 
+    /// We use a Bayesian network learned for this network, so it should
     fn sample_in_domain(
         &self,
         rng: &mut impl Rng,
@@ -257,7 +262,7 @@ impl BayesianNetwork {
                 // log::info!("Sampling {:?} (index: {index})", v.feature);
                 // println!("Discrete vector: {:?}", new_discrete_vector);
                 if !matches!(v.feature, Feature::TimeBin(_)) {
-                    let index = v.sample_index(rng, &new_discrete_vector)?;
+                    let index = v.sample_index(rng, &new_discrete_vector);
                     if let Some(i) = index {
                         assert!(i < v.feature.get_cardinality());
                         // println!("Sampled value for {:?}: {}", v.feature, i);
@@ -288,30 +293,36 @@ impl BayesianNetwork {
     fn sample_transfer_learning(
         &self,
         rng: &mut impl Rng,
-        discrete_vector: &mut Vec<usize>,
+        mut discrete_vector: Vec<usize>,
     ) -> Result<IntermediateVector, String> {
         // println!("{self:?}");
-        let mut new_discrete_vector = discrete_vector.clone();
-        new_discrete_vector.clone_from(discrete_vector);
         for v in &self.nodes {
             if !matches!(v.feature, Feature::TimeBin(_)) {
                 // TODO: avoid creating Uniform for just one value, better use Rng::random_range
                 // If there is no possible value (due to constraints in the BN), select a random one
                 // It will be later be fixed with the Gibbs sampling
-                let i = v.sample_index(rng, &new_discrete_vector)?.unwrap_or(Uniform::new(0, v.feature.get_cardinality()).unwrap().sample(rng));
-                    assert!(i < v.feature.get_cardinality());
-                    new_discrete_vector.push(i);
+                let i = v.sample_index(rng, &discrete_vector).unwrap_or(
+                    Uniform::new(0, v.feature.get_cardinality())
+                        .unwrap()
+                        .sample(rng),
+                );
+                assert!(i < v.feature.get_cardinality());
+                discrete_vector.push(i);
             }
         } // if it’s "Time", do not push any value (it was already done previously)
-        let domain_vector = self.discrete_to_domain(new_discrete_vector, rng);
+        // Iterate over the vector using Gibbs sampling
+        self.gibbs(rng, &mut discrete_vector);
+        let domain_vector = self.discrete_to_domain(discrete_vector, rng);
         Ok(domain_vector)
     }
 
-    fn discrete_to_domain(&self, discrete_vector: Vec<usize>,
+    fn discrete_to_domain(
+        &self,
+        discrete_vector: Vec<usize>,
         rng: &mut impl Rng,
-        ) -> IntermediateVector {
+    ) -> IntermediateVector {
         let mut domain_vector: IntermediateVector = IntermediateVector::default();
-        for (v_index,v) in self.nodes.iter().enumerate() {
+        for (v_index, v) in self.nodes.iter().enumerate() {
             if !matches!(v.feature, Feature::TimeBin(_)) {
                 let i = discrete_vector[v_index];
                 match &v.feature {
@@ -327,15 +338,13 @@ impl BayesianNetwork {
                     Feature::SrcIp(v) => match v[i] {
                         AnonymizedIpv4Addr::Known(p) => domain_vector.src_ip = Some(p),
                         AnonymizedIpv4Addr::Public => {
-                            domain_vector.src_ip =
-                                Some(utils::sample_random_global_ip(rng));
+                            domain_vector.src_ip = Some(utils::sample_random_global_ip(rng));
                         }
                     },
                     Feature::DstIp(v) => match v[i] {
                         AnonymizedIpv4Addr::Known(p) => domain_vector.dst_ip = Some(p),
                         AnonymizedIpv4Addr::Public => {
-                            domain_vector.dst_ip =
-                                Some(utils::sample_random_global_ip(rng));
+                            domain_vector.dst_ip = Some(utils::sample_random_global_ip(rng));
                         }
                     },
                     Feature::DstPt(v) => match v[i] {
@@ -353,24 +362,45 @@ impl BayesianNetwork {
     }
 
     /// Perform a Gibbs sampling from an already initialized vector
-    fn gibbs(
-        &self,
-        rng: &mut impl Rng,
-        discrete_vector: &mut Vec<usize>,
-    ) {
-        // println!("{self:?}");
-        for _ in 0..GIBBS_BURN_IN {
-            for (v_index,v) in self.nodes.iter().enumerate() {
+    fn gibbs(&self, rng: &mut impl Rng, discrete_vector: &mut Vec<usize>) {
+        // println!("Starting Gibbs");
+        let mut current_iter = 0;
+        let mut all_good = false;
+        while current_iter < GIBBS_BURN_IN || !all_good {
+            // println!("{current_iter}");
+            current_iter += 1;
+            all_good = true;
+            for (v_index, v) in self.nodes.iter().enumerate() {
                 if !matches!(v.feature, Feature::TimeBin(_)) {
-                    // TODO: tirage de i
-                    // TODO: si problème de tirage, refaire une itération
-                    let i = 0;
-                    discrete_vector[v_index] = i;
+                    // println!("Generating value for {:?}", v.feature);
+                    let mut weights: Vec<f64> = vec![];
+                    for value in 0..v.feature.get_cardinality() {
+                        // Get the full conditional probability of "value"
+                        discrete_vector[v_index] = value;
+                        let mut w = v.get_probability(discrete_vector);
+                        for ch in &v.children {
+                            w *= self.nodes[*ch]
+                                .get_probability(discrete_vector);
+                        }
+                        weights.push(w);
+                    }
+                    // println!("{:?}", weights);
+                    let distr = WeightedIndex::new(weights);
+                    if let Ok(distr) = distr {
+                        discrete_vector[v_index] = distr.sample(rng);
+                    } else {
+                        // println!("No possible value for {:?}", v.feature);
+                        // no possible value! use a random one
+                        discrete_vector[v_index] = Uniform::new(0, v.feature.get_cardinality())
+                            .unwrap()
+                            .sample(rng);
+                        all_good = false;
+                    }
                 } // Do not modify the Time
             }
         }
+        // println!("End of Gibbs");
     }
-
 
     // Used to remove impossible values
     fn condition_cpt(&self, node: usize, index_parent: usize, parent_val: usize) -> CPT {
@@ -448,6 +478,11 @@ impl BayesianNetwork {
         }
         Ok(())
     }
+
+    // fn identify_possible_values(&mut self) -> Result<(), String> {
+    //     let mut m = selen::prelude::Model::default();
+    //     Ok(())
+    // }
 }
 
 /// The model with all the data
@@ -540,7 +575,7 @@ impl BayesianModel {
                         for s in &network.present_os {
                             if !v.contains(s) {
                                 log::warn!(
-                                    "OS {s:?} is not present in the original dataset and will not be generated"
+                                    "OS {s:?} is not present in the train set and will not be generated"
                                 );
                             }
                         }
@@ -573,7 +608,7 @@ impl BayesianModel {
                         for s in &network.services {
                             if !v.contains(s) {
                                 log::warn!(
-                                    "Service {s:?} is not present in the original dataset and will not be generated"
+                                    "Service {s:?} is not present in the train set and will not be generated"
                                 );
                             }
                         }
@@ -1090,7 +1125,7 @@ fn bn_from_bif(network: bifxml::Network, alpha: u64) -> Result<(BayesianNetwork,
                     .collect::<Result<Vec<TCPConnState>, String>>()?,
             )),
 
-            _ => None, // some duplicated features are deliberately ignored (such as Dst Pt UDP/TCP)
+            _ => None, // TODO: panic ? error message ?
         };
 
         if let Some(feature) = feature {
@@ -1124,12 +1159,20 @@ fn bn_from_bif(network: bifxml::Network, alpha: u64) -> Result<(BayesianNetwork,
                 feature,
                 parents, // indices in the Bayesian network’s nodes
                 parents_cardinality,
+                children: vec![],
                 cpt,
                 removed_values: HashSet::new(),
+                index: processed_bn.nodes.len(),
             };
             processed_bn.nodes.push(node);
         }
         // }
+    }
+
+    for i in 0..processed_bn.nodes.len() {
+        for p in &processed_bn.nodes[i].parents.clone() {
+            processed_bn.nodes[*p].children.push(i);
+        }
     }
 
     Ok((processed_bn, bin_count.expect("Time feature not found!")))
@@ -1154,7 +1197,8 @@ impl Stage2 for BNGenerator {
         let bin_count = model.get_bin_count();
         let mut restart = true;
         let bn = model.get_bn()?;
-        while restart { // TODO: idéalement, plus besoin de restart…
+        while restart {
+            // TODO: idéalement, plus besoin de restart…
             restart = false;
             let time = min(
                 bin_count - 1,
@@ -1163,7 +1207,11 @@ impl Stage2 for BNGenerator {
             );
             let mut discrete_vector: Vec<usize> = vec![];
             discrete_vector.push(time);
-            domain_vector = bn.sample_in_domain(&mut rng, discrete_vector)?;
+            domain_vector = if model.get_tl()?.is_some() {
+                bn.sample_transfer_learning(&mut rng, discrete_vector)?
+            } else {
+                bn.sample_in_domain(&mut rng, discrete_vector)?
+            };
 
             if domain_vector.src_ip.is_some() && domain_vector.src_ip == domain_vector.dst_ip {
                 log::trace!("Restart (identical IPs)");
