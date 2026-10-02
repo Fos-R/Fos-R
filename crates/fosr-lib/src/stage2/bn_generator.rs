@@ -379,7 +379,7 @@ impl BayesianModel {
                     }
                 }
 
-                bn.add_tl_nodes(src_ip, dst_ip, &network.all_ips, &network.services);
+                bn.add_tl_nodes(src_ip, dst_ip, &network.all_ips);
                 let tl_extra_data = TransferLearningExtraData {
                     // src_ip,
                     // dst_ip,

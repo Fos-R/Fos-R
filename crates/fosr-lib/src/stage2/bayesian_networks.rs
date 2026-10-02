@@ -15,9 +15,9 @@ use std::fmt::{Display, Error, Formatter};
 use std::iter;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
-use strum::IntoEnumIterator;
 
 const GIBBS_BURN_IN: usize = 10;
+const GIBBS_GIVE_UP: usize = 100;
 
 /// A node of the Bayesian network
 #[derive(Debug, Clone)]
@@ -220,7 +220,7 @@ impl BayesianNetwork {
         // println!("Starting Gibbs");
         let mut current_iter = 0;
         let mut all_good = false;
-        while current_iter < GIBBS_BURN_IN || !all_good {
+        while (current_iter < GIBBS_BURN_IN || !all_good) && current_iter < GIBBS_GIVE_UP {
             // println!("{current_iter}");
             current_iter += 1;
             all_good = true;
@@ -459,7 +459,6 @@ impl BayesianNetwork {
         src_ip: HashMap<(L7Proto, OS, SrcIpRole), AnonymizedIpv4Distr>,
         dst_ip: HashMap<(L7Proto, OS, DstIpRole), AnonymizedIpv4Distr>,
         all_ips: &[Ipv4Addr],
-        services: &[L7Proto],
     ) {
         let all_ips: Vec<AnonymizedIpv4Addr> = all_ips
             .iter()
@@ -497,24 +496,36 @@ impl BayesianNetwork {
             let mut cpt: CPT = vec![];
             // The order of the variables in the for loops must be the same as in the "parents" vector
 
-            for s in services {
-                for os in OS::iter() {
-                    for role in SrcIpRole::iter() {
-                        if let Some((domain, distr)) = src_ip.get(&(*s, os, role)) {
-                            let v: Vec<f64> = all_ips
-                                .iter()
-                                .map(|ip| match domain.iter().position(|ip2| ip == ip2) {
-                                    None => 0., // this value cannot be generated for this combination
-                                    Some(p) => distr.weight(p).unwrap(), // get the associated weight
-                                })
-                                .collect();
-                            cpt.push(Some(WeightedIndex::new(v).unwrap()));
-                        } else {
-                            cpt.push(None);
+            if let Feature::L7Proto(ref services) = self.nodes[index_l7proto].feature {
+                for s in services {
+                    if let Feature::SrcOs(ref os_domain) = self.nodes[index_src_os].feature {
+                        for os in os_domain {
+                            if let Feature::SrcIpRole(ref roles) =
+                                self.nodes[index_src_ip_role].feature
+                            {
+                                for role in roles {
+                                    if let Some((domain, distr)) = src_ip.get(&(*s, *os, *role)) {
+                                        let v: Vec<f64> = all_ips
+                                            .iter()
+                                            .map(|ip| {
+                                                match domain.iter().position(|ip2| ip == ip2) {
+                                                    None => 0., // this value cannot be generated for this combination
+                                                    Some(p) => distr.weight(p).unwrap(), // get the associated weight
+                                                }
+                                            })
+                                            .collect();
+                                        cpt.push(Some(WeightedIndex::new(v).unwrap()));
+                                    } else {
+                                        cpt.push(None);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
+
+            assert_eq!(cpt.len(), parents_cardinality.iter().product::<usize>());
 
             let node = BayesianNetworkNode {
                 feature,
@@ -549,26 +560,37 @@ impl BayesianNetwork {
                 self.nodes[index_dst_ip_role].feature.get_cardinality(),
             ];
             let mut cpt: CPT = vec![];
-            // The order of the variables in the for loops must be the same as in the "parents" vector
 
-            for s in services {
-                for os in OS::iter() {
-                    for role in DstIpRole::iter() {
-                        if let Some((domain, distr)) = dst_ip.get(&(*s, os, role)) {
-                            let v: Vec<f64> = all_ips
-                                .iter()
-                                .map(|ip| match domain.iter().position(|ip2| ip == ip2) {
-                                    None => 0., // this value cannot be generated for this combination
-                                    Some(p) => distr.weight(p).unwrap(), // get the associated weight
-                                })
-                                .collect();
-                            cpt.push(Some(WeightedIndex::new(v).unwrap()));
-                        } else {
-                            cpt.push(None);
+            if let Feature::L7Proto(ref services) = self.nodes[index_l7proto].feature {
+                for s in services {
+                    if let Feature::DstOs(ref os_domain) = self.nodes[index_dst_os].feature {
+                        for os in os_domain {
+                            if let Feature::DstIpRole(ref roles) =
+                                self.nodes[index_dst_ip_role].feature
+                            {
+                                for role in roles {
+                                    if let Some((domain, distr)) = dst_ip.get(&(*s, *os, *role)) {
+                                        let v: Vec<f64> = all_ips
+                                            .iter()
+                                            .map(|ip| {
+                                                match domain.iter().position(|ip2| ip == ip2) {
+                                                    None => 0., // this value cannot be generated for this combination
+                                                    Some(p) => distr.weight(p).unwrap(), // get the associated weight
+                                                }
+                                            })
+                                            .collect();
+                                        cpt.push(Some(WeightedIndex::new(v).unwrap()));
+                                    } else {
+                                        cpt.push(None);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
+
+            assert_eq!(cpt.len(), parents_cardinality.iter().product::<usize>());
 
             let node = BayesianNetworkNode {
                 feature,

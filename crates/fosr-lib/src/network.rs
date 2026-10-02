@@ -635,7 +635,7 @@ pub fn import_network(config_string: &str) -> Network {
     let config: Network = serde_yaml::from_str::<NetworkYaml>(config_string)
         .expect("Cannot parse the configuration file")
         .into();
-    log::info!("\"{}\" successfully loaded", config.metadata.title);
+    log::info!("Network \"{}\" successfully loaded", config.metadata.title);
     log::trace!("Network: {config:?}");
     config
 }
@@ -644,7 +644,7 @@ pub fn import_network(config_string: &str) -> Network {
 pub fn reversibly_import_network(config_string: &str) -> NetworkYaml {
     let config: NetworkYaml = serde_yaml::from_str::<NetworkYaml>(config_string)
         .expect("Cannot parse the configuration file");
-    log::info!("\"{}\" successfully loaded", config.metadata.title);
+    log::info!("Network \"{}\" successfully loaded", config.metadata.title);
     log::trace!("Network: {config:?}");
     config
 }
