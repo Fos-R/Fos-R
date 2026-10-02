@@ -1,5 +1,5 @@
 use crate::stage2::TCPConnState;
-use crate::structs::{DstIpRole, L4Proto, L7Proto, L7ProtoWithPort, OS, SrcIpRole};
+use crate::structs::{DstIpRole, Flow, FlowData, L4Proto, L7Proto, L7ProtoWithPort, OS, SrcIpRole};
 
 use pnet::util::MacAddr;
 use rand_distr::weighted::WeightedIndex;
@@ -19,8 +19,6 @@ pub struct IntermediateVector {
     pub src_ttl: Option<u8>,
     pub dst_ttl: Option<u8>,
     pub packets_count_cluster: Option<usize>,
-    // fwd_packets_count: Option<usize>,
-    // bwd_packets_count: Option<usize>,
     pub timestamp: Option<Duration>,
     pub proto: Option<L4Proto>,
     pub tcp_flags: Option<TCPConnState>,
@@ -30,9 +28,34 @@ pub struct IntermediateVector {
     pub dst_mac: Option<MacAddr>,
 }
 
+/// This structure holds the flow that is being built. Since we cannot instance all the variables
+/// at the same time, each variable is an Option
+impl From<IntermediateVector> for Flow {
+    fn from(p: IntermediateVector) -> Self {
+        let d = FlowData {
+            src_ip: p.src_ip.unwrap(),
+            dst_ip: p.dst_ip.unwrap(),
+            src_port: p.src_port.unwrap(),
+            dst_port: p.dst_port.unwrap(),
+            src_ttl: p.src_ttl.unwrap(),
+            dst_ttl: p.dst_ttl.unwrap(),
+            src_os: p.src_os.unwrap(),
+            dst_os: p.dst_os.unwrap(),
+            packets_count_cluster: p.packets_count_cluster.unwrap(),
+            fwd_packets_count: 0,
+            bwd_packets_count: 0,
+            src_mac: p.src_mac.unwrap(),
+            dst_mac: p.dst_mac.unwrap(),
+            timestamp: p.timestamp.unwrap(),
+            l7_proto: p.l7_proto.unwrap(),
+        };
+        p.proto.unwrap().wrap(d, p.tcp_flags)
+    }
+}
+
 pub type AnonymizedIpv4Distr = (Vec<AnonymizedIpv4Addr>, WeightedIndex<f64>);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// An anonynized IPv4 address
 /// Anonymized addresses are typically public addresses
 pub enum AnonymizedIpv4Addr {
@@ -57,8 +80,8 @@ pub enum Feature {
     DstOs(Vec<OS>),
     SrcIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
     DstIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
-    DstPt(Vec<DstPt>), // the port comes from the network file (must be chosen after the dest IP)
-    PktCount(usize),   // cardinality only
+    DstPt(Vec<DstPt>),
+    PktCount(usize), // cardinality only
     SrcTTL(Vec<u8>),
     DstTTL(Vec<u8>),
     SrcMac(Vec<MacAddr>),
@@ -108,10 +131,10 @@ impl Feature {
 /// Extra information for the transfer learning
 #[derive(Debug, Clone)]
 pub struct TransferLearningExtraData {
-    /// Source IP node
-    pub src_ip: HashMap<(L7Proto, OS, SrcIpRole), AnonymizedIpv4Distr>,
-    /// Destination IP node
-    pub dst_ip: HashMap<(L7Proto, OS, DstIpRole), AnonymizedIpv4Distr>,
+    // /// Source IP node
+    // pub src_ip: HashMap<(L7Proto, OS, SrcIpRole), AnonymizedIpv4Distr>,
+    // /// Destination IP node
+    // pub dst_ip: HashMap<(L7Proto, OS, DstIpRole), AnonymizedIpv4Distr>,
     /// Difference between theoretical and actual TTL observations
     pub local_ttl_delta: HashMap<Ipv4Addr, u8>,
     pub services_per_server: HashMap<(Ipv4Addr, L7Proto), Vec<L7ProtoWithPort>>,

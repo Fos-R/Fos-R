@@ -1,7 +1,7 @@
 use crate::network;
 use crate::stage2::bn_structs::*;
 use crate::stage2::{TCPConnState, bifxml};
-use crate::structs::{DstIpRole, Flow, FlowData, L4Proto, L7Proto, OS, SrcIpRole};
+use crate::structs::{DstIpRole, L4Proto, L7Proto, OS, SrcIpRole};
 use crate::utils;
 
 use pnet::util::MacAddr;
@@ -12,34 +12,12 @@ use rand_distr::weighted::WeightedIndex;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::{Display, Error, Formatter};
+use std::iter;
+use std::net::Ipv4Addr;
 use std::str::FromStr;
+use strum::IntoEnumIterator;
 
 const GIBBS_BURN_IN: usize = 10;
-
-/// This structure holds the flow that is being built. Since we cannot instance all the variables
-/// at the same time, each variable is an Option
-impl From<IntermediateVector> for Flow {
-    fn from(p: IntermediateVector) -> Self {
-        let d = FlowData {
-            src_ip: p.src_ip.unwrap(),
-            dst_ip: p.dst_ip.unwrap(),
-            src_port: p.src_port.unwrap(),
-            dst_port: p.dst_port.unwrap(),
-            src_ttl: p.src_ttl.unwrap(),
-            dst_ttl: p.dst_ttl.unwrap(),
-            src_os: p.src_os.unwrap(),
-            dst_os: p.dst_os.unwrap(),
-            packets_count_cluster: p.packets_count_cluster.unwrap(),
-            fwd_packets_count: 0, //p.fwd_packets_count.unwrap(), FIXME
-            bwd_packets_count: 0, //p.bwd_packets_count.unwrap(), FIXME
-            src_mac: p.src_mac.unwrap(),
-            dst_mac: p.dst_mac.unwrap(),
-            timestamp: p.timestamp.unwrap(),
-            l7_proto: p.l7_proto.unwrap(),
-        };
-        p.proto.unwrap().wrap(d, p.tcp_flags)
-    }
-}
 
 /// A node of the Bayesian network
 #[derive(Debug, Clone)]
@@ -57,45 +35,42 @@ struct BayesianNetworkNode {
 
 #[allow(clippy::upper_case_acronyms)]
 /// A conditional probability table
-type CPT = Vec<Option<WeightedIndex<u64>>>; // some combination may be impossible
+type CPT = Vec<Option<WeightedIndex<f64>>>; // some combination may be impossible
 
 impl BayesianNetworkNode {
-    /// Sample the value of one variable and update the vector with it
-    fn sample_index(&self, rng: &mut impl Rng, current: &[usize]) -> Option<usize> {
+    /// Get the line of the CPT corresponding to the current vector
+    fn get_cpt_line(&self, current: &[usize]) -> Option<&WeightedIndex<f64>> {
         let mut parents_index = 0;
-        // println!("Sample index of {:?}", self.feature);
-        // println!("Sample index");
         for (index, card) in self.parents.iter().zip(self.parents_cardinality.iter()) {
-            // println!(
-            //     "Parent {}. Value: {:?}. Cpt len: {}.",
-            //     index,
-            //     current[*index],
-            //     self.cpt.as_ref().unwrap().len()
-            // );
             parents_index = parents_index * card + current[*index];
         }
-        // println!("CPT: {:?}", self.cpt);
         match &self.cpt {
             None => unreachable!(), // only happens with Time
-            Some(cpt) => cpt[parents_index].as_ref().map(|w| w.sample(rng)),
+            Some(cpt) => cpt[parents_index].as_ref(),
         }
     }
 
-    /// Return the probability of this node being equal to "value" for some values of its parents
+    /// Sample the value of one variable and update the vector with it
+    fn sample_index(&self, rng: &mut impl Rng, current: &[usize]) -> Option<usize> {
+        // TODO: check SrcIp != DstIp
+        self.get_cpt_line(current).map(|w| w.sample(rng))
+    }
+
+    /// Return the probability of this node given its parents for the current values
     /// Used for computing the full conditional distribution
     fn get_probability(&self, current: &[usize]) -> f64 {
-        let mut parents_index = 0;
-        for (index, card) in self.parents.iter().zip(self.parents_cardinality.iter()) {
-            parents_index = parents_index * card + current[*index];
-        }
-        match &self.cpt {
-            None => unreachable!(), // only possible with Time
-            Some(cpt) => cpt[parents_index]
-                .as_ref()
-                .map(|w| {
-                    (w.weight(current[self.index]).unwrap() as f64) / (w.total_weight() as f64)
-                })
-                .unwrap_or(0.0),
+        // We assume that SrcIp is always just before DstIp
+        // Check if Src IP == Dst IP
+        if (matches!(self.feature, Feature::DstIp(_))
+            && current[self.index] == current[self.index - 1])
+            || (matches!(self.feature, Feature::SrcIp(_))
+                && current[self.index] == current[self.index + 1])
+        {
+            0.0
+        } else {
+            self.get_cpt_line(current)
+                .map(|w| w.weight(current[self.index]).unwrap() / w.total_weight())
+                .unwrap_or(0.0)
         }
     }
 }
@@ -282,7 +257,7 @@ impl BayesianNetwork {
 
     // Used to remove impossible values
     fn condition_cpt(&self, node: usize, index_parent: usize, parent_val: usize) -> CPT {
-        let mut output: Vec<Option<WeightedIndex<u64>>> = vec![];
+        let mut output: Vec<Option<WeightedIndex<f64>>> = vec![];
         assert!(
             self.nodes[node].parents_cardinality[index_parent] > parent_val,
             "Parent val is too large: {parent_val}"
@@ -370,14 +345,14 @@ impl BayesianNetwork {
                     }
                 }
                 // create a list of all the indices to set the probability to 0
-                let weight_update: Vec<(usize, &u64)> = v
+                let weight_update: Vec<(usize, &f64)> = v
                     .iter()
                     .enumerate()
                     .filter_map(|(index, os)| {
                         if network.present_os.contains(os) {
                             None
                         } else {
-                            Some((index, &0))
+                            Some((index, &0.0))
                         }
                     })
                     .collect();
@@ -403,14 +378,14 @@ impl BayesianNetwork {
                     }
                 }
                 // create a list of all the indices to set the probability to 0
-                let weight_update: Vec<(usize, &u64)> = v
+                let weight_update: Vec<(usize, &f64)> = v
                     .iter()
                     .enumerate()
                     .filter_map(|(index, proto)| {
                         if network.services.contains(proto) {
                             None
                         } else {
-                            Some((index, &0))
+                            Some((index, &0.0))
                         }
                     })
                     .collect();
@@ -429,12 +404,12 @@ impl BayesianNetwork {
             {
                 // No internet access? Then set the probability of the Internet role to
                 // zero
-                let weight_update: Vec<(usize, &u64)> = v
+                let weight_update: Vec<(usize, &f64)> = v
                     .iter()
                     .enumerate()
                     .filter_map(|(index, role)| {
                         if role == &SrcIpRole::Internet {
-                            Some((index, &0))
+                            Some((index, &0.0))
                         } else {
                             None
                         }
@@ -454,12 +429,12 @@ impl BayesianNetwork {
                 && let Feature::DstIpRole(v) = &mut node.feature
             {
                 // Same for DstIpRole
-                let weight_update: Vec<(usize, &u64)> = v
+                let weight_update: Vec<(usize, &f64)> = v
                     .iter()
                     .enumerate()
                     .filter_map(|(index, role)| {
                         if role == &DstIpRole::Internet {
-                            Some((index, &0))
+                            Some((index, &0.0))
                         } else {
                             None
                         }
@@ -477,6 +452,144 @@ impl BayesianNetwork {
                 }
             }
         }
+    }
+
+    pub fn add_tl_nodes(
+        &mut self,
+        src_ip: HashMap<(L7Proto, OS, SrcIpRole), AnonymizedIpv4Distr>,
+        dst_ip: HashMap<(L7Proto, OS, DstIpRole), AnonymizedIpv4Distr>,
+        all_ips: &[Ipv4Addr],
+        services: &[L7Proto],
+    ) {
+        let all_ips: Vec<AnonymizedIpv4Addr> = all_ips
+            .iter()
+            .map(|ip| AnonymizedIpv4Addr::Known(*ip))
+            // add Internet
+            .chain(iter::once(AnonymizedIpv4Addr::Public))
+            .collect();
+
+        let feature = Feature::SrcIp(all_ips.clone());
+
+        let index_l7proto = self
+            .nodes
+            .iter()
+            .position(|n| matches!(n.feature, Feature::L7Proto(_)))
+            .unwrap();
+
+        {
+            let index_src_os = self
+                .nodes
+                .iter()
+                .position(|n| matches!(n.feature, Feature::SrcOs(_)))
+                .unwrap();
+            let index_src_ip_role = self
+                .nodes
+                .iter()
+                .position(|n| matches!(n.feature, Feature::SrcIpRole(_)))
+                .unwrap();
+
+            let parents = vec![index_l7proto, index_src_os, index_src_ip_role];
+            let parents_cardinality = vec![
+                self.nodes[index_l7proto].feature.get_cardinality(),
+                self.nodes[index_src_os].feature.get_cardinality(),
+                self.nodes[index_src_ip_role].feature.get_cardinality(),
+            ];
+            let mut cpt: CPT = vec![];
+            // The order of the variables in the for loops must be the same as in the "parents" vector
+
+            for s in services {
+                for os in OS::iter() {
+                    for role in SrcIpRole::iter() {
+                        if let Some((domain, distr)) = src_ip.get(&(*s, os, role)) {
+                            let v: Vec<f64> = all_ips
+                                .iter()
+                                .map(|ip| match domain.iter().position(|ip2| ip == ip2) {
+                                    None => 0., // this value cannot be generated for this combination
+                                    Some(p) => distr.weight(p).unwrap(), // get the associated weight
+                                })
+                                .collect();
+                            cpt.push(Some(WeightedIndex::new(v).unwrap()));
+                        } else {
+                            cpt.push(None);
+                        }
+                    }
+                }
+            }
+
+            let node = BayesianNetworkNode {
+                feature,
+                parents,
+                parents_cardinality,
+                children: vec![], // no children
+                cpt: Some(cpt),
+                removed_values: HashSet::new(),
+                index: self.nodes.len(),
+            };
+            self.nodes.push(node);
+        }
+
+        {
+            let feature = Feature::DstIp(all_ips.clone());
+
+            let index_dst_os = self
+                .nodes
+                .iter()
+                .position(|n| matches!(n.feature, Feature::DstOs(_)))
+                .unwrap();
+            let index_dst_ip_role = self
+                .nodes
+                .iter()
+                .position(|n| matches!(n.feature, Feature::DstIpRole(_)))
+                .unwrap();
+
+            let parents = vec![index_l7proto, index_dst_os, index_dst_ip_role];
+            let parents_cardinality = vec![
+                self.nodes[index_l7proto].feature.get_cardinality(),
+                self.nodes[index_dst_os].feature.get_cardinality(),
+                self.nodes[index_dst_ip_role].feature.get_cardinality(),
+            ];
+            let mut cpt: CPT = vec![];
+            // The order of the variables in the for loops must be the same as in the "parents" vector
+
+            for s in services {
+                for os in OS::iter() {
+                    for role in DstIpRole::iter() {
+                        if let Some((domain, distr)) = dst_ip.get(&(*s, os, role)) {
+                            let v: Vec<f64> = all_ips
+                                .iter()
+                                .map(|ip| match domain.iter().position(|ip2| ip == ip2) {
+                                    None => 0., // this value cannot be generated for this combination
+                                    Some(p) => distr.weight(p).unwrap(), // get the associated weight
+                                })
+                                .collect();
+                            cpt.push(Some(WeightedIndex::new(v).unwrap()));
+                        } else {
+                            cpt.push(None);
+                        }
+                    }
+                }
+            }
+
+            let node = BayesianNetworkNode {
+                feature,
+                parents,
+                parents_cardinality,
+                children: vec![], // no children
+                cpt: Some(cpt),
+                removed_values: HashSet::new(),
+                index: self.nodes.len(),
+            };
+            self.nodes.push(node);
+        }
+
+        assert!(matches!(
+            self.nodes[self.nodes.len() - 1].feature,
+            Feature::DstIp(_)
+        ));
+        assert!(matches!(
+            self.nodes[self.nodes.len() - 2].feature,
+            Feature::SrcIp(_)
+        ));
     }
 
     // fn identify_possible_values(&mut self) -> Result<(), String> {
@@ -497,7 +610,7 @@ fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), Stri
     } else if let Some(cpt) = node.cpt.as_mut() {
         for cpt in cpt {
             if let Some(weights) = cpt {
-                let result = weights.update_weights(&[(index, &0)]);
+                let result = weights.update_weights(&[(index, &0.0)]);
                 if result.is_err() {
                     *cpt = None;
                 }
@@ -623,7 +736,7 @@ pub fn bn_from_bif(
             .table
             .split_ascii_whitespace()
             .map(|s| s.parse::<u64>().expect("Cannot parse the CPT"))
-            .map(|l| if l == 0 { l } else { l + alpha - 1 }) // leave zeros as is
+            .map(|l| if l == 0 { 0.0 } else { (l + alpha - 1) as f64 }) // leave zeros as is
             .collect::<Vec<_>>()
             .chunks(v.outcome.len())
             .map(|l| WeightedIndex::new(l).ok()) // some lines are only 0. In that case, insert a
