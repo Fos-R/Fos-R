@@ -49,7 +49,7 @@ pub struct ArcModels {
     pub time_bins: Arc<stage1::TimeModel>,
     /// The Bayesian network of stage 1
     /// There is a lock to allow a concurrent modification of the network
-    pub bn: Arc<RwLock<stage2::bayesian_networks::BayesianModel>>,
+    pub bn: Arc<RwLock<stage2::bn_generator::BayesianModel>>,
     /// The automata of stage 2
     pub automata: Arc<stage3::tadam::AutomataLibrary>,
 }
@@ -69,7 +69,7 @@ pub struct Models {
     /// The time model of stage 0
     pub time_bins: stage1::TimeModel,
     /// The Bayesian network of stage 1
-    pub bn: stage2::bayesian_networks::BayesianModel,
+    pub bn: stage2::bn_generator::BayesianModel,
     /// The automata of stage 2
     pub automata: stage3::tadam::AutomataLibrary,
 }
@@ -77,7 +77,7 @@ pub struct Models {
 impl Models {
     pub fn from_source(source: &ModelsSource, alpha: u64) -> Result<Self, String> {
         Ok(Models {
-            bn: stage2::bayesian_networks::BayesianModel::from_source(source, alpha)?,
+            bn: stage2::bn_generator::BayesianModel::from_source(source, alpha)?,
             time_bins: stage1::TimeModel::from_source(source)?,
             automata: stage3::tadam::AutomataLibrary::from_source(source)?,
         })
@@ -88,7 +88,7 @@ impl Models {
         alpha: u64,
     ) -> Result<Self, String> {
         Ok(Models {
-            bn: stage2::bayesian_networks::BayesianModel::from_source_for_transfer_learning(
+            bn: stage2::bn_generator::BayesianModel::from_source_for_transfer_learning(
                 source, alpha,
             )?,
             time_bins: stage1::TimeModel::from_source(source)?,
@@ -102,7 +102,7 @@ impl Models {
         alpha: u64,
     ) -> Result<Self, String> {
         Ok(Models {
-            bn: stage2::bayesian_networks::BayesianModel::from_source_for_transfer_learning(
+            bn: stage2::bn_generator::BayesianModel::from_source_for_transfer_learning(
                 source, alpha,
             )?
             .with_network(&network)?,

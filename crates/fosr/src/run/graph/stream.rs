@@ -12,7 +12,7 @@ use crate::shared::constants::network::STREAM_MAX_PER_CYCLE_WASM;
 use crate::shared::constants::network::STREAM_RATE_LIMIT_MS;
 use crate::shared::constants::network::{STREAM_BUFFER_AHEAD_SECS, STREAM_CHECK_INTERVAL_MS};
 use chrono::{DateTime, Offset, TimeZone};
-use fosr_lib::{L7Proto, models, stage1, stage2::Stage2, stage2::bayesian_networks::BNGenerator};
+use fosr_lib::{L7Proto, models, stage1, stage2::Stage2, stage2::bn_generator::BNGenerator};
 use std::collections::BinaryHeap;
 use std::net::Ipv4Addr;
 use std::sync::atomic::{AtomicBool, Ordering};

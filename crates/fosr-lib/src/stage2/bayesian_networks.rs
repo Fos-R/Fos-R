@@ -1,58 +1,23 @@
-use crate::models;
 use crate::network;
-use crate::stage2::{Stage2, TCPConnState, TimePoint, bifxml};
-use crate::structs::{
-    DstIpRole, Flow, FlowData, L4Proto, L7Proto, L7ProtoWithPort, OS, Port, SeededData, SrcIpRole,
-};
+use crate::stage2::bn_structs::*;
+use crate::stage2::{TCPConnState, bifxml};
+use crate::structs::{DstIpRole, Flow, FlowData, L4Proto, L7Proto, OS, SrcIpRole};
 use crate::utils;
 
-use chrono::Timelike;
 use pnet::util::MacAddr;
-use rand::prelude::SliceRandom;
-use rand_core::{Rng, SeedableRng};
+use rand_core::Rng;
 use rand_distr::Distribution;
 use rand_distr::Uniform;
 use rand_distr::weighted::WeightedIndex;
-use rand_pcg::Pcg32;
-use std::cmp::min;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::{Display, Error, Formatter};
-use std::iter;
-use std::net::Ipv4Addr;
 use std::str::FromStr;
-use std::sync::Arc;
-use std::sync::RwLock;
-use std::time::Duration;
-use strum::IntoEnumIterator;
 
 const GIBBS_BURN_IN: usize = 10;
 
-#[derive(Debug, Clone, Default)]
 /// This structure holds the flow that is being built. Since we cannot instance all the variables
 /// at the same time, each variable is an Option
-struct IntermediateVector {
-    src_ip_role: Option<SrcIpRole>,
-    dst_ip_role: Option<DstIpRole>,
-    src_os: Option<OS>,
-    dst_os: Option<OS>,
-    l7_proto: Option<L7Proto>,
-    dst_port: Option<u16>,
-    src_port: Option<u16>,
-    src_ttl: Option<u8>,
-    dst_ttl: Option<u8>,
-    packets_count_cluster: Option<usize>,
-    // fwd_packets_count: Option<usize>,
-    // bwd_packets_count: Option<usize>,
-    timestamp: Option<Duration>,
-    proto: Option<L4Proto>,
-    tcp_flags: Option<TCPConnState>,
-    src_ip: Option<Ipv4Addr>,
-    dst_ip: Option<Ipv4Addr>,
-    src_mac: Option<MacAddr>,
-    dst_mac: Option<MacAddr>,
-}
-
 impl From<IntermediateVector> for Flow {
     fn from(p: IntermediateVector) -> Self {
         let d = FlowData {
@@ -88,94 +53,6 @@ struct BayesianNetworkNode {
     children: Vec<usize>,
     // Index of this node in the Bayesian network
     index: usize,
-}
-
-type AnonymizedIpv4Distr = (Vec<AnonymizedIpv4Addr>, WeightedIndex<f64>);
-
-/// Extra information for the transfer learning
-#[derive(Debug, Clone)]
-pub struct TransferLearningExtraData {
-    /// Source IP node
-    src_ip: HashMap<(L7Proto, OS, SrcIpRole), AnonymizedIpv4Distr>,
-    /// Destination IP node
-    dst_ip: HashMap<(L7Proto, OS, DstIpRole), AnonymizedIpv4Distr>,
-    /// Difference between theoretical and actual TTL observations
-    local_ttl_delta: HashMap<Ipv4Addr, u8>,
-    services_per_server: HashMap<(Ipv4Addr, L7Proto), Vec<L7ProtoWithPort>>,
-    mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
-}
-
-#[derive(Debug, Clone, Copy)]
-/// An anonynized IPv4 address
-/// Anonymized addresses are typically public addresses
-enum AnonymizedIpv4Addr {
-    Public,
-    Known(Ipv4Addr),
-}
-
-#[derive(Debug, Clone)]
-enum DstPt {
-    Random,
-    Fixed(u16),
-}
-
-#[derive(Debug, Clone)]
-/// The set of random variables that can appear in a Bayesian network
-enum Feature {
-    // for each feature, we associate a domain
-    TimeBin(usize), // cardinality only
-    SrcIpRole(Vec<SrcIpRole>),
-    DstIpRole(Vec<DstIpRole>),
-    SrcOs(Vec<OS>),
-    DstOs(Vec<OS>),
-    SrcIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
-    DstIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
-    DstPt(Vec<DstPt>), // the port comes from the network file (must be chosen after the dest IP)
-    PktCount(usize),   // cardinality only
-    SrcTTL(Vec<u8>),
-    DstTTL(Vec<u8>),
-    SrcMac(Vec<MacAddr>),
-    DstMac(Vec<MacAddr>),
-    L7Proto(Vec<L7Proto>),
-    L4Proto(Vec<L4Proto>),
-    EndFlags(Vec<TCPConnState>),
-}
-
-impl Feature {
-    fn get_value_string(&self, index: usize) -> String {
-        match &self {
-            // Feature::SrcIpRole(v) | Feature::DstIpRole(v) => format!("{:?}", v[index]),
-            Feature::SrcIp(v) | Feature::DstIp(v) => format!("{:?}", v[index]),
-            Feature::SrcOs(v) | Feature::DstOs(v) => format!("{:?}", v[index]),
-            Feature::DstPt(v) => format!("{:?}", v[index]),
-            Feature::PktCount(_) => format!("Cluster {index}"),
-            Feature::SrcTTL(v) | Feature::DstTTL(v) => format!("{:?}", v[index]),
-            Feature::SrcMac(v) | Feature::DstMac(v) => format!("{:?}", v[index]),
-            Feature::L4Proto(v) => format!("{:?}", v[index]),
-            Feature::L7Proto(v) => format!("{:?}", v[index]),
-            Feature::EndFlags(v) => format!("{:?}", v[index]),
-            Feature::TimeBin(_) => format!("Time bin {index}"),
-            Feature::SrcIpRole(v) => format!("{:?}", v[index]),
-            Feature::DstIpRole(v) => format!("{:?}", v[index]),
-        }
-    }
-
-    fn get_cardinality(&self) -> usize {
-        match &self {
-            // Feature::SrcIpRole(v) | Feature::DstIpRole(v) => v.len(),
-            Feature::SrcIp(v) | Feature::DstIp(v) => v.len(),
-            Feature::SrcOs(v) | Feature::DstOs(v) => v.len(),
-            Feature::DstPt(v) => v.len(),
-            Feature::PktCount(card) | Feature::TimeBin(card) => *card,
-            Feature::SrcTTL(v) | Feature::DstTTL(v) => v.len(),
-            Feature::SrcMac(v) | Feature::DstMac(v) => v.len(),
-            Feature::SrcIpRole(v) => v.len(),
-            Feature::DstIpRole(v) => v.len(),
-            Feature::L4Proto(v) => v.len(),
-            Feature::L7Proto(v) => v.len(),
-            Feature::EndFlags(v) => v.len(),
-        }
-    }
 }
 
 #[allow(clippy::upper_case_acronyms)]
@@ -215,7 +92,9 @@ impl BayesianNetworkNode {
             None => unreachable!(), // only possible with Time
             Some(cpt) => cpt[parents_index]
                 .as_ref()
-                .map(|w| (w.weight(current[self.index]).unwrap() as f64) / (w.total_weight() as f64))
+                .map(|w| {
+                    (w.weight(current[self.index]).unwrap() as f64) / (w.total_weight() as f64)
+                })
                 .unwrap_or(0.0),
         }
     }
@@ -246,7 +125,7 @@ impl Display for BayesianNetwork {
 impl BayesianNetwork {
     /// Sample a vector from the Bayesian network
     /// We use a Bayesian network learned for this network, so it should
-    fn sample_in_domain(
+    pub fn sample_in_domain(
         &self,
         rng: &mut impl Rng,
         discrete_vector: Vec<usize>,
@@ -290,7 +169,7 @@ impl BayesianNetwork {
     }
 
     /// Sample a vector from the Bayesian network
-    fn sample_transfer_learning(
+    pub fn sample_transfer_learning(
         &self,
         rng: &mut impl Rng,
         mut discrete_vector: Vec<usize>,
@@ -362,7 +241,7 @@ impl BayesianNetwork {
     }
 
     /// Perform a Gibbs sampling from an already initialized vector
-    fn gibbs(&self, rng: &mut impl Rng, discrete_vector: &mut Vec<usize>) {
+    fn gibbs(&self, rng: &mut impl Rng, discrete_vector: &mut [usize]) {
         // println!("Starting Gibbs");
         let mut current_iter = 0;
         let mut all_good = false;
@@ -379,8 +258,7 @@ impl BayesianNetwork {
                         discrete_vector[v_index] = value;
                         let mut w = v.get_probability(discrete_vector);
                         for ch in &v.children {
-                            w *= self.nodes[*ch]
-                                .get_probability(discrete_vector);
+                            w *= self.nodes[*ch].get_probability(discrete_vector);
                         }
                         weights.push(w);
                     }
@@ -435,7 +313,7 @@ impl BayesianNetwork {
     }
 
     // find the values of parents that only lead to "None" CPTs
-    fn remove_impossible_values(&mut self) -> Result<(), String> {
+    pub fn remove_impossible_values(&mut self) -> Result<(), String> {
         log::trace!("Remove impossible values");
         // traverse the network in reverse topological order
         // indeed, children can modify their parents’ CPT
@@ -479,38 +357,133 @@ impl BayesianNetwork {
         Ok(())
     }
 
+    pub fn update_probabilities(&mut self, network: &network::Network) {
+        for node in &mut self.nodes {
+            // we set the probability of absent OS to 0
+            if let Feature::SrcOs(v) = &mut node.feature {
+                // get OS present in the network
+                for s in &network.present_os {
+                    if !v.contains(s) {
+                        log::warn!(
+                            "OS {s:?} is not present in the train set and will not be generated"
+                        );
+                    }
+                }
+                // create a list of all the indices to set the probability to 0
+                let weight_update: Vec<(usize, &u64)> = v
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, os)| {
+                        if network.present_os.contains(os) {
+                            None
+                        } else {
+                            Some((index, &0))
+                        }
+                    })
+                    .collect();
+                // modify all the probability distributions
+                for cpt in node.cpt.as_mut().unwrap() {
+                    if let Some(weights) = cpt {
+                        let result = weights.update_weights(&weight_update);
+                        // log::error!("Valeur impossible après mise à jour des distributions");
+                        if result.is_err() {
+                            *cpt = None;
+                        }
+                    }
+                }
+            }
+            // we set the probability of absent services to 0
+            else if let Feature::L7Proto(v) = &mut node.feature {
+                // get services present in the network
+                for s in &network.services {
+                    if !v.contains(s) {
+                        log::warn!(
+                            "Service {s:?} is not present in the train set and will not be generated"
+                        );
+                    }
+                }
+                // create a list of all the indices to set the probability to 0
+                let weight_update: Vec<(usize, &u64)> = v
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, proto)| {
+                        if network.services.contains(proto) {
+                            None
+                        } else {
+                            Some((index, &0))
+                        }
+                    })
+                    .collect();
+                // modify all the probability distributions
+                for cpt in node.cpt.as_mut().unwrap() {
+                    if let Some(weights) = cpt {
+                        let result = weights.update_weights(&weight_update);
+                        // log::error!("Valeur impossible après mise à jour des distributions");
+                        if result.is_err() {
+                            *cpt = None;
+                        }
+                    }
+                }
+            } else if !network.has_internet_access
+                && let Feature::SrcIpRole(v) = &mut node.feature
+            {
+                // No internet access? Then set the probability of the Internet role to
+                // zero
+                let weight_update: Vec<(usize, &u64)> = v
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, role)| {
+                        if role == &SrcIpRole::Internet {
+                            Some((index, &0))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                // modify all the probability distributions
+                for cpt in node.cpt.as_mut().unwrap() {
+                    if let Some(weights) = cpt {
+                        let result = weights.update_weights(&weight_update);
+                        // log::error!("Valeur impossible après mise à jour des distributions");
+                        if result.is_err() {
+                            *cpt = None;
+                        }
+                    }
+                }
+            } else if !network.has_internet_access
+                && let Feature::DstIpRole(v) = &mut node.feature
+            {
+                // Same for DstIpRole
+                let weight_update: Vec<(usize, &u64)> = v
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, role)| {
+                        if role == &DstIpRole::Internet {
+                            Some((index, &0))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                // modify all the probability distributions
+                for cpt in node.cpt.as_mut().unwrap() {
+                    if let Some(weights) = cpt {
+                        let result = weights.update_weights(&weight_update);
+                        // log::error!("Valeur impossible après mise à jour des distributions");
+                        if result.is_err() {
+                            *cpt = None;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // fn identify_possible_values(&mut self) -> Result<(), String> {
+    //     // TODO: also verify which conn_state / automata combination is possible
     //     let mut m = selen::prelude::Model::default();
     //     Ok(())
     // }
-}
-
-/// The model with all the data
-#[derive(Clone)]
-#[allow(clippy::large_enum_variant)]
-pub enum BayesianModel {
-    DatasetSpecific {
-        bn: BayesianNetwork,
-        bin_count: usize,
-    },
-    ForTransferLearning {
-        base_bn: BayesianNetwork,
-        bn: BayesianNetwork,
-        bin_count: usize,
-        transfer_learning: TransferLearningExtraData,
-    },
-    WaitingForNetwork {
-        base_bn: BayesianNetwork,
-        bin_count: usize,
-    },
-}
-
-/// Stage 1: generates flow descriptions
-#[derive(Clone)]
-#[allow(unused)]
-pub struct BNGenerator {
-    model: Arc<RwLock<BayesianModel>>,
-    online: bool, // used to generate the TTL, either initial or at the capture point
 }
 
 // remove a value from variable by setting its probability to zero
@@ -537,357 +510,10 @@ fn remove_value(node: &mut BayesianNetworkNode, index: usize) -> Result<(), Stri
     }
 }
 
-impl BayesianModel {
-    pub fn from_source_for_transfer_learning(
-        m: &models::ModelsSource,
-        alpha: u64,
-    ) -> Result<Self, String> {
-        // We use a seeded RNG so everything is deterministic
-
-        let bn_string: String = m
-            .get_tl_bn()
-            .map_err(|e| format!("Cannot find the Bayesian networks: {e}"))?;
-
-        log::trace!("Loading Bayesian network");
-        let bif_common = bifxml::from_str(&bn_string)?;
-
-        log::trace!("Converting from BIF");
-        let (base_bn, bin_count) = bn_from_bif(bif_common, alpha)?;
-
-        log::info!("Bayesian network has been loaded");
-        Ok(BayesianModel::WaitingForNetwork { base_bn, bin_count })
-    }
-
-    pub fn with_network(&self, network: &network::Network) -> Result<Self, String> {
-        match self {
-            BayesianModel::WaitingForNetwork {
-                base_bn, bin_count, ..
-            }
-            | BayesianModel::ForTransferLearning {
-                base_bn, bin_count, ..
-            } => {
-                let mut bn = base_bn.clone();
-
-                for node in &mut bn.nodes {
-                    // we set the probability of absent OS to 0
-                    if let Feature::SrcOs(v) = &mut node.feature {
-                        // get OS present in the network
-                        for s in &network.present_os {
-                            if !v.contains(s) {
-                                log::warn!(
-                                    "OS {s:?} is not present in the train set and will not be generated"
-                                );
-                            }
-                        }
-                        // create a list of all the indices to set the probability to 0
-                        let weight_update: Vec<(usize, &u64)> = v
-                            .iter()
-                            .enumerate()
-                            .filter_map(|(index, os)| {
-                                if network.present_os.contains(os) {
-                                    None
-                                } else {
-                                    Some((index, &0))
-                                }
-                            })
-                            .collect();
-                        // modify all the probability distributions
-                        for cpt in node.cpt.as_mut().unwrap() {
-                            if let Some(weights) = cpt {
-                                let result = weights.update_weights(&weight_update);
-                                // log::error!("Valeur impossible après mise à jour des distributions");
-                                if result.is_err() {
-                                    *cpt = None;
-                                }
-                            }
-                        }
-                        // we set the probability of absent services to 0
-                    }
-                    if let Feature::L7Proto(v) = &mut node.feature {
-                        // get services present in the network
-                        for s in &network.services {
-                            if !v.contains(s) {
-                                log::warn!(
-                                    "Service {s:?} is not present in the train set and will not be generated"
-                                );
-                            }
-                        }
-                        // create a list of all the indices to set the probability to 0
-                        let weight_update: Vec<(usize, &u64)> = v
-                            .iter()
-                            .enumerate()
-                            .filter_map(|(index, proto)| {
-                                if network.services.contains(proto) {
-                                    None
-                                } else {
-                                    Some((index, &0))
-                                }
-                            })
-                            .collect();
-                        // modify all the probability distributions
-                        for cpt in node.cpt.as_mut().unwrap() {
-                            if let Some(weights) = cpt {
-                                let result = weights.update_weights(&weight_update);
-                                // log::error!("Valeur impossible après mise à jour des distributions");
-                                if result.is_err() {
-                                    *cpt = None;
-                                }
-                            }
-                        }
-                    } else if !network.has_internet_access
-                        && let Feature::SrcIpRole(v) = &mut node.feature
-                    {
-                        // No internet access? Then set the probability of the Internet role to
-                        // zero
-                        let weight_update: Vec<(usize, &u64)> = v
-                            .iter()
-                            .enumerate()
-                            .filter_map(|(index, role)| {
-                                if role == &SrcIpRole::Internet {
-                                    Some((index, &0))
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect();
-                        // modify all the probability distributions
-                        for cpt in node.cpt.as_mut().unwrap() {
-                            if let Some(weights) = cpt {
-                                let result = weights.update_weights(&weight_update);
-                                // log::error!("Valeur impossible après mise à jour des distributions");
-                                if result.is_err() {
-                                    *cpt = None;
-                                }
-                            }
-                        }
-                    } else if !network.has_internet_access
-                        && let Feature::DstIpRole(v) = &mut node.feature
-                    {
-                        // Same for DstIpRole
-                        let weight_update: Vec<(usize, &u64)> = v
-                            .iter()
-                            .enumerate()
-                            .filter_map(|(index, role)| {
-                                if role == &DstIpRole::Internet {
-                                    Some((index, &0))
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect();
-                        // modify all the probability distributions
-                        for cpt in node.cpt.as_mut().unwrap() {
-                            if let Some(weights) = cpt {
-                                let result = weights.update_weights(&weight_update);
-                                // log::error!("Valeur impossible après mise à jour des distributions");
-                                if result.is_err() {
-                                    *cpt = None;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                bn.remove_impossible_values()?;
-
-                let mut rng = Pcg32::seed_from_u64(12345);
-                let mut src_ip: HashMap<(L7Proto, OS, SrcIpRole), AnonymizedIpv4Distr> =
-                    HashMap::new();
-                let mut dst_ip: HashMap<(L7Proto, OS, DstIpRole), AnonymizedIpv4Distr> =
-                    HashMap::new();
-
-                if network.users.is_empty() {
-                    return Err("No client in the network".to_string());
-                }
-                if network.servers.is_empty() {
-                    return Err("No server in the network".to_string());
-                }
-                // TODO: plutôt que d’avoir une erreur, plutôt mettre à jour le réseau bayésien
-
-                for s in &network.services {
-                    for os in OS::iter() {
-                        for role in SrcIpRole::iter() {
-                            if let Some(ips) = network.users.get(&(os, role)) {
-                                src_ip.insert(
-                                    (*s, os, role),
-                                    match role {
-                                        SrcIpRole::Internet if network.has_internet_access =>
-                                        // It can be a known Internet host, or just "Internet"
-                                        {
-                                            (
-                                                ips.clone()
-                                                    .into_iter()
-                                                    .map(AnonymizedIpv4Addr::Known)
-                                                    // add Internet
-                                                    .chain(iter::once(AnonymizedIpv4Addr::Public))
-                                                    .collect(),
-                                                get_zipf_weights_with_extra_value(
-                                                    ips.len(),
-                                                    &mut rng,
-                                                    0.8, // TODO: do not hardcode
-                                                ),
-                                            )
-                                        }
-                                        _ => (
-                                            ips.clone()
-                                                .into_iter()
-                                                .map(AnonymizedIpv4Addr::Known)
-                                                .collect(),
-                                            get_zipf_weights(ips.len(), &mut rng),
-                                        ),
-                                    },
-                                );
-                            } else if network.has_internet_access {
-                                // Only Internet
-                                src_ip.insert(
-                                    (*s, os, role),
-                                    (
-                                        vec![AnonymizedIpv4Addr::Public],
-                                        WeightedIndex::new([1.0]).unwrap(),
-                                    ),
-                                );
-                            } // No "else" arm: if the role is Internet but there is no Internet-reachable IPs and
-                            // there is no Internet access, then there is no possible IPs
-                        }
-
-                        for role in DstIpRole::iter() {
-                            let ips = network.servers.get(&(*s, os, role));
-                            if let Some(ips) = ips {
-                                dst_ip.insert(
-                                    (*s, os, role),
-                                    match role {
-                                        DstIpRole::Internet if network.has_internet_access => {
-                                            // A known Internet host, or just "Internet"
-                                            (
-                                                ips.clone()
-                                                    .into_iter()
-                                                    .map(AnonymizedIpv4Addr::Known)
-                                                    // add Internet
-                                                    .chain(iter::once(AnonymizedIpv4Addr::Public))
-                                                    .collect(),
-                                                get_zipf_weights_with_extra_value(
-                                                    ips.len(),
-                                                    &mut rng,
-                                                    0.8, // TODO: do not hardcode
-                                                ),
-                                            )
-                                        }
-                                        _ => (
-                                            ips.clone()
-                                                .into_iter()
-                                                .map(AnonymizedIpv4Addr::Known)
-                                                .collect(),
-                                            get_zipf_weights(ips.len(), &mut rng),
-                                        ),
-                                    },
-                                );
-                            } else if network.has_internet_access {
-                                // Only Internet
-                                dst_ip.insert(
-                                    (*s, os, role),
-                                    (
-                                        vec![AnonymizedIpv4Addr::Public],
-                                        WeightedIndex::new([1.0]).unwrap(),
-                                    ),
-                                );
-                            }
-                        }
-                    }
-                }
-
-                let mut local_ttl_delta: HashMap<Ipv4Addr, u8> = HashMap::new();
-                let mut mac_addr_map = network.mac_addr_map.clone();
-                for ip in network.all_ips.iter() {
-                    // TODO ! TTL should be calculated from the topology
-                    local_ttl_delta.insert(*ip, (rng.next_u32() % 10) as u8);
-                    if !mac_addr_map.contains_key(ip) {
-                        mac_addr_map.insert(
-                            *ip,
-                            // TODO: MacAddr are not fully random
-                            MacAddr::new(
-                                rng.next_u32() as u8,
-                                rng.next_u32() as u8,
-                                rng.next_u32() as u8,
-                                rng.next_u32() as u8,
-                                rng.next_u32() as u8,
-                                rng.next_u32() as u8,
-                            ),
-                        );
-                    }
-                }
-
-                let tl_extra_data = TransferLearningExtraData {
-                    src_ip,
-                    dst_ip,
-                    local_ttl_delta,
-                    services_per_server: network.services_per_server.clone(),
-                    mac_addr_map,
-                };
-
-                Ok(BayesianModel::ForTransferLearning {
-                    base_bn: base_bn.clone(),
-                    bn,
-                    bin_count: *bin_count,
-                    transfer_learning: tl_extra_data,
-                })
-            }
-            BayesianModel::DatasetSpecific { .. } => Err(
-                "A model suited for transfer learning is mandatory to use a custom network"
-                    .to_string(),
-            ),
-        }
-    }
-
-    pub fn from_source(m: &models::ModelsSource, alpha: u64) -> Result<Self, String> {
-        let bn_string: String = m
-            .get_bn()
-            .map_err(|e| format!("Cannot find the Bayesian networks: {e}"))?;
-
-        log::trace!("Loading Bayesian network");
-        let bif_common = bifxml::from_str(&bn_string)?;
-
-        log::trace!("Converting from BIF");
-        let (mut bn, bin_count) = bn_from_bif(bif_common, alpha)?;
-
-        log::info!("Bayesian network has been loaded");
-        bn.remove_impossible_values()?;
-
-        // log::info!("{bn_common}");
-        Ok(BayesianModel::DatasetSpecific { bn, bin_count })
-    }
-
-    fn get_bin_count(&self) -> usize {
-        match self {
-            BayesianModel::DatasetSpecific { bin_count, .. }
-            | BayesianModel::ForTransferLearning { bin_count, .. }
-            | BayesianModel::WaitingForNetwork { bin_count, .. } => *bin_count,
-        }
-    }
-
-    fn get_bn(&self) -> Result<&BayesianNetwork, String> {
-        match self {
-            BayesianModel::DatasetSpecific { bn, .. }
-            | BayesianModel::ForTransferLearning { bn, .. } => Ok(bn),
-            BayesianModel::WaitingForNetwork { .. } => {
-                Err("A network must be specified before this model can be used".to_string())
-            }
-        }
-    }
-
-    fn get_tl(&self) -> Result<Option<&TransferLearningExtraData>, String> {
-        match self {
-            BayesianModel::DatasetSpecific { .. } => Ok(None),
-            BayesianModel::ForTransferLearning {
-                transfer_learning, ..
-            } => Ok(Some(transfer_learning)),
-            BayesianModel::WaitingForNetwork { .. } => {
-                Err("A network must be specified before this model can be used".to_string())
-            }
-        }
-    }
-}
-
-fn bn_from_bif(network: bifxml::Network, alpha: u64) -> Result<(BayesianNetwork, usize), String> {
+pub fn bn_from_bif(
+    network: bifxml::Network,
+    alpha: u64,
+) -> Result<(BayesianNetwork, usize), String> {
     assert!(alpha >= 1); // by default, a pseudo-count is already included
 
     // Used only for computing the topological order
@@ -1176,205 +802,4 @@ fn bn_from_bif(network: bifxml::Network, alpha: u64) -> Result<(BayesianNetwork,
     }
 
     Ok((processed_bn, bin_count.expect("Time feature not found!")))
-}
-
-impl BNGenerator {
-    pub fn new(model: Arc<RwLock<BayesianModel>>, online: bool) -> Self {
-        BNGenerator { model, online }
-    }
-}
-
-impl Stage2 for BNGenerator {
-    /// Generates flows
-    fn generate_flows(
-        &self,
-        ts: SeededData<TimePoint>,
-    ) -> Result<impl Iterator<Item = SeededData<Flow>>, String> {
-        let mut rng = Pcg32::seed_from_u64(ts.seed);
-        let mut domain_vector: IntermediateVector = IntermediateVector::default();
-
-        let model = self.model.read().unwrap();
-        let bin_count = model.get_bin_count();
-        let mut restart = true;
-        let bn = model.get_bn()?;
-        while restart {
-            // TODO: idéalement, plus besoin de restart…
-            restart = false;
-            let time = min(
-                bin_count - 1,
-                ((f64::from(ts.data.date_time.num_seconds_from_midnight()) / (3600. * 24.)).fract()
-                    * (bin_count as f64)) as usize,
-            );
-            let mut discrete_vector: Vec<usize> = vec![];
-            discrete_vector.push(time);
-            domain_vector = if model.get_tl()?.is_some() {
-                bn.sample_transfer_learning(&mut rng, discrete_vector)?
-            } else {
-                bn.sample_in_domain(&mut rng, discrete_vector)?
-            };
-
-            if domain_vector.src_ip.is_some() && domain_vector.src_ip == domain_vector.dst_ip {
-                log::trace!("Restart (identical IPs)");
-                restart = true;
-                continue;
-            }
-
-            domain_vector.timestamp = Some(ts.data.unix_time);
-            let uniform = domain_vector.src_os.unwrap().get_ephemeral_port_distr();
-            // Use the default source port for that protocol if that exists
-            domain_vector.src_port = Some(
-                match domain_vector.l7_proto.unwrap().get_default_src_port() {
-                    Port::Fixed(p) => p,
-                    Port::Random => uniform.sample(&mut rng),
-                },
-            );
-
-            let port = domain_vector
-                .l7_proto
-                .unwrap()
-                .get_default_dst_port()
-                .unwrap();
-            // TODO: discutable
-            let uniform = domain_vector.dst_os.unwrap().get_ephemeral_port_distr();
-            domain_vector.dst_port = Some(match port {
-                Port::Fixed(p) => p,
-                Port::Random => uniform.sample(&mut rng),
-            });
-
-            if let Some(tl) = model.get_tl()? {
-                // Sample the destination IP
-                let dst_ips = tl.dst_ip.get(&(
-                    domain_vector.l7_proto.unwrap(),
-                    domain_vector.dst_os.unwrap(),
-                    domain_vector.dst_ip_role.unwrap(),
-                ));
-                if let Some((ips, weights)) = dst_ips {
-                    // This combinaison of L7 proto, OS and Role is known
-                    let ip = *ips.get(weights.sample(&mut rng)).unwrap();
-                    domain_vector.dst_ip = Some(match ip {
-                        AnonymizedIpv4Addr::Known(ip) => ip,
-                        AnonymizedIpv4Addr::Public => utils::sample_random_global_ip(&mut rng),
-                    });
-                } else {
-                    // This combinaison is not known: we cannot sample it
-                    log::error!(
-                        "No Destination IP for {}, {}, {:?}",
-                        domain_vector.l7_proto.unwrap(),
-                        domain_vector.dst_os.unwrap(),
-                        domain_vector.dst_ip_role.unwrap()
-                    );
-                    restart = true;
-                    continue;
-                };
-
-                // Sample the source IP
-                let src_ips = tl.src_ip.get(&(
-                    domain_vector.l7_proto.unwrap(),
-                    domain_vector.src_os.unwrap(),
-                    domain_vector.src_ip_role.unwrap(),
-                ));
-                if let Some((ips, weights)) = src_ips {
-                    // This combinaison of L7 proto, OS and Role is known
-                    let ip = *ips.get(weights.sample(&mut rng)).unwrap();
-                    domain_vector.src_ip = Some(match ip {
-                        AnonymizedIpv4Addr::Known(ip) => ip,
-                        AnonymizedIpv4Addr::Public => utils::sample_random_global_ip(&mut rng),
-                    });
-                } else {
-                    // This combinaison is not known: we cannot sample it
-                    log::error!(
-                        "No Source IP for {}, {}, {:?}",
-                        domain_vector.l7_proto.unwrap(),
-                        domain_vector.src_os.unwrap(),
-                        domain_vector.src_ip_role.unwrap()
-                    );
-                    restart = true;
-                    continue;
-                };
-
-                domain_vector.src_mac = Some(
-                    *tl.mac_addr_map
-                        .get(&domain_vector.src_ip.unwrap())
-                        .unwrap_or(&MacAddr::zero()),
-                ); // TODO
-                domain_vector.dst_mac = Some(
-                    *tl.mac_addr_map
-                        .get(&domain_vector.dst_ip.unwrap())
-                        .unwrap_or(&MacAddr::zero()),
-                ); // TODO
-
-                let port = match tl.services_per_server.get(&(
-                    domain_vector.dst_ip.unwrap(),
-                    domain_vector.l7_proto.unwrap(),
-                )) {
-                    // local IPs
-                    Some(v) => v.first().unwrap().get_port(),
-                    // public IPs
-                    None => domain_vector
-                        .l7_proto
-                        .unwrap()
-                        .get_default_dst_port()
-                        .unwrap(),
-                };
-                // TODO: Discutable...
-                let uniform = domain_vector.dst_os.unwrap().get_ephemeral_port_distr();
-                domain_vector.dst_port = Some(match port {
-                    Port::Fixed(p) => p,
-                    Port::Random => uniform.sample(&mut rng),
-                });
-
-                // Complete TTL
-                domain_vector.src_ttl = Some(
-                    // TODO: we can do better
-                    domain_vector.src_os.unwrap().get_initial_ttl()
-                        - *tl
-                            .local_ttl_delta
-                            .get(&domain_vector.src_ip.unwrap())
-                            .unwrap_or(&Uniform::new(0, 10).unwrap().sample(&mut rng)),
-                );
-                domain_vector.dst_ttl = Some(
-                    domain_vector.dst_os.unwrap().get_initial_ttl()
-                        - *tl
-                            .local_ttl_delta
-                            .get(&domain_vector.dst_ip.unwrap())
-                            .unwrap_or(&Uniform::new(0, 10).unwrap().sample(&mut rng)),
-                );
-            }
-        }
-        Ok(iter::once(SeededData {
-            seed: rng.next_u64(),
-            data: domain_vector.into(),
-        }))
-    }
-}
-
-/// A Zipf distribution for client and server activity
-fn get_zipf_weights(len: usize, rng: &mut impl Rng) -> WeightedIndex<f64> {
-    assert!(len > 0);
-    let mut weights: Vec<f64> = iter::repeat_n(1, len)
-        .enumerate()
-        .map(|(i, _)| 1. / ((i + 1) as f64))
-        .collect();
-    weights.shuffle(rng);
-    WeightedIndex::new(&weights).unwrap()
-}
-
-/// A Zipf distribution, except for one value that has a fixed probability.
-/// This extra value will alway be at the end of the list.
-fn get_zipf_weights_with_extra_value(
-    len: usize,
-    rng: &mut impl Rng,
-    probability: f64,
-) -> WeightedIndex<f64> {
-    assert!(len > 0);
-    assert!(probability >= 0.0);
-    assert!(probability < 1.0);
-    let mut weights: Vec<f64> = iter::repeat_n(1, len)
-        .enumerate()
-        .map(|(i, _)| 1. / ((i + 1) as f64))
-        .collect();
-    weights.shuffle(rng);
-    let extra_weight = weights.iter().sum::<f64>() * probability / (1.0 - probability);
-    weights.push(extra_weight);
-    WeightedIndex::new(&weights).unwrap()
 }

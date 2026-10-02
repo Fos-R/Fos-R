@@ -5,8 +5,10 @@ use std::net::Ipv4Addr;
 use std::sync::Arc;
 
 /// A implementation of Bayesian networks generation
-pub mod bayesian_networks;
+mod bayesian_networks;
 mod bifxml;
+pub mod bn_generator;
+mod bn_structs;
 
 // /// A implementation of FlowChronicle’s generation
 // pub mod flowchronicle;

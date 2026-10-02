@@ -403,7 +403,7 @@ fn generate_pcap(
         Some(duration),
         tz_offset,
     );
-    let s2 = stage2::bayesian_networks::BNGenerator::new(model.bn, false);
+    let s2 = stage2::bn_generator::BNGenerator::new(model.bn, false);
     let s3 = stage3::tadam::TadamGenerator::new(model.automata);
     let s4 = stage4::Stage4::new(taint); //, model.network);
     let jobs = jobs.unwrap_or(max(1, num_cpus::get() / 2));
@@ -521,7 +521,7 @@ fn net_injection(
         deterministic,
     );
 
-    let s2 = stage2::bayesian_networks::BNGenerator::new(bn, false);
+    let s2 = stage2::bn_generator::BNGenerator::new(bn, false);
     let s2 = stage2::FilterForOnline::new(local_ips.clone(), s2);
     let s3 = stage3::tadam::TadamGenerator::new(automata_library);
     let s4 = stage4::Stage4::new(!stealthy);

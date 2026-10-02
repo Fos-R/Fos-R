@@ -71,7 +71,7 @@ pub fn generate(
     // We duplicate the BN so the user can change the network while the generation is ongoing
     // without perturbating the generation
     let bn = model.bn.write().unwrap().clone();
-    let s1 = stage2::bayesian_networks::BNGenerator::new(Arc::new(RwLock::new(bn)), false);
+    let s1 = stage2::bn_generator::BNGenerator::new(Arc::new(RwLock::new(bn)), false);
     let s2 = TadamGenerator::new(model.automata);
     let s3 = stage4::Stage4::new(taint);
     log::info!("Run single thread");
