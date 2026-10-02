@@ -19,7 +19,7 @@ pub trait Stage2: Clone + std::marker::Send + 'static {
     fn generate_flows(
         &self,
         ts: SeededData<TimePoint>,
-    ) -> Result<impl Iterator<Item = SeededData<Flow>>, String>;
+    ) -> Result<Option<SeededData<Flow>>, String>;
 }
 
 /// Generate flows from timestamps and sends them progressively to a channel
@@ -34,7 +34,7 @@ pub fn run_channel(
         if stats.should_stop() {
             break;
         }
-        for f in generator.generate_flows(ts)? {
+        if let Some(f) = generator.generate_flows(ts)? {
             tx_s2.send(f)?;
         }
     }
@@ -50,7 +50,7 @@ pub fn run_vec(
     log::trace!("Start S2 (vec)");
     let mut vector = Vec::with_capacity(vec_s2.len());
     for ts in vec_s2 {
-        for f in generator.generate_flows(ts)? {
+        if let Some(f) = generator.generate_flows(ts)? {
             vector.push(f);
         }
     }
@@ -75,7 +75,7 @@ impl<T: Stage2> Stage2 for FilterForOnline<T> {
     fn generate_flows(
         &self,
         ts: SeededData<TimePoint>,
-    ) -> Result<impl Iterator<Item = SeededData<Flow>>, String> {
+    ) -> Result<Option<SeededData<Flow>>, String> {
         Ok(self.s2.generate_flows(ts)?.filter(|f| {
             let data = f.data.get_data();
             let kept =

@@ -98,6 +98,13 @@ impl Display for BayesianNetwork {
 }
 
 impl BayesianNetwork {
+
+    pub fn is_time_bin_possible(&self, index: usize) -> bool {
+        // TimeBin is always
+        assert!(matches!(self.nodes[0].feature, Feature::TimeBin(_)));
+        self.nodes[0].removed_values.contains(&index)
+    }
+
     /// Sample a vector from the Bayesian network
     /// We use a Bayesian network learned for this network, so it should
     pub fn sample_in_domain(
@@ -165,7 +172,7 @@ impl BayesianNetwork {
             }
         } // if it’s "Time", do not push any value (it was already done previously)
         // Iterate over the vector using Gibbs sampling
-        self.gibbs(rng, &mut discrete_vector);
+        self.gibbs_sampling(rng, &mut discrete_vector);
         let domain_vector = self.discrete_to_domain(discrete_vector, rng);
         Ok(domain_vector)
     }
@@ -216,7 +223,7 @@ impl BayesianNetwork {
     }
 
     /// Perform a Gibbs sampling from an already initialized vector
-    fn gibbs(&self, rng: &mut impl Rng, discrete_vector: &mut [usize]) {
+    fn gibbs_sampling(&self, rng: &mut impl Rng, discrete_vector: &mut [usize]) {
         // println!("Starting Gibbs");
         let mut current_iter = 0;
         let mut all_good = false;

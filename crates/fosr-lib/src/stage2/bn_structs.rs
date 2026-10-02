@@ -94,7 +94,6 @@ pub enum Feature {
 impl Feature {
     pub fn get_value_string(&self, index: usize) -> String {
         match &self {
-            // Feature::SrcIpRole(v) | Feature::DstIpRole(v) => format!("{:?}", v[index]),
             Feature::SrcIp(v) | Feature::DstIp(v) => format!("{:?}", v[index]),
             Feature::SrcOs(v) | Feature::DstOs(v) => format!("{:?}", v[index]),
             Feature::DstPt(v) => format!("{:?}", v[index]),
@@ -112,7 +111,6 @@ impl Feature {
 
     pub fn get_cardinality(&self) -> usize {
         match &self {
-            // Feature::SrcIpRole(v) | Feature::DstIpRole(v) => v.len(),
             Feature::SrcIp(v) | Feature::DstIp(v) => v.len(),
             Feature::SrcOs(v) | Feature::DstOs(v) => v.len(),
             Feature::DstPt(v) => v.len(),
@@ -131,10 +129,6 @@ impl Feature {
 /// Extra information for the transfer learning
 #[derive(Debug, Clone)]
 pub struct TransferLearningExtraData {
-    // /// Source IP node
-    // pub src_ip: HashMap<(L7Proto, OS, SrcIpRole), AnonymizedIpv4Distr>,
-    // /// Destination IP node
-    // pub dst_ip: HashMap<(L7Proto, OS, DstIpRole), AnonymizedIpv4Distr>,
     /// Difference between theoretical and actual TTL observations
     pub local_ttl_delta: HashMap<Ipv4Addr, u8>,
     pub services_per_server: HashMap<(Ipv4Addr, L7Proto), Vec<L7ProtoWithPort>>,

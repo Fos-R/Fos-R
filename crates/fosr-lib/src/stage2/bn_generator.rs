@@ -40,7 +40,7 @@ impl Stage2 for BNGenerator {
     fn generate_flows(
         &self,
         ts: SeededData<TimePoint>,
-    ) -> Result<impl Iterator<Item = SeededData<Flow>>, String> {
+    ) -> Result<Option<SeededData<Flow>>, String> {
         let mut rng = Pcg32::seed_from_u64(ts.seed);
         let mut domain_vector: IntermediateVector = IntermediateVector::default();
 
@@ -56,6 +56,12 @@ impl Stage2 for BNGenerator {
                 ((f64::from(ts.data.date_time.num_seconds_from_midnight()) / (3600. * 24.)).fract()
                     * (bin_count as f64)) as usize,
             );
+
+            // The model cannot generate any flow for this bin
+            if !bn.is_time_bin_possible(time) {
+                return Ok(None);
+            }
+
             let discrete_vector: Vec<usize> = vec![time];
             domain_vector = if model.get_tl()?.is_some() {
                 bn.sample_transfer_learning(&mut rng, discrete_vector)?
@@ -92,56 +98,6 @@ impl Stage2 for BNGenerator {
             });
 
             if let Some(tl) = model.get_tl()? {
-                // // Sample the destination IP
-                // let dst_ips = tl.dst_ip.get(&(
-                //     domain_vector.l7_proto.unwrap(),
-                //     domain_vector.dst_os.unwrap(),
-                //     domain_vector.dst_ip_role.unwrap(),
-                // ));
-                // if let Some((ips, weights)) = dst_ips {
-                //     // This combinaison of L7 proto, OS and Role is known
-                //     let ip = *ips.get(weights.sample(&mut rng)).unwrap();
-                //     domain_vector.dst_ip = Some(match ip {
-                //         AnonymizedIpv4Addr::Known(ip) => ip,
-                //         AnonymizedIpv4Addr::Public => utils::sample_random_global_ip(&mut rng),
-                //     });
-                // } else {
-                //     // This combinaison is not known: we cannot sample it
-                //     log::error!(
-                //         "No Destination IP for {}, {}, {:?}",
-                //         domain_vector.l7_proto.unwrap(),
-                //         domain_vector.dst_os.unwrap(),
-                //         domain_vector.dst_ip_role.unwrap()
-                //     );
-                //     restart = true;
-                //     continue;
-                // };
-
-                // // Sample the source IP
-                // let src_ips = tl.src_ip.get(&(
-                //     domain_vector.l7_proto.unwrap(),
-                //     domain_vector.src_os.unwrap(),
-                //     domain_vector.src_ip_role.unwrap(),
-                // ));
-                // if let Some((ips, weights)) = src_ips {
-                //     // This combinaison of L7 proto, OS and Role is known
-                //     let ip = *ips.get(weights.sample(&mut rng)).unwrap();
-                //     domain_vector.src_ip = Some(match ip {
-                //         AnonymizedIpv4Addr::Known(ip) => ip,
-                //         AnonymizedIpv4Addr::Public => utils::sample_random_global_ip(&mut rng),
-                //     });
-                // } else {
-                //     // This combinaison is not known: we cannot sample it
-                //     log::error!(
-                //         "No Source IP for {}, {}, {:?}",
-                //         domain_vector.l7_proto.unwrap(),
-                //         domain_vector.src_os.unwrap(),
-                //         domain_vector.src_ip_role.unwrap()
-                //     );
-                //     restart = true;
-                //     continue;
-                // };
-
                 domain_vector.src_mac = Some(
                     *tl.mac_addr_map
                         .get(&domain_vector.src_ip.unwrap())
@@ -191,7 +147,7 @@ impl Stage2 for BNGenerator {
                 );
             }
         }
-        Ok(iter::once(SeededData {
+        Ok(Some(SeededData {
             seed: rng.next_u64(),
             data: domain_vector.into(),
         }))
@@ -250,8 +206,6 @@ impl BayesianModel {
                 let mut bn = base_bn.clone();
 
                 bn.update_probabilities(network);
-
-                bn.remove_impossible_values()?;
 
                 let mut rng = Pcg32::seed_from_u64(12345);
                 let mut src_ip: HashMap<(L7Proto, OS, SrcIpRole), AnonymizedIpv4Distr> =
@@ -380,9 +334,9 @@ impl BayesianModel {
                 }
 
                 bn.add_tl_nodes(src_ip, dst_ip, &network.all_ips);
+                bn.remove_impossible_values()?;
+
                 let tl_extra_data = TransferLearningExtraData {
-                    // src_ip,
-                    // dst_ip,
                     local_ttl_delta,
                     services_per_server: network.services_per_server.clone(),
                     mac_addr_map,
