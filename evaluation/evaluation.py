@@ -36,13 +36,11 @@ for i in range(16, 32):
     local_net.append("172." + str(i) + ".")
 
 
-def merge_internet(value):
-    # TODO: use "local_orig" et "local_resp" plutôt
-    value = str(value)
-    for ip in local_net:
-        if value.startswith(ip):
-            return value
-    return "Internet"
+def remove_public_ip(value, local_ips):
+    if value in local_ips:
+        return value
+    else:
+        return "Internet"
 
 
 def get_time(value):
@@ -725,15 +723,31 @@ if __name__ == "__main__":
 
     print("Preprocessing")
     # preprocessing
+
+    ips = list(
+        set(flow[flow["local_orig"] == "T"]["id.orig_h"].tolist()).union(
+            set(flow[flow["local_resp"] == "T"]["id.resp_h"].tolist())
+        )
+    )
+    ips.sort()
+
     for feature in ["id.orig_h", "id.resp_h"]:
-        flow_eval[feature] = flow_eval[feature].apply(merge_internet)
-        flow_ref[feature] = flow_ref[feature].apply(merge_internet)
-        flow_synthetic[feature] = flow_synthetic[feature].apply(merge_internet)
+        flow_eval[feature] = flow_eval[feature].apply(remove_public_ip, local_ips=ips)
+        flow_ref[feature] = flow_ref[feature].apply(remove_public_ip, local_ips=ips)
+        flow_synthetic[feature] = flow_synthetic[feature].apply(
+            remove_public_ip, local_ips=ips
+        )
 
     for feature in ["ip.src", "ip.dst"]:
-        flow_eval_ip[feature] = flow_eval_ip[feature].apply(merge_internet)
-        flow_ref_ip[feature] = flow_ref_ip[feature].apply(merge_internet)
-        flow_synthetic_ip[feature] = flow_synthetic_ip[feature].apply(merge_internet)
+        flow_eval_ip[feature] = flow_eval_ip[feature].apply(
+            remove_public_ip, local_ips=ips
+        )
+        flow_ref_ip[feature] = flow_ref_ip[feature].apply(
+            remove_public_ip, local_ips=ips
+        )
+        flow_synthetic_ip[feature] = flow_synthetic_ip[feature].apply(
+            remove_public_ip, local_ips=ips
+        )
 
     flow_eval["ts"] = flow_eval["ts"].apply(get_time)
     flow_ref["ts"] = flow_ref["ts"].apply(get_time)
