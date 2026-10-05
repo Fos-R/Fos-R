@@ -11,6 +11,7 @@
 - New default models (CICIDS17, CUPID and DEDALE)
 - New network description file format
 - New topology generator
+- New in-domain and out-of-domain generation
 
 #### fosr-cli
 

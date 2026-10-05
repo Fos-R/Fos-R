@@ -365,6 +365,7 @@ pages:
     # - pandoc dedale.md -o dedale.html --template template.html --include-after-body footer.html --standalone --toc --toc-depth 1
     - rm *.md template.html
     - tree .
+    - du --max-depth=1 -h
   artifacts:
     expire_in: 3 days
     paths:
