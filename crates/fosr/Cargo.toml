@@ -40,7 +40,7 @@ chrono-tz = "0.10.4"
 eframe = "0.33.3"
 egui_extras = { version = "0.33.3", features = ["chrono", "all_loaders", "syntect", "serde"] }
 log = "0.4.34"
-wasm-bindgen = "0.2.127"
+wasm-bindgen = "0.2.129"
 fosr-lib = { version = "1.0.0-dev", path = "../fosr-lib" }
 rfd = "0.17.2"
 humantime = "2.4.0"
