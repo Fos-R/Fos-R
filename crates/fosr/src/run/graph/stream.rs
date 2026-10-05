@@ -221,7 +221,7 @@ fn generate_flows_to_buffer_wasm(
     while state.needs_more_flows() && generated_this_cycle < STREAM_MAX_PER_CYCLE_WASM {
         if let Some(timestamp) = s0.next() {
             if let Ok(flows) = s1.generate_flows(timestamp) {
-                for seeded_flow in flows {
+                if let Some(seeded_flow) = flows {
                     let flow_data = seeded_flow.data.get_data();
                     let scheduled = ScheduledFlow::from_flow_data(&flow_data, initial_timestamp);
                     state.pending_flows.push(scheduled);

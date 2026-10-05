@@ -14,9 +14,6 @@ use crate::shared::widgets::helpers::labeled_toggle;
 use eframe::egui;
 use egui_material_icons::icons::{ICON_CODE, ICON_DELETE, ICON_EDIT, ICON_SAVE_AS, ICON_WARNING};
 
-#[cfg(target_arch = "wasm32")]
-use crate::shared::config::file_ops::poll_file_import;
-
 /// Configuration toolbar UI.
 ///
 /// Displays a file picker button, a template selection dropdown menu,
