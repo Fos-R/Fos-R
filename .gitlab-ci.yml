@@ -40,8 +40,8 @@ build-linux-x86-64:
     expire_in: 3 days
     paths:
       - target/*/release/fosr-cli
-      - target/*/release/fosr
-      - target/debian/*.deb
+      # - target/*/release/fosr
+      # - target/debian/*.deb
       - doc
 
 .build-linux-crosscompile:
