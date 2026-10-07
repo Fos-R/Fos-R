@@ -567,7 +567,7 @@ impl BayesianNetwork {
         ));
     }
 
-    fn get_solution(&self, values: &[(usize, i32)]) -> Option<Vec<usize>> {
+    fn get_solution(&self, values: &[(usize, i32)]) -> Result<Vec<usize>, String> {
         // TODO: also verify which conn_state / automata combination is possible
         let mut m = selen::prelude::Model::default();
 
@@ -625,18 +625,20 @@ impl BayesianNetwork {
                 m.table(&vars, tuples);
             }
         }
-        m.solve().ok().map(|s| {
-            s.get_values(&variables)
+        match m.solve() {
+            Ok(s) => Ok(s
+                .get_values(&variables)
                 .into_iter()
                 .map(|v| v.as_int().unwrap() as usize)
-                .collect::<Vec<usize>>()
-        })
+                .collect::<Vec<usize>>()),
+            Err(e) => Err(format!("{e:?}")),
+        }
     }
 
     pub fn remove_impossible_values(&mut self) -> Result<(), String> {
         log::debug!("Computing possible values of the Bayesian network");
-        if self.get_solution(&[]).is_none() {
-            return Err("No solution to the Bayesian network".to_string());
+        if self.get_solution(&[]).is_err() {
+            return Err(format!("No solution to the Bayesian network"));
         }
 
         let mut possible_values: Vec<HashSet<usize>> =
@@ -646,11 +648,19 @@ impl BayesianNetwork {
                 // if we already obtained this value earlier, no need to try it
                 if !possible_values[i].contains(&v) {
                     let solution = self.get_solution(&[(i, v as i32)]);
-                    if let Some(solution) = solution {
-                        let var_number = solution.len();
-                        for i2 in 0..var_number {
-                            // this value is possible for this variable
-                            possible_values[i2].insert(solution[i2]);
+                    match solution {
+                        Ok(solution) => {
+                            let var_number = solution.len();
+                            for i2 in 0..var_number {
+                                // this value is possible for this variable
+                                possible_values[i2].insert(solution[i2]);
+                            }
+                        }
+                        Err(_) => {
+                            log::debug!(
+                                "Value {} is not possible",
+                                n.feature.get_value_string(v)
+                            );
                         }
                     }
                 }

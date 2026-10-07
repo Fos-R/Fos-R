@@ -614,13 +614,13 @@ impl Interface {
                 public = true;
                 utils::sample_random_global_ip(&mut rng)
             }
-            _ => i.ip_addr.parse().expect("Cannot parse IP address"),
+            ip => i.ip_addr.parse().expect(&format!("Cannot parse IP address: {ip}")),
         };
         Ok(Interface {
             // uses,
             mac_addr: i
                 .mac_addr
-                .map(|s| s.parse().expect("Cannot parse MAC address")),
+                .map(|s| s.parse().expect(&format!("Cannot parse MAC address: {s}"))),
             ip_addr,
             services,
             public, // open_ports,
