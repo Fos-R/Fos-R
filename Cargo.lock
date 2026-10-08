@@ -4518,8 +4518,7 @@ dependencies = [
 [[package]]
 name = "selen"
 version = "0.15.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "069ccc9fbbb7f2de521452b5c96d7d898b0d2e5f49698adbcfc13914f218d3af"
+source = "git+https://github.com/PFGimenez/selen.git#5ea49e5196e54f2f039b81745a00194882961b9d"
 
 [[package]]
 name = "semver"

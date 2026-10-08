@@ -240,11 +240,9 @@ impl BayesianNetwork {
 
     /// Perform a Gibbs sampling from an already initialized vector
     fn gibbs_sampling(&self, rng: &mut impl Rng, discrete_vector: &mut [usize]) {
-        // println!("Starting Gibbs");
         let mut current_iter = 0;
         let mut all_good = false;
         while (current_iter < GIBBS_BURN_IN || !all_good) && current_iter < GIBBS_GIVE_UP {
-            // println!("{current_iter}");
             current_iter += 1;
             all_good = true;
             for (v_index, v) in self.nodes.iter().enumerate() {
@@ -275,7 +273,9 @@ impl BayesianNetwork {
                 } // Do not modify the Time
             }
         }
-        // println!("End of Gibbs");
+        if current_iter == GIBBS_GIVE_UP {
+            log_once::warn_once!("Gibbs sampling: give up");
+        }
     }
 
     pub fn update_probabilities(&mut self, network: &network::Network) {
