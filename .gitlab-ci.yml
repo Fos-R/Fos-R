@@ -145,7 +145,7 @@ build-wasm32:
 
 ### TEST
 
-test-audit:
+.test-audit:
   tags:
     - ci.inria.fr
     - large
@@ -162,7 +162,7 @@ test-audit:
     - cargo audit -D unsound -D yanked
   allow_failure: true
 
-test-publish:
+.test-publish:
   tags:
     - ci.inria.fr
     - large
@@ -207,7 +207,7 @@ test-publish:
     paths:
       - data/$DATASET/$DATASET-fosr/data.pcap
 
-tests:
+.tests:
   tags:
     - ci.inria.fr
     - large

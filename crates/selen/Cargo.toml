@@ -1,0 +1,11 @@
+[package]
+name = "selen"
+version = "0.15.5"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+real-selen = { package = "selen", version = "0.15.5" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-time = "1.1.0"
