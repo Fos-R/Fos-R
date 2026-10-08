@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/fosr-ebpf", "crates/fosr-cli", "crates/fosr-lib", "crates/fosr"]
+members = ["crates/fosr-ebpf", "crates/fosr-cli", "crates/fosr-lib", "crates/fosr", "crates/selen-webtime"]
 exclude = ["/learning", "/public", "/data", "/evaluation"]
 default-members = ["crates/fosr"]
 

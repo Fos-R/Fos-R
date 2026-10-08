@@ -1,0 +1,13 @@
+[package]
+name = "selen-webtime"
+version = "0.15.5"
+authors = ["Pierre-François Gimenez <pierre-francois.gimenez@inria.fr>"]
+edition = "2024"
+description = "A wrapper of Selen compatible with WASM."
+license = "MIT"
+
+[dependencies]
+selen = "0.15.5"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-time = "1.1.0"

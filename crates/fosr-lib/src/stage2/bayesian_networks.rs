@@ -562,9 +562,9 @@ impl BayesianNetwork {
 
     fn get_solution(&self, values: &[(usize, i32)]) -> Result<Vec<usize>, String> {
         // TODO: also verify which conn_state / automata combination is possible
-        let mut m = selen::prelude::Model::default();
+        let mut m = selen_webtime::prelude::Model::default();
 
-        let variables: Vec<selen::prelude::VarId> = self
+        let variables: Vec<selen_webtime::prelude::VarId> = self
             .nodes
             .iter()
             .map(|n| m.int(0, (n.feature.get_cardinality() as i32) - 1))
@@ -594,13 +594,13 @@ impl BayesianNetwork {
             if let Some(ref cpt) = n.cpt {
                 // Time is skipped
                 // Start with the last parents, i.e. the ones with the least significants bits in the CPT numbering
-                let mut vars: Vec<selen::prelude::VarId> =
+                let mut vars: Vec<selen_webtime::prelude::VarId> =
                     n.parents.iter().map(|p| variables[*p]).rev().collect();
                 vars.push(variables[i]);
-                let mut tuples: Vec<Vec<selen::prelude::Val>> = vec![];
+                let mut tuples: Vec<Vec<selen_webtime::prelude::Val>> = vec![];
                 for (mut parent_index, line) in cpt.iter().enumerate() {
                     if let Some(line) = line {
-                        let mut parent_tuple: Vec<selen::prelude::Val> = vec![];
+                        let mut parent_tuple: Vec<selen_webtime::prelude::Val> = vec![];
                         for card in n.parents_cardinality.iter().rev() {
                             parent_tuple.push(((parent_index % card) as i32).into());
                             parent_index /= card;
