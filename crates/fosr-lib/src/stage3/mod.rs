@@ -94,7 +94,7 @@ pub fn run_channel(
 
 /// Generate packet metadata from flows and into a vector
 pub fn run_vec(generator: impl Stage3, vec_s3: Vec<SeededData<Flow>>) -> S3Vector {
-    log::trace!("Start S3 (vec)");
+    log::trace!("Start S3 (vec) with {} elements", vec_s3.len());
     let mut vectors = S3Vector {
         tcp: Vec::with_capacity(
             vec_s3

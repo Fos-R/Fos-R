@@ -118,7 +118,7 @@ impl BayesianNetwork {
     pub fn is_time_bin_possible(&self, index: usize) -> bool {
         // TimeBin is always the first variable in topological order
         assert!(matches!(self.nodes[0].feature, Feature::TimeBin(_)));
-        self.nodes[0].removed_values.contains(&index)
+        !self.nodes[0].removed_values.contains(&index)
     }
 
     /// Sample a vector from the Bayesian network
@@ -171,7 +171,7 @@ impl BayesianNetwork {
         &self,
         rng: &mut impl Rng,
         mut discrete_vector: Vec<usize>,
-    ) -> Result<IntermediateVector, String> {
+    ) -> IntermediateVector {
         // println!("{self:?}");
         for v in &self.nodes {
             if !matches!(v.feature, Feature::TimeBin(_)) {
@@ -190,7 +190,7 @@ impl BayesianNetwork {
         // Iterate over the vector using Gibbs sampling
         self.gibbs_sampling(rng, &mut discrete_vector);
         let domain_vector = self.discrete_to_domain(discrete_vector, rng);
-        Ok(domain_vector)
+        domain_vector
     }
 
     fn discrete_to_domain(

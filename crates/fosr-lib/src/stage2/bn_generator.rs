@@ -64,7 +64,7 @@ impl Stage2 for BNGenerator {
 
             let discrete_vector: Vec<usize> = vec![time];
             domain_vector = if model.get_tl()?.is_some() {
-                bn.sample_transfer_learning(&mut rng, discrete_vector)?
+                bn.sample_transfer_learning(&mut rng, discrete_vector)
             } else {
                 bn.sample_in_domain(&mut rng, discrete_vector)?
             };

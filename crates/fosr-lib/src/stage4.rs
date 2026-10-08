@@ -525,7 +525,7 @@ pub fn run_vec<T: PacketInfo>(
     vec_s4: Vec<SeededData<PacketsIR<T>>>,
     stats: Arc<Stats>,
 ) -> Vec<Packet> {
-    log::trace!("Start S4 (vec)");
+    log::trace!("Start S4 (vec) with {} elements", vec_s4.len());
     let mut payload_array: Box<[u8]> = vec![0; 65536].into_boxed_slice(); // to avoid allocating Vec for payloads
     let mut packet: Box<[u8]> = vec![0; 65536].into_boxed_slice();
     let mut all_packets: Vec<Packet> =

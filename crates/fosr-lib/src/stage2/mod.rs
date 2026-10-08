@@ -45,7 +45,7 @@ pub fn run_vec(
     generator: impl Stage2,
     vec_s2: Vec<SeededData<TimePoint>>,
 ) -> Result<Vec<SeededData<Flow>>, String> {
-    log::trace!("Start S2 (vec)");
+    log::trace!("Start S2 (vec) with {} elements", vec_s2.len());
     let mut vector = Vec::with_capacity(vec_s2.len());
     for ts in vec_s2 {
         if let Some(f) = generator.generate_flows(ts)? {
