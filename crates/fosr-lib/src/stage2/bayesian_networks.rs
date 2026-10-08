@@ -78,12 +78,7 @@ impl BayesianNetworkNode {
     fn remove_value(&mut self, index: usize) {
         self.removed_values.insert(index);
         assert!(self.removed_values.len() != self.feature.get_cardinality());
-        // if self.removed_values.len() == self.feature.get_cardinality() {
-        //     Err(format!(
-        //         "No value of {:?} can lead to a flow compatible with the network",
-        //         self.feature
-        //     ))
-        // } else
+        // We cannot remove values of Time since we do not sample it and it has no CPT
         if let Some(cpt) = self.cpt.as_mut() {
             for cpt in cpt {
                 if let Some(weights) = cpt {
@@ -93,8 +88,6 @@ impl BayesianNetworkNode {
                     }
                 }
             }
-        } else {
-            // We cannot remove values of Time since we do not sample it and it has no CPT
         }
     }
 }

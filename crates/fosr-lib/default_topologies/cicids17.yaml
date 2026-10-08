@@ -1,0 +1,75 @@
+metadata:
+  title: CICIDS17 Dataset Network
+  desc: The topology of the testbed used for the CICIDS17 dataset.
+  author: Pierre-François Gimenez
+  version: 1.0.0
+  format: 1
+
+networks:
+  - subnet: 192.168.10.0
+    mask: 24
+    name: "Victim Network"
+    hosts:
+      - interfaces:
+        - ip_addr: 192.168.10.3
+          services:
+            - dns
+            - kerberos
+            - dce_rpc
+            - ldap
+            - ftp
+            - ftp-data
+            - ssh
+            - smtp
+            - imap
+        os: windows
+      - interfaces:
+        - ip_addr: 192.168.10.50
+        - ip_addr: 205.174.165.68
+          services:
+            - https
+            - http
+        os: linux
+      - interfaces:
+        - ip_addr: 192.168.10.51
+        - ip_addr: 205.174.165.66
+          services:
+            - https
+            - http
+        os: linux
+      - interfaces: # Ubuntu 14.4, 32B
+        - ip_addr: 192.168.10.19
+      - interfaces: # Ubuntu 14.4, 64B
+        - ip_addr: 192.168.10.17
+      - interfaces: # Ubuntu 16.4, 32B
+        - ip_addr: 192.168.10.16
+      - interfaces: # Ubuntu 16.4, 64B
+        - ip_addr: 192.168.10.12
+      - interfaces: # Win 7 Pro 64B
+        - ip_addr: 192.168.10.9
+        os: windows
+      - interfaces: # Win 8.1 64B
+        - ip_addr: 192.168.10.5
+        os: windows
+      - interfaces: # Win Vista 64B
+        - ip_addr: 192.168.10.8
+        os: windows
+      - interfaces: # Win 10 Pro 32B
+        - ip_addr: 192.168.10.14
+        os: windows
+      - interfaces: # Win 10 64B
+        - ip_addr: 192.168.10.15
+        os: windows
+      - interfaces: # Mac
+        - ip_addr: 192.168.10.25
+      - interfaces: # router
+        - ip_addr: 192.168.10.1
+        - ip_addr: 172.16.0.2
+  - subnet: 172.16.0.0
+    mask: 24
+    name: "Internal1"
+    hosts:
+      - interfaces: # router
+        - ip_addr: 172.16.0.1
+        - ip_addr: 205.174.165.80
+
