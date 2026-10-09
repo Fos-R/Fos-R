@@ -1952,7 +1952,7 @@ dependencies = [
  "rand_core 0.10.1",
  "rand_distr",
  "rand_pcg",
- "selen 0.15.5",
+ "selen",
  "serde",
  "serde-xml-rs",
  "serde_json",
@@ -4518,16 +4518,10 @@ dependencies = [
 [[package]]
 name = "selen"
 version = "0.15.5"
+source = "git+https://github.com/PFGimenez/selen.git#6dc13fb0a8d660071ade76fb4034b41c36f8b382"
 dependencies = [
- "selen 0.15.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "web-time",
 ]
-
-[[package]]
-name = "selen"
-version = "0.15.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "069ccc9fbbb7f2de521452b5c96d7d898b0d2e5f49698adbcfc13914f218d3af"
 
 [[package]]
 name = "semver"
