@@ -18,11 +18,13 @@ mod cmd;
 
 use std::cmp::max;
 use std::collections::HashMap;
+use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::BufWriter;
 use std::io::Write;
 use std::net::Ipv4Addr;
+use std::path::Path;
 use std::process;
 use std::sync::Arc;
 use std::sync::mpsc::channel;
@@ -307,6 +309,13 @@ fn main() -> Result<(), String> {
             )
             .expect("Failed to write to the file");
             log::info!("Topology has been successfully generated into {outfile}");
+        }
+        cmd::Command::ValidateNetwork { input } => {
+            network::import_network(
+                &fs::read_to_string(Path::new(&input))
+                    .map_err(|e| format!("Cannot open the network file: {e}"))?,
+            );
+            log::info!("Network is valid.");
         }
     }
     Ok(())

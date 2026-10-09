@@ -459,4 +459,9 @@ pub enum Command {
         #[arg(required = true, help = "Pcap file to untaint", index = 1)]
         input: String,
     },
+    /// Verify whether a network file is correct or not
+    ValidateNetwork {
+        #[arg(required = true, help = "Network description file to validate", index = 1)]
+        input: String,
+    },
 }
