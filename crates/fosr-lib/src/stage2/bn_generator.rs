@@ -368,7 +368,6 @@ impl BayesianModel {
         let (mut bn, bin_count) = bn_from_bif(bif_common, alpha)?;
 
         log::info!("Bayesian network has been loaded");
-        bn.remove_impossible_values()?;
 
         // log::info!("{bn_common}");
         Ok(BayesianModel::DatasetSpecific { bn, bin_count })

@@ -58,9 +58,12 @@ impl BayesianNetworkNode {
 
     /// Return the probability of this node given its parents for the current values
     /// Used for computing the full conditional distribution
+    /// It should only be used during transfer learning
     fn get_probability(&self, current: &[usize]) -> f64 {
         // We assume that SrcIp is always just before DstIp
         // Check if Src IP == Dst IP
+        // This test assumes that their domain is equal, which is only the case in transfer
+        // learning
         if (matches!(self.feature, Feature::DstIp(_))
             && current[self.index] == current[self.index - 1])
             || (matches!(self.feature, Feature::SrcIp(_))
@@ -588,7 +591,22 @@ impl BayesianNetwork {
             .unwrap();
 
         // Source and destination IP must be different
-        m.ne_op(variables[index_src_ip], variables[index_dst_ip]);
+        // m.ne_op(variables[index_src_ip], variables[index_dst_ip]);
+
+        let mut non_equal_ips: Vec<Vec<selen::prelude::Val>> = vec![];
+        // We assume the domain of the Source and Destination IPs is the same, with the same
+        // ordering
+        for v1 in 0..self.nodes[index_src_ip].feature.get_cardinality() {
+            for v2 in 0..self.nodes[index_dst_ip].feature.get_cardinality() {
+                if v1 != v2 {
+                    non_equal_ips.push(vec![(v1 as i32).into(), (v2 as i32).into()]);
+                } else {
+                    assert_eq!(self.nodes[index_src_ip].feature.get_value_string(v1), self.nodes[index_dst_ip].feature.get_value_string(v2));
+                }
+            }
+        }
+
+        m.table(&[variables[index_src_ip], variables[index_dst_ip]], non_equal_ips);
 
         for (i, n) in self.nodes.iter().enumerate() {
             if let Some(ref cpt) = n.cpt {
@@ -628,6 +646,8 @@ impl BayesianNetwork {
         }
     }
 
+    /// Remove impossible values from a Bayesian network
+    /// It should only be called on a Bayesian network used for transfer learning
     pub fn remove_impossible_values(&mut self) -> Result<(), String> {
         log::debug!("Computing possible values of the Bayesian network");
         if self.get_solution(&[]).is_err() {
