@@ -447,6 +447,26 @@ pub enum Command {
         )]
         no_order_pcap: bool,
     },
+    #[cfg(all(target_os = "linux", feature = "server"))]
+    /// Spawn a Web server that listens to HTTP request to generate data. Available on Linux only.
+    WebServer {
+        #[arg(short, long, default_value_t = 80, help = "Port to listen from")]
+        port: u16,
+        #[arg(
+            short = 'd',
+            long,
+            help = "Maximum allowed duration of generated data (in hours)"
+        )]
+        maximum_duration: Option<f64>,
+        #[arg(short = 'm', long, help = "Use a default model")]
+        default_models: Option<CreateDefaultModels>,
+        #[arg(
+            short,
+            long,
+            help = "Number of generation jobs. By default, use half the available cores"
+        )]
+        jobs: Option<usize>,
+    },
     /// Remove the Fos-R taint from a pcap file
     Untaint {
         #[arg(short, long, required = true, help = "Pcap file to untaint")]
@@ -461,7 +481,11 @@ pub enum Command {
     },
     /// Verify whether a network file is correct or not
     ValidateNetwork {
-        #[arg(required = true, help = "Network description file to validate", index = 1)]
+        #[arg(
+            required = true,
+            help = "Network description file to validate",
+            index = 1
+        )]
         input: String,
     },
 }

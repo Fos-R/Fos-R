@@ -101,7 +101,7 @@ pub struct TimedEdge<T: EdgeType> {
     iat_distr: Arc<EdgeDistribution>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(unused)]
 pub struct CrossProductTimedAutomaton<T: EdgeType> {
     graph: Vec<CrossProductTimedNode<T>>,

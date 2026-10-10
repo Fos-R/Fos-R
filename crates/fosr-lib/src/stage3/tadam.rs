@@ -17,11 +17,13 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
+#[derive(Clone)]
 struct AutomataSet<T: EdgeType> {
     cons_a: automaton::CrossProductTimedAutomaton<T>,
     uncons_a: automaton::TimedAutomaton<T>,
 }
 
+#[derive(Clone)]
 pub struct AutomataLibrary {
     tcp_automata: HashMap<(L7Proto, TCPConnState), Vec<AutomataSet<TCPEdgeTuple>>>,
     udp_automata: HashMap<L7Proto, Vec<AutomataSet<UDPEdgeTuple>>>,

@@ -365,7 +365,7 @@ impl BayesianModel {
         let bif_common = bifxml::from_str(&bn_string)?;
 
         log::trace!("Converting from BIF");
-        let (mut bn, bin_count) = bn_from_bif(bif_common, alpha)?;
+        let (bn, bin_count) = bn_from_bif(bif_common, alpha)?;
 
         log::info!("Bayesian network has been loaded");
 

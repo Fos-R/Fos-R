@@ -65,6 +65,7 @@ impl From<Models> for ArcModels {
 }
 
 /// The models
+#[derive(Clone)]
 pub struct Models {
     /// The time model of stage 0
     pub time_bins: stage1::TimeModel,
@@ -130,6 +131,16 @@ impl Models {
     ) -> Result<Self, String> {
         Self::from_source_with_network(source, network::import_network(network), alpha)
     }
+
+    pub fn with_string_network(
+        &mut self,
+        network: &str,
+    ) -> Result<(), String> {
+        self.bn.with_network(&network::import_network(network))?;
+        Ok(())
+    }
+
+
 }
 
 impl ModelsSource {

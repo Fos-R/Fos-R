@@ -192,8 +192,7 @@ impl BayesianNetwork {
         } // if it’s "Time", do not push any value (it was already done previously)
         // Iterate over the vector using Gibbs sampling
         self.gibbs_sampling(rng, &mut discrete_vector);
-        let domain_vector = self.discrete_to_domain(discrete_vector, rng);
-        domain_vector
+        self.discrete_to_domain(discrete_vector, rng)
     }
 
     fn discrete_to_domain(
@@ -651,7 +650,7 @@ impl BayesianNetwork {
     pub fn remove_impossible_values(&mut self) -> Result<(), String> {
         log::debug!("Computing possible values of the Bayesian network");
         if self.get_solution(&[]).is_err() {
-            return Err(format!("No solution to the Bayesian network"));
+            return Err("No solution to the Bayesian network".to_string());
         }
 
         let mut possible_values: Vec<HashSet<usize>> =

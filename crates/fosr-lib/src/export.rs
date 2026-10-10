@@ -15,14 +15,23 @@ pub fn run_export(
     order_pcap: bool,
 ) {
     log::trace!("Start pcap export thread");
+    log::trace!("Saving into {outfile}");
     let file_out = OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(true)
         .open(outfile)
         .expect("Error opening or creating file");
+    run_export_to_writer(rx_pcap, file_out, order_pcap);
+}
+
+/// Export the packets into any Writer
+pub fn run_export_to_writer(
+    rx_pcap: thingbuf::mpsc::blocking::Receiver<Packets, PacketsRecycler>,
+    file_out: impl std::io::Write,
+    order_pcap: bool,
+) {
     let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
-    log::trace!("Saving into {outfile}");
 
     if order_pcap {
         let mut all_packets: Vec<Packet> = vec![];
