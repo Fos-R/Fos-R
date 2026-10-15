@@ -81,6 +81,7 @@ pub enum CreateDefaultModels {
         feature = "models_cupid",
         feature = "models_dedale"
     ))]
+    /// Models merged from CICIDS17 + CUPID + DEDALE
     CCD,
     #[cfg(all(feature = "models_cicids17", feature = "models_cupid",))]
     /// Models merged from CICIDS17 + CUPID
@@ -449,8 +450,9 @@ pub enum Command {
     },
     #[cfg(all(target_os = "linux", feature = "server"))]
     /// Spawn a Web server that listens to HTTP request to generate data. Available on Linux only.
+    /// If you need an HTTPS server, use a local reverse proxy.
     WebServer {
-        #[arg(short, long, default_value_t = 80, help = "Port to listen from")]
+        #[arg(short, long, default_value_t = 8080, help = "Port to listen from")]
         port: u16,
         #[arg(
             short = 'd',

@@ -147,6 +147,7 @@ fn main() -> Result<(), String> {
 
             let model = models::Models::from_source_with_path_network(&source, &network, alpha)?;
 
+            let duration = humantime::parse_duration(&duration).expect("Duration could not be parsed.");
             generate_pcap(
                 duration,
                 seed,
@@ -186,6 +187,7 @@ fn main() -> Result<(), String> {
 
             let model = models::Models::from_source(&source, alpha)?;
 
+            let duration = humantime::parse_duration(&duration).expect("Duration could not be parsed.");
             generate_pcap(
                 duration,
                 seed,
@@ -327,7 +329,7 @@ fn main() -> Result<(), String> {
 
 #[allow(clippy::too_many_arguments)]
 fn generate_pcap(
-    duration: String,
+    duration: Duration,
     seed: Option<u64>,
     export: run::ExportParams,
     profile: cmd::GenerationProfile,
@@ -340,7 +342,6 @@ fn generate_pcap(
 ) -> Result<(), String> {
     // let automata_library = Arc::new(model.automata);
     // let bn = Arc::new(model.bn);
-    let duration = humantime::parse_duration(&duration).expect("Duration could not be parsed.");
     let target = stats::Target::GenerationDuration(duration);
 
     if let Some(s) = seed {

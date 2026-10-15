@@ -16,64 +16,58 @@ pub fn start(
     base_model: models::Models,
     jobs: Option<usize>,
 ) -> Result<(), String> {
-    #[derive(Deserialize)]
-    struct Json {
-        // TODO
+    #[derive(Deserialize, Debug)]
+    struct JsonRequest {
+        duration: String,
+        seed: Option<u64>,
+        start_time: Option<String>,
+        tz: Option<String>,
+        network: String,
     }
 
     let address = format!("localhost:{port}");
     log::info!("Listening on {address}");
 
-    // let base_model: models::ArcModels = model.into();
     // Only one client can generate at the same time
     // This is to avoid DoS attacks
     let mutex = Mutex::new(());
 
     rouille::start_server(address, move |request| {
         router!(request,
-            // A POST route to generate pcap
-            (POST) (/generate) => {
-                let data: Json = try_or_400!(rouille::input::json_input(request));
+            // A GET route to generate pcap
+            (GET) (/pcap) => {
+                let data: JsonRequest = try_or_400!(rouille::input::json_input(request));
 
-
-                let (raw_read, raw_write) = nix::unistd::pipe().expect("Échec pipe système");
+                log::info!("Received request: {data:?}");
+                let (raw_read, raw_write) = try_or_400!(nix::unistd::pipe());
                 let _lock = mutex.lock().unwrap(); // Only one generation at a time
                 let mut m = base_model.clone();
                 let reader = File::from(raw_read);
                 let writer = File::from(raw_write);
-                let result = m.with_string_network("todo..."); // FIXME: read from request
+                try_or_400!(m.with_string_network(&data.network).map_err(|s| std::io::Error::new(std::io::ErrorKind::Other, s)));
 
-                if let Err(string) = result {
-                    return Response::text(string)
-                            .with_status_code(400); // Bad request error
-                }
-                let result = crate::generate_pcap(
-                    "1h".to_string(), // FIXME: read from request
-                    None,  // FIXME
-                    run::ExportParams{ outfile: run::ExportDestination::Writer(writer), order_pcap: false}, // writer
+                let duration = try_or_400!(humantime::parse_duration(&data.duration));
+
+                // TODO: prendre min avec maximum_duration
+                try_or_400!(crate::generate_pcap(
+                    duration,
+                    data.seed,
+                    run::ExportParams { outfile: run::ExportDestination::Writer(writer), order_pcap: false}, // write to pipe writer
                     cmd::GenerationProfile::Efficient,
-                    None, // FIXME
-                    None, // FIXME
-                    None, // FIXME
+                    data.start_time,
+                    None,
+                    data.tz,
                     jobs,
                     false,
-                    m.into());
+                    m.into()).map_err(|s| std::io::Error::new(std::io::ErrorKind::Other, s)));
 
-                match result {
-                    Ok(()) => {
-
-                        Response {
-                            status_code: 200,
-                            headers: vec![
-                                (Cow::Borrowed("Content-Type"), Cow::Borrowed("application/octet-stream"))
-                            ],
-                            data: ResponseBody::from_reader(reader),
-                            upgrade: None,
-                        }
-                    },
-                    Err(string) =>
-                        Response::text(string)
-                            .with_status_code(400) // Bad request error
+                Response {
+                    status_code: 200,
+                    headers: vec![
+                        (Cow::Borrowed("Content-Type"), Cow::Borrowed("application/octet-stream"))
+                    ],
+                    data: ResponseBody::from_reader(reader),
+                    upgrade: None,
                 }
             },
             // Unknown route
