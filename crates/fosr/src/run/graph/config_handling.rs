@@ -68,7 +68,7 @@ pub fn handle_config_changes(
         // Try to parse the config, handle errors gracefully
         // Use catch_unwind because import_config uses .expect() internally
         let config_result =
-            std::panic::catch_unwind(|| fosr_lib::network::import_network(config_content));
+            std::panic::catch_unwind(|| fosr_lib::network::import_network(config_content).unwrap());
 
         match config_result {
             Ok(config) => {

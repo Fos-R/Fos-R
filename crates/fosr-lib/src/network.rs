@@ -33,7 +33,8 @@ pub fn get_default_topologies() -> Vec<NetworkYaml> {
         .assets()
         .filter_map(|(name, f)| {
             if name.ends_with(".yaml") {
-                Some(reversibly_import_network(str::from_utf8(f).unwrap()))
+                // we do not return a Result because default topologies are verified
+                Some(reversibly_import_network(str::from_utf8(f).unwrap()).unwrap())
             } else {
                 None
             }
@@ -614,13 +615,22 @@ impl Interface {
                 public = true;
                 utils::sample_random_global_ip(&mut rng)
             }
-            ip => i.ip_addr.parse().expect(&format!("Cannot parse IP address: {ip}")),
+            ip => i
+                .ip_addr
+                .parse()
+                .map_err(|_| format!("Cannot parse IP address: {ip}"))?,
         };
+        let mac_addr = match i.mac_addr {
+            None => None,
+            Some(s) => Some(
+                s.parse()
+                    .map_err(|_| format!("Cannot parse MAC address: {s}"))?,
+            ),
+        };
+
         Ok(Interface {
             // uses,
-            mac_addr: i
-                .mac_addr
-                .map(|s| s.parse().expect(&format!("Cannot parse MAC address: {s}"))),
+            mac_addr,
             ip_addr,
             services,
             public, // open_ports,
@@ -630,21 +640,20 @@ impl Interface {
 
 /// Import a configuration from a string. The string can be either in JSON or YAML format (the
 /// truth is that YAML is a superset of JSON).
-// TODO: renvoyer un Result
-pub fn import_network(config_string: &str) -> Network {
+pub fn import_network(config_string: &str) -> Result<Network, String> {
     let config: Network = serde_yaml::from_str::<NetworkYaml>(config_string)
-        .expect("Cannot parse the configuration file")
+        .map_err(|e| format!("{e:?}"))?
         .into();
     log::info!("Network \"{}\" successfully loaded", config.metadata.title);
     log::trace!("Network: {config:?}");
-    config
+    Ok(config)
 }
 
 /// Import a configuration from a string.
-pub fn reversibly_import_network(config_string: &str) -> NetworkYaml {
-    let config: NetworkYaml = serde_yaml::from_str::<NetworkYaml>(config_string)
-        .expect("Cannot parse the configuration file");
+pub fn reversibly_import_network(config_string: &str) -> Result<NetworkYaml, String> {
+    let config: NetworkYaml =
+        serde_yaml::from_str::<NetworkYaml>(config_string).map_err(|e| format!("{e:?}"))?;
     log::info!("Network \"{}\" successfully loaded", config.metadata.title);
     log::trace!("Network: {config:?}");
-    config
+    Ok(config)
 }

@@ -449,9 +449,9 @@ pub enum Command {
         no_order_pcap: bool,
     },
     #[cfg(all(target_os = "linux", feature = "server"))]
-    /// Spawn a Web server that listens to HTTP request to generate data. Available on Linux only.
+    /// Spawn an API server that listens to HTTP request to generate data. Available on Linux only.
     /// If you need an HTTPS server, use a local reverse proxy.
-    WebServer {
+    ApiServer {
         #[arg(short, long, default_value_t = 8080, help = "Port to listen from")]
         port: u16,
         #[arg(

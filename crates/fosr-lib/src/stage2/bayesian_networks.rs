@@ -600,12 +600,18 @@ impl BayesianNetwork {
                 if v1 != v2 {
                     non_equal_ips.push(vec![(v1 as i32).into(), (v2 as i32).into()]);
                 } else {
-                    assert_eq!(self.nodes[index_src_ip].feature.get_value_string(v1), self.nodes[index_dst_ip].feature.get_value_string(v2));
+                    assert_eq!(
+                        self.nodes[index_src_ip].feature.get_value_string(v1),
+                        self.nodes[index_dst_ip].feature.get_value_string(v2)
+                    );
                 }
             }
         }
 
-        m.table(&[variables[index_src_ip], variables[index_dst_ip]], non_equal_ips);
+        m.table(
+            &[variables[index_src_ip], variables[index_dst_ip]],
+            non_equal_ips,
+        );
 
         for (i, n) in self.nodes.iter().enumerate() {
             if let Some(ref cpt) = n.cpt {
@@ -669,10 +675,7 @@ impl BayesianNetwork {
                             }
                         }
                         Err(_) => {
-                            log::debug!(
-                                "Value {} is not possible",
-                                n.feature.get_value_string(v)
-                            );
+                            log::debug!("Value {} is not possible", n.feature.get_value_string(v));
                         }
                     }
                 }

@@ -147,7 +147,8 @@ fn main() -> Result<(), String> {
 
             let model = models::Models::from_source_with_path_network(&source, &network, alpha)?;
 
-            let duration = humantime::parse_duration(&duration).expect("Duration could not be parsed.");
+            let duration =
+                humantime::parse_duration(&duration).expect("Duration could not be parsed.");
             generate_pcap(
                 duration,
                 seed,
@@ -187,7 +188,8 @@ fn main() -> Result<(), String> {
 
             let model = models::Models::from_source(&source, alpha)?;
 
-            let duration = humantime::parse_duration(&duration).expect("Duration could not be parsed.");
+            let duration =
+                humantime::parse_duration(&duration).expect("Duration could not be parsed.");
             generate_pcap(
                 duration,
                 seed,
@@ -205,7 +207,7 @@ fn main() -> Result<(), String> {
             )?;
         }
         #[cfg(all(target_os = "linux", feature = "server"))]
-        cmd::Command::WebServer {
+        cmd::Command::ApiServer {
             port,
             maximum_duration,
             default_models,
@@ -320,7 +322,7 @@ fn main() -> Result<(), String> {
             network::import_network(
                 &fs::read_to_string(Path::new(&input))
                     .map_err(|e| format!("Cannot open the network file: {e}"))?,
-            );
+            )?;
             log::info!("Network is valid.");
         }
     }

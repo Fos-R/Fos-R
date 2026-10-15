@@ -120,7 +120,7 @@ impl Models {
         let network = network::import_network(
             &fs::read_to_string(Path::new(path))
                 .map_err(|e| format!("Cannot open the network file: {e}"))?,
-        );
+        )?;
         Self::from_source_with_network(source, network, alpha)
     }
 
@@ -129,18 +129,13 @@ impl Models {
         network: &str,
         alpha: u64,
     ) -> Result<Self, String> {
-        Self::from_source_with_network(source, network::import_network(network), alpha)
+        Self::from_source_with_network(source, network::import_network(network)?, alpha)
     }
 
-    pub fn with_string_network(
-        &mut self,
-        network: &str,
-    ) -> Result<(), String> {
-        self.bn.with_network(&network::import_network(network))?;
+    pub fn with_string_network(&mut self, network: &str) -> Result<(), String> {
+        self.bn.with_network(&network::import_network(network)?)?;
         Ok(())
     }
-
-
 }
 
 impl ModelsSource {
