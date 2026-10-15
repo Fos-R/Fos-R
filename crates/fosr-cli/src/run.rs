@@ -82,6 +82,7 @@ pub fn run_efficient<T: inject::NetEnabler>(
     s4: (stage4::Stage4, usize),
     stats: Arc<stats::Stats>,
     #[allow(unused)] s5net: Option<InjectParam<T>>,
+    show_progress: bool,
 ) -> Result<(), String> {
     log::debug!("Generation with \"efficient\" profile");
     let (s2, s2_count) = s2;
@@ -129,8 +130,7 @@ pub fn run_efficient<T: inject::NetEnabler>(
             } else {
                 process::exit(1);
             }
-        })
-        .expect("Error setting Ctrl-C handler");
+        }).ok();
 
         // STAGE 0
         let builder = thread::Builder::new().name("Stage1".into());
@@ -294,7 +294,7 @@ pub fn run_efficient<T: inject::NetEnabler>(
         }
     }
 
-    {
+    if show_progress {
         let stats = Arc::clone(&stats);
         let builder = thread::Builder::new().name("Monitoring".into());
         threads.push(
@@ -310,7 +310,7 @@ pub fn run_efficient<T: inject::NetEnabler>(
     }
 
     if !export_threads.is_empty() {
-        // log::info!("Generation complete: exporting");
+        log::info!("Generation complete: exporting");
         for thread in export_threads {
             thread.join().unwrap();
         }
@@ -323,6 +323,7 @@ pub fn run_efficient<T: inject::NetEnabler>(
     for thread in threads {
         thread.join().unwrap();
     }
+    log::info!("Pcap is fully generated and exported");
     Ok(())
 }
 
@@ -352,8 +353,7 @@ pub fn run_fast(
         // Handle ctrl+C
         ctrlc::set_handler(move || {
             process::exit(1);
-        })
-        .expect("Error setting Ctrl-C handler");
+        }).ok();
 
         let mut threads = vec![];
 

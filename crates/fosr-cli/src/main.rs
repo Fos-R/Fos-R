@@ -163,6 +163,7 @@ fn main() -> Result<(), String> {
                 jobs,
                 taint,
                 model.into(),
+                true,
             )?;
         }
         cmd::Command::AugmentDataset {
@@ -204,6 +205,7 @@ fn main() -> Result<(), String> {
                 jobs,
                 taint,
                 model.into(),
+                true,
             )?;
         }
         #[cfg(all(target_os = "linux", feature = "server"))]
@@ -341,6 +343,7 @@ fn generate_pcap(
     jobs: Option<usize>,
     taint: bool,
     model: models::ArcModels,
+    show_progress: bool,
 ) -> Result<(), String> {
     // let automata_library = Arc::new(model.automata);
     // let bn = Arc::new(model.bn);
@@ -459,6 +462,7 @@ fn generate_pcap(
                 (s4, s4_count),
                 Arc::new(stats::Stats::new(target)),
                 None::<run::InjectParam<inject::DummyNetEnabler>>,
+                show_progress,
             )?;
         }
     }

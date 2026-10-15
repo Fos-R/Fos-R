@@ -1981,6 +1981,7 @@ name = "fosr-cli"
 version = "1.0.0-dev"
 dependencies = [
  "assert_cmd",
+ "base64 0.23.1",
  "chrono",
  "chrono-tz",
  "clap",
