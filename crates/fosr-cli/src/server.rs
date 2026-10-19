@@ -55,7 +55,7 @@ pub fn start(
                 let writer = File::from(raw_write);
                 let network = try_or_400!(BASE64_STANDARD.decode(data.network));
                 let network = try_or_400!(String::from_utf8(network));
-                try_or_400!(model.with_string_network(&network).map_err(|s| std::io::Error::new(std::io::ErrorKind::Other, s)));
+                model = try_or_400!(model.with_string_network(&network).map_err(|s| std::io::Error::new(std::io::ErrorKind::Other, s)));
                 let model: models::ArcModels = model.into();
                 let duration = try_or_400!(humantime::parse_duration(&data.duration)).min(maximum_duration);
                 let export = run::ExportParams { outfile: run::ExportDestination::Writer(writer), order_pcap: false}; // write to pipe writer

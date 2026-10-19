@@ -318,7 +318,7 @@ pub fn run_efficient<T: inject::NetEnabler>(
     }
 
     // Wait for the generation threads to end
-    for thread in gen_threads {
+    for thread in gen_threads.into_iter().rev() {
         thread.join().map_err(|_| "Thread panicked")??;
     }
 

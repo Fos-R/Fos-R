@@ -59,6 +59,7 @@ impl Stage2 for BNGenerator {
 
             // The model cannot generate any flow for this bin
             if !bn.is_time_bin_possible(time) {
+                log::trace!("Time bin is not possible");
                 return Ok(None);
             }
 
@@ -195,7 +196,7 @@ impl BayesianModel {
         Ok(BayesianModel::WaitingForNetwork { base_bn, bin_count })
     }
 
-    pub fn with_network(&self, network: &network::Network) -> Result<Self, String> {
+    pub fn with_network(self, network: &network::Network) -> Result<Self, String> {
         match self {
             BayesianModel::WaitingForNetwork {
                 base_bn, bin_count, ..
@@ -345,7 +346,7 @@ impl BayesianModel {
                 Ok(BayesianModel::ForTransferLearning {
                     base_bn: base_bn.clone(),
                     bn,
-                    bin_count: *bin_count,
+                    bin_count,
                     transfer_learning: tl_extra_data,
                 })
             }

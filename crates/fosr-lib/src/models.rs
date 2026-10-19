@@ -132,9 +132,9 @@ impl Models {
         Self::from_source_with_network(source, network::import_network(network)?, alpha)
     }
 
-    pub fn with_string_network(&mut self, network: &str) -> Result<(), String> {
-        self.bn.with_network(&network::import_network(network)?)?;
-        Ok(())
+    pub fn with_string_network(mut self, network: &str) -> Result<Self, String> {
+        self.bn = self.bn.with_network(&network::import_network(network)?)?;
+        Ok(self)
     }
 }
 
