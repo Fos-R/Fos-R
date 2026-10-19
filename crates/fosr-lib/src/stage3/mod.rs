@@ -53,6 +53,7 @@ pub fn run_channel(
     stats: Arc<Stats>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     log::trace!("Start S3 (channel)");
+    let mut count = 0;
     for flow in rx_s3 {
         if stats.should_stop() {
             break;
@@ -87,8 +88,9 @@ pub fn run_channel(
                 }
             }
         }
+        count += 1;
     }
-    log::trace!("S3 stops");
+    log::trace!("S3 stops: {count} elements received");
     Ok(())
 }
 

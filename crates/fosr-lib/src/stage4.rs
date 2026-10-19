@@ -496,6 +496,7 @@ pub fn run_channel<T: PacketInfo>(
     let mut payload_array: Box<[u8]> = vec![0; 65536].into_boxed_slice(); // to avoid allocating Vec for payloads
     let mut packet: Box<[u8]> = vec![0; 65536].into_boxed_slice();
 
+    let mut count = 0;
     for headers in rx_s4 {
         // log::trace!("Creating packets");
         let mut flow_packets = tx_s4_to_pcap.send_ref()?;
@@ -514,8 +515,9 @@ pub fn run_channel<T: PacketInfo>(
         if stats.should_stop() {
             break;
         }
+        count += 1;
     }
-    log::trace!("S4 stops");
+    log::trace!("S4 stops: {count} elements received");
     Ok(())
 }
 

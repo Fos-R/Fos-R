@@ -28,6 +28,7 @@ pub fn run_channel(
     stats: Arc<Stats>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     log::trace!("Start S2 (channel)");
+    let mut count = 0;
     for ts in rx_s2 {
         if stats.should_stop() {
             break;
@@ -35,8 +36,9 @@ pub fn run_channel(
         if let Some(f) = generator.generate_flows(ts)? {
             tx_s2.send(f)?;
         }
+        count += 1;
     }
-    log::trace!("S2 stops");
+    log::trace!("S2 stops: {count} elements received");
     Ok(())
 }
 

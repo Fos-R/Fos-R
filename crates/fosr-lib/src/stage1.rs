@@ -343,6 +343,7 @@ pub fn run_channel(
     stats: Arc<Stats>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     log::trace!("Start S1 (channel)");
+    let mut count = 0;
     let initial_ts = generator.get_initial_ts();
     for ts in generator {
         if stats.should_stop() {
@@ -351,10 +352,11 @@ pub fn run_channel(
         stats.set_current_duration(
             ts.data.unix_time.as_secs() - initial_ts.as_secs() + 2 * WINDOW_WIDTH_IN_SECS,
         ); // this hack (adding WINDOW_WIDTH_IN_SECS) is just a way to be sure to reach the duration target for the progress bar
-        // log::trace!("S0 generates {ts:?}");
+        // log::trace!("S1 generates {ts:?}");
         tx_s1.send(ts)?;
+        count += 1;
     }
-    log::trace!("S1 stops");
+    log::trace!("S1 stops: {count} elements generated");
     Ok(())
 }
 

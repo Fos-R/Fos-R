@@ -1,13 +1,22 @@
 use std::borrow::Cow;
+use std::cmp::max;
 use std::fs::File;
+use std::sync::Arc;
 use std::sync::Mutex;
+use std::thread;
 use std::time::Duration;
 
-use crate::{cmd, run};
+use crate::run;
+use fosr_lib::inject;
 use fosr_lib::models;
+use fosr_lib::stage1;
+use fosr_lib::stage2;
+use fosr_lib::stage3;
+use fosr_lib::stage4;
+use fosr_lib::stats;
 
-use nix;
 use base64::prelude::*;
+use nix;
 use rouille::{Response, ResponseBody, router, try_or_400};
 use serde::Deserialize;
 
@@ -31,7 +40,7 @@ pub fn start(
 
     // Only one client can generate at the same time
     // This is to avoid DoS attacks
-    let mutex = Mutex::new(());
+    let mutex = Arc::new(Mutex::new(()));
 
     rouille::start_server(address, move |request| {
         router!(request,
@@ -39,30 +48,69 @@ pub fn start(
             (GET) (/pcap) => {
                 let data: JsonRequest = try_or_400!(rouille::input::json_input(request));
 
-                log::info!("Received request: {data:?}");
+                log::debug!("Received request: {data:?}");
                 let (raw_read, raw_write) = try_or_400!(nix::unistd::pipe());
-                let _lock = mutex.lock().unwrap(); // Only one generation at a time
-                let mut m = base_model.clone();
+                let mut model = base_model.clone();
                 let reader = File::from(raw_read);
                 let writer = File::from(raw_write);
                 let network = try_or_400!(BASE64_STANDARD.decode(data.network));
                 let network = try_or_400!(String::from_utf8(network));
-                try_or_400!(m.with_string_network(&network).map_err(|s| std::io::Error::new(std::io::ErrorKind::Other, s)));
-
+                try_or_400!(model.with_string_network(&network).map_err(|s| std::io::Error::new(std::io::ErrorKind::Other, s)));
+                let model: models::ArcModels = model.into();
                 let duration = try_or_400!(humantime::parse_duration(&data.duration)).min(maximum_duration);
+                let export = run::ExportParams { outfile: run::ExportDestination::Writer(writer), order_pcap: false}; // write to pipe writer
+                let target = stats::Target::GenerationDuration(duration);
 
-                try_or_400!(crate::generate_pcap(
-                    duration,
+                if let Some(s) = data.seed {
+                    log::info!("Generating with seed {s}");
+                }
+
+                let (initial_ts, tz_offset) = try_or_400!(crate::get_start_time_and_offset(data.start_time, data.tz).map_err(|s| std::io::Error::new(std::io::ErrorKind::Other, s)));
+
+                let s1 = stage1::BinBasedGenerator::new(
                     data.seed,
-                    run::ExportParams { outfile: run::ExportDestination::Writer(writer), order_pcap: false}, // write to pipe writer
-                    cmd::GenerationProfile::Efficient,
-                    data.start_time,
-                    None,
-                    data.tz,
-                    jobs,
                     false,
-                    m.into(),
-                    false).map_err(|s| std::io::Error::new(std::io::ErrorKind::Other, s)));
+                    None,
+                    model.time_bins,
+                    initial_ts,
+                    Some(duration),
+                    tz_offset,
+                );
+                let s2 = stage2::bn_generator::BNGenerator::new(model.bn, false);
+                let s3 = stage3::tadam::TadamGenerator::new(model.automata);
+                let s4 = stage4::Stage4::new(false);
+                let jobs = jobs.unwrap_or(max(1, num_cpus::get() / 2));
+
+                let (s2_count, s3_count, s4_count) = (
+                    max(1, jobs / 3),
+                    max(1, jobs / 3),
+                    max(1, jobs - 2 * (jobs / 3)),
+                );
+
+                let mutex = mutex.clone();
+                let builder = thread::Builder::new().name("generation".into());
+                // we do not use the ThreadHandle to detach the thread
+                let _detached_thread = builder.spawn(move || {
+                    let lock = mutex.lock().unwrap(); // Only one generation at a time
+                    let result = run::run_efficient(
+                        vec![],
+                        Some(export),
+                        s1,
+                        (s2, s2_count),
+                        (s3, s3_count),
+                        (s4, s4_count),
+                        Arc::new(stats::Stats::new(target)),
+                        None::<run::InjectParam<inject::DummyNetEnabler>>,
+                        false);
+
+                    // If there is an error in the thread, it’s too late to send a 400 Error
+                    if let Err(s) = result {
+                        log::error!("Error during generation: {s}");
+                    }
+
+                    // move the lock and unlock at the end of the generation
+                    drop(lock);
+                });
 
                 rouille::content_encoding::apply(request, Response {
                     status_code: 200,

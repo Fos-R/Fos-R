@@ -88,6 +88,9 @@ pub fn run_efficient<T: inject::NetEnabler>(
     let (s2, s2_count) = s2;
     let (s3, s3_count) = s3;
     let (s4, s4_count) = s4;
+    assert!(s2_count > 0);
+    assert!(s3_count > 0);
+    assert!(s4_count > 0);
 
     let mut threads = vec![];
     let mut gen_threads = vec![];
@@ -130,15 +133,17 @@ pub fn run_efficient<T: inject::NetEnabler>(
             } else {
                 process::exit(1);
             }
-        }).ok();
+        })
+        .ok();
 
         // STAGE 0
         let builder = thread::Builder::new().name("Stage1".into());
         let stats_s1 = Arc::clone(&stats);
         gen_threads.push(
             builder
-                .spawn(move || {
-                    let _ = stage1::run_channel(s1, tx_s1, stats_s1);
+                .spawn(move || -> Result<(), String> {
+                    stage1::run_channel(s1, tx_s1, stats_s1).map_err(|e| e.to_string())?;
+                    Ok(())
                 })
                 .map_err(|e| e.to_string())?,
         );
@@ -153,8 +158,9 @@ pub fn run_efficient<T: inject::NetEnabler>(
             let builder = thread::Builder::new().name("Stage2".into());
             gen_threads.push(
                 builder
-                    .spawn(move || {
-                        let _ = stage2::run_channel(s2, rx_s2, tx_s2, stats);
+                    .spawn(move || -> Result<(), String> {
+                        stage2::run_channel(s2, rx_s2, tx_s2, stats).map_err(|e| e.to_string())?;
+                        Ok(())
                     })
                     .map_err(|e| e.to_string())?,
             );
@@ -170,8 +176,9 @@ pub fn run_efficient<T: inject::NetEnabler>(
             let builder = thread::Builder::new().name("Stage3".into());
             gen_threads.push(
                 builder
-                    .spawn(move || {
-                        let _ = stage3::run_channel(s3, rx_s3, tx_s3, stats);
+                    .spawn(move || -> Result<(), String> {
+                        stage3::run_channel(s3, rx_s3, tx_s3, stats).map_err(|e| e.to_string())?;
+                        Ok(())
                     })
                     .map_err(|e| e.to_string())?,
             );
@@ -197,8 +204,8 @@ pub fn run_efficient<T: inject::NetEnabler>(
                         let rx_s4_tcp = rx_s4_tcp.clone();
                         gen_threads.push(
                             builder
-                                .spawn(move || {
-                                    let _ = stage4::run_channel(
+                                .spawn(move || -> Result<(), String> {
+                                    stage4::run_channel(
                                         |f, p, v, a| s4.generate_tcp_packets(f, p, v, a),
                                         &local_interfaces,
                                         rx_s4_tcp,
@@ -206,7 +213,9 @@ pub fn run_efficient<T: inject::NetEnabler>(
                                         tx_s4_to_pcap,
                                         stats,
                                         do_export,
-                                    );
+                                    )
+                                    .map_err(|e| e.to_string())?;
+                                    Ok(())
                                 })
                                 .map_err(|e| e.to_string())?,
                         );
@@ -215,8 +224,8 @@ pub fn run_efficient<T: inject::NetEnabler>(
                         let rx_s4_udp = rx_s4_udp.clone();
                         gen_threads.push(
                             builder
-                                .spawn(move || {
-                                    let _ = stage4::run_channel(
+                                .spawn(move || -> Result<(), String> {
+                                    stage4::run_channel(
                                         |f, p, v, a| s4.generate_udp_packets(f, p, v, a),
                                         &local_interfaces,
                                         rx_s4_udp,
@@ -224,7 +233,9 @@ pub fn run_efficient<T: inject::NetEnabler>(
                                         tx_s4_to_pcap,
                                         stats,
                                         do_export,
-                                    );
+                                    )
+                                    .map_err(|e| e.to_string())?;
+                                    Ok(())
                                 })
                                 .map_err(|e| e.to_string())?,
                         );
@@ -233,8 +244,8 @@ pub fn run_efficient<T: inject::NetEnabler>(
                         let rx_s4_icmp = rx_s4_icmp.clone();
                         gen_threads.push(
                             builder
-                                .spawn(move || {
-                                    let _ = stage4::run_channel(
+                                .spawn(move || -> Result<(), String> {
+                                    stage4::run_channel(
                                         |f, p, v, a| s4.generate_icmp_packets(f, p, v, a),
                                         &local_interfaces,
                                         rx_s4_icmp,
@@ -242,7 +253,9 @@ pub fn run_efficient<T: inject::NetEnabler>(
                                         tx_s4_to_pcap,
                                         stats,
                                         do_export,
-                                    );
+                                    )
+                                    .map_err(|e| e.to_string())?;
+                                    Ok(())
                                 })
                                 .map_err(|e| e.to_string())?,
                         );
@@ -306,13 +319,13 @@ pub fn run_efficient<T: inject::NetEnabler>(
 
     // Wait for the generation threads to end
     for thread in gen_threads {
-        thread.join().unwrap();
+        thread.join().map_err(|_| "Thread panicked")??;
     }
 
     if !export_threads.is_empty() {
         log::info!("Generation complete: exporting");
         for thread in export_threads {
-            thread.join().unwrap();
+            thread.join().map_err(|_| "Thread panicked")?;
         }
     }
 
@@ -321,7 +334,7 @@ pub fn run_efficient<T: inject::NetEnabler>(
 
     // Wait for the other threads to stop
     for thread in threads {
-        thread.join().unwrap();
+        thread.join().map_err(|_| "Thread panicked")?;
     }
     log::info!("Pcap is fully generated and exported");
     Ok(())
@@ -353,7 +366,8 @@ pub fn run_fast(
         // Handle ctrl+C
         ctrlc::set_handler(move || {
             process::exit(1);
-        }).ok();
+        })
+        .ok();
 
         let mut threads = vec![];
 
@@ -374,9 +388,9 @@ pub fn run_fast(
             let s3 = s3.clone();
             let s4 = s4.clone();
             let stats = Arc::clone(&stats);
-            threads.push(thread::spawn(move || {
+            threads.push(thread::spawn(move || -> Result<(), String> {
                 // log::info!("Stage 1 generation");
-                let vec = stage2::run_vec(s2, vec).unwrap();
+                let vec = stage2::run_vec(s2, vec)?;
                 // log::info!("Stage 2 generation");
                 let vec = stage3::run_vec(s3, vec);
 
@@ -404,7 +418,8 @@ pub fn run_fast(
                     stats,
                 ));
                 packets.sort_unstable();
-                tx.send(packets).unwrap();
+                tx.send(packets).map_err(|e| e.to_string())?;
+                Ok(())
             }));
         }
         drop(tx); // drop it so we can stop when all threads are over
@@ -415,12 +430,12 @@ pub fn run_fast(
                 .create(true)
                 .truncate(true)
                 .open(&outfile)
-                .expect("Error opening or creating file"),
+                .map_err(|e| e.to_string())?,
             ExportDestination::Writer(writer) => writer,
         };
-        let mut pcap_writer = PcapWriter::new(BufWriter::new(writer)).expect("Error writing file");
+        let mut pcap_writer = PcapWriter::new(BufWriter::new(writer)).map_err(|e| e.to_string())?;
         for thread in threads {
-            thread.join().unwrap();
+            thread.join().map_err(|_| "Thread panicked")??;
         }
 
         log::info!("Generation complete");

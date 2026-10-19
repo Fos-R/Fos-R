@@ -1,5 +1,3 @@
-#[cfg(feature = "net_injection")]
-use fosr_lib::inject;
 use fosr_lib::inject;
 use fosr_lib::models;
 use fosr_lib::network;
@@ -25,8 +23,8 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use chrono::DateTime;
-use chrono::Offset;
 use chrono::TimeZone;
+use chrono::{FixedOffset, Offset};
 use chrono_tz::Tz;
 use clap::Parser;
 #[cfg(feature = "net_injection")]
@@ -68,8 +66,9 @@ fn main() -> Result<(), String> {
             } else {
                 default_models?.get_source() // we are sure it contains something
             };
-            let duration = duration
-                .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed."));
+            let duration = duration.map(|d| {
+                humantime::parse_duration(&d).map_err(|_| "Duration could not be parsed.")
+            })?;
             #[cfg(not(all(target_os = "linux", feature = "iptables")))]
             let stealthy = false;
             net_injection(
@@ -105,8 +104,9 @@ fn main() -> Result<(), String> {
             } else {
                 default_models?.get_source() // we are sure it contains something
             };
-            let duration = duration
-                .map(|d| humantime::parse_duration(&d).expect("Duration could not be parsed."));
+            let duration = duration.map(|d| {
+                humantime::parse_duration(&d).map_err(|_| "Duration could not be parsed.")?
+            });
             net_injection(
                 false,
                 seed,
@@ -147,8 +147,8 @@ fn main() -> Result<(), String> {
 
             let model = models::Models::from_source_with_path_network(&source, &network, alpha)?;
 
-            let duration =
-                humantime::parse_duration(&duration).expect("Duration could not be parsed.");
+            let duration = humantime::parse_duration(&duration)
+                .map_err(|_| "Duration could not be parsed.")?;
             generate_pcap(
                 duration,
                 seed,
@@ -189,8 +189,8 @@ fn main() -> Result<(), String> {
 
             let model = models::Models::from_source(&source, alpha)?;
 
-            let duration =
-                humantime::parse_duration(&duration).expect("Duration could not be parsed.");
+            let duration = humantime::parse_duration(&duration)
+                .map_err(|_| "Duration could not be parsed.")?;
             generate_pcap(
                 duration,
                 seed,
@@ -310,14 +310,13 @@ fn main() -> Result<(), String> {
                 &topo::subtopo::get_default_subtopos(),
                 &gen_params,
             )?);
-            let mut file =
-                File::create(&outfile).expect("Failed to create or open the topology file");
+            let mut file = File::create(&outfile).map_err(|e| e.to_string())?;
             file.write_all(
                 serde_yaml::to_string(&topology)
-                    .expect("Serialization issue")
+                    .map_err(|e| e.to_string())?
                     .as_bytes(),
             )
-            .expect("Failed to write to the file");
+            .map_err(|e| e.to_string())?;
             log::info!("Topology has been successfully generated into {outfile}");
         }
         cmd::Command::ValidateNetwork { input } => {
@@ -331,28 +330,10 @@ fn main() -> Result<(), String> {
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
-fn generate_pcap(
-    duration: Duration,
-    seed: Option<u64>,
-    export: run::ExportParams,
-    profile: cmd::GenerationProfile,
+pub fn get_start_time_and_offset(
     start_time: Option<String>,
-    flow_per_day: Option<u64>,
     tz: Option<String>,
-    jobs: Option<usize>,
-    taint: bool,
-    model: models::ArcModels,
-    show_progress: bool,
-) -> Result<(), String> {
-    // let automata_library = Arc::new(model.automata);
-    // let bn = Arc::new(model.bn);
-    let target = stats::Target::GenerationDuration(duration);
-
-    if let Some(s) = seed {
-        log::info!("Generating with seed {s}");
-    }
-
+) -> Result<(Duration, FixedOffset), String> {
     let (mut initial_ts, ts_requires_offset): (Duration, bool) =
         if let Some(start_time) = start_time {
             // try to parse a date
@@ -376,22 +357,24 @@ fn generate_pcap(
         };
 
     let tz_offset = if let Some(tz_str) = tz {
-        let tz: Tz = tz_str.parse().expect("Could not parse the timezone");
+        let tz: Tz = tz_str
+            .parse()
+            .map_err(|e: chrono_tz::ParseError| e.to_string())?;
         let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
-            .unwrap()
+            .ok_or("Cannot get date from timestamp")?
             .naive_utc();
         let tz = tz.offset_from_utc_datetime(&date).fix();
         log::info!("Using {tz_str} timezone (UTC{tz})");
         tz
     } else {
         let date = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
-            .unwrap()
+            .ok_or("Cannot get date from timestamp")?
             .naive_utc();
         let tz = chrono::Local::now()
             .timezone()
             .offset_from_local_datetime(&date)
-            .single()
-            .expect("Ambiguous local date from timestamp")
+            .earliest()
+            .ok_or("This time does not exist")?
             .fix();
         log::info!("Using local timezone (UTC{tz})");
         tz
@@ -401,14 +384,40 @@ fn generate_pcap(
     // now, compute the actual timestamp taking into account the timezone
     if ts_requires_offset {
         let duration: i64 = DateTime::from_timestamp(initial_ts.as_secs() as i64, 0)
-            .unwrap()
+            .ok_or("Cannot get date from timestamp")?
             .naive_utc()
             .and_local_timezone(tz_offset)
-            .unwrap()
+            .earliest()
+            .ok_or("This time does not exist")?
             .timestamp();
-        let duration: u64 = i64::try_into(duration).expect("Time before UNIX epoch!");
+        let duration: u64 = i64::try_into(duration).map_err(|_| "Time before UNIX epoch!")?;
         initial_ts = Duration::from_secs(duration);
     }
+
+    Ok((initial_ts, tz_offset))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn generate_pcap(
+    duration: Duration,
+    seed: Option<u64>,
+    export: run::ExportParams,
+    profile: cmd::GenerationProfile,
+    start_time: Option<String>,
+    flow_per_day: Option<u64>,
+    tz: Option<String>,
+    jobs: Option<usize>,
+    taint: bool,
+    model: models::ArcModels,
+    show_progress: bool,
+) -> Result<(), String> {
+    let target = stats::Target::GenerationDuration(duration);
+
+    if let Some(s) = seed {
+        log::info!("Generating with seed {s}");
+    }
+
+    let (initial_ts, tz_offset) = get_start_time_and_offset(start_time, tz)?;
 
     let s1 = stage1::BinBasedGenerator::new(
         seed,
