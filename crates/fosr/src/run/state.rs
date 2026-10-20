@@ -27,7 +27,7 @@ impl RunTabState {
             && let Ok(network) = self.next_config.try_recv()
         {
             let mut bn = models.bn.write().unwrap();
-            *bn = bn.with_network(&network).unwrap();
+            *bn = bn.clone().with_network(&network).unwrap();
         }
     }
 
