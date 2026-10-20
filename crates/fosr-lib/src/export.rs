@@ -13,7 +13,7 @@ pub fn run_export(
     rx_pcap: thingbuf::mpsc::blocking::Receiver<Packets, PacketsRecycler>,
     outfile: &str,
     order_pcap: bool,
-) {
+) -> Result<(), String> {
     log::trace!("Start pcap export thread");
     log::trace!("Saving into {outfile}");
     let file_out = OpenOptions::new()
@@ -21,8 +21,9 @@ pub fn run_export(
         .create(true)
         .truncate(true)
         .open(outfile)
-        .expect("Error opening or creating file");
-    run_export_to_writer(rx_pcap, file_out, order_pcap);
+        .map_err(|e| e.to_string())?;
+    run_export_to_writer(rx_pcap, file_out, order_pcap)?;
+    Ok(())
 }
 
 /// Export the packets into any Writer
@@ -30,7 +31,7 @@ pub fn run_export_to_writer(
     rx_pcap: thingbuf::mpsc::blocking::Receiver<Packets, PacketsRecycler>,
     file_out: impl std::io::Write,
     order_pcap: bool,
-) {
+) -> Result<(), String> {
     let mut pcap_writer = PcapWriter::new(BufWriter::new(file_out)).expect("Error writing file");
 
     if order_pcap {
@@ -61,7 +62,7 @@ pub fn run_export_to_writer(
                     packet.data.len() as u32,
                     &packet.data,
                 ))
-                .unwrap();
+                .map_err(|e| e.to_string())?;
         }
         pb_pcap.finish();
     } else {
@@ -74,10 +75,11 @@ pub fn run_export_to_writer(
                         packet.data.len() as u32,
                         &packet.data,
                     ))
-                    .unwrap();
+                    .map_err(|e| e.to_string())?;
             }
         }
     }
+    Ok(())
 }
 
 /// Simulates a pcap export. It must be called to consume the generated data.

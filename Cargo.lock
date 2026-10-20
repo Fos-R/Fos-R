@@ -1994,7 +1994,6 @@ dependencies = [
  "indicatif",
  "itertools",
  "log",
- "nix",
  "num_cpus",
  "pcap-file",
  "pnet",

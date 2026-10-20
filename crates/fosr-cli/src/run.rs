@@ -12,9 +12,9 @@ use fosr_lib::{
 };
 
 use std::collections::HashMap;
-use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::BufWriter;
+use std::io::PipeWriter;
 use std::net::Ipv4Addr;
 use std::process;
 use std::sync::Arc;
@@ -41,9 +41,8 @@ pub struct InjectParam<T: inject::NetEnabler> {
 
 pub enum ExportDestination {
     FileName(String),
-    #[cfg(target_os = "linux")]
     #[allow(unused)]
-    Writer(File),
+    Writer(PipeWriter),
 }
 
 pub struct ExportParams {
@@ -269,13 +268,16 @@ pub fn run_efficient<T: inject::NetEnabler>(
         let builder = thread::Builder::new().name("Pcap-export".into());
         export_threads.push(if let Some(export) = export {
             builder
-                .spawn(move || match export.outfile {
-                    ExportDestination::FileName(s) => {
-                        export::run_export(rx_pcap, &s, export.order_pcap)
+                .spawn(move || -> Result<(), String> {
+                    match export.outfile {
+                        ExportDestination::FileName(s) => {
+                            export::run_export(rx_pcap, &s, export.order_pcap)?
+                        }
+                        ExportDestination::Writer(w) => {
+                            export::run_export_to_writer(rx_pcap, &w, export.order_pcap)?
+                        }
                     }
-                    ExportDestination::Writer(w) => {
-                        export::run_export_to_writer(rx_pcap, &w, export.order_pcap)
-                    }
+                    Ok(())
                 })
                 .map_err(|e| e.to_string())?
         } else {
@@ -283,6 +285,7 @@ pub fn run_efficient<T: inject::NetEnabler>(
             builder
                 .spawn(move || {
                     export::run_dummy_export(rx_pcap);
+                    Ok(())
                 })
                 .map_err(|e| e.to_string())?
         });
@@ -325,7 +328,7 @@ pub fn run_efficient<T: inject::NetEnabler>(
     if !export_threads.is_empty() {
         log::info!("Generation complete: exporting");
         for thread in export_threads {
-            thread.join().map_err(|_| "Thread panicked")?;
+            thread.join().map_err(|_| "Thread panicked")??;
         }
     }
 
@@ -431,7 +434,9 @@ pub fn run_fast(
                 .truncate(true)
                 .open(&outfile)
                 .map_err(|e| e.to_string())?,
-            ExportDestination::Writer(writer) => writer,
+            ExportDestination::Writer(_writer) => {
+                Err("ExportDestination::Writer is not available for run_fast")?
+            }
         };
         let mut pcap_writer = PcapWriter::new(BufWriter::new(writer)).map_err(|e| e.to_string())?;
         for thread in threads {
