@@ -11,7 +11,6 @@ use fosr_lib::utils;
 
 mod cmd;
 mod run;
-#[cfg(feature = "server")]
 mod server;
 
 use std::cmp::max;
@@ -220,7 +219,6 @@ fn main() -> Result<(), String> {
                 true,
             )?;
         }
-        #[cfg(feature = "server")]
         cmd::Command::ApiServer {
             port,
             maximum_duration,

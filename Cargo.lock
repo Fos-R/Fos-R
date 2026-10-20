@@ -620,12 +620,6 @@ dependencies = [
 
 [[package]]
 name = "base64"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
-
-[[package]]
-name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
@@ -772,13 +766,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "buf_redux"
-version = "0.8.4"
+name = "buffer-redux"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b953a6887648bb07a535631f2bc00fbdb2a2216f135552cb3f534ed136b9c07f"
+checksum = "431a9cc8d7efa49bc326729264537f5e60affce816c66edf434350778c9f4f54"
 dependencies = [
  "memchr",
- "safemem",
 ]
 
 [[package]]
@@ -3172,24 +3165,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "multipart"
-version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00dec633863867f29cb39df64a397cdf4a6354708ddd7759f70c7fb51c5f9182"
-dependencies = [
- "buf_redux",
- "httparse",
- "log",
- "mime",
- "mime_guess",
- "quick-error 1.2.3",
- "rand 0.8.8",
- "safemem",
- "tempfile",
- "twoway",
-]
-
-[[package]]
 name = "naga"
 version = "27.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4536,17 +4511,16 @@ dependencies = [
 [[package]]
 name = "rouille"
 version = "3.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3716fbf57fc1084d7a706adf4e445298d123e4a44294c4e8213caf1b85fcc921"
+source = "git+https://github.com/tomaka/rouille.git#31f772c40007503d25e60e9aba77836a4273ec26"
 dependencies = [
- "base64 0.13.1",
+ "base64 0.22.1",
  "brotli",
  "chrono",
  "deflate",
  "filetime",
- "multipart",
  "percent-encoding",
  "rand 0.8.8",
+ "rouille-multipart",
  "serde",
  "serde_derive",
  "serde_json",
@@ -4555,6 +4529,23 @@ dependencies = [
  "time",
  "tiny_http",
  "url",
+]
+
+[[package]]
+name = "rouille-multipart"
+version = "0.18.0"
+source = "git+https://github.com/tomaka/rouille.git#31f772c40007503d25e60e9aba77836a4273ec26"
+dependencies = [
+ "buffer-redux",
+ "httparse",
+ "log",
+ "mime",
+ "mime_guess",
+ "quick-error 1.2.3",
+ "rand 0.8.8",
+ "safemem",
+ "tempfile",
+ "twoway",
 ]
 
 [[package]]

@@ -27,7 +27,7 @@ num_cpus = "1.17.0"
 pcap-file = "2.0.0"
 pnet = { version = "0.35.0", default-features = false }
 pnet_packet = "0.35.0"
-rouille = { version = "3.6.2", optional = true }
+rouille = { version = "3.6.2", git = "https://github.com/tomaka/rouille.git" }
 serde = "1.0.229"
 serde_yaml = "0.9.34"
 thingbuf = "0.1.6"
@@ -46,7 +46,6 @@ models_cicids17 = ["fosr-lib/models_cicids17"]
 models_dedale = ["fosr-lib/models_dedale"]
 default = ["models_cupid", "models_cicids17", "models_dedale"]
 net_injection = ["pnet/std", "fosr-lib/net_injection"]
-server = ["dep:rouille"]
 
 [package.metadata.deb]
 section = "science"

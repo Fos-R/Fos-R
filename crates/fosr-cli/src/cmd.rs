@@ -449,7 +449,6 @@ pub enum Command {
         )]
         no_order_pcap: bool,
     },
-    #[cfg(feature = "server")]
     /// Spawn an API server that listens to HTTP request to generate data.
     /// If you need an HTTPS server, use a local reverse proxy.
     ApiServer {
