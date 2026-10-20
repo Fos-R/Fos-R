@@ -13,7 +13,7 @@ keywords = ["networking", "ai", "security"]
 [dependencies]
 base64 = "0.22.1"
 chrono = "0.4.45"
-crossbeam-channel = "0.5.16"
+crossbeam-channel = "0.5.17"
 derivative = "2.2.0"
 fosr-ebpf = { version = "0.1.1", path = "../fosr-ebpf", optional = true }
 include-bytes-zstd = "0.1.0"
@@ -26,7 +26,7 @@ nalgebra = "0.35"
 pcap-file = "2.0.0"
 pnet = { version = "0.35.0", default-features = false }
 pnet_packet = "0.35.0"
-rand = "0.10.2"
+rand = "0.10.3"
 rand_core = "0.10.1"
 rand_distr = "0.6.0"
 rand_pcg = "0.10.2"
@@ -51,7 +51,7 @@ models_dedale = []
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.build-dependencies]
 anyhow = { version = "1", default-features = false, optional = true }
-aya-build = { version = "0.1.2", default-features = false, optional = true }
+aya-build = { version = "0.1.3", default-features = false, optional = true }
 fosr-ebpf = { path = "../fosr-ebpf", optional = true }
 
 # auto-detect WASM target and add the feature to getrandom
