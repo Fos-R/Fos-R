@@ -23,6 +23,8 @@
 - New `generate-topology` command
 - New unstable `create-pcap` command
 - New `split-untaint` command
+- New `validate-network` command
+- New `api-server` command
 
 #### fosr
 
