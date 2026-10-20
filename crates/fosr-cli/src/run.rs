@@ -1,5 +1,4 @@
 use fosr_lib::export;
-#[cfg(feature = "net_injection")]
 use fosr_lib::inject;
 use fosr_lib::stage1;
 use fosr_lib::stage2;
@@ -8,7 +7,7 @@ use fosr_lib::stage4;
 use fosr_lib::stats;
 use fosr_lib::{
     Flow, ICMPPacketInfo, L4Proto, Packets, PacketsIR, PacketsRecycler, SeededData, TCPPacketInfo,
-    TimePoint, UDPPacketInfo, inject,
+    TimePoint, UDPPacketInfo,
 };
 
 use std::collections::HashMap;
@@ -27,8 +26,6 @@ use crossbeam_channel::bounded;
 use indicatif::HumanBytes;
 use itertools::kmerge;
 use pcap_file::pcap::{PcapPacket, PcapWriter};
-#[cfg(feature = "net_injection")]
-use pnet::{datalink, ipnetwork::IpNetwork};
 
 const CHANNEL_SIZE: usize = 50;
 
@@ -297,13 +294,16 @@ pub fn run_efficient<T: inject::NetEnabler>(
             let builder = thread::Builder::new().name("inject".into());
             gen_threads.push(
                 builder
-                    .spawn(move || match s5net.injection_algo {
-                        cmd::InjectionAlgo::Fast => {
-                            inject::start_fast(s5net.net_enabler, rx_s5, stats)
-                        }
-                        cmd::InjectionAlgo::Reliable => {
-                            inject::start_reliable(s5net.net_enabler, rx_s5, stats)
-                        }
+                    .spawn(move || -> Result<(), String> {
+                        match s5net.injection_algo {
+                            cmd::InjectionAlgo::Fast => {
+                                inject::start_fast(s5net.net_enabler, rx_s5, stats)
+                            }
+                            cmd::InjectionAlgo::Reliable => {
+                                inject::start_reliable(s5net.net_enabler, rx_s5, stats)
+                            }
+                        };
+                        Ok(())
                     })
                     .map_err(|e| e.to_string())?,
             );

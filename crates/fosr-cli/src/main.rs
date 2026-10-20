@@ -29,6 +29,8 @@ use chrono_tz::Tz;
 use clap::Parser;
 #[cfg(feature = "net_injection")]
 use pnet::{datalink, ipnetwork::IpNetwork};
+#[cfg(feature = "net_injection")]
+use std::net::Ipv4Addr;
 
 // Use Jemalloc when possible
 #[cfg(all(target_os = "linux", any(target_env = "", target_env = "gnu")))]
@@ -45,48 +47,54 @@ fn main() -> Result<(), String> {
     match args.command {
         #[cfg(feature = "net_injection")]
         cmd::Command::InjectCyberRange {
-            #[cfg(all(target_os = "linux", feature = "iptables"))]
-            stealthy,
+            // #[cfg(all(target_os = "linux", feature = "iptables"))]
+            // stealthy,
             seed,
             network,
             outfile,
             no_order_pcap,
             flow_per_day,
-            net_enabler,
             duration,
             jobs,
             deterministic,
             injection_algo,
             default_models,
             custom_models,
+            alpha,
         } => {
             // load the models
             let source = if let Some(custom_models) = custom_models {
                 models::ModelsSource::UserDefined(custom_models)
             } else {
-                default_models?.get_source() // we are sure it contains something
+                default_models.unwrap().get_source() // we are sure it contains something
             };
-            let duration = duration.map(|d| {
-                humantime::parse_duration(&d).map_err(|_| "Duration could not be parsed.")
-            })?;
-            #[cfg(not(all(target_os = "linux", feature = "iptables")))]
-            let stealthy = false;
+            let duration = duration
+                .map(|d| -> Result<Duration, String> {
+                    Ok(humantime::parse_duration(&d)
+                        .map_err(|_| "Duration could not be parsed.")?)
+                })
+                .transpose()?;
+            // #[cfg(not(all(target_os = "linux", feature = "iptables")))]
+            // let stealthy = false;
             net_injection(
-                stealthy,
+                false,
                 seed,
                 network,
                 outfile,
                 no_order_pcap,
                 flow_per_day,
-                net_enabler,
                 duration,
                 jobs,
                 deterministic,
                 injection_algo,
                 source,
-            );
+                alpha,
+            )?;
         }
-        #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
+        #[cfg(all(
+            any(target_os = "windows", target_os = "linux"),
+            feature = "net_injection"
+        ))]
         cmd::Command::InjectAcross {
             seed,
             network,
@@ -97,16 +105,20 @@ fn main() -> Result<(), String> {
             jobs,
             default_models,
             custom_models,
+            alpha,
         } => {
             // load the models
             let source = if let Some(custom_models) = custom_models {
                 models::ModelsSource::UserDefined(custom_models)
             } else {
-                default_models?.get_source() // we are sure it contains something
+                default_models.unwrap().get_source() // we are sure it contains something
             };
-            let duration = duration.map(|d| {
-                humantime::parse_duration(&d).map_err(|_| "Duration could not be parsed.")?
-            });
+            let duration = duration
+                .map(|d| -> Result<Duration, String> {
+                    Ok(humantime::parse_duration(&d)
+                        .map_err(|_| "Duration could not be parsed.")?)
+                })
+                .transpose()?;
             net_injection(
                 false,
                 seed,
@@ -114,13 +126,13 @@ fn main() -> Result<(), String> {
                 outfile,
                 no_order_pcap,
                 flow_per_day,
-                cmd::NetEnabler::Ebpf,
                 duration,
                 jobs,
                 true,
                 cmd::InjectionAlgo::Fast,
                 source,
-            );
+                alpha,
+            )?;
         }
         cmd::Command::CreatePcap {
             seed,
@@ -224,7 +236,7 @@ fn main() -> Result<(), String> {
 
             server::start(
                 port,
-                maximum_duration.map(|d| Duration::from_secs_f64((d as f64) / 3600.0)),
+                maximum_duration.map(|d| Duration::from_secs_f64(d / 3600.0)),
                 model,
                 jobs,
             )?;
@@ -486,12 +498,12 @@ fn net_injection(
     outfile: Option<String>,
     no_order_pcap: bool,
     flow_per_day: Option<u64>,
-    net_enabler: cmd::NetEnabler,
     duration: Option<Duration>,
     jobs: Option<usize>,
     deterministic: bool,
     injection_algo: cmd::InjectionAlgo,
     source: models::ModelsSource,
+    alpha: u64,
 ) -> Result<(), String> {
     // Extract all IPv4 local interfaces (except loopback)
     let extract_addr = |iface: datalink::NetworkInterface| {
@@ -517,11 +529,10 @@ fn net_injection(
         .flat_map(extract_addr)
         .filter(|i| !i.is_loopback())
         .collect();
-    log::debug!("IPv4 interfaces: {:?}", &local_ips);
+    log::debug!("IPv4 interfaces: {:?}", local_ips);
 
-    let model = models::Models::from_source(source)?; //.with_network(&network).unwrap(); // FIXME
-    let automata_library = Arc::new(model.automata);
-    let bn = Arc::new(model.bn);
+    let model: models::ArcModels =
+        models::Models::from_source_with_path_network(&source, &network, alpha)?.into();
 
     // TODO verify if the current IP has a role in the network
     // if !has_role {
@@ -538,9 +549,9 @@ fn net_injection(
         deterministic,
     );
 
-    let s2 = stage2::bn_generator::BNGenerator::new(bn, false);
+    let s2 = stage2::bn_generator::BNGenerator::new(model.bn, false);
     let s2 = stage2::FilterForOnline::new(local_ips.clone(), s2);
-    let s3 = stage3::tadam::TadamGenerator::new(automata_library);
+    let s3 = stage3::tadam::TadamGenerator::new(model.automata);
     let s4 = stage4::Stage4::new(!stealthy);
 
     // run
@@ -551,51 +562,26 @@ fn net_injection(
         max(1, jobs - (2 * jobs) / 3),
     );
 
-    log::info!("Network enabler: {net_enabler:?}");
-    match net_enabler {
-        #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
-        cmd::NetEnabler::Ebpf => {
-            let s4net = run::InjectParam {
-                net_enabler: inject::ebpf::EBPFNetEnabler::new(
-                    matches!(injection_algo, cmd::InjectionAlgo::Fast),
-                    &local_interfaces,
-                ),
-                injection_algo,
-            };
-            run_efficient(
-                local_ips,
-                outfile.map(|o| ExportParams {
-                    outfile: ExportDestination::FileName(o),
-                    order_pcap: !no_order_pcap,
-                }),
-                s1,
-                (s2, s2_count),
-                (s3, s3_count),
-                (s4, s4_count),
-                Arc::new(stats::Stats::new(stats::Target::None)),
-                Some(s4net),
-            );
-        }
-        #[cfg(all(target_os = "linux", feature = "iptables"))]
-        cmd::NetEnabler::Iptables => {
-            let s4net = run::InjectParam {
-                net_enabler: inject::iptables::IPTablesNetEnabler::new(!stealthy, false),
-                injection_algo,
-            };
-            run_efficient(
-                local_ips,
-                outfile.map(|o| ExportParams {
-                    outfile: ExportDestination::FileName(o),
-                    order_pcap: !no_order_pcap,
-                }),
-                s1,
-                (s2, s2_count),
-                (s3, s3_count),
-                (s4, s4_count),
-                Arc::new(stats::Stats::new(stats::Target::None)),
-                Some(s4net),
-            );
-        }
+    let s4net = run::InjectParam {
+        net_enabler: inject::ebpf::EBPFNetEnabler::new(
+            matches!(injection_algo, cmd::InjectionAlgo::Fast),
+            &local_interfaces,
+        )?,
+        injection_algo,
     };
+    run::run_efficient(
+        local_ips,
+        outfile.map(|o| run::ExportParams {
+            outfile: run::ExportDestination::FileName(o),
+            order_pcap: !no_order_pcap,
+        }),
+        s1,
+        (s2, s2_count),
+        (s3, s3_count),
+        (s4, s4_count),
+        Arc::new(stats::Stats::new(stats::Target::None)),
+        Some(s4net),
+        false,
+    )?;
     Ok(())
 }

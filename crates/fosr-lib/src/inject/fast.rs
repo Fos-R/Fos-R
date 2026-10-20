@@ -234,7 +234,7 @@ pub fn start_fast(
             .unwrap();
 
         // iptables hack
-        s4net.get_ttl().map(|ttl| tx.set_ttl(ttl).unwrap());
+        // s4net.get_ttl().map(|ttl| tx.set_ttl(ttl).unwrap());
 
         let builder = thread::Builder::new().name(format!("Stage4-{proto:?}"));
         let stats = stats.clone();

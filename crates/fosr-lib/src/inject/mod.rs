@@ -13,14 +13,10 @@ pub use reliable::start_reliable;
 
 #[cfg(all(
     any(target_os = "windows", target_os = "linux"),
-    feature = "ebpf",
     feature = "net_injection"
 ))]
 /// Network enabler based on eBPF
 pub mod ebpf;
-#[cfg(all(target_os = "linux", feature = "iptables", feature = "net_injection"))]
-/// Network enable based on iptables
-pub mod iptables;
 
 /// A trait for network enablers
 pub trait NetEnabler: Clone + std::marker::Send + 'static {

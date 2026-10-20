@@ -347,8 +347,8 @@ pub fn start_reliable(
 
         {
             // iptables hack
-            #[cfg(all(target_os = "linux", feature = "iptables"))]
-            s4net.get_ttl().map(|ttl| tx.set_ttl(ttl).unwrap());
+            // #[cfg(all(target_os = "linux", feature = "iptables"))]
+            // s4net.get_ttl().map(|ttl| tx.set_ttl(ttl).unwrap());
 
             let builder = thread::Builder::new().name(format!("Stage4-{proto:?}-tx"));
             let current_flows = current_flows.clone();

@@ -11,14 +11,6 @@ pub struct Args {
 }
 
 #[derive(ValueEnum, Debug, Clone)]
-pub enum NetEnabler {
-    #[cfg(all(target_os = "linux", feature = "iptables"))]
-    Iptables,
-    #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
-    Ebpf,
-}
-
-#[derive(ValueEnum, Debug, Clone)]
 pub enum GenerationProfile {
     Fast,
     Efficient,
@@ -146,13 +138,13 @@ pub enum Command {
         custom_models: Option<String>,
         #[arg(short, long, help = "Path to the network file")]
         network: String,
-        #[cfg(all(target_os = "linux", feature = "iptables"))]
-        #[arg(
-            long,
-            default_value_t = false,
-            help = "Do not taint the packets. Option only available on Linux with the \"iptables\" feature."
-        )]
-        stealthy: bool,
+        // #[cfg(all(target_os = "linux", feature = "iptables"))]
+        // #[arg(
+        //     long,
+        //     default_value_t = false,
+        //     help = "Do not taint the packets. Option only available on Linux with the \"iptables\" feature."
+        // )]
+        // stealthy: bool,
         #[arg(
             short,
             long,
@@ -172,12 +164,6 @@ pub enum Command {
         )]
         duration: Option<String>,
         #[arg(
-            short = 'e',
-            long,
-            help = "Method to avoid kernel interactions with the injected traffic"
-        )]
-        net_enabler: NetEnabler,
-        #[arg(
             short,
             long,
             help = "Number of generation jobs. By default, use half the available cores"
@@ -196,9 +182,18 @@ pub enum Command {
             help = "Ensure the generated traffic is always the same. It makes Fos-R less robust to staggered process starts, so avoid it unless for testing"
         )]
         deterministic: bool,
+        #[arg(
+            long,
+            default_value_t = 1,
+            help = "Pseudo-counts for the Bayesian network. Increase to artificially favor diversity. Must be at least 1."
+        )]
+        alpha: u64,
     },
 
-    #[cfg(all(any(target_os = "windows", target_os = "linux"), feature = "ebpf"))]
+    #[cfg(all(
+        any(target_os = "windows", target_os = "linux"),
+        feature = "net_injection"
+    ))]
     /// This mode injects traffic from two network interfaces, across some network equipment to analyse.
     #[clap(group(
     clap::ArgGroup::new("models")
@@ -243,6 +238,12 @@ pub enum Command {
             help = "Number of generation jobs. By default, use half the available cores"
         )]
         jobs: Option<usize>,
+        #[arg(
+            long,
+            default_value_t = 1,
+            help = "Pseudo-counts for the Bayesian network. Increase to artificially favor diversity. Must be at least 1."
+        )]
+        alpha: u64,
     },
     /// Create a pcap file that extends a dataset. For deterministic generation,
     /// specify -t, --tz and --seed.

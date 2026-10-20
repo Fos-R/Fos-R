@@ -44,16 +44,10 @@ aya = { version = "0.13.1", default-features = false, optional = true }
 
 [features]
 default = []
-net_injection = ["pnet/std"]
+net_injection = ["pnet/std", "dep:aya", "dep:fosr-ebpf"]
 models_cupid = []
 models_cicids17 = []
 models_dedale = []
-
-# Linux only
-iptables = ["net_injection"]
-
-# Linux & Windows only
-ebpf = ["dep:aya", "net_injection", "dep:fosr-ebpf"]
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.build-dependencies]
 anyhow = { version = "1", default-features = false, optional = true }

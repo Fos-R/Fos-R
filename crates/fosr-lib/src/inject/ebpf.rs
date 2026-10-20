@@ -27,7 +27,10 @@ impl NetEnabler for EBPFNetEnabler {
 /// # Parameters
 ///
 /// - `local_interfaces`: List of used (by Fos-R) network interfaces.
-fn load_ebpf_program(local_interfaces: &[datalink::NetworkInterface], program_name: &str) {
+fn load_ebpf_program(
+    local_interfaces: &[datalink::NetworkInterface],
+    program_name: &str,
+) -> Result<(), String> {
     use aya::programs::{Xdp, XdpFlags};
 
     // Retrieve the stored eBPF program that where stored, at compilation, into the binary
@@ -46,24 +49,26 @@ fn load_ebpf_program(local_interfaces: &[datalink::NetworkInterface], program_na
     for local_interface in local_interfaces {
         program
             .attach(&local_interface.name, XdpFlags::SKB_MODE)
-            .unwrap_or_else(|_| {
-                panic!("failed to attach the XDP program on interface {local_interface}")
-            });
+            .map_err(|s| s.to_string())?;
     }
 
     // leak the ebpf program so it lives as long as the process
     Box::<Ebpf>::leak(Box::new(ebpf));
+    Ok(())
 }
 
 impl EBPFNetEnabler {
-    pub fn new(fast: bool, local_interfaces: &[datalink::NetworkInterface]) -> Self {
+    pub fn new(
+        fast: bool,
+        local_interfaces: &[datalink::NetworkInterface],
+    ) -> Result<Self, String> {
         if fast {
             log::info!("Loading \"drop\" eBPF program");
-            load_ebpf_program(local_interfaces, "fosr_ebpf_drop");
+            load_ebpf_program(local_interfaces, "fosr_ebpf_drop")?;
         } else {
             log::info!("Loading \"redirect\" eBPF program");
-            load_ebpf_program(local_interfaces, "fosr_ebpf_redirect");
+            load_ebpf_program(local_interfaces, "fosr_ebpf_redirect")?;
         }
-        EBPFNetEnabler { fast }
+        Ok(EBPFNetEnabler { fast })
     }
 }

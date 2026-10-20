@@ -171,7 +171,7 @@ impl From<pcap::PcapPacket<'_>> for PacketInfo {
 
             _ => {
                 // log::error!("Unsupported protocol: {proto}");
-                panic!("Unsupported protocol")
+                todo!("Unsupported protocol")
             }
         }
     }

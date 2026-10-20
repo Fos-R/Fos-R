@@ -176,7 +176,7 @@ impl BinBasedGenerator {
         seed: Option<u64>,
         total_duration: Option<Duration>,
         flow_per_day: Option<u64>,
-        profile: TimeModel,
+        profile: Arc<TimeModel>,
         deterministic: bool,
     ) -> Self {
         let current_date = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
@@ -203,7 +203,7 @@ impl BinBasedGenerator {
             d.div_duration_f32(Duration::from_secs(WINDOW_WIDTH_IN_SECS))
                 .ceil() as u64
         });
-        let lambdas = get_lambdas(flow_per_day, profile.bins);
+        let lambdas = get_lambdas(flow_per_day, &profile.bins);
 
         let mut generator = BinBasedGenerator {
             net_injection: true,
