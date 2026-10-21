@@ -82,8 +82,8 @@ pub fn start(
     rouille::start_server_with_pool(address, Some(1), move |request| {
         dbg!(request.method());
         dbg!(request.url());
-        if request.method() == "POST" && request.url() == "/pcap" {
-            // A POST route to generate pcap
+        if request.url() == "/pcap" {
+            // any method works
             dbg!(&request);
             let data: JsonRequest = try_or_400!(json_input(request));
 
