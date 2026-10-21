@@ -22,7 +22,7 @@ use rouille::input::json::JsonError;
 use rouille::{Response, ResponseBody, try_or_400};
 use serde::Deserialize;
 
-pub fn json_input<O>(request: &rouille::Request) -> Result<O, JsonError>
+fn json_input<O>(request: &rouille::Request) -> Result<O, JsonError>
 where
     O: serde::de::DeserializeOwned,
 {
@@ -48,6 +48,16 @@ where
     }
 }
 
+/// REST API:
+/// Route /pcap
+/// Method: POST or GET
+/// Parameters in JSON format:
+/// - duration, a mandatory parameter, as a string. The duration of the pcap. You can use human-friendly time, such as \"15days 30min 5s\".
+/// - network, a mandatory parameter, as a string. The network to generate for. IT MUST BE BASE64-ENCODED.
+/// - seed, an optional parameter, as an integer. Seed for the random generators.
+/// - start_time, an optional parameter, as a string. Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. The date cannot be ealier than 1970. By default, use the current time. Date time is considered to be in the timezone specified in tz.
+/// - tz, an optional parameter, as a string. Timezone of the generated, used for realistic work hours. By default, local timezone is used. Use a IANA time zone (like Europe/Paris) or an abbreviation (like CET). The offset is assumed constant during the generation time range.
+/// The route returns directly the pcap file.
 pub fn start(
     port: u16,
     maximum_duration: Option<Duration>,
@@ -80,8 +90,6 @@ pub fn start(
 
     // Only one connection at a time (with is complementary to the mutex)
     rouille::start_server_with_pool(address, Some(1), move |request| {
-        dbg!(request.method());
-        dbg!(request.url());
         if request.url() == "/pcap" {
             // any method works
             dbg!(&request);
