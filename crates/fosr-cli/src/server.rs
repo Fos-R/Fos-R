@@ -57,12 +57,13 @@ where
 /// - seed, an optional parameter, as an integer. Seed for the random generators.
 /// - start_time, an optional parameter, as a string. Beginning time of the pcap in RFC3339 style (\"2025-05-01 10:28:07\") or a Unix timestamp. The date cannot be ealier than 1970. By default, use the current time. Date time is considered to be in the timezone specified in tz.
 /// - tz, an optional parameter, as a string. Timezone of the generated, used for realistic work hours. By default, local timezone is used. Use a IANA time zone (like Europe/Paris) or an abbreviation (like CET). The offset is assumed constant during the generation time range.
+///
 /// The route returns directly the pcap file.
 pub fn start(
     port: u16,
     maximum_duration: Option<Duration>,
     base_model: models::Models,
-    jobs: Option<usize>,
+    jobs: usize,
 ) -> Result<(), String> {
     #[derive(Deserialize, Debug)]
     struct JsonRequest {
@@ -75,8 +76,6 @@ pub fn start(
     let maximum_duration = maximum_duration.unwrap_or(Duration::MAX);
     let address = format!("localhost:{port}");
     log::info!("Listening on {address}");
-
-    let jobs = jobs.unwrap_or(max(1, num_cpus::get() / 2));
 
     let (s2_count, s3_count, s4_count) = (
         max(1, jobs / 3),

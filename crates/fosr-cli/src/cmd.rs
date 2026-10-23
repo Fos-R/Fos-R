@@ -465,9 +465,12 @@ pub enum Command {
         #[arg(
             short,
             long,
-            help = "Number of generation jobs. By default, use half the available cores"
+            default_value_t = 1,
+            help = "Number of generation jobs. By default, use as few cores as possible"
         )]
-        jobs: Option<usize>,
+        // Only one job by default
+        // Indeed, the network throughput is the limiting factor here, not CPU
+        jobs: usize,
     },
     /// Remove the Fos-R taint from a pcap file
     Untaint {
