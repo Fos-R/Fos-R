@@ -31,6 +31,7 @@ pub struct TimePoint {
 /// A transport protocol
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString)]
 #[serde(rename_all_fields = "UPPERCASE")]
+#[strum(serialize_all = "UPPERCASE")]
 #[strum(
     parse_err_fn = String::from,
     parse_err_ty = String

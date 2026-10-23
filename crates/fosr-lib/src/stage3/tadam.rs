@@ -210,6 +210,7 @@ impl From<PacketDistrJson> for PacketDistr {
 
 #[derive(Deserialize, Debug)]
 #[serde(tag = "proto")]
+#[serde(rename_all = "UPPERCASE")]
 enum PacketDistrJson {
     Tcp {
         conn_state: TcpConnState,
