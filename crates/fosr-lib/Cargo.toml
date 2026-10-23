@@ -30,6 +30,7 @@ rand = "0.10.3"
 rand_core = "0.10.1"
 rand_distr = "0.6.0"
 rand_pcg = "0.10.2"
+rayon = "1.10"
 selen = { version = "0.15.5", git = "https://github.com/PFGimenez/selen.git" }
 serde = { version = "1.0.229", features = ["derive"] }
 serde-xml-rs = "0.8.2"
@@ -57,3 +58,4 @@ fosr-ebpf = { path = "../fosr-ebpf", optional = true }
 # auto-detect WASM target and add the feature to getrandom
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.4.3", features=["wasm_js"] }
+wasm-bindgen-rayon = "1.2"

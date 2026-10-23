@@ -11,6 +11,7 @@ use nalgebra::{matrix, vector};
 use rand::prelude::IndexedRandom;
 use rand_core::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
+use rayon::prelude::*;
 use serde::Deserialize;
 use statrs::distribution::MultivariateNormal;
 use std::collections::HashMap;
@@ -27,6 +28,92 @@ struct AutomataSet<T: EdgeType> {
 pub struct AutomataLibrary {
     tcp_automata: HashMap<(L7Proto, TcpConnState), Vec<AutomataSet<TcpEdgeTuple>>>,
     udp_automata: HashMap<L7Proto, Vec<AutomataSet<UdpEdgeTuple>>>,
+}
+
+enum LoadedAutomata {
+    TcpAutomata(L7Proto, TcpConnState, AutomataSet<TcpEdgeTuple>),
+    UdpAutomata(L7Proto, AutomataSet<UdpEdgeTuple>),
+}
+
+fn import_from_str(string: &str, clusters: &[PacketDistr]) -> Result<LoadedAutomata, String> {
+    let string = string.to_string();
+    let a: automaton::JsonAutomaton =
+        serde_json::from_str::<automaton::JsonAutomaton>(string.leak())
+            .map_err(|e| format!("Import error: {e}"))?;
+    let l7proto = L7Proto::from_str(&a.metadata.service)?;
+    let conn_state = a.metadata.conn_state;
+    match a.protocol {
+        L4Proto::Tcp => {
+            assert!(conn_state.is_some());
+            let automata_clusters = clusters
+                .iter()
+                .find_map(|p| {
+                    if let PacketDistr::Tcp {
+                        conn_state,
+                        service,
+                        distr,
+                    } = p
+                        && *service == l7proto
+                        && *conn_state == a.metadata.conn_state.unwrap()
+                    {
+                        Some(distr)
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or_else(|| {
+                    panic!(
+                        "No cluster found for {l7proto} and {:?}",
+                        conn_state.unwrap()
+                    )
+                });
+            assert!(!automata_clusters.is_empty());
+            let a = automaton::TimedAutomaton::<TcpEdgeTuple>::import_timed_automaton(
+                a,
+                automata_clusters.clone(),
+                parse_tcp_symbol,
+            )?;
+            log::debug!("Import TCP {a}, registered for {l7proto:?}");
+            Ok(LoadedAutomata::TcpAutomata(
+                l7proto,
+                conn_state.unwrap(),
+                AutomataSet {
+                    uncons_a: a.clone(),
+                    cons_a: a.into(),
+                },
+            ))
+        }
+        L4Proto::Udp => {
+            let automata_clusters = clusters
+                .iter()
+                .find_map(|p| {
+                    if let PacketDistr::Udp { service, distr } = p
+                        && *service == l7proto
+                    {
+                        Some(distr)
+                    } else {
+                        None
+                    }
+                })
+                .expect("No cluster found for {l7proto}");
+
+            assert!(!automata_clusters.is_empty());
+            let a = automaton::TimedAutomaton::<UdpEdgeTuple>::import_timed_automaton(
+                a,
+                automata_clusters.clone(),
+                parse_udp_symbol,
+            )?;
+            log::debug!("Import UDP {a}, registered for {l7proto:?}");
+            Ok(LoadedAutomata::UdpAutomata(
+                l7proto,
+                AutomataSet {
+                    uncons_a: a.clone(),
+                    cons_a: a.into(),
+                },
+            ))
+        }
+        L4Proto::Icmp => todo!(),
+    }
 }
 
 impl AutomataLibrary {
@@ -48,101 +135,30 @@ impl AutomataLibrary {
             // icmp_automata: HashMap::new(),
         };
 
-        for s in strings {
-            match lib.import_from_str(&s, &clusters) {
-                Ok(()) => nb += 1,
+        // load the automata in parallel with rayon
+        let loaded_automata: Vec<Result<LoadedAutomata, String>> = strings
+            .par_iter()
+            .map(|s| import_from_str(&s, &clusters))
+            .collect();
+
+        for result_automata in loaded_automata {
+            match result_automata {
+                Ok(LoadedAutomata::TcpAutomata(l7proto, conn_state, a)) => {
+                    nb += 1;
+                    let v = lib.tcp_automata.entry((l7proto, conn_state)).or_default();
+                    v.push(a);
+                }
+                Ok(LoadedAutomata::UdpAutomata(l7proto, a)) => {
+                    nb += 1;
+                    let v = lib.udp_automata.entry(l7proto).or_default();
+                    v.push(a);
+                }
                 Err(s) => log::error!("Could not load automaton ({s})"),
             }
-            // pb.inc(1);
         }
+
         log::info!("{nb} automata have been loaded");
         Ok(lib)
-    }
-
-    pub fn import_from_str(
-        &mut self,
-        string: &str,
-        clusters: &[PacketDistr],
-    ) -> Result<(), String> {
-        let string = string.to_string();
-        let a: automaton::JsonAutomaton =
-            serde_json::from_str::<automaton::JsonAutomaton>(string.leak())
-                .map_err(|e| format!("Import error: {e}"))?;
-        let l7proto = L7Proto::from_str(&a.metadata.service)?;
-        let conn_state = a.metadata.conn_state;
-        match a.protocol {
-            L4Proto::Tcp => {
-                assert!(conn_state.is_some());
-                let automata_clusters = clusters
-                    .iter()
-                    .find_map(|p| {
-                        if let PacketDistr::Tcp {
-                            conn_state,
-                            service,
-                            distr,
-                        } = p
-                            && *service == l7proto
-                            && *conn_state == a.metadata.conn_state.unwrap()
-                        {
-                            Some(distr)
-                        } else {
-                            None
-                        }
-                    })
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "No cluster found for {l7proto} and {:?}",
-                            conn_state.unwrap()
-                        )
-                    });
-                assert!(!automata_clusters.is_empty());
-                let a = automaton::TimedAutomaton::<TcpEdgeTuple>::import_timed_automaton(
-                    a,
-                    automata_clusters.clone(),
-                    parse_tcp_symbol,
-                )?;
-                // let proto = L7Proto::from_str(l7proto).unwrap();
-                log::debug!("Import TCP {a}, registered for {l7proto:?}");
-                let v = self
-                    .tcp_automata
-                    .entry((l7proto, conn_state.unwrap()))
-                    .or_default();
-                v.push(AutomataSet {
-                    uncons_a: a.clone(),
-                    cons_a: a.into(),
-                });
-            }
-            L4Proto::Udp => {
-                let automata_clusters = clusters
-                    .iter()
-                    .find_map(|p| {
-                        if let PacketDistr::Udp { service, distr } = p
-                            && *service == l7proto
-                        {
-                            Some(distr)
-                        } else {
-                            None
-                        }
-                    })
-                    .expect("No cluster found for {l7proto}");
-
-                assert!(!automata_clusters.is_empty());
-                let a = automaton::TimedAutomaton::<UdpEdgeTuple>::import_timed_automaton(
-                    a,
-                    automata_clusters.clone(),
-                    parse_udp_symbol,
-                )?;
-                // let proto = L7Proto::from_str(l7proto).unwrap();
-                log::debug!("Import UDP {a}, registered for {l7proto:?}");
-                let v = self.udp_automata.entry(l7proto).or_default();
-                v.push(AutomataSet {
-                    uncons_a: a.clone(),
-                    cons_a: a.into(),
-                });
-            }
-            L4Proto::Icmp => todo!(),
-        }
-        Ok(())
     }
 }
 
