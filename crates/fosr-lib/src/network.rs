@@ -1,4 +1,4 @@
-use crate::structs::{DstIpRole, L7Proto, L7ProtoWithPort, OS, SrcIpRole};
+use crate::structs::{DstIpRole, L7Proto, L7ProtoWithPort, Os, SrcIpRole};
 use crate::utils;
 
 use include_assets::{NamedArchive, include_dir};
@@ -58,16 +58,16 @@ pub struct Network {
     pub mac_addr_map: HashMap<Ipv4Addr, MacAddr>,
 
     /// A hashmap that maps an IP to an OS (if it is defined in the config file)
-    pub os_map: HashMap<Ipv4Addr, OS>,
+    pub os_map: HashMap<Ipv4Addr, Os>,
 
     /// A list of OS that are present
-    pub present_os: Vec<OS>,
+    pub present_os: Vec<Os>,
 
     /// List of users
-    pub users: HashMap<(OS, SrcIpRole), Vec<Ipv4Addr>>,
+    pub users: HashMap<(Os, SrcIpRole), Vec<Ipv4Addr>>,
 
     /// List of servers
-    pub servers: HashMap<(L7Proto, OS, DstIpRole), Vec<Ipv4Addr>>,
+    pub servers: HashMap<(L7Proto, Os, DstIpRole), Vec<Ipv4Addr>>,
 
     /// The list of "users" IPs
     pub all_users: Vec<Ipv4Addr>,
@@ -160,7 +160,7 @@ pub struct Host {
     pub hostname: Option<String>,
 
     /// Its OS
-    pub os: OS,
+    pub os: Os,
 
     /// The type of host (server or user)
     pub host_type: HostType,
@@ -294,7 +294,7 @@ pub struct HostYaml {
     pub hostname: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub os: Option<OS>,
+    pub os: Option<Os>,
 
     // client: Option<Vec<L7Proto>>,
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
@@ -386,8 +386,8 @@ impl From<NetworkYaml> for Network {
             .flatten()
             .collect();
 
-        let mut os_map: HashMap<Ipv4Addr, OS> = HashMap::new();
-        let mut present_os: HashSet<OS> = HashSet::new();
+        let mut os_map: HashMap<Ipv4Addr, Os> = HashMap::new();
+        let mut present_os: HashSet<Os> = HashSet::new();
         for host in networks
             .iter()
             .flat_map(|n| n.hosts.iter())
@@ -443,10 +443,10 @@ impl From<NetworkYaml> for Network {
             }
         }
 
-        let mut users: HashMap<(OS, SrcIpRole), Vec<Ipv4Addr>> = HashMap::new();
-        let mut servers: HashMap<(L7Proto, OS, DstIpRole), Vec<Ipv4Addr>> = HashMap::new();
+        let mut users: HashMap<(Os, SrcIpRole), Vec<Ipv4Addr>> = HashMap::new();
+        let mut servers: HashMap<(L7Proto, Os, DstIpRole), Vec<Ipv4Addr>> = HashMap::new();
 
-        for os in OS::iter() {
+        for os in Os::iter() {
             for role in SrcIpRole::iter() {
                 let ips: Vec<Ipv4Addr> = networks
                     .iter()
@@ -578,7 +578,7 @@ impl Host {
         );
         Host {
             hostname: h.hostname,
-            os: h.os.unwrap_or(OS::Linux),
+            os: h.os.unwrap_or(Os::Linux),
             host_type,
             interfaces: h
                 .interfaces

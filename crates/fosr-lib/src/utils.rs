@@ -42,11 +42,10 @@ pub struct FlowStats {
     pub iat: Vec<Duration>,
 }
 
-#[allow(clippy::upper_case_acronyms)]
 enum PacketInfo {
-    TCP(TCPPacketInfo),
-    UDP(UDPPacketInfo),
-    ICMP(ICMPPacketInfo),
+    Tcp(TcpPacketInfo),
+    Udp(UdpPacketInfo),
+    Icmp(IcmpPacketInfo),
 }
 
 trait PacketInfoTrait {
@@ -58,7 +57,7 @@ trait PacketInfoTrait {
 }
 
 #[derive(Debug)]
-struct TCPPacketInfo {
+struct TcpPacketInfo {
     payload: Vec<u8>,
     ts: Duration,
     flags: u8,
@@ -66,7 +65,7 @@ struct TCPPacketInfo {
     ttl: u8,
 }
 
-impl PacketInfoTrait for TCPPacketInfo {
+impl PacketInfoTrait for TcpPacketInfo {
     fn ts(&self) -> Duration {
         self.ts
     }
@@ -85,7 +84,7 @@ impl PacketInfoTrait for TCPPacketInfo {
 }
 
 #[derive(Debug)]
-struct ICMPPacketInfo {
+struct IcmpPacketInfo {
     // we assume no payload
     // we may need to add more fields to correctly generate them
     ts: Duration,
@@ -93,7 +92,7 @@ struct ICMPPacketInfo {
     ttl: u8,
 }
 
-impl PacketInfoTrait for ICMPPacketInfo {
+impl PacketInfoTrait for IcmpPacketInfo {
     fn ts(&self) -> Duration {
         self.ts
     }
@@ -112,14 +111,14 @@ impl PacketInfoTrait for ICMPPacketInfo {
 }
 
 #[derive(Debug)]
-struct UDPPacketInfo {
+struct UdpPacketInfo {
     payload: Vec<u8>,
     ts: Duration,
     src_ip: Ipv4Addr,
     ttl: u8,
 }
 
-impl PacketInfoTrait for UDPPacketInfo {
+impl PacketInfoTrait for UdpPacketInfo {
     fn ts(&self) -> Duration {
         self.ts
     }
@@ -146,7 +145,7 @@ impl From<pcap::PcapPacket<'_>> for PacketInfo {
         match ip_packet.get_next_level_protocol() {
             IpNextHeaderProtocols::Tcp => {
                 let tcp_packet = tcp::TcpPacket::new(ip_packet.payload()).unwrap();
-                PacketInfo::TCP(TCPPacketInfo {
+                PacketInfo::Tcp(TcpPacketInfo {
                     payload: tcp_packet.payload().to_vec(),
                     ts: p.timestamp,
                     flags: tcp_packet.get_flags(),
@@ -156,14 +155,14 @@ impl From<pcap::PcapPacket<'_>> for PacketInfo {
             }
             IpNextHeaderProtocols::Udp => {
                 let udp_packet = udp::UdpPacket::new(ip_packet.payload()).unwrap();
-                PacketInfo::UDP(UDPPacketInfo {
+                PacketInfo::Udp(UdpPacketInfo {
                     payload: udp_packet.payload().to_vec(),
                     ts: p.timestamp,
                     src_ip: ip_packet.get_source(),
                     ttl,
                 })
             }
-            IpNextHeaderProtocols::Icmp => PacketInfo::ICMP(ICMPPacketInfo {
+            IpNextHeaderProtocols::Icmp => PacketInfo::Icmp(IcmpPacketInfo {
                 ts: p.timestamp,
                 src_ip: ip_packet.get_source(),
                 ttl,
@@ -272,7 +271,7 @@ impl FlowStats {
         }
     }
 
-    fn new_from_tcp(flow_id: FlowId, packets: Vec<TCPPacketInfo>) -> Self {
+    fn new_from_tcp(flow_id: FlowId, packets: Vec<TcpPacketInfo>) -> Self {
         // get the flags before the packets are consumed
         let flags = packets.iter().map(|p| p.flags).collect();
         let mut stats = Self::process_packets(flow_id, packets);
@@ -280,11 +279,11 @@ impl FlowStats {
         stats
     }
 
-    fn new_from_udp(flow_id: FlowId, packets: Vec<UDPPacketInfo>) -> Self {
+    fn new_from_udp(flow_id: FlowId, packets: Vec<UdpPacketInfo>) -> Self {
         Self::process_packets(flow_id, packets)
     }
 
-    fn new_from_icmp(flow_id: FlowId, packets: Vec<ICMPPacketInfo>) -> Self {
+    fn new_from_icmp(flow_id: FlowId, packets: Vec<IcmpPacketInfo>) -> Self {
         Self::process_packets(flow_id, packets)
     }
 }
@@ -297,7 +296,7 @@ fn flow_id_from_packet(data: &[u8]) -> Option<FlowId> {
         IpNextHeaderProtocols::Tcp => {
             let tcp_packet = tcp::TcpPacket::new(ip_packet.payload())?;
             (
-                L4Proto::TCP,
+                L4Proto::Tcp,
                 tcp_packet.get_source(),
                 tcp_packet.get_destination(),
             )
@@ -305,12 +304,12 @@ fn flow_id_from_packet(data: &[u8]) -> Option<FlowId> {
         IpNextHeaderProtocols::Udp => {
             let udp_packet = udp::UdpPacket::new(ip_packet.payload()).unwrap();
             (
-                L4Proto::UDP,
+                L4Proto::Udp,
                 udp_packet.get_source(),
                 udp_packet.get_destination(),
             )
         }
-        IpNextHeaderProtocols::Icmp => (L4Proto::ICMP, 0, 0),
+        IpNextHeaderProtocols::Icmp => (L4Proto::Icmp, 0, 0),
 
         _ => {
             // log::error!("Unsupported protocol: {proto}");
@@ -392,9 +391,9 @@ pub fn export_stats(file: &str, stats: Vec<FlowStats>, include_payloads: bool) {
 pub fn process_file(file: &str) -> Vec<FlowStats> {
     let file_in = BufReader::new(File::open(file).expect("Error opening file"));
     let mut pcap_reader = pcap::PcapReader::new(file_in).unwrap();
-    let mut tcp_ongoing_flows: HashMap<FlowId, Vec<TCPPacketInfo>> = HashMap::new();
-    let mut udp_ongoing_flows: HashMap<FlowId, Vec<UDPPacketInfo>> = HashMap::new();
-    let mut icmp_ongoing_flows: HashMap<FlowId, Vec<ICMPPacketInfo>> = HashMap::new();
+    let mut tcp_ongoing_flows: HashMap<FlowId, Vec<TcpPacketInfo>> = HashMap::new();
+    let mut udp_ongoing_flows: HashMap<FlowId, Vec<UdpPacketInfo>> = HashMap::new();
+    let mut icmp_ongoing_flows: HashMap<FlowId, Vec<IcmpPacketInfo>> = HashMap::new();
     let mut finished_flows: Vec<FlowStats> = vec![];
 
     while let Some(packet) = pcap_reader.next_packet() {
@@ -406,7 +405,7 @@ pub fn process_file(file: &str) -> Vec<FlowStats> {
             let packet_info: PacketInfo = packet.into();
 
             match packet_info {
-                PacketInfo::TCP(packet) => {
+                PacketInfo::Tcp(packet) => {
                     let mut flow = tcp_ongoing_flows.entry(flow_id).or_default();
                     if let Some(last_packet) = flow.last() {
                         // check if the flow is already finished
@@ -421,7 +420,7 @@ pub fn process_file(file: &str) -> Vec<FlowStats> {
                     }
                     flow.push(packet); // TODO réordonner si on voit "SYN"
                 }
-                PacketInfo::UDP(packet) => {
+                PacketInfo::Udp(packet) => {
                     let mut flow = udp_ongoing_flows.entry(flow_id).or_default();
                     if let Some(last_packet) = flow.last() {
                         // check if the flow is already finished
@@ -435,7 +434,7 @@ pub fn process_file(file: &str) -> Vec<FlowStats> {
                     }
                     flow.push(packet);
                 }
-                PacketInfo::ICMP(packet) => {
+                PacketInfo::Icmp(packet) => {
                     let mut flow = icmp_ongoing_flows.entry(flow_id).or_default();
                     if let Some(last_packet) = flow.last() {
                         // check if the flow is already finished

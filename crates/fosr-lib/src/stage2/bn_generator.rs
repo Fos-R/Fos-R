@@ -3,7 +3,7 @@ use crate::network;
 use crate::stage2::bayesian_networks::*;
 use crate::stage2::bn_structs::*;
 use crate::stage2::{Stage2, TimePoint, bifxml};
-use crate::structs::{DstIpRole, Flow, L7Proto, OS, Port, SeededData, SrcIpRole};
+use crate::structs::{DstIpRole, Flow, L7Proto, Os, Port, SeededData, SrcIpRole};
 
 use chrono::Timelike;
 use pnet::util::MacAddr;
@@ -209,9 +209,9 @@ impl BayesianModel {
                 bn.update_probabilities(network);
 
                 let mut rng = Pcg32::seed_from_u64(12345);
-                let mut src_ip: HashMap<(L7Proto, OS, SrcIpRole), AnonymizedIpv4Distr> =
+                let mut src_ip: HashMap<(L7Proto, Os, SrcIpRole), AnonymizedIpv4Distr> =
                     HashMap::new();
-                let mut dst_ip: HashMap<(L7Proto, OS, DstIpRole), AnonymizedIpv4Distr> =
+                let mut dst_ip: HashMap<(L7Proto, Os, DstIpRole), AnonymizedIpv4Distr> =
                     HashMap::new();
 
                 if network.users.is_empty() {
@@ -223,7 +223,7 @@ impl BayesianModel {
                 // TODO: plutôt que d’avoir une erreur, plutôt mettre à jour le réseau bayésien
 
                 for s in &network.services {
-                    for os in OS::iter() {
+                    for os in Os::iter() {
                         for role in SrcIpRole::iter() {
                             if let Some(ips) = network.users.get(&(os, role)) {
                                 src_ip.insert(

@@ -561,7 +561,7 @@ fn net_injection(
     );
 
     let s4net = run::InjectParam {
-        net_enabler: inject::ebpf::EBPFNetEnabler::new(
+        net_enabler: inject::ebpf::EbpfNetEnabler::new(
             matches!(injection_algo, cmd::InjectionAlgo::Fast),
             &local_interfaces,
         )?,

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::net::Ipv4Addr;
 use std::time::Duration;
 
-use crate::{L7Proto, OS};
+use crate::{L7Proto, Os};
 
 /// Parameters of the generator.
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
@@ -48,7 +48,7 @@ pub struct SubTopologyNode {
     pub ip: Ipv4Addr,
     /// Operating system used by the node
     #[serde(default)]
-    pub os: OS,
+    pub os: Os,
     /// Type of the node
     #[serde(rename = "type")]
     pub kind: NodeType,

@@ -29,7 +29,6 @@ pub struct TimePoint {
 // Stage 2 and 3 structures
 
 /// A transport protocol
-#[allow(clippy::upper_case_acronyms)]
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString)]
 #[serde(rename_all_fields = "UPPERCASE")]
 #[strum(
@@ -38,11 +37,11 @@ pub struct TimePoint {
 )]
 pub enum L4Proto {
     #[serde(alias = "tcp")]
-    TCP,
+    Tcp,
     #[serde(alias = "udp")]
-    UDP,
+    Udp,
     #[serde(alias = "icmp")]
-    ICMP,
+    Icmp,
 }
 
 /// Connection states, adapted from Zeek
@@ -53,7 +52,7 @@ pub enum L4Proto {
     parse_err_fn = String::from,
     parse_err_ty = String
 )]
-pub enum TCPConnState {
+pub enum TcpConnState {
     /// Normal establishment and termination
     SF,
     /// Originator sent a SYN followed by a FIN, we never saw a SYN ACK from the responder (hence the connection was “half” open)
@@ -72,9 +71,9 @@ pub enum TCPConnState {
 impl Display for L4Proto {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            L4Proto::TCP => write!(f, "TCP"),
-            L4Proto::UDP => write!(f, "UDP"),
-            L4Proto::ICMP => write!(f, "ICMP"),
+            L4Proto::Tcp => write!(f, "TCP"),
+            L4Proto::Udp => write!(f, "UDP"),
+            L4Proto::Icmp => write!(f, "ICMP"),
         }
     }
 }
@@ -82,27 +81,27 @@ impl Display for L4Proto {
 impl L4Proto {
     pub fn iter() -> [L4Proto; 2] {
         // TODO: add the other protocols when they are implemented
-        [L4Proto::TCP, L4Proto::UDP] //, L4Proto::ICMP]
+        [L4Proto::Tcp, L4Proto::Udp] //, L4Proto::ICMP]
     }
 
     pub fn get_protocol_number(&self) -> u8 {
         match &self {
-            L4Proto::TCP => 6,
-            L4Proto::UDP => 17,
-            L4Proto::ICMP => 1,
+            L4Proto::Tcp => 6,
+            L4Proto::Udp => 17,
+            L4Proto::Icmp => 1,
         }
     }
 
-    pub fn wrap(&self, d: FlowData, c: Option<TCPConnState>) -> Flow {
+    pub fn wrap(&self, d: FlowData, c: Option<TcpConnState>) -> Flow {
         match &self {
-            L4Proto::TCP => Flow::TCP(d, c.unwrap_or(TCPConnState::SF)), // FIXME
-            L4Proto::UDP => {
+            L4Proto::Tcp => Flow::Tcp(d, c.unwrap_or(TcpConnState::SF)), // FIXME
+            L4Proto::Udp => {
                 // assert!(c.is_none());
-                Flow::UDP(d)
+                Flow::Udp(d)
             }
-            L4Proto::ICMP => {
+            L4Proto::Icmp => {
                 // assert!(c.is_none());
-                Flow::ICMP(d)
+                Flow::Icmp(d)
             }
         }
     }
@@ -325,37 +324,37 @@ impl L7ProtoWithPort {
 #[strum(ascii_case_insensitive)]
 #[serde(rename_all = "lowercase")]
 /// The OS of an host. By default, assume Linux
-pub enum OS {
+pub enum Os {
     #[default]
     Linux,
     Windows,
     Router,
 }
 
-impl Display for OS {
+impl Display for Os {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            OS::Linux => write!(f, "Linux"),
-            OS::Windows => write!(f, "Windows"),
-            OS::Router => write!(f, "Router"),
+            Os::Linux => write!(f, "Linux"),
+            Os::Windows => write!(f, "Windows"),
+            Os::Router => write!(f, "Router"),
         }
     }
 }
 
-impl OS {
+impl Os {
     pub fn get_initial_ttl(&self) -> u8 {
         match self {
-            OS::Linux => 64,
-            OS::Windows => 128,
-            OS::Router => 255,
+            Os::Linux => 64,
+            Os::Windows => 128,
+            Os::Router => 255,
         }
     }
 
     // Source: https://en.wikipedia.org/wiki/Ephemeral_port
     pub fn get_ephemeral_port_distr(&self) -> Uniform<u16> {
         match self {
-            OS::Linux | OS::Router => Uniform::new(32768, 60999).unwrap(),
-            OS::Windows => Uniform::new(49152, 65535).unwrap(),
+            Os::Linux | Os::Router => Uniform::new(32768, 60999).unwrap(),
+            Os::Windows => Uniform::new(49152, 65535).unwrap(),
         }
     }
 }
@@ -382,24 +381,23 @@ pub enum DstIpRole {
 }
 
 /// A wrapper for transport layer flow
-#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, Copy)]
 pub enum Flow {
-    TCP(FlowData, TCPConnState),
-    UDP(FlowData),
-    ICMP(FlowData),
+    Tcp(FlowData, TcpConnState),
+    Udp(FlowData),
+    Icmp(FlowData),
 }
 
 impl Flow {
     pub fn get_data(&self) -> &FlowData {
         match &self {
-            Flow::TCP(data, _) | Flow::UDP(data) | Flow::ICMP(data) => data,
+            Flow::Tcp(data, _) | Flow::Udp(data) | Flow::Icmp(data) => data,
         }
     }
 
     pub fn get_data_mut(&mut self) -> &mut FlowData {
         match self {
-            Flow::TCP(data, _) | Flow::UDP(data) | Flow::ICMP(data) => data,
+            Flow::Tcp(data, _) | Flow::Udp(data) | Flow::Icmp(data) => data,
         }
     }
 
@@ -416,9 +414,9 @@ impl Flow {
 
     pub fn get_proto(&self) -> L4Proto {
         match &self {
-            Flow::TCP(_, _) => L4Proto::TCP,
-            Flow::UDP(_) => L4Proto::UDP,
-            Flow::ICMP(_) => L4Proto::ICMP,
+            Flow::Tcp(_, _) => L4Proto::Tcp,
+            Flow::Udp(_) => L4Proto::Udp,
+            Flow::Icmp(_) => L4Proto::Icmp,
         }
     }
 }
@@ -429,8 +427,8 @@ pub struct FlowData {
     // In online mode, the local IP will always be the source
     pub src_ip: Ipv4Addr,
     pub dst_ip: Ipv4Addr,
-    pub src_os: OS,
-    pub dst_os: OS,
+    pub src_os: Os,
+    pub dst_os: Os,
     pub src_mac: MacAddr,
     pub dst_mac: MacAddr,
     pub src_port: u16,
@@ -447,7 +445,7 @@ pub struct FlowData {
 impl From<Flow> for FlowData {
     fn from(f: Flow) -> FlowData {
         match f {
-            Flow::TCP(data, _) | Flow::UDP(data) | Flow::ICMP(data) => data,
+            Flow::Tcp(data, _) | Flow::Udp(data) | Flow::Icmp(data) => data,
         }
     }
 }
@@ -601,11 +599,11 @@ impl Default for Packets {
             packets: Vec::with_capacity(150),
             directions: Vec::with_capacity(150),
             timestamps: Vec::with_capacity(150),
-            flow: Flow::UDP(FlowData {
+            flow: Flow::Udp(FlowData {
                 src_ip: Ipv4Addr::UNSPECIFIED,
                 dst_ip: Ipv4Addr::UNSPECIFIED,
-                src_os: OS::Linux,
-                dst_os: OS::Linux,
+                src_os: Os::Linux,
+                dst_os: Os::Linux,
                 src_mac: MacAddr::zero(),
                 dst_mac: MacAddr::zero(),
                 src_port: 0,

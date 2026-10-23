@@ -4,7 +4,7 @@ use std::time::Duration;
 
 #[derive(Debug, Clone)]
 /// Some information about a TCP packet
-pub struct TCPPacketInfo {
+pub struct TcpPacketInfo {
     /// the payload of the packet
     pub payload: Payload,
     /// the timestamp of the packet
@@ -25,7 +25,7 @@ pub struct TCPPacketInfo {
     pub p_flag: bool,
 }
 
-impl PacketInfo for TCPPacketInfo {
+impl PacketInfo for TcpPacketInfo {
     fn get_direction(&self) -> PacketDirection {
         self.direction
     }
@@ -37,7 +37,7 @@ impl PacketInfo for TCPPacketInfo {
     }
 }
 
-impl TCPPacketInfo {
+impl TcpPacketInfo {
     pub fn get_flag_byte(&self) -> u8 {
         (u8::from(self.s_flag) * TcpFlags::SYN)
             | (u8::from(self.a_flag) * TcpFlags::ACK)
@@ -49,7 +49,7 @@ impl TCPPacketInfo {
 }
 
 #[derive(Debug, Clone)]
-pub struct TCPEdgeTuple {
+pub struct TcpEdgeTuple {
     pub payload_type: PayloadType,
     pub direction: PacketDirection,
     pub s_flag: bool,
@@ -60,7 +60,7 @@ pub struct TCPEdgeTuple {
     pub p_flag: bool,
 }
 
-impl EdgeType for TCPEdgeTuple {
+impl EdgeType for TcpEdgeTuple {
     fn get_payload_type(&self) -> &PayloadType {
         &self.payload_type
     }
@@ -69,9 +69,9 @@ impl EdgeType for TCPEdgeTuple {
     }
 }
 
-pub fn parse_tcp_symbol(symbol: &str, p: PayloadType) -> TCPEdgeTuple {
+pub fn parse_tcp_symbol(symbol: &str, p: PayloadType) -> TcpEdgeTuple {
     let strings: Vec<&str> = symbol.split('_').collect();
-    TCPEdgeTuple {
+    TcpEdgeTuple {
         direction: match strings[1] {
             ">" => PacketDirection::Forward,
             _ => PacketDirection::Backward,
@@ -86,8 +86,8 @@ pub fn parse_tcp_symbol(symbol: &str, p: PayloadType) -> TCPEdgeTuple {
     }
 }
 
-pub fn create_tcp_header(payload: Payload, ts: Duration, e: &TCPEdgeTuple) -> TCPPacketInfo {
-    TCPPacketInfo {
+pub fn create_tcp_header(payload: Payload, ts: Duration, e: &TcpEdgeTuple) -> TcpPacketInfo {
+    TcpPacketInfo {
         payload,
         ts,
         direction: e.direction,

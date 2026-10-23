@@ -6,8 +6,8 @@ use fosr_lib::stage3;
 use fosr_lib::stage4;
 use fosr_lib::stats;
 use fosr_lib::{
-    Flow, ICMPPacketInfo, L4Proto, Packets, PacketsIR, PacketsRecycler, SeededData, TCPPacketInfo,
-    TimePoint, UDPPacketInfo,
+    Flow, IcmpPacketInfo, L4Proto, Packets, PacketsIR, PacketsRecycler, SeededData, TcpPacketInfo,
+    TimePoint, UdpPacketInfo,
 };
 
 use std::collections::HashMap;
@@ -97,10 +97,10 @@ pub fn run_efficient<T: inject::NetEnabler>(
         // Channels creation
         let (tx_s1, rx_s2) = bounded::<SeededData<TimePoint>>(CHANNEL_SIZE);
         let (tx_s2, rx_s3) = bounded::<SeededData<Flow>>(CHANNEL_SIZE);
-        let (tx_s3_tcp, rx_s4_tcp) = bounded::<SeededData<PacketsIR<TCPPacketInfo>>>(CHANNEL_SIZE);
-        let (tx_s3_udp, rx_s4_udp) = bounded::<SeededData<PacketsIR<UDPPacketInfo>>>(CHANNEL_SIZE);
+        let (tx_s3_tcp, rx_s4_tcp) = bounded::<SeededData<PacketsIR<TcpPacketInfo>>>(CHANNEL_SIZE);
+        let (tx_s3_udp, rx_s4_udp) = bounded::<SeededData<PacketsIR<UdpPacketInfo>>>(CHANNEL_SIZE);
         let (tx_s3_icmp, rx_s4_icmp) =
-            bounded::<SeededData<PacketsIR<ICMPPacketInfo>>>(CHANNEL_SIZE);
+            bounded::<SeededData<PacketsIR<IcmpPacketInfo>>>(CHANNEL_SIZE);
         let tx_s3 = stage3::S3Sender {
             tcp: tx_s3_tcp,
             udp: tx_s3_udp,
@@ -196,7 +196,7 @@ pub fn run_efficient<T: inject::NetEnabler>(
 
                 let builder = thread::Builder::new().name(format!("Stage4-{proto:?}"));
                 match proto {
-                    L4Proto::TCP => {
+                    L4Proto::Tcp => {
                         let rx_s4_tcp = rx_s4_tcp.clone();
                         gen_threads.push(
                             builder
@@ -216,7 +216,7 @@ pub fn run_efficient<T: inject::NetEnabler>(
                                 .map_err(|e| e.to_string())?,
                         );
                     }
-                    L4Proto::UDP => {
+                    L4Proto::Udp => {
                         let rx_s4_udp = rx_s4_udp.clone();
                         gen_threads.push(
                             builder
@@ -236,7 +236,7 @@ pub fn run_efficient<T: inject::NetEnabler>(
                                 .map_err(|e| e.to_string())?,
                         );
                     }
-                    L4Proto::ICMP => {
+                    L4Proto::Icmp => {
                         let rx_s4_icmp = rx_s4_icmp.clone();
                         gen_threads.push(
                             builder

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, net::Ipv4Addr};
 
 use crate::{
-    OS,
+    Os,
     topo::config::{NodeType, Service, SubTopologyParameters},
     utils,
 };
@@ -18,7 +18,7 @@ pub struct SubTopology {
     pub nodes: Vec<SubTopologyNode>,
     pub router_node: SubTopologyNode,
     pub services: HashMap<Service, bool>,
-    pub os: HashMap<OS, bool>,
+    pub os: HashMap<Os, bool>,
 }
 
 #[derive(Debug, Clone)]
@@ -81,7 +81,7 @@ impl SubTopology {
         self.services.contains_key(service)
     }
 
-    pub fn contains_os(&self, os: &OS) -> bool {
+    pub fn contains_os(&self, os: &Os) -> bool {
         self.os.contains_key(os)
     }
 }
@@ -146,7 +146,7 @@ pub struct MachineNode {
     pub name: String,
     pub address: Ipv4Addr,
     pub services: Vec<Service>,
-    pub os: OS,
+    pub os: Os,
 }
 
 impl MachineNode {
@@ -155,7 +155,7 @@ impl MachineNode {
             name: name.to_string(),
             address,
             services: Vec::new(),
-            os: OS::default(),
+            os: Os::default(),
         }
     }
 }

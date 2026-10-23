@@ -7,17 +7,17 @@ use crate::shared::constants::ui::{
 };
 use eframe::egui::{self, TextFormat, text::LayoutJob};
 use egui_material_icons::icons::ICON_CLEAR;
-use fosr_lib::structs::OS;
+use fosr_lib::structs::Os;
 
 /// Return a display name for an optional OS value.
 ///
 /// Returns a static string to avoid per-frame allocations.
 /// For contexts that need `String`, use `OS`'s `Display` impl directly.
-pub fn os_display_name(os: Option<OS>) -> &'static str {
+pub fn os_display_name(os: Option<Os>) -> &'static str {
     match os {
-        Some(OS::Linux) => "Linux",
-        Some(OS::Windows) => "Windows",
-        Some(OS::Router) => "Router",
+        Some(Os::Linux) => "Linux",
+        Some(Os::Windows) => "Windows",
+        Some(Os::Router) => "Router",
         None => "<none>",
     }
 }

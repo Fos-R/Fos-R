@@ -25,11 +25,11 @@ mod tcp;
 mod udp;
 
 /// Metadata of ICMP packet
-pub use icmp::ICMPPacketInfo;
+pub use icmp::IcmpPacketInfo;
 /// Metadata of TCP packet
-pub use tcp::TCPPacketInfo;
+pub use tcp::TcpPacketInfo;
 /// Metadata of UDP packet
-pub use udp::UDPPacketInfo;
+pub use udp::UdpPacketInfo;
 
 /// Utilities
 pub mod utils;

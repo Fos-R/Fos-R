@@ -1,5 +1,5 @@
 use crate::stats::Stats;
-use crate::structs::{Flow, SeededData, TCPConnState, TimePoint};
+use crate::structs::{Flow, SeededData, TcpConnState, TimePoint};
 use crossbeam_channel::{Receiver, Sender};
 use std::net::Ipv4Addr;
 use std::sync::Arc;

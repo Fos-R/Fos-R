@@ -12,7 +12,7 @@ use eframe::egui;
 use egui_graphs::events::{Event, PayloadNodeClick};
 use egui_material_icons::icons::{ICON_CLOSE, ICON_SAVE};
 use fosr_lib::network::{HostYaml, NetworkYaml};
-use fosr_lib::structs::OS;
+use fosr_lib::structs::Os;
 
 /// Look up a host by `(net_idx, host_idx)` position.
 fn get_host_by_pos(model: &NetworkYaml, pos: (usize, usize)) -> Option<&HostYaml> {
@@ -189,19 +189,19 @@ fn render_os_dropdown(ui: &mut egui::Ui, host: &mut HostYaml) {
                     host.os = None;
                 }
                 if ui
-                    .selectable_label(host.os == Some(OS::Linux), os_display_name(Some(OS::Linux)))
+                    .selectable_label(host.os == Some(Os::Linux), os_display_name(Some(Os::Linux)))
                     .clicked()
                 {
-                    host.os = Some(OS::Linux);
+                    host.os = Some(Os::Linux);
                 }
                 if ui
                     .selectable_label(
-                        host.os == Some(OS::Windows),
-                        os_display_name(Some(OS::Windows)),
+                        host.os == Some(Os::Windows),
+                        os_display_name(Some(Os::Windows)),
                     )
                     .clicked()
                 {
-                    host.os = Some(OS::Windows);
+                    host.os = Some(Os::Windows);
                 }
             });
     });

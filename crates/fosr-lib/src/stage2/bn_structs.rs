@@ -1,5 +1,5 @@
-use crate::stage2::TCPConnState;
-use crate::structs::{DstIpRole, Flow, FlowData, L4Proto, L7Proto, L7ProtoWithPort, OS, SrcIpRole};
+use crate::stage2::TcpConnState;
+use crate::structs::{DstIpRole, Flow, FlowData, L4Proto, L7Proto, L7ProtoWithPort, Os, SrcIpRole};
 
 use pnet::util::MacAddr;
 use rand_distr::weighted::WeightedIndex;
@@ -11,8 +11,8 @@ use std::time::Duration;
 pub struct IntermediateVector {
     pub src_ip_role: Option<SrcIpRole>,
     pub dst_ip_role: Option<DstIpRole>,
-    pub src_os: Option<OS>,
-    pub dst_os: Option<OS>,
+    pub src_os: Option<Os>,
+    pub dst_os: Option<Os>,
     pub l7_proto: Option<L7Proto>,
     pub dst_port: Option<u16>,
     pub src_port: Option<u16>,
@@ -21,7 +21,7 @@ pub struct IntermediateVector {
     pub packets_count_cluster: Option<usize>,
     pub timestamp: Option<Duration>,
     pub proto: Option<L4Proto>,
-    pub tcp_flags: Option<TCPConnState>,
+    pub tcp_flags: Option<TcpConnState>,
     pub src_ip: Option<Ipv4Addr>,
     pub dst_ip: Option<Ipv4Addr>,
     pub src_mac: Option<MacAddr>,
@@ -76,8 +76,8 @@ pub enum Feature {
     TimeBin(usize), // cardinality only
     SrcIpRole(Vec<SrcIpRole>),
     DstIpRole(Vec<DstIpRole>),
-    SrcOs(Vec<OS>),
-    DstOs(Vec<OS>),
+    SrcOs(Vec<Os>),
+    DstOs(Vec<Os>),
     SrcIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
     DstIp(Vec<AnonymizedIpv4Addr>), // the IP comes from the network file
     DstPt(Vec<DstPt>),
@@ -88,7 +88,7 @@ pub enum Feature {
     DstMac(Vec<MacAddr>),
     L7Proto(Vec<L7Proto>),
     L4Proto(Vec<L4Proto>),
-    EndFlags(Vec<TCPConnState>),
+    EndFlags(Vec<TcpConnState>),
 }
 
 impl Feature {

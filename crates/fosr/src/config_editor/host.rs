@@ -17,7 +17,7 @@ use eframe::egui;
 use egui_material_icons::icons::{ICON_ADD, ICON_CLEAR, ICON_DELETE, ICON_WARNING};
 use fosr_lib::network::{HostType, InterfaceYaml, next_ui_id};
 use fosr_lib::network::{HostYaml, NetworkYaml, SubNetworkYaml};
-use fosr_lib::structs::OS;
+use fosr_lib::structs::Os;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
 
@@ -394,19 +394,19 @@ fn render_os_dropdown(ui: &mut egui::Ui, key: (usize, usize), host: &mut HostYam
                 ui.separator();
 
                 if ui
-                    .selectable_label(host.os == Some(OS::Linux), os_display_name(Some(OS::Linux)))
+                    .selectable_label(host.os == Some(Os::Linux), os_display_name(Some(Os::Linux)))
                     .clicked()
                 {
-                    host.os = Some(OS::Linux);
+                    host.os = Some(Os::Linux);
                 }
                 if ui
                     .selectable_label(
-                        host.os == Some(OS::Windows),
-                        os_display_name(Some(OS::Windows)),
+                        host.os == Some(Os::Windows),
+                        os_display_name(Some(Os::Windows)),
                     )
                     .clicked()
                 {
-                    host.os = Some(OS::Windows);
+                    host.os = Some(Os::Windows);
                 }
             });
 

@@ -1,12 +1,12 @@
 // use crate::config::Hosts;
-use crate::icmp::ICMPPacketInfo;
+use crate::icmp::IcmpPacketInfo;
 use crate::stats::Stats;
 use crate::structs::{
     Flow, FlowData, Packet, PacketDirection, PacketInfo, Packets, PacketsIR, PacketsRecycler,
     Payload, SeededData,
 };
-use crate::tcp::TCPPacketInfo;
-use crate::udp::UDPPacketInfo;
+use crate::tcp::TcpPacketInfo;
+use crate::udp::UdpPacketInfo;
 
 use crossbeam_channel::{Receiver, Sender};
 use pcap_file::PcapError;
@@ -128,7 +128,7 @@ impl Stage4 {
         rng: &mut impl Rng,
         packet: &mut [u8],
         flow: &FlowData,
-        packet_info: &TCPPacketInfo,
+        packet_info: &TcpPacketInfo,
         tcp_data: &mut TcpPacketData, // TODO Change to take ownership of tcp_data
         payload_array: &mut Box<[u8]>,
     ) {
@@ -243,7 +243,7 @@ impl Stage4 {
         rng: &mut Pcg32,
         packet: &mut [u8],
         flow: &FlowData,
-        packet_info: &UDPPacketInfo,
+        packet_info: &UdpPacketInfo,
         payload_array: &mut Box<[u8]>,
     ) {
         let mut udp_packet = MutableUdpPacket::new(packet).unwrap();
@@ -305,7 +305,7 @@ impl Stage4 {
     /// Returns a Packets struct encapsulating the packet data, directions, timestamps, and flow.
     pub fn generate_tcp_packets(
         &self,
-        input: &SeededData<PacketsIR<TCPPacketInfo>>,
+        input: &SeededData<PacketsIR<TcpPacketInfo>>,
         packets: &mut Packets,
         packet: &mut Box<[u8]>,
         payload_array: &mut Box<[u8]>,
@@ -366,7 +366,7 @@ impl Stage4 {
     /// Returns a Packets struct encapsulating the packet data, directions, timestamps, and flow.
     pub fn generate_udp_packets(
         &self,
-        input: &SeededData<PacketsIR<UDPPacketInfo>>,
+        input: &SeededData<PacketsIR<UdpPacketInfo>>,
         packets: &mut Packets,
         packet: &mut Box<[u8]>,
         payload_array: &mut Box<[u8]>,
@@ -424,7 +424,7 @@ impl Stage4 {
     #[allow(unused)]
     pub fn generate_icmp_packets(
         &self,
-        input: &SeededData<PacketsIR<ICMPPacketInfo>>,
+        input: &SeededData<PacketsIR<IcmpPacketInfo>>,
         packets: &mut Packets,
         packet: &mut Box<[u8]>,
         payload_array: &mut Box<[u8]>,

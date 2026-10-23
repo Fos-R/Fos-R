@@ -9,7 +9,7 @@ use crate::shared::constants::ui::{
 use eframe::egui;
 use egui_graphs::events::Event;
 use fosr_lib::network::HostYaml;
-use fosr_lib::{L7Proto, OS, network, network::HostType, network::INTERNET_NETWORK_NAME};
+use fosr_lib::{L7Proto, Os, network, network::HostType, network::INTERNET_NETWORK_NAME};
 use petgraph::graph::NodeIndex;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -117,7 +117,7 @@ pub struct NetworkNode {
     pub hostname: Option<String>,
     pub node_type: NodeType,
     #[allow(dead_code)] // Kept for possible future use (e.g., node styling by OS)
-    pub os: OS,
+    pub os: Os,
     /// Number of flows this node has been involved in (as sender or receiver).
     /// Used for dynamic node sizing - more active nodes appear larger.
     pub flow_count: u32,
@@ -134,7 +134,7 @@ impl Default for NetworkNode {
             ip_addrs: Vec::new(),
             hostname: None,
             node_type: NodeType::User,
-            os: OS::default(),
+            os: Os::default(),
             flow_count: 0,
             max_flow_count: 0,
             zone: ZoneDisplay::default(),

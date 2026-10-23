@@ -1,5 +1,5 @@
 use crate::structs::{
-    EdgeType, FlowData, L4Proto, PacketDirection, PacketInfo, Payload, PayloadType, TCPConnState,
+    EdgeType, FlowData, L4Proto, PacketDirection, PacketInfo, Payload, PayloadType, TcpConnState,
 };
 use base64::Engine;
 use derivative::Derivative;
@@ -563,7 +563,7 @@ pub struct JsonAutomatonMetaData {
 #[serde(try_from = "JsonAutomatonMetaData")]
 pub struct AutomatonMetaData {
     pub service: String,
-    pub conn_state: Option<TCPConnState>,
+    pub conn_state: Option<TcpConnState>,
     pub input_file: String,
     pub creation_time: String,
 }
@@ -573,11 +573,11 @@ impl TryFrom<JsonAutomatonMetaData> for AutomatonMetaData {
 
     fn try_from(m: JsonAutomatonMetaData) -> Result<Self, String> {
         let conn_state = match m.conn_state.as_str() {
-            "SF" => Some(TCPConnState::SF),
-            "SH" => Some(TCPConnState::SH),
-            "RST" => Some(TCPConnState::RST),
-            "S0" => Some(TCPConnState::S0),
-            "REJ" => Some(TCPConnState::REJ),
+            "SF" => Some(TcpConnState::SF),
+            "SH" => Some(TcpConnState::SH),
+            "RST" => Some(TcpConnState::RST),
+            "S0" => Some(TcpConnState::S0),
+            "REJ" => Some(TcpConnState::REJ),
             "none" => None,
             s => Err(format!("Unknown connection state: {s}"))?,
         };

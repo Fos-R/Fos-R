@@ -3,7 +3,7 @@ use std::time::Duration;
 
 #[derive(Debug, Clone)]
 /// Some information about a UDP packet
-pub struct UDPPacketInfo {
+pub struct UdpPacketInfo {
     /// the payload of the packet
     pub payload: Payload,
     /// the timestamp of the packet
@@ -12,7 +12,7 @@ pub struct UDPPacketInfo {
     pub direction: PacketDirection,
 }
 
-impl PacketInfo for UDPPacketInfo {
+impl PacketInfo for UdpPacketInfo {
     fn get_direction(&self) -> PacketDirection {
         self.direction
     }
@@ -25,12 +25,12 @@ impl PacketInfo for UDPPacketInfo {
 }
 
 #[derive(Debug, Clone)]
-pub struct UDPEdgeTuple {
+pub struct UdpEdgeTuple {
     pub payload_type: PayloadType,
     pub direction: PacketDirection,
 }
 
-impl EdgeType for UDPEdgeTuple {
+impl EdgeType for UdpEdgeTuple {
     fn get_payload_type(&self) -> &PayloadType {
         &self.payload_type
     }
@@ -39,9 +39,9 @@ impl EdgeType for UDPEdgeTuple {
     }
 }
 
-pub fn parse_udp_symbol(symbol: &str, p: PayloadType) -> UDPEdgeTuple {
+pub fn parse_udp_symbol(symbol: &str, p: PayloadType) -> UdpEdgeTuple {
     let strings: Vec<&str> = symbol.split('_').collect();
-    UDPEdgeTuple {
+    UdpEdgeTuple {
         direction: match strings[0] {
             ">" => PacketDirection::Forward,
             _ => PacketDirection::Backward,
@@ -51,8 +51,8 @@ pub fn parse_udp_symbol(symbol: &str, p: PayloadType) -> UDPEdgeTuple {
 }
 
 #[allow(unused)]
-pub fn create_udp_header(payload: Payload, ts: Duration, e: &UDPEdgeTuple) -> UDPPacketInfo {
-    UDPPacketInfo {
+pub fn create_udp_header(payload: Payload, ts: Duration, e: &UdpEdgeTuple) -> UdpPacketInfo {
+    UdpPacketInfo {
         payload,
         ts,
         direction: e.direction,

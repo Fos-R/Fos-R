@@ -1,11 +1,11 @@
-use crate::icmp::ICMPPacketInfo;
+use crate::icmp::IcmpPacketInfo;
 use crate::stats::Stats;
 use crate::structs::{
     EdgeType, Flow, FlowData, L4Proto, L7Proto, PacketDirection, PacketInfo, PacketsIR, SeededData,
-    TCPConnState,
+    TcpConnState,
 };
-use crate::tcp::{TCPEdgeTuple, TCPPacketInfo, create_tcp_header, parse_tcp_symbol};
-use crate::udp::{UDPEdgeTuple, UDPPacketInfo, create_udp_header, parse_udp_symbol};
+use crate::tcp::{TcpEdgeTuple, TcpPacketInfo, create_tcp_header, parse_tcp_symbol};
+use crate::udp::{UdpEdgeTuple, UdpPacketInfo, create_udp_header, parse_udp_symbol};
 use crossbeam_channel::{Receiver, Sender};
 use std::sync::Arc;
 
@@ -18,31 +18,31 @@ pub trait Stage3: Clone + std::marker::Send + 'static {
     fn generate_tcp_packets_info(
         &self,
         flow: SeededData<FlowData>,
-        conn_state: TCPConnState,
-    ) -> Option<SeededData<PacketsIR<TCPPacketInfo>>>;
+        conn_state: TcpConnState,
+    ) -> Option<SeededData<PacketsIR<TcpPacketInfo>>>;
     fn generate_udp_packets_info(
         &self,
         flow: SeededData<FlowData>,
-    ) -> Option<SeededData<PacketsIR<UDPPacketInfo>>>;
+    ) -> Option<SeededData<PacketsIR<UdpPacketInfo>>>;
     fn generate_icmp_packets_info(
         &self,
         flow: SeededData<FlowData>,
-    ) -> Option<SeededData<PacketsIR<ICMPPacketInfo>>>;
+    ) -> Option<SeededData<PacketsIR<IcmpPacketInfo>>>;
 }
 
 /// A set of Sender used by a Stage 3. Each Sender corresponds to a L4 protocol
 #[derive(Debug, Clone)]
 pub struct S3Sender {
-    pub tcp: Sender<SeededData<PacketsIR<TCPPacketInfo>>>,
-    pub udp: Sender<SeededData<PacketsIR<UDPPacketInfo>>>,
-    pub icmp: Sender<SeededData<PacketsIR<ICMPPacketInfo>>>,
+    pub tcp: Sender<SeededData<PacketsIR<TcpPacketInfo>>>,
+    pub udp: Sender<SeededData<PacketsIR<UdpPacketInfo>>>,
+    pub icmp: Sender<SeededData<PacketsIR<IcmpPacketInfo>>>,
 }
 
 /// A set of Vector used by a Stage 3. Each Vector corresponds to a L4 protocol
 pub struct S3Vector {
-    pub tcp: Vec<SeededData<PacketsIR<TCPPacketInfo>>>,
-    pub udp: Vec<SeededData<PacketsIR<UDPPacketInfo>>>,
-    pub icmp: Vec<SeededData<PacketsIR<ICMPPacketInfo>>>,
+    pub tcp: Vec<SeededData<PacketsIR<TcpPacketInfo>>>,
+    pub udp: Vec<SeededData<PacketsIR<UdpPacketInfo>>>,
+    pub icmp: Vec<SeededData<PacketsIR<IcmpPacketInfo>>>,
 }
 
 /// Generate packet metadata from flows sends them progressively to a channel
@@ -60,7 +60,7 @@ pub fn run_channel(
         }
         log::trace!("Generating packets info");
         match flow.data {
-            Flow::TCP(data, conn_state) => {
+            Flow::Tcp(data, conn_state) => {
                 if let Some(pir) = generator.generate_tcp_packets_info(
                     SeededData {
                         seed: flow.seed,
@@ -71,7 +71,7 @@ pub fn run_channel(
                     tx_s3.tcp.send(pir)?;
                 }
             }
-            Flow::UDP(data) => {
+            Flow::Udp(data) => {
                 if let Some(pir) = generator.generate_udp_packets_info(SeededData {
                     seed: flow.seed,
                     data,
@@ -79,7 +79,7 @@ pub fn run_channel(
                     tx_s3.udp.send(pir)?;
                 }
             }
-            Flow::ICMP(data) => {
+            Flow::Icmp(data) => {
                 if let Some(pir) = generator.generate_icmp_packets_info(SeededData {
                     seed: flow.seed,
                     data,
@@ -101,26 +101,26 @@ pub fn run_vec(generator: impl Stage3, vec_s3: Vec<SeededData<Flow>>) -> S3Vecto
         tcp: Vec::with_capacity(
             vec_s3
                 .iter()
-                .filter(|f| matches!(f.data, Flow::TCP(_, _)))
+                .filter(|f| matches!(f.data, Flow::Tcp(_, _)))
                 .count(),
         ),
         udp: Vec::with_capacity(
             vec_s3
                 .iter()
-                .filter(|f| matches!(f.data, Flow::UDP(_)))
+                .filter(|f| matches!(f.data, Flow::Udp(_)))
                 .count(),
         ),
         icmp: Vec::with_capacity(
             vec_s3
                 .iter()
-                .filter(|f| matches!(f.data, Flow::ICMP(_)))
+                .filter(|f| matches!(f.data, Flow::Icmp(_)))
                 .count(),
         ),
     };
     for flow in vec_s3 {
         log::trace!("Generating packets info");
         match flow.data {
-            Flow::TCP(data, conn_state) => {
+            Flow::Tcp(data, conn_state) => {
                 if let Some(pir) = generator.generate_tcp_packets_info(
                     SeededData {
                         seed: flow.seed,
@@ -131,7 +131,7 @@ pub fn run_vec(generator: impl Stage3, vec_s3: Vec<SeededData<Flow>>) -> S3Vecto
                     vectors.tcp.push(pir);
                 }
             }
-            Flow::UDP(data) => {
+            Flow::Udp(data) => {
                 if let Some(pir) = generator.generate_udp_packets_info(SeededData {
                     seed: flow.seed,
                     data,
@@ -139,7 +139,7 @@ pub fn run_vec(generator: impl Stage3, vec_s3: Vec<SeededData<Flow>>) -> S3Vecto
                     vectors.udp.push(pir);
                 }
             }
-            Flow::ICMP(data) => {
+            Flow::Icmp(data) => {
                 if let Some(pir) = generator.generate_icmp_packets_info(SeededData {
                     seed: flow.seed,
                     data,

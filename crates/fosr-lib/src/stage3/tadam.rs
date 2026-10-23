@@ -1,8 +1,8 @@
 use crate::models;
 use crate::stage3::{
-    EdgeType, Flow, FlowData, ICMPPacketInfo, L4Proto, L7Proto, PacketDirection, PacketInfo,
-    PacketsIR, SeededData, Stage3, TCPConnState, TCPEdgeTuple, TCPPacketInfo, UDPEdgeTuple,
-    UDPPacketInfo, automaton, create_tcp_header, create_udp_header, parse_tcp_symbol,
+    EdgeType, Flow, FlowData, IcmpPacketInfo, L4Proto, L7Proto, PacketDirection, PacketInfo,
+    PacketsIR, SeededData, Stage3, TcpConnState, TcpEdgeTuple, TcpPacketInfo, UdpEdgeTuple,
+    UdpPacketInfo, automaton, create_tcp_header, create_udp_header, parse_tcp_symbol,
     parse_udp_symbol,
 };
 
@@ -25,8 +25,8 @@ struct AutomataSet<T: EdgeType> {
 
 #[derive(Clone)]
 pub struct AutomataLibrary {
-    tcp_automata: HashMap<(L7Proto, TCPConnState), Vec<AutomataSet<TCPEdgeTuple>>>,
-    udp_automata: HashMap<L7Proto, Vec<AutomataSet<UDPEdgeTuple>>>,
+    tcp_automata: HashMap<(L7Proto, TcpConnState), Vec<AutomataSet<TcpEdgeTuple>>>,
+    udp_automata: HashMap<L7Proto, Vec<AutomataSet<UdpEdgeTuple>>>,
 }
 
 impl AutomataLibrary {
@@ -71,12 +71,12 @@ impl AutomataLibrary {
         let l7proto = L7Proto::from_str(&a.metadata.service)?;
         let conn_state = a.metadata.conn_state;
         match a.protocol {
-            L4Proto::TCP => {
+            L4Proto::Tcp => {
                 assert!(conn_state.is_some());
                 let automata_clusters = clusters
                     .iter()
                     .find_map(|p| {
-                        if let PacketDistr::TCP {
+                        if let PacketDistr::Tcp {
                             conn_state,
                             service,
                             distr,
@@ -96,7 +96,7 @@ impl AutomataLibrary {
                         )
                     });
                 assert!(!automata_clusters.is_empty());
-                let a = automaton::TimedAutomaton::<TCPEdgeTuple>::import_timed_automaton(
+                let a = automaton::TimedAutomaton::<TcpEdgeTuple>::import_timed_automaton(
                     a,
                     automata_clusters.clone(),
                     parse_tcp_symbol,
@@ -112,11 +112,11 @@ impl AutomataLibrary {
                     cons_a: a.into(),
                 });
             }
-            L4Proto::UDP => {
+            L4Proto::Udp => {
                 let automata_clusters = clusters
                     .iter()
                     .find_map(|p| {
-                        if let PacketDistr::UDP { service, distr } = p
+                        if let PacketDistr::Udp { service, distr } = p
                             && *service == l7proto
                         {
                             Some(distr)
@@ -127,7 +127,7 @@ impl AutomataLibrary {
                     .expect("No cluster found for {l7proto}");
 
                 assert!(!automata_clusters.is_empty());
-                let a = automaton::TimedAutomaton::<UDPEdgeTuple>::import_timed_automaton(
+                let a = automaton::TimedAutomaton::<UdpEdgeTuple>::import_timed_automaton(
                     a,
                     automata_clusters.clone(),
                     parse_udp_symbol,
@@ -140,7 +140,7 @@ impl AutomataLibrary {
                     cons_a: a.into(),
                 });
             }
-            L4Proto::ICMP => todo!(),
+            L4Proto::Icmp => todo!(),
         }
         Ok(())
     }
@@ -149,12 +149,12 @@ impl AutomataLibrary {
 #[derive(Deserialize, Debug)]
 #[serde(from = "PacketDistrJson")]
 pub enum PacketDistr {
-    TCP {
-        conn_state: TCPConnState,
+    Tcp {
+        conn_state: TcpConnState,
         service: L7Proto,
         distr: Vec<MultivariateNormal<nalgebra::Const<2>>>,
     },
-    UDP {
+    Udp {
         service: L7Proto,
         distr: Vec<MultivariateNormal<nalgebra::Const<2>>>,
     },
@@ -164,12 +164,12 @@ pub enum PacketDistr {
 impl From<PacketDistrJson> for PacketDistr {
     fn from(d: PacketDistrJson) -> Self {
         match d {
-            PacketDistrJson::TCP {
+            PacketDistrJson::Tcp {
                 conn_state,
                 service,
                 mu,
                 cov,
-            } => PacketDistr::TCP {
+            } => PacketDistr::Tcp {
                 conn_state,
                 service: L7Proto::from_str(&service).unwrap(),
                 distr: mu
@@ -188,7 +188,7 @@ impl From<PacketDistrJson> for PacketDistr {
                     })
                     .collect(),
             },
-            PacketDistrJson::UDP { service, mu, cov } => PacketDistr::UDP {
+            PacketDistrJson::Udp { service, mu, cov } => PacketDistr::Udp {
                 service: L7Proto::from_str(&service).unwrap(),
                 distr: mu
                     .into_iter()
@@ -210,15 +210,14 @@ impl From<PacketDistrJson> for PacketDistr {
 
 #[derive(Deserialize, Debug)]
 #[serde(tag = "proto")]
-#[allow(clippy::upper_case_acronyms)]
 enum PacketDistrJson {
-    TCP {
-        conn_state: TCPConnState,
+    Tcp {
+        conn_state: TcpConnState,
         service: String,
         mu: Vec<Vec<f64>>,
         cov: Vec<Vec<Vec<f64>>>,
     },
-    UDP {
+    Udp {
         service: String,
         mu: Vec<Vec<f64>>,
         cov: Vec<Vec<Vec<f64>>>,
@@ -251,8 +250,8 @@ impl Stage3 for TadamGenerator {
     fn generate_tcp_packets_info(
         &self,
         mut flow: SeededData<FlowData>,
-        conn_state: TCPConnState,
-    ) -> Option<SeededData<PacketsIR<TCPPacketInfo>>> {
+        conn_state: TcpConnState,
+    ) -> Option<SeededData<PacketsIR<TcpPacketInfo>>> {
         let mut rng = Pcg32::seed_from_u64(flow.seed);
         let automata = self.lib.tcp_automata.get(&(flow.data.l7_proto, conn_state));
 
@@ -269,9 +268,9 @@ impl Stage3 for TadamGenerator {
 
                 Some(SeededData {
                     seed: rng.next_u64(),
-                    data: PacketsIR::<TCPPacketInfo> {
+                    data: PacketsIR::<TcpPacketInfo> {
                         packets_info,
-                        flow: Flow::TCP(flow.data, conn_state),
+                        flow: Flow::Tcp(flow.data, conn_state),
                     },
                 })
             } else {
@@ -296,7 +295,7 @@ impl Stage3 for TadamGenerator {
     fn generate_udp_packets_info(
         &self,
         mut flow: SeededData<FlowData>,
-    ) -> Option<SeededData<PacketsIR<UDPPacketInfo>>> {
+    ) -> Option<SeededData<PacketsIR<UdpPacketInfo>>> {
         let mut rng = Pcg32::seed_from_u64(flow.seed);
         let automata = self.lib.udp_automata.get(&flow.data.l7_proto);
         // let a = self.lib.udp_automata.get(&flow.data.l7_proto);
@@ -312,9 +311,9 @@ impl Stage3 for TadamGenerator {
 
                 Some(SeededData {
                     seed: rng.next_u64(),
-                    data: PacketsIR::<UDPPacketInfo> {
+                    data: PacketsIR::<UdpPacketInfo> {
                         packets_info,
-                        flow: Flow::UDP(flow.data),
+                        flow: Flow::Udp(flow.data),
                     },
                 })
             } else {
@@ -329,7 +328,7 @@ impl Stage3 for TadamGenerator {
     fn generate_icmp_packets_info(
         &self,
         _flow: SeededData<FlowData>,
-    ) -> Option<SeededData<PacketsIR<ICMPPacketInfo>>> {
+    ) -> Option<SeededData<PacketsIR<IcmpPacketInfo>>> {
         todo!()
     }
 }

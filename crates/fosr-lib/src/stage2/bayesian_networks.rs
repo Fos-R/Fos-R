@@ -1,7 +1,7 @@
 use crate::network;
 use crate::stage2::bn_structs::*;
-use crate::stage2::{TCPConnState, bifxml};
-use crate::structs::{DstIpRole, L4Proto, L7Proto, OS, SrcIpRole};
+use crate::stage2::{TcpConnState, bifxml};
+use crate::structs::{DstIpRole, L4Proto, L7Proto, Os, SrcIpRole};
 use crate::utils;
 
 use pnet::util::MacAddr;
@@ -24,7 +24,7 @@ const GIBBS_GIVE_UP: usize = 100;
 struct BayesianNetworkNode {
     feature: Feature,
     removed_values: HashSet<usize>,
-    cpt: Option<CPT>,                // TimeBin has no CPT
+    cpt: Option<Cpt>,                // TimeBin has no CPT
     parents: Vec<usize>,             // indices in the Bayesian network’s nodes
     parents_cardinality: Vec<usize>, // the cardinality of each parents. Used to compute the index
     // in the cpt
@@ -33,9 +33,8 @@ struct BayesianNetworkNode {
     index: usize,
 }
 
-#[allow(clippy::upper_case_acronyms)]
 /// A conditional probability table
-type CPT = Vec<Option<WeightedIndex<f64>>>; // some combination may be impossible
+type Cpt = Vec<Option<WeightedIndex<f64>>>; // some combination may be impossible
 
 impl BayesianNetworkNode {
     /// Get the line of the CPT corresponding to the current vector
@@ -404,8 +403,8 @@ impl BayesianNetwork {
 
     pub fn add_tl_nodes(
         &mut self,
-        src_ip: HashMap<(L7Proto, OS, SrcIpRole), AnonymizedIpv4Distr>,
-        dst_ip: HashMap<(L7Proto, OS, DstIpRole), AnonymizedIpv4Distr>,
+        src_ip: HashMap<(L7Proto, Os, SrcIpRole), AnonymizedIpv4Distr>,
+        dst_ip: HashMap<(L7Proto, Os, DstIpRole), AnonymizedIpv4Distr>,
         all_ips: &[Ipv4Addr],
     ) {
         let all_ips: Vec<AnonymizedIpv4Addr> = all_ips
@@ -441,7 +440,7 @@ impl BayesianNetwork {
                 self.nodes[index_src_os].feature.get_cardinality(),
                 self.nodes[index_src_ip_role].feature.get_cardinality(),
             ];
-            let mut cpt: CPT = vec![];
+            let mut cpt: Cpt = vec![];
             // The order of the variables in the for loops must be the same as in the "parents" vector
 
             if let Feature::L7Proto(ref services) = self.nodes[index_l7proto].feature {
@@ -507,7 +506,7 @@ impl BayesianNetwork {
                 self.nodes[index_dst_os].feature.get_cardinality(),
                 self.nodes[index_dst_ip_role].feature.get_cardinality(),
             ];
-            let mut cpt: CPT = vec![];
+            let mut cpt: Cpt = vec![];
 
             if let Feature::L7Proto(ref services) = self.nodes[index_l7proto].feature {
                 for s in services {
@@ -813,7 +812,7 @@ pub fn bn_from_bif(
             })
             .collect();
 
-        let cpt: CPT = def
+        let cpt: Cpt = def
             .table
             .split_ascii_whitespace()
             .map(|s| s.parse::<u64>().expect("Cannot parse the CPT"))
@@ -836,15 +835,15 @@ pub fn bn_from_bif(
                 v.outcome
                     .clone()
                     .into_iter()
-                    .map(|s| OS::from_str(&s).map_err(|e| format!("Unknown OS: {e} for {s}")))
-                    .collect::<Result<Vec<OS>, String>>()?,
+                    .map(|s| Os::from_str(&s).map_err(|e| format!("Unknown OS: {e} for {s}")))
+                    .collect::<Result<Vec<Os>, String>>()?,
             )),
             "Dst OS" => Some(Feature::DstOs(
                 v.outcome
                     .clone()
                     .into_iter()
-                    .map(|s| OS::from_str(&s).map_err(|e| format!("Unknown OS: {e} for {s}")))
-                    .collect::<Result<Vec<OS>, String>>()?,
+                    .map(|s| Os::from_str(&s).map_err(|e| format!("Unknown OS: {e} for {s}")))
+                    .collect::<Result<Vec<Os>, String>>()?,
             )),
             "Src IP Role" => Some(Feature::SrcIpRole(
                 v.outcome
@@ -941,8 +940,8 @@ pub fn bn_from_bif(
                 v.outcome
                     .clone()
                     .into_iter()
-                    .map(|s| TCPConnState::from_str(&s))
-                    .collect::<Result<Vec<TCPConnState>, String>>()?,
+                    .map(|s| TcpConnState::from_str(&s))
+                    .collect::<Result<Vec<TcpConnState>, String>>()?,
             )),
 
             _ => None, // TODO: panic ? error message ?

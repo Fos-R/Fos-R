@@ -3,12 +3,12 @@ use aya::Ebpf;
 use pnet::datalink;
 
 #[derive(Debug, Clone)]
-pub struct EBPFNetEnabler {
+pub struct EbpfNetEnabler {
     // Params
     fast: bool,
 }
 
-impl NetEnabler for EBPFNetEnabler {
+impl NetEnabler for EbpfNetEnabler {
     fn is_packet_relevant(&self, flags: u8) -> bool {
         flags & 0b100 > 0 // we know the traffic is tainted
     }
@@ -57,7 +57,7 @@ fn load_ebpf_program(
     Ok(())
 }
 
-impl EBPFNetEnabler {
+impl EbpfNetEnabler {
     pub fn new(
         fast: bool,
         local_interfaces: &[datalink::NetworkInterface],
@@ -69,6 +69,6 @@ impl EBPFNetEnabler {
             log::info!("Loading \"redirect\" eBPF program");
             load_ebpf_program(local_interfaces, "fosr_ebpf_redirect")?;
         }
-        Ok(EBPFNetEnabler { fast })
+        Ok(EbpfNetEnabler { fast })
     }
 }
