@@ -11,12 +11,14 @@ use nalgebra::{matrix, vector};
 use rand::prelude::IndexedRandom;
 use rand_core::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
-use rayon::prelude::*;
 use serde::Deserialize;
 use statrs::distribution::MultivariateNormal;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
+
+#[cfg(not(target_arch = "wasm32"))]
+use rayon::prelude::*;
 
 #[derive(Clone)]
 struct AutomataSet<T: EdgeType> {
@@ -136,6 +138,15 @@ impl AutomataLibrary {
         };
 
         // load the automata in parallel with rayon
+        
+        #[cfg(target_arch = "wasm32")]
+        // do not use rayon for wasm32
+        let loaded_automata: Vec<Result<LoadedAutomata, String>> = strings
+            .iter()
+            .map(|s| import_from_str(&s, &clusters))
+            .collect();
+
+        #[cfg(not(target_arch = "wasm32"))]
         let loaded_automata: Vec<Result<LoadedAutomata, String>> = strings
             .par_iter()
             .map(|s| import_from_str(&s, &clusters))

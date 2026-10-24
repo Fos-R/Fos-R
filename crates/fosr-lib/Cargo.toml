@@ -58,4 +58,3 @@ fosr-ebpf = { path = "../fosr-ebpf", optional = true }
 # auto-detect WASM target and add the feature to getrandom
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.4.3", features=["wasm_js"] }
-wasm-bindgen-rayon = "1.2"
