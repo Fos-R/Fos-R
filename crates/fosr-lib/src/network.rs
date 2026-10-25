@@ -271,8 +271,6 @@ pub struct SubNetworkYaml {
 
     pub subnet: String,
 
-    pub mask: Option<u8>,
-
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 
@@ -337,6 +335,24 @@ pub struct InterfaceYaml {
     pub services: Option<Vec<String>>,
 }
 
+pub fn parse_cidr(s: &str) -> Result<(Ipv4Addr, u8), String> {
+    let parts: Vec<&str> = s.split('/').collect();
+    if parts.len() != 2 {
+        return Err("Invalid CIDR notation".to_string());
+    }
+    let subnet = parts[0]
+        .parse::<Ipv4Addr>()
+        .map_err(|_| format!("Invalid subnet IP: {}", parts[0]))?;
+    let mask = parts[1]
+        .parse::<u8>()
+        .map_err(|_| "Invalid mask in CIDR notation".to_string())?;
+    if mask > 32 {
+        return Err("Mask must be between 0 and 32".to_string());
+    }
+
+    Ok((subnet, mask))
+}
+
 impl TryFrom<NetworkYaml> for Network {
     type Error = String;
 
@@ -355,27 +371,7 @@ impl TryFrom<NetworkYaml> for Network {
         let networks: Vec<SubNetwork> = networks_yaml
             .into_iter()
             .map(|n| {
-                let parts: Vec<&str> = n.subnet.split('/').collect();
-                let len = parts.len();
-                if parts.is_empty() {
-                    return Err("Empty subnet".to_string());
-                }
-                let subnet = parts[0]
-                    .parse::<Ipv4Addr>()
-                    .map_err(|_| format!("Invalid subnet IP: {}", parts[0]))?;
-                let mask = match len {
-                    1 => n.mask.ok_or(format!("No mask for subnet {subnet}"))?,
-                    2 => {
-                        let mask = parts[1]
-                            .parse::<u8>()
-                            .map_err(|_| "Invalid mask in CIDR notation".to_string())?;
-                        if mask > 32 {
-                            return Err("Mask must be between 0 and 32".to_string());
-                        }
-                        mask
-                    }
-                    _ => return Err("Invalid CIDR notation".to_string()),
-                };
+                let (subnet, mask) = parse_cidr(&n.subnet)?;
 
                 Ok(SubNetwork {
                     subnet: subnet,

@@ -80,8 +80,7 @@ impl From<Vec<SubTopologyOrInternet>> for NetworkYaml {
                     networks.push(SubNetworkYaml {
                         ui_id: next_ui_id(),
                         public: false,
-                        subnet: st.subnet.to_string(),
-                        mask: Some(st.mask as u8),
+                        subnet: format!("{}/{}", st.subnet.to_string(), st.mask),
                         name: Some(st.name.clone()),
                         hosts,
                     });
