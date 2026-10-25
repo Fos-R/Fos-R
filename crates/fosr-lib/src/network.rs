@@ -269,6 +269,7 @@ pub struct SubNetworkYaml {
     #[serde(default)]
     pub public: bool,
 
+    /// The subnet is an CIDR format
     pub subnet: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -276,6 +277,33 @@ pub struct SubNetworkYaml {
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub hosts: Vec<HostYaml>,
+}
+
+impl SubNetworkYaml {
+    pub fn get_subnet_ip(&self) -> Result<Ipv4Addr, String> {
+        let parts: Vec<&str> = self.subnet.split('/').collect();
+        if parts.len() != 2 {
+            return Err("Invalid CIDR notation".to_string());
+        }
+        parts[0]
+            .parse::<Ipv4Addr>()
+            .map_err(|_| format!("Invalid subnet IP: {}", parts[0]))
+    }
+
+    pub fn get_mask(&self) -> Result<u8, String> {
+        let parts: Vec<&str> = self.subnet.split('/').collect();
+        if parts.len() != 2 {
+            return Err("Invalid CIDR notation".to_string());
+        }
+        let mask = parts[1]
+            .parse::<u8>()
+            .map_err(|_| "Invalid mask in CIDR notation".to_string())?;
+        if mask > 32 {
+            return Err("Mask must be between 0 and 32".to_string());
+        }
+
+        Ok(mask)
+    }
 }
 
 /// YAML-level host representation with String-based fields for editing.
@@ -335,24 +363,6 @@ pub struct InterfaceYaml {
     pub services: Option<Vec<String>>,
 }
 
-pub fn parse_cidr(s: &str) -> Result<(Ipv4Addr, u8), String> {
-    let parts: Vec<&str> = s.split('/').collect();
-    if parts.len() != 2 {
-        return Err("Invalid CIDR notation".to_string());
-    }
-    let subnet = parts[0]
-        .parse::<Ipv4Addr>()
-        .map_err(|_| format!("Invalid subnet IP: {}", parts[0]))?;
-    let mask = parts[1]
-        .parse::<u8>()
-        .map_err(|_| "Invalid mask in CIDR notation".to_string())?;
-    if mask > 32 {
-        return Err("Mask must be between 0 and 32".to_string());
-    }
-
-    Ok((subnet, mask))
-}
-
 impl TryFrom<NetworkYaml> for Network {
     type Error = String;
 
@@ -371,11 +381,9 @@ impl TryFrom<NetworkYaml> for Network {
         let networks: Vec<SubNetwork> = networks_yaml
             .into_iter()
             .map(|n| {
-                let (subnet, mask) = parse_cidr(&n.subnet)?;
-
                 Ok(SubNetwork {
-                    subnet: subnet,
-                    mask: mask,
+                    subnet: n.get_subnet_ip()?,
+                    mask: n.get_mask()?,
                     public: n.public,
                     name: n.name.unwrap_or("Unnamed subnet".to_string()),
                     hosts: n

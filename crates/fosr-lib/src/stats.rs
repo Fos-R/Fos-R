@@ -7,6 +7,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread;
 use std::time::Duration;
+// use std::sync::OnceLock;
 
 /// Generation statistics
 pub struct Stats {
@@ -29,6 +30,12 @@ pub struct Stats {
     /// The number of packets sent to the network interface
     pub sent_packets: AtomicU64,
 }
+
+// static STATS: OnceLock<Stats> = OnceLock::new();
+
+// pub fn stats() -> &'static Stats {
+//     STATS.get_or_init(|| Stats::default())
+// }
 
 impl Default for Stats {
     fn default() -> Self {

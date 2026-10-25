@@ -182,7 +182,7 @@ pub fn collect_other_subnets(
         .iter()
         .enumerate()
         .filter(|(i, _)| *i != exclude_idx)
-        .map(|(_, n)| (n.subnet, n.mask))
+        .map(|(_, n)| (n.get_subnet_ip().unwrap(), n.get_mask().unwrap()))
         .collect()
 }
 
@@ -195,7 +195,12 @@ pub fn validate_network_subnet_overlap(
 ) -> Vec<String> {
     let mut warnings = Vec::new();
     for &(other_subnet, other_mask) in other_subnets {
-        if subnets_overlap(network.subnet, network.mask, other_subnet, other_mask) {
+        if subnets_overlap(
+            network.get_subnet_ip().unwrap(),
+            network.get_mask().unwrap(),
+            other_subnet,
+            other_mask,
+        ) {
             warnings.push(format!("Subnet overlaps with {other_subnet}/{other_mask}"));
         }
     }
@@ -207,7 +212,10 @@ pub fn validate_network_subnet_overlap(
 /// Scans X from 1 to 254 and returns the first `192.168.X.0` that does not
 /// overlap with any existing subnet in the configuration.
 pub fn find_available_subnet(networks: &[SubNetworkYaml]) -> Option<Ipv4Addr> {
-    let existing: Vec<(Ipv4Addr, u8)> = networks.iter().map(|n| (n.subnet, n.mask)).collect();
+    let existing: Vec<(Ipv4Addr, u8)> = networks
+        .iter()
+        .map(|n| (n.get_subnet_ip().unwrap(), n.get_mask().unwrap()))
+        .collect();
 
     for x in 1u8..=254 {
         let candidate = Ipv4Addr::new(192, 168, x, 0);

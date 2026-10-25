@@ -43,9 +43,8 @@ pub fn render_hosts_section(ui: &mut egui::Ui, model: &mut NetworkYaml) {
 
         model.add_network(SubNetworkYaml {
             ui_id: next_ui_id(),
-            subnet,
+            subnet: format!("{subnet}/24"),
             public: false,
-            mask: 24,
             name: Some(format!("Network {}", net_count + 1)),
             hosts: vec![],
         });
@@ -99,13 +98,12 @@ fn render_network_section(
 ) {
     let host_count = network.hosts.len();
     let header_text = format!(
-        "{} ({}/{}) - {} host{}",
+        "{} ({}) - {} host{}",
         network
             .name
             .clone()
             .unwrap_or("Unnamed network".to_string()),
         network.subnet,
-        network.mask,
         host_count,
         if host_count != 1 { "s" } else { "" }
     );
@@ -157,11 +155,14 @@ fn render_network_section(
 
             // Render hosts
             let mut host_to_remove: Option<usize> = None;
+            let subnet_ip = network.get_subnet_ip().unwrap();
+            let mask = network.get_mask().unwrap();
+
             for (local_idx, host) in network.hosts.iter_mut().enumerate() {
                 render_host_card(
                     ui,
                     (net_idx, local_idx),
-                    Some((network.subnet, network.mask)),
+                    Some((subnet_ip, mask)),
                     host,
                     ip_counts,
                     mac_counts,
@@ -179,22 +180,23 @@ fn render_network_section(
 fn render_network_fields(ui: &mut egui::Ui, network: &mut SubNetworkYaml) {
     ui.horizontal(|ui| {
         ui.label("Subnet");
-        let mut subnet_str = network.subnet.to_string();
+        let mut subnet_str = network.get_subnet_ip().unwrap().to_string();
+        let mask = network.get_mask().unwrap();
         if ui
             .add(egui::TextEdit::singleline(&mut subnet_str).desired_width(120.0))
             .changed()
-            && let Ok(ip) = subnet_str.parse()
+            && let Ok(ip) = subnet_str.parse::<Ipv4Addr>()
         {
-            network.subnet = ip;
+            network.subnet = format!("{ip}/{mask}");
         }
 
         ui.label("/");
-        let mut mask_val = network.mask as u32;
+        let mut mask_val = mask as u32;
         if ui
             .add(egui::DragValue::new(&mut mask_val).range(1..=31).speed(0.1))
             .changed()
         {
-            network.mask = mask_val as u8;
+            network.subnet = format!("{subnet_str}/{mask_val}");
         }
 
         // ui.label("Name");
@@ -491,8 +493,12 @@ fn create_host_with_network_ip(
     ip_counts: &HashMap<String, usize>,
     mac_counts: &HashMap<String, usize>,
 ) -> HostYaml {
-    let ip = host_interfaces::find_available_ip_in_subnet(network.subnet, network.mask, ip_counts)
-        .unwrap_or_default();
+    let ip = host_interfaces::find_available_ip_in_subnet(
+        network.get_subnet_ip().unwrap(),
+        network.get_mask().unwrap(),
+        ip_counts,
+    )
+    .unwrap_or_default();
     HostYaml {
         interfaces: vec![InterfaceYaml {
             ip_addr: ip,

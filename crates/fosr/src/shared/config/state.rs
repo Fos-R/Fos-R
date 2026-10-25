@@ -42,8 +42,10 @@ impl ConfigFileState {
     }
 
     pub fn set_config_model(&mut self, network: NetworkYaml) {
-        self.next_config.send(network.clone().into()).unwrap();
-        self.processed_config_model = Some(network.clone().into());
+        self.next_config
+            .send(network.clone().try_into().unwrap())
+            .unwrap();
+        self.processed_config_model = Some(network.clone().try_into().unwrap());
         self.config_model = Some(network);
     }
 

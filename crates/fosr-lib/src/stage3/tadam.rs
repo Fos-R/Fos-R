@@ -138,7 +138,7 @@ impl AutomataLibrary {
         };
 
         // load the automata in parallel with rayon
-        
+
         #[cfg(target_arch = "wasm32")]
         // do not use rayon for wasm32
         let loaded_automata: Vec<Result<LoadedAutomata, String>> = strings
@@ -149,7 +149,7 @@ impl AutomataLibrary {
         #[cfg(not(target_arch = "wasm32"))]
         let loaded_automata: Vec<Result<LoadedAutomata, String>> = strings
             .par_iter()
-            .map(|s| import_from_str(&s, &clusters))
+            .map(|s| import_from_str(s, &clusters))
             .collect();
 
         for result_automata in loaded_automata {
