@@ -330,11 +330,16 @@ fn main() -> Result<(), String> {
             log::info!("Topology has been successfully generated into {outfile}");
         }
         cmd::Command::ValidateNetwork { input } => {
-            network::import_network(
-                &fs::read_to_string(Path::new(&input))
-                    .map_err(|e| format!("Cannot open the network file: {e}"))?,
-            )?;
-            log::info!("Network is valid.");
+            for file in input {
+                let res = network::import_network(
+                    &fs::read_to_string(Path::new(&file))
+                        .map_err(|e| format!("Cannot open the network file: {e}"))?,
+                );
+                match res {
+                    Ok(_) => log::info!("Network {file} is valid."),
+                    Err(s) => log::warn!("Network {file} has an error: {s}"),
+                }
+            }
         }
     }
     Ok(())

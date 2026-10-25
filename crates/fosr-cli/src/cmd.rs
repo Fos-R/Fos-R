@@ -488,9 +488,9 @@ pub enum Command {
     ValidateNetwork {
         #[arg(
             required = true,
-            help = "Network description file to validate",
-            index = 1
+            help = "Network description file(s) to validate",
+            num_args = 1..
         )]
-        input: String,
+        input: Vec<String>,
     },
 }
