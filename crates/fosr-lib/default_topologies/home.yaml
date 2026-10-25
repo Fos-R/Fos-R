@@ -6,8 +6,7 @@ metadata:
   format: 1
 
 networks:
-  - subnet: 192.168.1.0
-    mask: 24
+  - subnet: 192.168.1.0/24
     name: "Home Network"
     hosts:
       - hostname: home-router

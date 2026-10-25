@@ -80,8 +80,8 @@ impl From<Vec<SubTopologyOrInternet>> for NetworkYaml {
                     networks.push(SubNetworkYaml {
                         ui_id: next_ui_id(),
                         public: false,
-                        subnet: st.subnet,
-                        mask: st.mask as u8,
+                        subnet: st.subnet.to_string(),
+                        mask: Some(st.mask as u8),
                         name: Some(st.name.clone()),
                         hosts,
                     });
@@ -106,7 +106,9 @@ impl From<Vec<SubTopologyOrInternet>> for NetworkYaml {
 
 impl From<Vec<SubTopologyOrInternet>> for Network {
     fn from(topology: Vec<SubTopologyOrInternet>) -> Self {
-        NetworkYaml::from(topology).into()
+        NetworkYaml::from(topology)
+            .try_into()
+            .expect("Generated network is not valid")
     }
 }
 

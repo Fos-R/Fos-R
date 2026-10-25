@@ -7,8 +7,7 @@ metadata:
 
 networks:
   # ==================== DMZ SUBNET ====================
-  - subnet: 192.168.10.0
-    mask: 24
+  - subnet: 192.168.10.0/24
     name: "DMZ"
     hosts:
       - hostname: dmz-web-gateway
@@ -44,8 +43,7 @@ networks:
 
 
   # ==================== APPLICATION SUBNET ====================
-  - subnet: 192.168.20.0
-    mask: 24
+  - subnet: 192.168.20.0/24
     name: "Application"
     hosts:
       - hostname: app-api-frontend
@@ -71,8 +69,7 @@ networks:
           - ip_addr: 192.168.20.1
 
   # ==================== DATABASE SUBNET ====================
-  - subnet: 192.168.30.0
-    mask: 24
+  - subnet: 192.168.30.0/24
     name: "Database"
     hosts:
       - hostname: db-primary
@@ -100,8 +97,7 @@ networks:
           - ip_addr: 192.168.30.1
 
   # ==================== USER SUBNET ====================
-  - subnet: 192.168.50.0
-    mask: 24
+  - subnet: 192.168.50.0/24
     name: "Users"
     hosts:
       - hostname: admin-workstation

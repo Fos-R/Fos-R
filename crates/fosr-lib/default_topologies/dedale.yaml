@@ -6,11 +6,9 @@ metadata:
   format: 1
 
 networks:
-  - subnet: 172.16.255.0
-    mask: 24
+  - subnet: 172.16.255.0/24
     name: "Green zone"
-  - subnet: 172.16.1.0
-    mask: 24
+  - subnet: 172.16.1.0/24
     name: "Internal"
     hosts:
       - interfaces: # Router
@@ -107,8 +105,7 @@ networks:
       - interfaces:
         - ip_addr: 172.16.1.31
         os: windows
-  - subnet: 172.16.0.0
-    mask: 24
+  - subnet: 172.16.0.0/24
     name: "Servers"
     hosts:
       - interfaces:
@@ -121,8 +118,7 @@ networks:
           services:
             - https
             - http
-  - subnet: 172.17.0.0
-    mask: 16
+  - subnet: 172.17.0.0/16
     name: "DMZ"
     hosts:
       - interfaces: # Router
@@ -142,8 +138,7 @@ networks:
           services:
             - https
             - http
-  - subnet: 172.18.0.0
-    mask: 16
+  - subnet: 172.18.0.0/16
     name: "Red zone 172.18"
     hosts:
       - interfaces: # Router
@@ -154,8 +149,7 @@ networks:
         - ip_addr: public
 
 
-  - subnet: 172.19.0.0
-    mask: 16
+  - subnet: 172.19.0.0/16
     name: "Red zone 172.19"
     hosts:
       - interfaces:

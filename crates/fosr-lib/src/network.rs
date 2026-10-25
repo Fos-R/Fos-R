@@ -269,9 +269,9 @@ pub struct SubNetworkYaml {
     #[serde(default)]
     pub public: bool,
 
-    pub subnet: Ipv4Addr,
+    pub subnet: String,
 
-    pub mask: u8,
+    pub mask: Option<u8>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -337,8 +337,10 @@ pub struct InterfaceYaml {
     pub services: Option<Vec<String>>,
 }
 
-impl From<NetworkYaml> for Network {
-    fn from(c: NetworkYaml) -> Self {
+impl TryFrom<NetworkYaml> for Network {
+    type Error = String;
+
+    fn try_from(c: NetworkYaml) -> Result<Self, String> {
         let mut hasher = DefaultHasher::new();
         c.metadata.title.hash(&mut hasher);
         let mut rng = Pcg32::seed_from_u64(hasher.finish());
@@ -352,18 +354,42 @@ impl From<NetworkYaml> for Network {
         let networks_yaml = c.networks;
         let networks: Vec<SubNetwork> = networks_yaml
             .into_iter()
-            .map(|n| SubNetwork {
-                subnet: n.subnet,
-                mask: n.mask,
-                public: n.public,
-                name: n.name.unwrap_or("Unnamed subnet".to_string()),
-                hosts: n
-                    .hosts
-                    .into_iter()
-                    .map(|h| Host::from(h, &mut rng, n.public))
-                    .collect(),
+            .map(|n| {
+                let parts: Vec<&str> = n.subnet.split('/').collect();
+                let len = parts.len();
+                if parts.is_empty() {
+                    return Err("Empty subnet".to_string());
+                }
+                let subnet = parts[0]
+                    .parse::<Ipv4Addr>()
+                    .map_err(|_| format!("Invalid subnet IP: {}", parts[0]))?;
+                let mask = match len {
+                    1 => n.mask.ok_or(format!("No mask for subnet {subnet}"))?,
+                    2 => {
+                        let mask = parts[1]
+                            .parse::<u8>()
+                            .map_err(|_| "Invalid mask in CIDR notation".to_string())?;
+                        if mask > 32 {
+                            return Err("Mask must be between 0 and 32".to_string());
+                        }
+                        mask
+                    }
+                    _ => return Err("Invalid CIDR notation".to_string()),
+                };
+
+                Ok(SubNetwork {
+                    subnet: subnet,
+                    mask: mask,
+                    public: n.public,
+                    name: n.name.unwrap_or("Unnamed subnet".to_string()),
+                    hosts: n
+                        .hosts
+                        .into_iter()
+                        .map(|h| Host::from(h, &mut rng, n.public))
+                        .collect(),
+                })
             })
-            .collect();
+            .collect::<Result<Vec<SubNetwork>, String>>()?;
 
         let all_users: Vec<Ipv4Addr> = networks
             .iter()
@@ -540,7 +566,7 @@ impl From<NetworkYaml> for Network {
             });
         }
 
-        Network {
+        Ok(Network {
             metadata: c.metadata,
             networks: all_networks,
             os_map,
@@ -557,7 +583,7 @@ impl From<NetworkYaml> for Network {
             has_internet_access,
             // users_per_service,
             // open_ports,
-        }
+        })
     }
 }
 
@@ -643,7 +669,7 @@ impl Interface {
 pub fn import_network(config_string: &str) -> Result<Network, String> {
     let config: Network = serde_yaml::from_str::<NetworkYaml>(config_string)
         .map_err(|e| format!("{e:?}"))?
-        .into();
+        .try_into()?;
     log::info!("Network \"{}\" successfully loaded", config.metadata.title);
     log::trace!("Network: {config:?}");
     Ok(config)

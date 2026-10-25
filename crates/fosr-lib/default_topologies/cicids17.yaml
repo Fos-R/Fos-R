@@ -6,8 +6,7 @@ metadata:
   format: 1
 
 networks:
-  - subnet: 192.168.10.0
-    mask: 24
+  - subnet: 192.168.10.0/24
     name: "Victim Network"
     hosts:
       - interfaces:
@@ -65,8 +64,7 @@ networks:
       - interfaces: # router
         - ip_addr: 192.168.10.1
         - ip_addr: 172.16.0.2
-  - subnet: 172.16.0.0
-    mask: 24
+  - subnet: 172.16.0.0/24
     name: "Internal1"
     hosts:
       - interfaces: # router

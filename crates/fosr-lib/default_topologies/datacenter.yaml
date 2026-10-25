@@ -7,8 +7,7 @@ metadata:
 
 networks:
   # ==================== LOAD BALANCER TIER ====================
-  - subnet: 10.0.1.0
-    mask: 24
+  - subnet: 10.0.1.0/24
     name: "Load Balancers"
     hosts:
       - hostname: lb-primary
@@ -35,8 +34,7 @@ networks:
           - ip_addr: public
 
   # ==================== WEB SERVER TIER ====================
-  - subnet: 10.0.2.0
-    mask: 24
+  - subnet: 10.0.2.0/24
     name: "Web Servers"
     hosts:
       - hostname: web-server-01
@@ -72,8 +70,7 @@ networks:
           - ip_addr: 10.0.2.13
 
   # ==================== APPLICATION TIER ====================
-  - subnet: 10.0.3.0
-    mask: 24
+  - subnet: 10.0.3.0/24
     name: "Application Servers"
     hosts:
       - hostname: app-server-01
@@ -100,8 +97,7 @@ networks:
           - ip_addr: 10.0.3.12
 
   # ==================== ADMIN ====================
-  - subnet: 10.0.8.0
-    mask: 24
+  - subnet: 10.0.8.0/24
     name: "Admin"
     hosts:
       - hostname: admin
@@ -116,8 +112,7 @@ networks:
           - ip_addr: 10.0.8.2
 
   # ==================== DATABASE TIER ====================
-  - subnet: 10.0.4.0
-    mask: 24
+  - subnet: 10.0.4.0/24
     name: "Database Servers"
     hosts:
       - hostname: db-primary
@@ -151,8 +146,7 @@ networks:
           - ip_addr: 10.0.4.13
 
   # ==================== CACHE TIER ====================
-  - subnet: 10.0.5.0
-    mask: 24
+  - subnet: 10.0.5.0/24
     name: "Cache"
     hosts:
       - hostname: cache-server
@@ -169,8 +163,7 @@ networks:
           - ip_addr: 10.0.5.11
 
   # ==================== MONITORING ====================
-  - subnet: 10.0.6.0
-    mask: 24
+  - subnet: 10.0.6.0/24
     name: "Monitoring"
     hosts:
       - hostname: monitoring-server
@@ -188,8 +181,7 @@ networks:
           - ip_addr: 10.0.6.11
 
   # ==================== DNS ====================
-  - subnet: 10.0.7.0
-    mask: 24
+  - subnet: 10.0.7.0/24
     name: "DNS"
     hosts:
       - hostname: dns-server
