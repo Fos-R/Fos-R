@@ -13,11 +13,7 @@ build-linux-x86-64:
     - large
   stage: build
   image: rust
-  variables:
-    GIT_STRATEGY: clone
-    GIT_CHECKOUT: "false"
   script:
-    - git checkout $CI_COMMIT_REF_NAME
     # version without network injection
     - cargo build -p fosr-cli
     - cargo build -p fosr
@@ -50,11 +46,7 @@ build-linux-x86-64:
     - large
   stage: build
   image: rust
-  variables:
-    GIT_STRATEGY: clone
-    GIT_CHECKOUT: "false"
   script:
-    - git checkout $CI_COMMIT_REF_NAME
     # - rustup toolchain install nightly --component rust-src
     # - cargo install cargo-binstall --locked
     # - cargo binstall bpf-linker
@@ -96,11 +88,7 @@ build-linux-x86-64:
     - large
   stage: build
   image: rust
-  variables:
-    GIT_STRATEGY: clone
-    GIT_CHECKOUT: "false"
   script:
-    - git checkout $CI_COMMIT_REF_NAME
     - apt update
     - apt install -y binutils-mingw-w64-x86-64 gcc-mingw-w64
     - rustup target add $TARGET
@@ -125,11 +113,7 @@ build-wasm32:
     - large
   stage: build
   image: rust
-  variables:
-    GIT_STRATEGY: clone
-    GIT_CHECKOUT: "false"
   script:
-    - git checkout $CI_COMMIT_REF_NAME
     - rustup target add wasm32-unknown-unknown
     # pinning the version so it is consistent with the version in Cargo.toml
     - cargo install wasm-bindgen-cli --version 0.2.129
@@ -151,13 +135,9 @@ build-wasm32:
     - large
   stage: test
   image: rust
-  variables:
-    GIT_STRATEGY: clone
-    GIT_CHECKOUT: "false"
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
-    - git checkout $CI_COMMIT_REF_NAME
     - cargo install cargo-audit
     - cargo audit -D unsound -D yanked
   allow_failure: true
@@ -168,13 +148,9 @@ build-wasm32:
     - large
   stage: test
   image: rust
-  variables:
-    GIT_STRATEGY: clone
-    GIT_CHECKOUT: "false"
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
-    - git checkout $CI_COMMIT_REF_NAME
     # - rustup toolchain install nightly --component rust-src
     # - cargo install cargo-binstall --locked
     # - cargo binstall bpf-linker
@@ -188,11 +164,7 @@ build-wasm32:
     - large
   stage: test
   image: rust
-  variables:
-    GIT_STRATEGY: clone
-    GIT_CHECKOUT: "false"
   script:
-    - git checkout $CI_COMMIT_REF_NAME
     - mkdir -p data/$DATASET/$DATASET-fosr
     - cargo run -p fosr-cli -- augment-dataset -o data/$DATASET/$DATASET-fosr/data.pcap -s 0 -d 1day -t 0 -p fast --tz UTC -m $DATASET
   parallel:
@@ -213,11 +185,7 @@ build-wasm32:
     - large
   stage: test
   image: rust
-  variables:
-    GIT_STRATEGY: clone
-    GIT_CHECKOUT: "false"
   script:
-    - git checkout $CI_COMMIT_REF_NAME
     # test for debug and release
     - cargo test -p fosr-cli -- --nocapture
     - cargo test -r -p fosr-cli -- --nocapture
@@ -330,13 +298,9 @@ pages:
     publish: public
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
-  variables:
-    GIT_STRATEGY: clone
-    GIT_CHECKOUT: "false"
   script:
     - apt update
     - apt install -y pandoc git tree
-    - git checkout $CI_COMMIT_REF_NAME
     - mv doc public/
     - mv target public/bin
     - cat CHANGELOG.md >> public/changelog.md
