@@ -1,29 +1,3 @@
-mask: 24
-name: st188
-nodes:
-- ip: 192.168.187.1
-  name: r188_1
-  type: router
-- ip: 192.168.187.2
-  name: n188_2
-  os: windows
-  services: dbms_server
-  type: machine
-- ip: 192.168.187.3
-  name: n188_3
-  os: linux
-  type: machine
-- ip: 192.168.187.4
-  name: n188_4
-  os: windows
-  services: ftp_server
-  type: machine
-- ip: 192.168.187.5
-  name: n188_5
-  os: linux
-  type: machine
-- ip: 192.168.187.6
-  name: n188_6
-  os: windows
-  type: machine
-subnet: 192.168.187.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:995ef1077a47f245667a951cecfa5f1629a35820e7ce075241c86e9bc613c331
+size 468

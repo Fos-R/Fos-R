@@ -1,20 +1,3 @@
-mask: 24
-name: st110
-nodes:
-- ip: 192.168.109.1
-  name: r110_1
-  type: router
-- ip: 192.168.109.2
-  name: n110_2
-  os: windows
-  type: machine
-- ip: 192.168.109.3
-  name: n110_3
-  os: linux
-  type: machine
-- ip: 192.168.109.4
-  name: n110_4
-  os: linux
-  services: web_server
-  type: machine
-subnet: 192.168.109.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:d89bb1e3afe0fec8fb7a2af9654afd0ce4f1d0b64de06f9b03d164e14d60fc61
+size 314

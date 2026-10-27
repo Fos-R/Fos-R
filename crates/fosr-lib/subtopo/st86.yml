@@ -1,29 +1,3 @@
-mask: 24
-name: st86
-nodes:
-- ip: 192.168.85.1
-  name: r86_1
-  type: router
-- ip: 192.168.85.2
-  name: n86_2
-  os: windows
-  type: machine
-- ip: 192.168.85.3
-  name: n86_3
-  os: linux
-  services: ftp_server
-  type: machine
-- ip: 192.168.85.4
-  name: n86_4
-  os: linux
-  type: machine
-- ip: 192.168.85.5
-  name: n86_5
-  os: linux
-  type: machine
-- ip: 192.168.85.6
-  name: n86_6
-  os: windows
-  services: proxy_server
-  type: machine
-subnet: 192.168.85.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:7a2fad60a67d3e3f3aa083ebd3963032d80d770b69c8a3b74c82b662e3fd6159
+size 453

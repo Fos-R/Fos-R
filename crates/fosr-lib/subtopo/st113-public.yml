@@ -1,30 +1,3 @@
-mask: 24
-name: st113
-nodes:
-- ip: 161.76.97.1
-  name: r113_1
-  type: router
-- ip: 161.76.97.2
-  name: n113_2
-  os: windows
-  type: machine
-- ip: 161.76.97.3
-  name: n113_3
-  os: linux
-  services: ldap_server
-  type: machine
-- ip: 161.76.97.4
-  name: n113_4
-  os: linux
-  services: web_server
-  type: machine
-- ip: 161.76.97.5
-  name: n113_5
-  os: linux
-  services: ldap_server
-  type: machine
-- ip: 161.76.97.6
-  name: n113_6
-  os: windows
-  type: machine
-subnet: 161.76.97.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:ac2115c0808a2b1db48644b947840aad9835b6090bb100ef36d37f464139ec16
+size 476

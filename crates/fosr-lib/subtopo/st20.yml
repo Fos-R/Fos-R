@@ -1,25 +1,3 @@
-mask: 24
-name: st20
-nodes:
-- ip: 192.168.19.1
-  name: r20_1
-  type: router
-- ip: 192.168.19.2
-  name: n20_2
-  os: linux
-  services: web_server
-  type: machine
-- ip: 192.168.19.3
-  name: n20_3
-  os: linux
-  type: machine
-- ip: 192.168.19.4
-  name: n20_4
-  os: windows
-  services: dns_server
-  type: machine
-- ip: 192.168.19.5
-  name: n20_5
-  os: linux
-  type: machine
-subnet: 192.168.19.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:d2585d62a5f072ef503a32edff3bc86d2e8d912c9cd2480df9179ff15ee04689
+size 388

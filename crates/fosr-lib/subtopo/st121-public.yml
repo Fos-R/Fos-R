@@ -1,33 +1,3 @@
-mask: 24
-name: st121
-nodes:
-- ip: 25.217.116.1
-  name: r121_1
-  type: router
-- ip: 25.217.116.2
-  name: n121_2
-  os: windows
-  type: machine
-- ip: 25.217.116.3
-  name: n121_3
-  os: linux
-  services: dbms_server
-  type: machine
-- ip: 25.217.116.4
-  name: n121_4
-  os: linux
-  services: web_server
-  type: machine
-- ip: 25.217.116.5
-  name: n121_5
-  os: linux
-  type: machine
-- ip: 25.217.116.6
-  name: n121_6
-  os: windows
-  type: machine
-- ip: 25.217.116.7
-  name: n121_7
-  os: linux
-  type: machine
-subnet: 25.217.116.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:b63732cc5ccf74a336a67137ffa92490659279a7ead84b429d714f151c8306ec
+size 521

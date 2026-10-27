@@ -1,21 +1,3 @@
-mask: 24
-name: st4
-nodes:
-- ip: 192.168.3.1
-  name: r4_1
-  type: router
-- ip: 192.168.3.2
-  name: n4_2
-  os: linux
-  services: web_server
-  type: machine
-- ip: 192.168.3.3
-  name: n4_3
-  os: linux
-  services: log_server
-  type: machine
-- ip: 192.168.3.4
-  name: n4_4
-  os: linux
-  type: machine
-subnet: 192.168.3.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:f63d6f196d29b37f8165a3cf15ed374f573ea698cfa5d26c7f42354d9843c9e1
+size 315

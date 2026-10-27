@@ -1,20 +1,3 @@
-mask: 24
-name: st254
-nodes:
-- ip: 192.168.253.1
-  name: r254_1
-  type: router
-- ip: 192.168.253.2
-  name: n254_2
-  os: linux
-  type: machine
-- ip: 192.168.253.3
-  name: n254_3
-  os: windows
-  services: cloud_storage
-  type: machine
-- ip: 192.168.253.4
-  name: n254_4
-  os: windows
-  type: machine
-subnet: 192.168.253.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:9f2903f94c4daf230920b569ab0121c5966db0a10609df2a7094d3eeec7c2a31
+size 319

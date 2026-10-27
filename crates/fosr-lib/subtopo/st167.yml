@@ -1,34 +1,3 @@
-mask: 24
-name: st167
-nodes:
-- ip: 192.168.166.1
-  name: r167_1
-  type: router
-- ip: 192.168.166.2
-  name: n167_2
-  os: linux
-  type: machine
-- ip: 192.168.166.3
-  name: n167_3
-  os: linux
-  services: mail_server
-  type: machine
-- ip: 192.168.166.4
-  name: n167_4
-  os: linux
-  services: web_server
-  type: machine
-- ip: 192.168.166.5
-  name: n167_5
-  os: windows
-  type: machine
-- ip: 192.168.166.6
-  name: n167_6
-  os: linux
-  services: dbms_server
-  type: machine
-- ip: 192.168.166.7
-  name: n167_7
-  os: linux
-  type: machine
-subnet: 192.168.166.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:57443b531d9ee93a5c11afeef643e07b8e324d2f0a318e45ceb5eefc8c01d213
+size 551

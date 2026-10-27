@@ -1,28 +1,3 @@
-mask: 24
-name: st146
-nodes:
-- ip: 192.168.145.1
-  name: r146_1
-  type: router
-- ip: 192.168.145.2
-  name: n146_2
-  os: linux
-  services: web_server
-  type: machine
-- ip: 192.168.145.3
-  name: n146_3
-  os: windows
-  type: machine
-- ip: 192.168.145.4
-  name: n146_4
-  os: linux
-  type: machine
-- ip: 192.168.145.5
-  name: n146_5
-  os: windows
-  type: machine
-- ip: 192.168.145.6
-  name: n146_6
-  os: linux
-  type: machine
-subnet: 192.168.145.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:7b45f93516e25062616b5e14f17052d5cb7892e242417e167b82a87e625a8c71
+size 442

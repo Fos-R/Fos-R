@@ -1,28 +1,3 @@
-mask: 24
-name: st161
-nodes:
-- ip: 192.168.160.1
-  name: r161_1
-  type: router
-- ip: 192.168.160.2
-  name: n161_2
-  os: linux
-  type: machine
-- ip: 192.168.160.3
-  name: n161_3
-  os: linux
-  type: machine
-- ip: 192.168.160.4
-  name: n161_4
-  os: windows
-  services: cms_server
-  type: machine
-- ip: 192.168.160.5
-  name: n161_5
-  os: windows
-  type: machine
-- ip: 192.168.160.6
-  name: n161_6
-  os: linux
-  type: machine
-subnet: 192.168.160.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:5c21df27e9652e26535e80d065147ab33917c27d1feed225741b796e65fbca6b
+size 442

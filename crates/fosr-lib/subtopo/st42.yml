@@ -1,24 +1,3 @@
-mask: 24
-name: st42
-nodes:
-- ip: 192.168.41.1
-  name: r42_1
-  type: router
-- ip: 192.168.41.2
-  name: n42_2
-  os: linux
-  services: ftp_server
-  type: machine
-- ip: 192.168.41.3
-  name: n42_3
-  os: linux
-  type: machine
-- ip: 192.168.41.4
-  name: n42_4
-  os: linux
-  type: machine
-- ip: 192.168.41.5
-  name: n42_5
-  os: linux
-  type: machine
-subnet: 192.168.41.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:160dd63911508de29a9e5221be2fbd7f31c5dab23fde1f3126496cc3cd6538d6
+size 363

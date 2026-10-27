@@ -1,24 +1,3 @@
-mask: 24
-name: st104
-nodes:
-- ip: 192.168.103.1
-  name: r104_1
-  type: router
-- ip: 192.168.103.2
-  name: n104_2
-  os: windows
-  type: machine
-- ip: 192.168.103.3
-  name: n104_3
-  os: windows
-  type: machine
-- ip: 192.168.103.4
-  name: n104_4
-  os: linux
-  type: machine
-- ip: 192.168.103.5
-  name: n104_5
-  os: windows
-  services: proxy_server
-  type: machine
-subnet: 192.168.103.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:fe95eea326eb2e9676dbba471274fc2e6fcf1dd2a89d3bae0a7e94bbc1d5638c
+size 383

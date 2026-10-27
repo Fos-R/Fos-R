@@ -1,25 +1,3 @@
-mask: 24
-name: st59
-nodes:
-- ip: 192.168.58.1
-  name: r59_1
-  type: router
-- ip: 192.168.58.2
-  name: n59_2
-  os: linux
-  services: cloud_storage
-  type: machine
-- ip: 192.168.58.3
-  name: n59_3
-  os: linux
-  type: machine
-- ip: 192.168.58.4
-  name: n59_4
-  os: linux
-  services: dbms_server
-  type: machine
-- ip: 192.168.58.5
-  name: n59_5
-  os: windows
-  type: machine
-subnet: 192.168.58.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:ee6171e51bd876acf9331558499286c74cdaa7787a057b0dbb5845ba15a234cc
+size 392

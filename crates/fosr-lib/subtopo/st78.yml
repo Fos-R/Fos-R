@@ -1,21 +1,3 @@
-mask: 24
-name: st78
-nodes:
-- ip: 192.168.77.1
-  name: r78_1
-  type: router
-- ip: 192.168.77.2
-  name: n78_2
-  os: windows
-  type: machine
-- ip: 192.168.77.3
-  name: n78_3
-  os: linux
-  services: ftp_server
-  type: machine
-- ip: 192.168.77.4
-  name: n78_4
-  os: windows
-  services: cloud_storage
-  type: machine
-subnet: 192.168.77.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:43f4b9b53abdf1b81bb48b2ef8a2b0d7b9569335d974f4e5e8785fe45078241d
+size 332

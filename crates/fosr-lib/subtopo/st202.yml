@@ -1,20 +1,3 @@
-mask: 24
-name: st202
-nodes:
-- ip: 192.168.201.1
-  name: r202_1
-  type: router
-- ip: 192.168.201.2
-  name: n202_2
-  os: windows
-  type: machine
-- ip: 192.168.201.3
-  name: n202_3
-  os: windows
-  services: cms_server
-  type: machine
-- ip: 192.168.201.4
-  name: n202_4
-  os: windows
-  type: machine
-subnet: 192.168.201.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:de3cfa3e2202bdee507c1274bfa655af41f9aba14838bd412d365fb413460eef
+size 318

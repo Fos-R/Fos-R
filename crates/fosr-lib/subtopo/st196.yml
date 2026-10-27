@@ -1,19 +1,3 @@
-mask: 24
-name: st196
-nodes:
-- ip: 192.168.195.1
-  name: r196_1
-  type: router
-- ip: 192.168.195.2
-  name: n196_2
-  os: windows
-  type: machine
-- ip: 192.168.195.3
-  name: n196_3
-  os: windows
-  type: machine
-- ip: 192.168.195.4
-  name: n196_4
-  os: linux
-  type: machine
-subnet: 192.168.195.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:2acab2a6aa929a588e7b3436f97eb00901a90b6a5537e1baecc67c50b51d9797
+size 293

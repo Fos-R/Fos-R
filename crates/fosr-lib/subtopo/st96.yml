@@ -1,25 +1,3 @@
-mask: 24
-name: st96
-nodes:
-- ip: 192.168.95.1
-  name: r96_1
-  type: router
-- ip: 192.168.95.2
-  name: n96_2
-  os: windows
-  services: log_server
-  type: machine
-- ip: 192.168.95.3
-  name: n96_3
-  os: linux
-  services: ldap_server
-  type: machine
-- ip: 192.168.95.4
-  name: n96_4
-  os: windows
-  type: machine
-- ip: 192.168.95.5
-  name: n96_5
-  os: windows
-  type: machine
-subnet: 192.168.95.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:dd50a9e43ffe4e1456ae151e0877ee31c16c5bba9c305174059f49cb59b4ec3b
+size 393

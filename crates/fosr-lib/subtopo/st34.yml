@@ -1,33 +1,3 @@
-mask: 24
-name: st34
-nodes:
-- ip: 192.168.33.1
-  name: r34_1
-  type: router
-- ip: 192.168.33.2
-  name: n34_2
-  os: linux
-  type: machine
-- ip: 192.168.33.3
-  name: n34_3
-  os: windows
-  services: cloud_storage
-  type: machine
-- ip: 192.168.33.4
-  name: n34_4
-  os: linux
-  type: machine
-- ip: 192.168.33.5
-  name: n34_5
-  os: windows
-  type: machine
-- ip: 192.168.33.6
-  name: n34_6
-  os: windows
-  services: ldap_server
-  type: machine
-- ip: 192.168.33.7
-  name: n34_7
-  os: linux
-  type: machine
-subnet: 192.168.33.0
+version https://git-lfs.github.com/spec/v1
+oid sha256:2f887321be7ad95b3aa0721c9de4a7cedb4cc50a60a7f3edc5b19cd96380dce7
+size 518
