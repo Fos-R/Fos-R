@@ -17,6 +17,8 @@ use wasm_bindgen::prelude::*;
 /// The `canvas_id` argument is the ID of the HTML canvas element where the app will be rendered.
 #[wasm_bindgen]
 pub async fn start(canvas_id: &str) -> Result<(), JsValue> {
+    console_error_panic_hook::set_once();
+
     // Redirect logs to the browser console
     if let Err(e) = eframe::WebLogger::init(log::LevelFilter::Info) {
         log::warn!("WebLogger initialization failed: {:?}", e);
