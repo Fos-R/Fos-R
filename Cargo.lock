@@ -4744,7 +4744,7 @@ dependencies = [
 [[package]]
 name = "selen"
 version = "0.15.5"
-source = "git+https://github.com/PFGimenez/selen.git#391a5e30aae20e385d027567f607383c56fd5297"
+source = "git+https://github.com/PFGimenez/selen.git#b40983e3fd0bb4c3d2596dc2acd42ac2d03dea7a"
 dependencies = [
  "web-time",
 ]
