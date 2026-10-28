@@ -30,7 +30,7 @@ rand = "0.10.3"
 rand_core = "0.10.1"
 rand_distr = "0.6.0"
 rand_pcg = "0.10.2"
-rayon = "1.10"
+rayon = "1.12"
 selen = { version = "0.15.5", git = "https://github.com/PFGimenez/selen.git" }
 serde = { version = "1.0.229", features = ["derive"] }
 serde-xml-rs = "0.8.2"
