@@ -57,13 +57,17 @@ impl Iterator for BinBasedGenerator {
     fn next(&mut self) -> Option<Self::Item> {
         while self.remaining_flows == 0 {
             if self.net_injection {
-                // wait until the end of the current window
-                if SystemTime::now().duration_since(UNIX_EPOCH).unwrap() > self.next_ts {
+                // self.next_ts is the start of the window we are about to generate.
+                // Generate it one window in advance, so its flows reach the injection
+                // before their first packets are due (they are not sorted within a window)
+                let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+                if now > self.next_ts {
                     log::warn!("Generation is too slow");
                 } else {
                     thread::sleep(
                         self.next_ts
-                            .saturating_sub(SystemTime::now().duration_since(UNIX_EPOCH).unwrap()),
+                            .saturating_sub(Duration::from_secs(WINDOW_WIDTH_IN_SECS))
+                            .saturating_sub(now),
                     );
                 }
             }

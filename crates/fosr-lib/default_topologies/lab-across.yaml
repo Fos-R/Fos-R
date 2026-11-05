@@ -1,0 +1,24 @@
+# The small network used by across_netns.sh.
+#
+# There are only two machines here: a client on one side of the router and a
+# server on the other. Their IPs are the ones the script gives to the "left" and
+# "right" namespaces, so each Fos-R process recognises itself in this file.
+#
+# The router in the middle ("dut", with 10.0.1.1 and 10.0.2.1) isn't listed on
+# purpose. It only forwards the traffic, we don't want Fos-R to generate any
+# traffic to or from it.
+metadata:
+  title: netns across lab
+networks:
+  - subnet: 10.0.1.0/24 # use the CIDR form, Fos-R rejects a separate "mask" field
+    hosts:
+      - hostname: client
+        type: user # a user only opens connections, it doesn't offer services
+        interfaces:
+          - ip_addr: 10.0.1.2 # veth-l, the cable end inside "left"
+  - subnet: 10.0.2.0/24
+    hosts:
+      - hostname: srv
+        interfaces:
+          - ip_addr: 10.0.2.2 # veth-r, the cable end inside "right"
+            services: [http, ssh] # what the client will connect to
