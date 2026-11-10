@@ -15,7 +15,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-const WINDOW_WIDTH_IN_SECS: u64 = 5;
+const WINDOW_WIDTH_IN_SECS: u64 = 10;
 
 /// Stage 1: generate timestamps.
 /// Generate a throughput according to some distribution and never stops. It always prepares the next windows (i.e., not
