@@ -8,6 +8,7 @@ set -euo pipefail
 
 FOSR=${FOSR:-./target/release/fosr-cli}
 CAPTURE=${CAPTURE:-across.pcap}
+MTU=${MTU:-9000}
 
 setup() {
     sudo ip netns add left
@@ -21,6 +22,11 @@ setup() {
     sudo ip -n dut   addr add 10.0.1.1/24 dev dut-l
     sudo ip -n dut   addr add 10.0.2.1/24 dev dut-r
     sudo ip -n right addr add 10.0.2.2/24 dev veth-r
+
+    sudo ip -n left  link set veth-l mtu "$MTU"
+    sudo ip -n dut   link set dut-l  mtu "$MTU"
+    sudo ip -n dut   link set dut-r  mtu "$MTU"
+    sudo ip -n right link set veth-r mtu "$MTU"
 
     sudo ip -n left  link set veth-l up
     sudo ip -n dut   link set dut-l up

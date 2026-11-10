@@ -4,6 +4,8 @@ Créer les namespace via le rust, un thread par IP/machine qui gère les transfe
 
 Drop les namespace à la fin
 
+Voir pour la fragmentation des packets, potentiellement flag fragment more à côté du taint. Peut être ok de mettre gros mtu temporairement dans les namespaces.
+
 # Eval
 
 - 17 décembre petite soutenance
