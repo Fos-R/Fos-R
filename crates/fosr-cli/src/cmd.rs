@@ -244,6 +244,12 @@ pub enum Command {
             help = "Pseudo-counts for the Bayesian network. Increase to artificially favor diversity. Must be at least 1."
         )]
         alpha: u64,
+        #[arg(
+            long,
+            default_value_t = false,
+            help = "Build the topology in network namespaces and play every host (Linux, root)"
+        )]
+        netns: bool,
     },
     /// Create a pcap file that extends a dataset. For deterministic generation,
     /// specify -t, --tz and --seed.
