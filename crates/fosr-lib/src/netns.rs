@@ -78,7 +78,8 @@ fn delete_ns(ns: &str) {
     }
 }
 
-/// Deletes the namespaces created by `Network::create_netns` when dropped
+/// Deletes the namespaces created by `Network::create_netns` when dropped. Must be used otherwise the lab gets deleted instantly
+#[must_use]
 pub struct NetnsGuard {
     /// Router last: deleting it also removes the bridges and the router ends of the veths
     namespaces: Vec<String>,

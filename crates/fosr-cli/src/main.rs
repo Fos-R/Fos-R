@@ -88,6 +88,7 @@ fn main() -> Result<(), String> {
                 injection_algo,
                 source,
                 alpha,
+                false, // TODO: add namespace option to InjectCyberRange too ?
             )?;
         }
         #[cfg(all(
@@ -105,6 +106,7 @@ fn main() -> Result<(), String> {
             default_models,
             custom_models,
             alpha,
+            netns,
         } => {
             // load the models
             let source = if let Some(custom_models) = custom_models {
@@ -131,6 +133,7 @@ fn main() -> Result<(), String> {
                 cmd::InjectionAlgo::Fast,
                 source,
                 alpha,
+                netns,
             )?;
         }
         cmd::Command::CreatePcap {
@@ -507,6 +510,7 @@ fn net_injection(
     injection_algo: cmd::InjectionAlgo,
     source: models::ModelsSource,
     alpha: u64,
+    netns: bool,
 ) -> Result<(), String> {
     // Extract all IPv4 local interfaces (except loopback)
     let extract_addr = |iface: datalink::NetworkInterface| {
@@ -534,8 +538,25 @@ fn net_injection(
         .collect();
     log::debug!("IPv4 interfaces: {:?}", local_ips);
 
+    // Import the network here to be able to use it for netns
+    let topology = network::import_network(
+        &fs::read_to_string(&network).map_err(|e| format!("Cannot open the network file: {e}"))?,
+    )?;
+
+    // Keep this variable as long as the lab runs: the namespaces are deleted when it is dropped
+    #[cfg(target_os = "linux")]
+    let _lab = if netns {
+        Some(topology.create_netns()?)
+    } else {
+        None
+    };
+    #[cfg(not(target_os = "linux"))]
+    if netns {
+        return Err("--netns is only available on Linux".into());
+    }
+
     let model: models::ArcModels =
-        models::Models::from_source_with_path_network(&source, &network, alpha)?.into();
+        models::Models::from_source_with_network(&source, topology.clone(), alpha)?.into();
 
     // TODO verify if the current IP has a role in the network
     // if !has_role {
