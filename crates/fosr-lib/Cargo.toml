@@ -74,7 +74,7 @@ fosr-ebpf = { path = "../fosr-ebpf", optional = true }
 getrandom = { version = "0.4.3", features = ["wasm_js"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-nix = { version = "0.31.3", features = ["sched"], optional = true }
+nix = { version = "0.31.3", features = ["sched", "net", "mount"], optional = true }
 rtnetlink = { version = "0.24.0", optional = true }
 tokio = { version = "1.54.1", default-features = false, features = [
     "rt",
