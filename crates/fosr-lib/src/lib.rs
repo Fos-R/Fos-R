@@ -51,7 +51,8 @@ pub mod export;
 
 /// Network injection
 pub mod inject;
-#[cfg(feature = "net_injection")]
+/// Build a network-namespace lab from a topology
+#[cfg(all(target_os = "linux", feature = "net_injection"))]
 pub mod netns;
 
 /// Network topology generator
