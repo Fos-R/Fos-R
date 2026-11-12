@@ -2043,6 +2043,7 @@ dependencies = [
  "log-once",
  "microlp",
  "nalgebra",
+ "nix",
  "pcap-file",
  "pnet",
  "pnet_packet",
@@ -2060,6 +2061,7 @@ dependencies = [
  "statrs",
  "strum",
  "thingbuf",
+ "tokio",
 ]
 
 [[package]]

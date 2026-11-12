@@ -51,6 +51,8 @@ pub mod export;
 
 /// Network injection
 pub mod inject;
+#[cfg(feature = "net_injection")]
+pub mod netns;
 
 /// Network topology generator
 pub mod topo;
