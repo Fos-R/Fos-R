@@ -226,9 +226,7 @@ pub fn start_fast(
 ) {
     log::trace!("Start injection");
     let mut join_handles = Vec::new();
-    let source_ips = topology.all_ips.clone();
     for (proto, rx_s4) in incoming_flows.into_iter() {
-        let source_ips = source_ips.clone();
         let stats = stats.clone();
         let s4net = s4net.clone();
         let topology = topology.clone();
@@ -238,7 +236,11 @@ pub fn start_fast(
                 .spawn(move || {
                     let mut senders = HashMap::new();
                     let mut worker_handles = Vec::new();
-                    for source_ip in source_ips {
+                    let source_hosts = topology.lab_hosts();
+                    for source_host in source_hosts {
+                        let Some(source_ip) = source_host.get_ip_addr().first().copied() else {
+                            panic!("Could not parse start time");
+                        };
                         let (tx_ip, rx_ip) = bounded::<Packets>(50);
                         senders.insert(source_ip, tx_ip);
                         // for each transport protocol and each IP, create a new raw socket

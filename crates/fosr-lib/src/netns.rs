@@ -218,7 +218,7 @@ async fn add_ns(ns: &str) -> Result<(), String> {
 impl Network {
     /// Hosts that get a namespace. Routers don't: the router of the lab plays them.
     /// If several hosts share an IP, only the first one gets a namespace.
-    fn lab_hosts(&self) -> impl Iterator<Item = &Host> {
+    pub fn lab_hosts(&self) -> impl Iterator<Item = &Host> {
         let mut seen = HashSet::new();
         self.networks
             .iter()
