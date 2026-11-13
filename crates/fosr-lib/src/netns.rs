@@ -8,11 +8,15 @@ use nix::{
 };
 use rtnetlink::{
     Handle, LinkBridge, LinkUnspec, LinkVeth, NetworkNamespace, RouteMessageBuilder,
-    packet_route::route::{RouteScope, RouteType},
+    packet_route::{
+        route::{RouteScope, RouteType},
+        rule::RuleAction,
+    },
 };
 use std::{
     collections::HashSet,
     fs::File,
+    io::ErrorKind,
     net::Ipv4Addr,
     os::{fd::AsRawFd, unix::process::CommandExt},
     process::{Child, Command},
@@ -52,14 +56,14 @@ fn veth_names(ip: &Ipv4Addr) -> (String, String) {
     (format!("vr{x:08x}"), format!("vh{x:08x}"))
 }
 
-/// Netmask of a subnet, as an integer
-fn netmask(sub: &SubNetwork) -> u32 {
-    u32::MAX.checked_shl(32 - sub.mask as u32).unwrap_or(0)
+/// Netmask of a prefix length, as an integer
+fn netmask(prefix: u8) -> u32 {
+    u32::MAX.checked_shl(32 - prefix as u32).unwrap_or(0)
 }
 
 /// Whether `ip` is inside `sub`
 fn contains(sub: &SubNetwork, ip: &Ipv4Addr) -> bool {
-    u32::from(*ip) & netmask(sub) == u32::from(sub.subnet) & netmask(sub)
+    u32::from(*ip) & netmask(sub.mask) == u32::from(sub.subnet) & netmask(sub.mask)
 }
 
 /// Open the file of a namespace, to give it to `setns`
@@ -82,6 +86,19 @@ fn connect() -> Result<Handle, String> {
 /// Index of an interface, looked up in the namespace of the calling thread
 fn ifindex(name: &str) -> Result<u32, String> {
     if_nametoindex(name).map_err(|e| format!("interface {name}: {e}"))
+}
+
+/// Disable IPv6 in the namespace of the calling thread, so the kernel doesn't add its own packets
+fn disable_ipv6() -> Result<(), String> {
+    for conf in ["all", "default"] {
+        match std::fs::write(format!("/proc/sys/net/ipv6/conf/{conf}/disable_ipv6"), "1") {
+            Err(e) if e.kind() != ErrorKind::NotFound => {
+                return Err(format!("Cannot disable IPv6: {e}"));
+            }
+            _ => {} // NotFound: IPv6 is already disabled in the whole kernel
+        }
+    }
+    Ok(())
 }
 
 /// Delete a namespace, like `ip netns del`. Plain sync calls, so it can be used in `Drop`.
@@ -224,6 +241,7 @@ impl Network {
     /// or else its first unused IP
     fn lab_subnets(&self) -> Result<Vec<LabSubnet<'_>>, String> {
         let used: HashSet<&Ipv4Addr> = self.all_ips.iter().collect();
+        // TODO: router IPs that are not a gateway are not in the lab (no flow targets routers for now)
         let routers: Vec<Ipv4Addr> = self
             .networks
             .iter()
@@ -236,8 +254,8 @@ impl Network {
             .filter(|n| n.name != INTERNET_NETWORK_NAME)
             .enumerate()
             .map(|(i, sub)| {
-                let network = u32::from(sub.subnet) & netmask(sub);
-                let broadcast = network | !netmask(sub);
+                let network = u32::from(sub.subnet) & netmask(sub.mask);
+                let broadcast = network | !netmask(sub.mask);
                 let gateway = routers
                     .iter()
                     .copied()
@@ -318,6 +336,7 @@ impl Network {
             add_ns(ROUTER_NS).await?;
             enter(ROUTER_NS)?;
             let router = connect()?;
+            disable_ipv6()?;
             std::fs::write("/proc/sys/net/ipv4/ip_forward", "1").map_err(|e| e.to_string())?;
 
             // 2. Create one bridge for each subnet, with the gateway IP
@@ -383,25 +402,51 @@ impl Network {
                     }
                 }
 
-                // 5. Configure the host: IPs, interfaces up, default route through the first one
+                // 5. Configure the host: IPs, interfaces up, and a default route for each interface
                 enter(&ns)?;
                 let h = connect()?;
+                disable_ipv6()?;
                 for (i, (vh, ip, prefix, gateway)) in links.into_iter().enumerate() {
                     let vh_idx = addr_up(&h, &vh, ip, prefix).await?;
-                    if i == 0 {
-                        // onlink: on a point-to-point link, the gateway is outside the host's /32
-                        h.route()
-                            .add(
-                                RouteMessageBuilder::<Ipv4Addr>::new()
-                                    .gateway(gateway)
-                                    .output_interface(vh_idx)
-                                    .onlink()
-                                    .build(),
-                            )
+                    // onlink: on a point-to-point link, the gateway is outside the host's /32
+                    let mut default = RouteMessageBuilder::<Ipv4Addr>::new()
+                        .gateway(gateway)
+                        .output_interface(vh_idx)
+                        .onlink();
+                    if i > 0 {
+                        // other interfaces: their own table, used for what is sent from their IP
+                        let table = 100 + i as u32;
+                        default = default.table_id(table);
+                        if prefix < 32 {
+                            let network = Ipv4Addr::from(u32::from(ip) & netmask(prefix));
+                            h.route()
+                                .add(
+                                    RouteMessageBuilder::<Ipv4Addr>::new()
+                                        .destination_prefix(network, prefix)
+                                        .output_interface(vh_idx)
+                                        .scope(RouteScope::Link)
+                                        .table_id(table)
+                                        .build(),
+                                )
+                                .execute()
+                                .await
+                                .map_err(|e| format!("route to {network}/{prefix} in {ns}: {e}"))?;
+                        }
+                        h.rule()
+                            .add()
+                            .v4()
+                            .source_prefix(ip, 32)
+                            .table_id(table)
+                            .action(RuleAction::ToTable)
                             .execute()
                             .await
-                            .map_err(|e| format!("default route of {ns}: {e}"))?;
+                            .map_err(|e| format!("rule from {ip} in {ns}: {e}"))?;
                     }
+                    h.route()
+                        .add(default.build())
+                        .execute()
+                        .await
+                        .map_err(|e| format!("default route of {vh} in {ns}: {e}"))?;
                 }
                 enter(ROUTER_NS)?; // back, so that ifindex() finds the router interfaces
             }
@@ -414,6 +459,7 @@ impl Network {
 
                 enter(INTERNET_NS)?;
                 let inet = connect()?;
+                disable_ipv6()?;
                 inet.link()
                     .set(LinkUnspec::new_with_name("lo").up().build())
                     .execute()
