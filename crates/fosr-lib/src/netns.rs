@@ -1,4 +1,4 @@
-use crate::network::{INTERNET_NETWORK_NAME, Network, SubNetwork};
+use crate::network::{Host, HostType, INTERNET_NETWORK_NAME, Network, SubNetwork};
 
 use nix::{
     mount::{MntFlags, umount2},
@@ -11,10 +11,12 @@ use rtnetlink::{
     packet_route::route::{RouteScope, RouteType},
 };
 use std::{
+    collections::HashSet,
     fs::File,
     net::Ipv4Addr,
     os::{fd::AsRawFd, unix::process::CommandExt},
     process::{Child, Command},
+    sync::atomic::{AtomicBool, Ordering},
     thread,
 };
 
@@ -26,7 +28,7 @@ pub const INTERNET_NS: &str = "fosr-internet";
 const NETNS_DIR: &str = "/run/netns";
 /// Prefix of every namespace of the lab
 const PREFIX: &str = "fosr-";
-/// Next hop of the point-to-point links of the known Internet hosts
+/// Next hop of the point-to-point links (IPs outside every subnet)
 const LINK_GW: Ipv4Addr = Ipv4Addr::new(169, 254, 0, 1);
 /// Router side and Internet side of the router <-> fosr-internet link
 const INET_ROUTER: Ipv4Addr = Ipv4Addr::new(169, 254, 1, 1);
@@ -35,12 +37,13 @@ const INET_PREFIX: u8 = 30;
 /// Veth names of the router <-> fosr-internet link
 const VR_INET: &str = "vr-inet";
 const VH_INET: &str = "vh-inet";
-/// Id of the kernel "local" routing table
-const RT_TABLE_LOCAL: u32 = 255;
 
-/// Namespace of an IP of the topology
-pub fn ns_name(ip: &Ipv4Addr) -> String {
-    format!("{PREFIX}{ip}")
+/// Whether this process has a lab, for the Ctrl-C handler
+static LAB_ALIVE: AtomicBool = AtomicBool::new(false);
+
+/// Namespace of a host, named after its first IP
+fn host_ns(host: &Host) -> String {
+    format!("{PREFIX}{}", host.interfaces[0].ip_addr)
 }
 
 /// Router end and host end of the veth of an IP (interface names must stay under 16 chars)
@@ -49,9 +52,14 @@ fn veth_names(ip: &Ipv4Addr) -> (String, String) {
     (format!("vr{x:08x}"), format!("vh{x:08x}"))
 }
 
-/// The gateway of a subnet is its first address
-fn gateway(sub: &SubNetwork) -> Ipv4Addr {
-    Ipv4Addr::from(u32::from(sub.subnet) + 1)
+/// Netmask of a subnet, as an integer
+fn netmask(sub: &SubNetwork) -> u32 {
+    u32::MAX.checked_shl(32 - sub.mask as u32).unwrap_or(0)
+}
+
+/// Whether `ip` is inside `sub`
+fn contains(sub: &SubNetwork, ip: &Ipv4Addr) -> bool {
+    u32::from(*ip) & netmask(sub) == u32::from(sub.subnet) & netmask(sub)
 }
 
 /// Open the file of a namespace, to give it to `setns`
@@ -86,7 +94,7 @@ fn delete_ns(ns: &str) {
 }
 
 /// Delete every namespace of the lab, even the ones of a previous run
-pub fn delete_all_netns() {
+fn delete_all_netns() {
     let Ok(entries) = std::fs::read_dir(NETNS_DIR) else {
         return;
     };
@@ -98,6 +106,13 @@ pub fn delete_all_netns() {
             log::info!("Deleting namespace {name}");
             delete_ns(&name);
         }
+    }
+}
+
+/// Delete the lab of this process, if any. For the exits that skip `Drop` (Ctrl-C)
+pub fn delete_lab_on_exit() {
+    if LAB_ALIVE.swap(false, Ordering::Relaxed) {
+        delete_all_netns();
     }
 }
 
@@ -122,18 +137,23 @@ pub struct NetnsGuard {
 
 impl Drop for NetnsGuard {
     fn drop(&mut self) {
+        LAB_ALIVE.store(false, Ordering::Relaxed);
         for ns in &self.namespaces {
             delete_ns(ns);
         }
     }
 }
 
-/// Create a namespace and a veth from the router to it. `vr` stays in the router, `vh` is moved
+/// A local subnet of the lab: a bridge in the router, with the gateway IP
+struct LabSubnet<'a> {
+    sub: &'a SubNetwork,
+    bridge: String,
+    gateway: Ipv4Addr,
+}
+
+/// Create a veth from the router to the namespace `ns`. `vr` stays in the router, `vh` is moved
 /// into the namespace. Both are still down.
 async fn plug(router: &Handle, ns: &str, vr: &str, vh: &str) -> Result<(), String> {
-    NetworkNamespace::add(ns)
-        .await
-        .map_err(|e| format!("namespace {ns}: {e}"))?;
     router
         .link()
         .add(LinkVeth::new(vr, vh).build())
@@ -171,10 +191,78 @@ async fn addr_up(handle: &Handle, dev: &str, ip: Ipv4Addr, prefix: u8) -> Result
     Ok(idx)
 }
 
+/// Add a namespace, like `ip netns add`
+async fn add_ns(ns: &str) -> Result<(), String> {
+    NetworkNamespace::add(ns)
+        .await
+        .map_err(|e| format!("namespace {ns}: {e}"))
+}
+
 impl Network {
+    /// Hosts that get a namespace. Routers don't: the router of the lab plays them.
+    /// If several hosts share an IP, only the first one gets a namespace.
+    fn lab_hosts(&self) -> impl Iterator<Item = &Host> {
+        let mut seen = HashSet::new();
+        self.networks
+            .iter()
+            .flat_map(|n| &n.hosts)
+            .filter(|h| h.host_type != HostType::Router && !h.interfaces.is_empty())
+            .filter(move |h| {
+                let ips = h.get_ip_addr();
+                if let Some(ip) = ips.iter().find(|ip| seen.contains(*ip)) {
+                    log_once::warn_once!(
+                        "{ip} is used by several hosts, only the first one is in the lab"
+                    );
+                    return false;
+                }
+                seen.extend(ips);
+                true
+            })
+    }
+
+    /// Local subnets, each with its gateway: the IP of a router of the topology in that subnet,
+    /// or else its first unused IP
+    fn lab_subnets(&self) -> Result<Vec<LabSubnet<'_>>, String> {
+        let used: HashSet<&Ipv4Addr> = self.all_ips.iter().collect();
+        let routers: Vec<Ipv4Addr> = self
+            .networks
+            .iter()
+            .flat_map(|n| &n.hosts)
+            .filter(|h| h.host_type == HostType::Router)
+            .flat_map(|h| h.get_ip_addr())
+            .collect();
+        self.networks
+            .iter()
+            .filter(|n| n.name != INTERNET_NETWORK_NAME)
+            .enumerate()
+            .map(|(i, sub)| {
+                let network = u32::from(sub.subnet) & netmask(sub);
+                let broadcast = network | !netmask(sub);
+                let gateway = routers
+                    .iter()
+                    .copied()
+                    .find(|ip| contains(sub, ip))
+                    .or_else(|| {
+                        (network + 1..broadcast)
+                            .map(Ipv4Addr::from)
+                            .find(|ip| !used.contains(ip))
+                    })
+                    .ok_or(format!(
+                        "No free IP for the gateway of {network}/{}",
+                        sub.mask
+                    ))?;
+                Ok(LabSubnet {
+                    sub,
+                    bridge: format!("br{i}"),
+                    gateway,
+                })
+            })
+            .collect()
+    }
+
     /// Every namespace of the lab, router last
     fn namespaces(&self) -> Vec<String> {
-        let mut namespaces: Vec<String> = self.all_ips.iter().map(ns_name).collect();
+        let mut namespaces: Vec<String> = self.lab_hosts().map(host_ns).collect();
         if self.has_internet_access {
             namespaces.push(INTERNET_NS.into());
         }
@@ -182,7 +270,7 @@ impl Network {
         namespaces
     }
 
-    /// Create the router namespace, one bridge per subnet and one namespace per IP.
+    /// Create the router namespace, one bridge per subnet and one namespace per host.
     /// The namespaces are deleted when the returned guard is dropped.
     pub fn create_netns(&self) -> Result<NetnsGuard, String> {
         if !geteuid().is_root() {
@@ -196,6 +284,7 @@ impl Network {
         let guard = NetnsGuard {
             namespaces: self.namespaces(),
         };
+        LAB_ALIVE.store(true, Ordering::Relaxed);
         // setns only moves the current thread, so we build the lab in a thread that ends right after
         thread::scope(|s| {
             thread::Builder::new()
@@ -208,12 +297,17 @@ impl Network {
         Ok(guard)
     }
 
-    /// Move the calling thread (only this one) into the namespace of `ip`
+    /// Move the calling thread (only this one) into the namespace of the host that has `ip`
     pub fn enter_ns(&self, ip: &Ipv4Addr) -> Result<(), String> {
-        enter(&ns_name(ip))
+        let host = self
+            .lab_hosts()
+            .find(|h| h.get_ip_addr().contains(ip))
+            .ok_or(format!("{ip} is not a host of the lab"))?;
+        enter(&host_ns(host))
     }
 
     fn build_netns(&self) -> Result<(), String> {
+        let subnets = self.lab_subnets()?;
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_io()
             .build()
@@ -221,117 +315,100 @@ impl Network {
 
         rt.block_on(async {
             // 1. Router: forwards everything, and is where the traffic is captured
-            NetworkNamespace::add(ROUTER_NS)
-                .await
-                .map_err(|e| e.to_string())?;
+            add_ns(ROUTER_NS).await?;
             enter(ROUTER_NS)?;
             let router = connect()?;
             std::fs::write("/proc/sys/net/ipv4/ip_forward", "1").map_err(|e| e.to_string())?;
 
-            let local_subnets = self
-                .networks
-                .iter()
-                .filter(|n| n.name != INTERNET_NETWORK_NAME);
-            for (s, subnet) in local_subnets.clone().enumerate() {
-                // 2. Create one bridge for each subnet, with the gateway IP
-                let br = format!("br{s}");
+            // 2. Create one bridge for each subnet, with the gateway IP
+            for s in &subnets {
                 router
                     .link()
-                    .add(LinkBridge::new(&br).build())
+                    .add(LinkBridge::new(&s.bridge).build())
                     .execute()
                     .await
-                    .map_err(|e| e.to_string())?;
-                let br_idx = ifindex(&br)?;
+                    .map_err(|e| format!("bridge {}: {e}", s.bridge))?;
                 router
                     .address()
-                    .add(br_idx, gateway(subnet).into(), subnet.mask)
+                    .add(ifindex(&s.bridge)?, s.gateway.into(), s.sub.mask)
                     .execute()
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(|e| format!("gateway {} on {}: {e}", s.gateway, s.bridge))?;
+            }
 
-                for ip in subnet.hosts.iter().flat_map(|h| h.get_ip_addr()) {
-                    // 3. Create a namespace for each IP, linked to the router by a veth
-                    let ns = ns_name(&ip);
+            for host in self.lab_hosts() {
+                // 3. Create a namespace for each host, with one veth per interface
+                let ns = host_ns(host);
+                add_ns(&ns).await?;
+                // what the host side needs: (vh, IP, prefix, gateway)
+                let mut links = Vec::new();
+                for ip in host.get_ip_addr() {
                     let (vr, vh) = veth_names(&ip);
                     plug(&router, &ns, &vr, &vh).await?;
-
-                    // 4. Plug the router end into the bridge
-                    router
-                        .link()
-                        .set(
-                            LinkUnspec::new_with_name(&vr)
-                                .controller(br_idx)
-                                .up()
-                                .build(),
-                        )
-                        .execute()
-                        .await
-                        .map_err(|e| e.to_string())?;
-
-                    // 5. Configure the host: IP, interface up, default route to the gateway
-                    enter(&ns)?;
-                    let host = connect()?;
-                    addr_up(&host, &vh, ip, subnet.mask).await?;
-                    host.route()
-                        .add(
-                            RouteMessageBuilder::<Ipv4Addr>::new()
-                                .gateway(gateway(subnet))
-                                .build(),
-                        )
-                        .execute()
-                        .await
-                        .map_err(|e| e.to_string())?;
-                    enter(ROUTER_NS)?; // back, so that ifindex() finds the router interfaces
+                    let subnet = subnets
+                        .iter()
+                        .filter(|s| contains(s.sub, &ip))
+                        .max_by_key(|s| s.sub.mask);
+                    if let Some(s) = subnet {
+                        // 4. In a subnet: plug the router end into its bridge
+                        router
+                            .link()
+                            .set(
+                                LinkUnspec::new_with_name(&vr)
+                                    .controller(ifindex(&s.bridge)?)
+                                    .up()
+                                    .build(),
+                            )
+                            .execute()
+                            .await
+                            .map_err(|e| format!("{vr} into {}: {e}", s.bridge))?;
+                        links.push((vh, ip, s.sub.mask, s.gateway));
+                    } else {
+                        // 4. Outside every subnet (public IPs, Internet hosts): point-to-point link
+                        // several vr can share LINK_GW/32: each host sees its own copy of the gateway
+                        let vr_idx = addr_up(&router, &vr, LINK_GW, 32).await?;
+                        router
+                            .route()
+                            .add(
+                                RouteMessageBuilder::<Ipv4Addr>::new()
+                                    .destination_prefix(ip, 32)
+                                    .output_interface(vr_idx)
+                                    .scope(RouteScope::Link)
+                                    .build(),
+                            )
+                            .execute()
+                            .await
+                            .map_err(|e| format!("route to {ip}: {e}"))?;
+                        links.push((vh, ip, 32, LINK_GW));
+                    }
                 }
-            }
 
-            // 6. Known Internet hosts: no common subnet, so one point-to-point link each
-            let internet_ips: Vec<Ipv4Addr> = self
-                .networks
-                .iter()
-                .filter(|n| n.name == INTERNET_NETWORK_NAME)
-                .flat_map(|n| &n.hosts)
-                .flat_map(|h| h.get_ip_addr())
-                .collect();
-            for ip in internet_ips {
-                let ns = ns_name(&ip);
-                let (vr, vh) = veth_names(&ip);
-                plug(&router, &ns, &vr, &vh).await?;
-                // several vr can share LINK_GW/32: each host sees its own copy of the gateway
-                let vr_idx = addr_up(&router, &vr, LINK_GW, 32).await?;
-                router
-                    .route()
-                    .add(
-                        RouteMessageBuilder::<Ipv4Addr>::new()
-                            .destination_prefix(ip, 32)
-                            .output_interface(vr_idx)
-                            .scope(RouteScope::Link)
-                            .build(),
-                    )
-                    .execute()
-                    .await
-                    .map_err(|e| e.to_string())?;
-
+                // 5. Configure the host: IPs, interfaces up, default route through the first one
                 enter(&ns)?;
-                let host = connect()?;
-                let vh_idx = addr_up(&host, &vh, ip, 32).await?;
-                // onlink: LINK_GW is reachable on vh even though it is not in a subnet of the host
-                host.route()
-                    .add(
-                        RouteMessageBuilder::<Ipv4Addr>::new()
-                            .gateway(LINK_GW)
-                            .output_interface(vh_idx)
-                            .onlink()
-                            .build(),
-                    )
-                    .execute()
-                    .await
-                    .map_err(|e| e.to_string())?;
-                enter(ROUTER_NS)?;
+                let h = connect()?;
+                for (i, (vh, ip, prefix, gateway)) in links.into_iter().enumerate() {
+                    let vh_idx = addr_up(&h, &vh, ip, prefix).await?;
+                    if i == 0 {
+                        // onlink: on a point-to-point link, the gateway is outside the host's /32
+                        h.route()
+                            .add(
+                                RouteMessageBuilder::<Ipv4Addr>::new()
+                                    .gateway(gateway)
+                                    .output_interface(vh_idx)
+                                    .onlink()
+                                    .build(),
+                            )
+                            .execute()
+                            .await
+                            .map_err(|e| format!("default route of {ns}: {e}"))?;
+                    }
+                }
+                enter(ROUTER_NS)?; // back, so that ifindex() finds the router interfaces
             }
 
-            // 7. Anonymous Internet: one namespace that accepts every IP not routed elsewhere
+            // 6. Anonymous Internet: one namespace that accepts every IP not routed elsewhere
             if self.has_internet_access {
+                add_ns(INTERNET_NS).await?;
                 plug(&router, INTERNET_NS, VR_INET, VH_INET).await?;
                 addr_up(&router, VR_INET, INET_ROUTER, INET_PREFIX).await?;
 
@@ -343,47 +420,32 @@ impl Network {
                     .await
                     .map_err(|e| e.to_string())?;
                 addr_up(&inet, VH_INET, INET_PEER, INET_PREFIX).await?;
-                inet.route()
-                    .add(
-                        RouteMessageBuilder::<Ipv4Addr>::new()
-                            .gateway(INET_ROUTER)
-                            .build(),
-                    )
-                    .execute()
-                    .await
-                    .map_err(|e| e.to_string())?;
-                // every destination is local (AnyIP)...
+                // replies to the hosts of the lab go back to the router...
+                for ip in self.lab_hosts().flat_map(|h| h.get_ip_addr()) {
+                    inet.route()
+                        .add(
+                            RouteMessageBuilder::<Ipv4Addr>::new()
+                                .destination_prefix(ip, 32)
+                                .gateway(INET_ROUTER)
+                                .build(),
+                        )
+                        .execute()
+                        .await
+                        .map_err(|e| format!("route to {ip}: {e}"))?;
+                }
+                // ...and every other destination is local (AnyIP). Not with throw routes in the
+                // "local" table: without custom rules, the kernel treats a throw as unreachable.
                 inet.route()
                     .add(
                         RouteMessageBuilder::<Ipv4Addr>::new()
                             .kind(RouteType::Local)
-                            .table_id(RT_TABLE_LOCAL)
                             .scope(RouteScope::Host)
                             .output_interface(ifindex("lo")?)
                             .build(),
                     )
                     .execute()
                     .await
-                    .map_err(|e| e.to_string())?;
-                // ...except the local subnets and the router link, so that replies go back out
-                let link_net =
-                    Ipv4Addr::from(u32::from(INET_ROUTER) & !((1 << (32 - INET_PREFIX)) - 1));
-                let throws = local_subnets
-                    .map(|n| (n.subnet, n.mask))
-                    .chain([(link_net, INET_PREFIX)]);
-                for (subnet, mask) in throws {
-                    inet.route()
-                        .add(
-                            RouteMessageBuilder::<Ipv4Addr>::new()
-                                .destination_prefix(subnet, mask)
-                                .kind(RouteType::Throw)
-                                .table_id(RT_TABLE_LOCAL)
-                                .build(),
-                        )
-                        .execute()
-                        .await
-                        .map_err(|e| e.to_string())?;
-                }
+                    .map_err(|e| format!("local route: {e}"))?;
 
                 // last: everything the router does not know goes to the Internet
                 enter(ROUTER_NS)?;
@@ -404,7 +466,11 @@ impl Network {
 
     /// Router ends of the veths: capturing on them sees each packet once, when it leaves its sender
     pub fn capture_ports(&self) -> Vec<String> {
-        let mut ports: Vec<String> = self.all_ips.iter().map(|ip| veth_names(ip).0).collect();
+        let mut ports: Vec<String> = self
+            .lab_hosts()
+            .flat_map(|h| h.get_ip_addr())
+            .map(|ip| veth_names(&ip).0)
+            .collect();
         if self.has_internet_access {
             ports.push(VR_INET.into());
         }

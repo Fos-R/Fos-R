@@ -127,6 +127,9 @@ pub fn run_efficient<T: inject::NetEnabler>(
                 log::warn!("Exporting the generated data, please wait a few seconds");
                 stats_ctrlc.stop_early();
             } else {
+                // process::exit skips the Drop of the lab
+                #[cfg(all(target_os = "linux", feature = "net_injection"))]
+                fosr_lib::netns::delete_lab_on_exit();
                 process::exit(1);
             }
         })
