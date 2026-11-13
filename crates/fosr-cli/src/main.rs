@@ -89,6 +89,7 @@ fn main() -> Result<(), String> {
                 source,
                 alpha,
                 false, // TODO: add namespace option to InjectCyberRange too ?
+                None,  // TODO: same ?
             )?;
         }
         #[cfg(all(
@@ -107,6 +108,7 @@ fn main() -> Result<(), String> {
             custom_models,
             alpha,
             netns,
+            capture,
         } => {
             // load the models
             let source = if let Some(custom_models) = custom_models {
@@ -134,6 +136,7 @@ fn main() -> Result<(), String> {
                 source,
                 alpha,
                 netns,
+                capture,
             )?;
         }
         cmd::Command::CreatePcap {
@@ -511,6 +514,7 @@ fn net_injection(
     source: models::ModelsSource,
     alpha: u64,
     netns: bool,
+    capture: Option<String>,
 ) -> Result<(), String> {
     // Extract all IPv4 local interfaces (except loopback)
     let extract_addr = |iface: datalink::NetworkInterface| {
@@ -550,8 +554,12 @@ fn net_injection(
     } else {
         None
     };
+    #[cfg(target_os = "linux")]
+    let capture = capture
+        .map(|file| fosr_lib::capture::RouterCapture::start(&topology, file))
+        .transpose()?;
     #[cfg(not(target_os = "linux"))]
-    if netns {
+    if netns || capture.is_some() {
         return Err("--netns is only available on Linux".into());
     }
 
@@ -607,5 +615,11 @@ fn net_injection(
         Some(s4net),
         false,
     )?;
+
+    #[cfg(target_os = "linux")]
+    if let Some(capture) = capture {
+        capture.stop()?;
+    }
+
     Ok(())
 }

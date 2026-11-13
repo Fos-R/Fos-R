@@ -49,6 +49,9 @@ pub mod stage4;
 /// Export to pcap
 pub mod export;
 
+/// Capture router received packets
+#[cfg(all(target_os = "linux", feature = "net_injection"))]
+pub mod capture;
 /// Network injection
 pub mod inject;
 /// Build a network-namespace lab from a topology

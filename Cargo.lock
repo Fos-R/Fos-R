@@ -2039,6 +2039,7 @@ dependencies = [
  "include-bytes-zstd",
  "include_assets",
  "indicatif",
+ "itertools",
  "log",
  "log-once",
  "microlp",

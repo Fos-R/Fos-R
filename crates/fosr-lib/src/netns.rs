@@ -4,12 +4,19 @@ use nix::{
     mount::{MntFlags, umount2},
     net::if_::if_nametoindex,
     sched::{CloneFlags, setns},
+    unistd::geteuid,
 };
 use rtnetlink::{
     Handle, LinkBridge, LinkUnspec, LinkVeth, NetworkNamespace, RouteMessageBuilder,
     packet_route::route::{RouteScope, RouteType},
 };
-use std::{fs::File, net::Ipv4Addr, os::fd::AsRawFd, thread};
+use std::{
+    fs::File,
+    net::Ipv4Addr,
+    os::{fd::AsRawFd, unix::process::CommandExt},
+    process::{Child, Command},
+    thread,
+};
 
 /// Router through which all the traffic goes, to generate the final PCAP
 pub const ROUTER_NS: &str = "fosr-router";
@@ -78,6 +85,34 @@ fn delete_ns(ns: &str) {
     }
 }
 
+/// Delete every namespace of the lab, even the ones of a previous run
+pub fn delete_all_netns() {
+    let Ok(entries) = std::fs::read_dir(NETNS_DIR) else {
+        return;
+    };
+    for name in entries
+        .flatten()
+        .filter_map(|e| e.file_name().into_string().ok())
+    {
+        if name.starts_with(PREFIX) {
+            log::info!("Deleting namespace {name}");
+            delete_ns(&name);
+        }
+    }
+}
+
+/// Start `cmd` inside the namespace `ns`
+pub fn spawn_in(ns: &str, cmd: &mut Command) -> Result<Child, String> {
+    // opened before the fork: only `setns` runs in the child before exec
+    let f = open_ns(ns)?;
+    // SAFETY: setns is a plain syscall, it doesn't allocate nor take locks
+    unsafe {
+        cmd.pre_exec(move || setns(&f, CloneFlags::CLONE_NEWNET).map_err(std::io::Error::from));
+    }
+    cmd.spawn()
+        .map_err(|e| format!("Cannot start {:?}: {e}", cmd.get_program()))
+}
+
 /// Keeps the lab alive: the namespaces of `Network::create_netns` are deleted when it is dropped
 #[must_use = "dropping the guard deletes the namespaces right away"]
 pub struct NetnsGuard {
@@ -96,13 +131,15 @@ impl Drop for NetnsGuard {
 /// Create a namespace and a veth from the router to it. `vr` stays in the router, `vh` is moved
 /// into the namespace. Both are still down.
 async fn plug(router: &Handle, ns: &str, vr: &str, vh: &str) -> Result<(), String> {
-    NetworkNamespace::add(ns).await.map_err(|e| e.to_string())?;
+    NetworkNamespace::add(ns)
+        .await
+        .map_err(|e| format!("namespace {ns}: {e}"))?;
     router
         .link()
         .add(LinkVeth::new(vr, vh).build())
         .execute()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("veth {vr}/{vh}: {e}"))?;
     let target = open_ns(ns)?;
     router
         .link()
@@ -113,7 +150,7 @@ async fn plug(router: &Handle, ns: &str, vr: &str, vh: &str) -> Result<(), Strin
         )
         .execute()
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| format!("moving {vh} to {ns}: {e}"))
 }
 
 /// Give an address to `dev` and set it up. The thread must be in the namespace of `handle`.
@@ -124,13 +161,13 @@ async fn addr_up(handle: &Handle, dev: &str, ip: Ipv4Addr, prefix: u8) -> Result
         .add(idx, ip.into(), prefix)
         .execute()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("address {ip}/{prefix} on {dev}: {e}"))?;
     handle
         .link()
         .set(LinkUnspec::new_with_index(idx).up().build())
         .execute()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("{dev} up: {e}"))?;
     Ok(idx)
 }
 
@@ -148,18 +185,12 @@ impl Network {
     /// Create the router namespace, one bridge per subnet and one namespace per IP.
     /// The namespaces are deleted when the returned guard is dropped.
     pub fn create_netns(&self) -> Result<NetnsGuard, String> {
-        // 0. Remove leftovers of a previous run (maybe with another topology)
-        if let Ok(entries) = std::fs::read_dir(NETNS_DIR) {
-            for name in entries
-                .flatten()
-                .filter_map(|e| e.file_name().into_string().ok())
-            {
-                if name.starts_with(PREFIX) {
-                    log::info!("Deleting leftover namespace {name}");
-                    delete_ns(&name);
-                }
-            }
+        if !geteuid().is_root() {
+            return Err("Creating network namespaces needs root privileges".into());
         }
+
+        // 0. Remove leftovers of a previous run (maybe with another topology)
+        delete_all_netns();
 
         // created first, so that an error below cleans up what was already made
         let guard = NetnsGuard {
@@ -369,5 +400,14 @@ impl Network {
             }
             Ok(())
         })
+    }
+
+    /// Router ends of the veths: capturing on them sees each packet once, when it leaves its sender
+    pub fn capture_ports(&self) -> Vec<String> {
+        let mut ports: Vec<String> = self.all_ips.iter().map(|ip| veth_names(ip).0).collect();
+        if self.has_internet_access {
+            ports.push(VR_INET.into());
+        }
+        ports
     }
 }

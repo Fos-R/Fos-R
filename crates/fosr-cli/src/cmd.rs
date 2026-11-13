@@ -250,6 +250,12 @@ pub enum Command {
             help = "Build the topology in network namespaces and play every host (Linux, root)"
         )]
         netns: bool,
+        #[arg(
+            long,
+            requires = "netns",
+            help = "Capture the traffic going through the router of the lab into this pcap file (needs tcpdump)"
+        )]
+        capture: Option<String>,
     },
     /// Create a pcap file that extends a dataset. For deterministic generation,
     /// specify -t, --tz and --seed.
