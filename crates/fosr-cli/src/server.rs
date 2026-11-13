@@ -150,6 +150,7 @@ pub fn start(
                     Arc::new(stats::Stats::new(target)),
                     None::<run::InjectParam<inject::DummyNetEnabler>>,
                     false,
+                    None,
                 );
 
                 // If there is an error in the thread, it’s too late to send a 400 Error

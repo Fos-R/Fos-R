@@ -493,6 +493,7 @@ fn generate_pcap(
                 Arc::new(stats::Stats::new(target)),
                 None::<run::InjectParam<inject::DummyNetEnabler>>,
                 show_progress,
+                None,
             )?;
         }
     }
@@ -614,6 +615,7 @@ fn net_injection(
         Arc::new(stats::Stats::new(stats::Target::None)),
         Some(s4net),
         false,
+        Some(topology),
     )?;
 
     #[cfg(target_os = "linux")]

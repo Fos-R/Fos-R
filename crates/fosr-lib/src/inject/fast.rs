@@ -1,10 +1,11 @@
 use super::NetEnabler;
+use crate::network::Network;
 use crate::stats::Stats;
 use crate::structs::*;
 
-use crossbeam_channel::Receiver;
 use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::TryRecvError;
+use crossbeam_channel::{Receiver, bounded};
 use pnet::transport::{TransportChannelType, TransportSender, transport_channel};
 use pnet_packet::Packet as _;
 use pnet_packet::ip::IpNextHeaderProtocol;
@@ -220,34 +221,75 @@ pub fn start_fast(
     s4net: impl NetEnabler,
     incoming_flows: HashMap<L4Proto, Receiver<Packets>>,
     stats: Arc<Stats>,
+    _source_ips: Vec<Ipv4Addr>,
+    topology: Network,
 ) {
     log::trace!("Start injection");
     let mut join_handles = Vec::new();
+    let source_ips = topology.all_ips.clone();
     for (proto, rx_s4) in incoming_flows.into_iter() {
-        // for each transport protocol, create a new raw socket
-        // the raw socket listens to all the interfaces
-        let channel_type =
-            TransportChannelType::Layer3(IpNextHeaderProtocol::new(proto.get_protocol_number()));
-        #[allow(unused_mut)]
-        let (mut tx, _) = transport_channel(4096, channel_type)
-            .map_err(|e| log::error!("Error {e}. Please retry with root privilege."))
-            .unwrap();
-
-        // iptables hack
-        // s4net.get_ttl().map(|ttl| tx.set_ttl(ttl).unwrap());
-
-        let builder = thread::Builder::new().name(format!("Stage4-{proto:?}"));
+        let source_ips = source_ips.clone();
         let stats = stats.clone();
         let s4net = s4net.clone();
+        let topology = topology.clone();
+        let builder = thread::Builder::new().name(format!("Stage4-{proto:?}"));
         join_handles.push(
             builder
                 .spawn(move || {
-                    send_packets(s4net, tx, stats, rx_s4);
+                    let mut senders = HashMap::new();
+                    let mut worker_handles = Vec::new();
+                    for source_ip in source_ips {
+                        let (tx_ip, rx_ip) = bounded::<Packets>(50);
+                        senders.insert(source_ip, tx_ip);
+                        // for each transport protocol and each IP, create a new raw socket
+                        // the raw socket listens to all the interfaces
+                        let channel_type = TransportChannelType::Layer3(IpNextHeaderProtocol::new(
+                            proto.get_protocol_number(),
+                        ));
+
+                        // iptables hack
+                        // s4net.get_ttl().map(|ttl| tx.set_ttl(ttl).unwrap());
+
+                        let builder =
+                            thread::Builder::new().name(format!("Stage4-{proto:?}-{source_ip}"));
+                        let stats = stats.clone();
+                        let s4net = s4net.clone();
+                        let topology = topology.clone();
+                        worker_handles.push(
+                            builder
+                                .spawn(move || {
+                                    topology
+                                        .enter_ns(&source_ip)
+                                        .expect("Failed to enter network namespace");
+                                    #[allow(unused_mut)]
+                                    let (mut tx, _) = transport_channel(4096, channel_type)
+                                        .map_err(|e| {
+                                            log::error!(
+                                                "Error {e}. Please retry with root privilege."
+                                            )
+                                        })
+                                        .unwrap();
+                                    send_packets(s4net, tx, stats, rx_ip);
+                                })
+                                .unwrap(),
+                        );
+                        // transfer receivers to a list so they have an index
+                        // receivers.push(rx_s4);
+                    }
+                    for flow in rx_s4 {
+                        senders
+                            .get(&flow.flow.get_data().src_ip)
+                            .expect("No injection thread for this source IP")
+                            .send(flow)
+                            .unwrap();
+                    }
+                    drop(senders);
+                    for handle in worker_handles {
+                        handle.join().unwrap();
+                    }
                 })
                 .unwrap(),
         );
-        // transfer receivers to a list so they have an index
-        // receivers.push(rx_s4);
     }
 
     for handle in join_handles.into_iter() {

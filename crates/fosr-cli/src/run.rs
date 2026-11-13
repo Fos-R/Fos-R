@@ -1,5 +1,6 @@
 use fosr_lib::export;
 use fosr_lib::inject;
+use fosr_lib::network::Network;
 use fosr_lib::stage1;
 use fosr_lib::stage2;
 use fosr_lib::stage3;
@@ -79,6 +80,7 @@ pub fn run_efficient<T: inject::NetEnabler>(
     stats: Arc<stats::Stats>,
     #[allow(unused)] s5net: Option<InjectParam<T>>,
     show_progress: bool,
+    topology: Option<Network>,
 ) -> Result<(), String> {
     log::debug!("Generation with \"efficient\" profile");
     let (s2, s2_count) = s2;
@@ -295,13 +297,20 @@ pub fn run_efficient<T: inject::NetEnabler>(
         if let Some(s5net) = s5net {
             let stats = Arc::clone(&stats);
             let builder = thread::Builder::new().name("inject".into());
+            let Some(topology) = topology else {
+                panic!("Missing topology for fast injection");
+            };
             gen_threads.push(
                 builder
                     .spawn(move || -> Result<(), String> {
                         match s5net.injection_algo {
-                            cmd::InjectionAlgo::Fast => {
-                                inject::start_fast(s5net.net_enabler, rx_s5, stats)
-                            }
+                            cmd::InjectionAlgo::Fast => inject::start_fast(
+                                s5net.net_enabler,
+                                rx_s5,
+                                stats,
+                                local_interfaces,
+                                topology,
+                            ),
                             cmd::InjectionAlgo::Reliable => {
                                 inject::start_reliable(s5net.net_enabler, rx_s5, stats)
                             }
