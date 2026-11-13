@@ -237,6 +237,11 @@ impl Network {
             })
     }
 
+    /// IPs that are played in the lab: every IP of every host that has a namespace
+    pub fn lab_ips(&self) -> Vec<Ipv4Addr> {
+        self.lab_hosts().flat_map(|h| h.get_ip_addr()).collect()
+    }
+
     /// Local subnets, each with its gateway: the IP of a router of the topology in that subnet,
     /// or else its first unused IP
     fn lab_subnets(&self) -> Result<Vec<LabSubnet<'_>>, String> {
